@@ -1,27 +1,32 @@
 gado/
+├── .gitignore.txt
 ├── app.py
-├── db.py
+├── build.bat
 ├── calculos.py
 ├── config.py
+├── db.py
 ├── estrutura.txt
 ├── exportar.py
+├── gado.spec
 ├── gado_familia.xlsx
+├── gitignore
+├── GadoSitioSantoAntonio.exe
 ├── iniciar.bat
 ├── main.py
 ├── migrar_gastos.py
+├── python-3.12.10-amd64.exe
 ├── registros.py
 ├── relatorios.py
+├── requirements.txt
 ├── sistema_gado.py
 ├── ui_helper.py
-├── visitas_routes.py
-├── build.bat
-├── gado.spec
 ├── usuarios.json
-├── python-3.12.10-amd64.exe
-├── requirements.txt
+├── visitas_routes.py
 ├── wsgi.py
-├── .gitignore
+│
 ├── __pycache__/
+│
+├── _internal/
 │
 ├── backups/
 │
@@ -33,6 +38,7 @@ gado/
 │   ├── form_gasto.html
 │   ├── form_manejo.html
 │   ├── form_venda.html
+│   ├── form_visita.html
 │   ├── importar.html
 │   ├── lista.html
 │   ├── lista_visitas.html
