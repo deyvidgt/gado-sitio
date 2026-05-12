@@ -1,9 +1,0 @@
-git init
-git add .
-git commit -m "primeiro upload"
-git branch -M main
-git remote add origin https://github.com/deyvidgt/gado-sitio.git
-git push -u origin main
-
-git clone https://github.com/deyvidgt/gado-sitio.git ~/gado
-cd ~/gado

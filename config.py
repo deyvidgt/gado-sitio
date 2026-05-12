@@ -6,7 +6,7 @@ Sítio Santo Antonio — Família: Geane, Deyvid, Nilson
 """
 
 ARQUIVO_DADOS = "gado_familia.xlsx"
-VERSAO = "3.1"
+VERSAO = "3.2"
 NOME_SITIO = "Sítio Santo Antonio"
 FAMILIA = "Geane, Deyvid e Nilson"
 
@@ -78,6 +78,28 @@ COLUNAS_VENDAS = [
 COLUNAS_MANEJO = [
     "Data", "Tipo", "Qtd Cabeças", "Descrição", "Responsável",
 ]
+
+# ── VISITAS AO SÍTIO ──────────────────────────────────────────────────────────
+COLUNAS_VISITAS = [
+    "Data", "Responsável",
+    "Gado Contado", "Gado Esperado", "Gado Faltando",
+    "Sal/Ração", "Proteinado",
+    "Mato/Vegetação", "Grama/Pastagem", "Córrego/Água",
+    "Quintal", "Cisterna",
+    "Choveu", "Chuva mm",
+    "Observações", "Sugestões",
+]
+
+# Opções para campos de status da visita
+OPCOES_VISITA = {
+    "sal_racao":  ["OK", "Baixo", "Vazio"],
+    "proteinado": ["OK", "Baixo", "Vazio"],
+    "mato":       ["Limpo", "Precisa Capinar", "Muito Mato"],
+    "grama":      ["Boa", "Regular", "Escassa"],
+    "corrego":    ["Normal", "Baixo", "Seco"],
+    "quintal":    ["OK", "Precisa Atenção"],
+    "cisterna":   ["OK", "Baixo", "Vazia"],
+}
 
 # Pesos de cores para exportação Excel
 CORES = {

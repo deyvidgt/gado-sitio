@@ -29,7 +29,7 @@ from calculos import (
     calcular_indicadores_extras, calcular_gasto_por_tipo, calcular_evolucao_cmp,
 )
 from config import (TIPOS_GASTO, TIPOS_MANEJO, MEMBROS, NOMES_MEMBROS,
-                    EMOJIS_MEMBROS, USUARIOS, SESSAO_MINUTOS)
+                    EMOJIS_MEMBROS, USUARIOS, SESSAO_MINUTOS, OPCOES_VISITA)
 from exportar import exportar_relatorio_excel
 
 app = Flask(__name__,

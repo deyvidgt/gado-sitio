@@ -19,7 +19,7 @@ else:
 from config import (
     ARQUIVO_DADOS,
     COLUNAS_COMPRAS, COLUNAS_GASTOS,
-    COLUNAS_VENDAS, COLUNAS_MANEJO,
+    COLUNAS_VENDAS, COLUNAS_MANEJO, COLUNAS_VISITAS,
 )
 
 # Caminho completo do arquivo de dados (usado em todas as funções)
@@ -41,28 +41,43 @@ def fazer_backup() -> str | None:
 # ── Inicialização ─────────────────────────────────────────────────────────────
 
 def inicializar():
-    """Cria o arquivo de dados com todas as abas se não existir."""
-    if os.path.exists(ARQUIVO_PATH):
+    """Cria o arquivo de dados com todas as abas se não existir.
+       Se o arquivo já existe mas não tem a aba Visitas, adiciona sem perder dados.
+    """
+    if not os.path.exists(ARQUIVO_PATH):
+        wb = Workbook()
+
+        ws_comp = wb.active
+        ws_comp.title = "Compras"
+        ws_comp.append(COLUNAS_COMPRAS)
+
+        ws_gast = wb.create_sheet("Gastos")
+        ws_gast.append(COLUNAS_GASTOS)
+
+        ws_vend = wb.create_sheet("Vendas")
+        ws_vend.append(COLUNAS_VENDAS)
+
+        ws_man = wb.create_sheet("Manejo")
+        ws_man.append(COLUNAS_MANEJO)
+
+        ws_vis = wb.create_sheet("Visitas")
+        ws_vis.append(COLUNAS_VISITAS)
+
+        wb.create_sheet("Resumo")
+        wb.save(ARQUIVO_PATH)
+        print(f"✅ Arquivo de dados criado: {ARQUIVO_DADOS}")
         return
 
-    wb = Workbook()
-
-    ws_comp = wb.active
-    ws_comp.title = "Compras"
-    ws_comp.append(COLUNAS_COMPRAS)
-
-    ws_gast = wb.create_sheet("Gastos")
-    ws_gast.append(COLUNAS_GASTOS)
-
-    ws_vend = wb.create_sheet("Vendas")
-    ws_vend.append(COLUNAS_VENDAS)
-
-    ws_man = wb.create_sheet("Manejo")
-    ws_man.append(COLUNAS_MANEJO)
-
-    wb.create_sheet("Resumo")
-    wb.save(ARQUIVO_PATH)
-    print(f"✅ Arquivo de dados criado: {ARQUIVO_DADOS}")
+    # Arquivo já existe — verificar se a aba Visitas precisa ser criada
+    try:
+        wb = load_workbook(ARQUIVO_PATH)
+        if "Visitas" not in wb.sheetnames:
+            ws_vis = wb.create_sheet("Visitas")
+            ws_vis.append(COLUNAS_VISITAS)
+            wb.save(ARQUIVO_PATH)
+            print("✅ Aba 'Visitas' criada no arquivo existente.")
+    except Exception as e:
+        print(f"⚠️  Não foi possível verificar aba Visitas: {e}")
 
 
 # ── Leitura ───────────────────────────────────────────────────────────────────
@@ -87,7 +102,7 @@ def carregar_todas() -> dict[str, pd.DataFrame]:
     """Carrega todas as abas de uma vez."""
     return {
         aba: carregar_aba(aba)
-        for aba in ["Compras", "Gastos", "Vendas", "Manejo"]
+        for aba in ["Compras", "Gastos", "Vendas", "Manejo", "Visitas"]
     }
 
 
@@ -118,10 +133,7 @@ def _preparar_valor(v):
 
 
 def salvar_linha(aba: str, linha: list):
-    """Adiciona uma linha ao final de uma aba.
-
-    BUG CORRIGIDO: variável `arquivo` não estava definida — agora usa ARQUIVO_PATH.
-    """
+    """Adiciona uma linha ao final de uma aba."""
     wb = load_workbook(ARQUIVO_PATH)
     ws = wb[aba]
     ws.append([_preparar_valor(v) for v in linha])
@@ -129,10 +141,7 @@ def salvar_linha(aba: str, linha: list):
 
 
 def reescrever_aba(aba: str, df: pd.DataFrame):
-    """Reescreve completamente uma aba a partir de um DataFrame.
-
-    BUG CORRIGIDO: variável `arquivo` não estava definida — agora usa ARQUIVO_PATH.
-    """
+    """Reescreve completamente uma aba a partir de um DataFrame."""
     wb = load_workbook(ARQUIVO_PATH)
     ws = wb[aba]
 

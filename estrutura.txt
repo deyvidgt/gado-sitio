@@ -1,7 +1,4 @@
 gado/
-├── __pycache__/
-├── _internal/
-├── backups/
 ├── app.py
 ├── db.py
 ├── calculos.py
@@ -16,25 +13,31 @@ gado/
 ├── relatorios.py
 ├── sistema_gado.py
 ├── ui_helper.py
+├── visitas_routes.py
 ├── build.bat
 ├── gado.spec
 ├── usuarios.json
 ├── python-3.12.10-amd64.exe
 ├── requirements.txt
 ├── wsgi.py
-├── gitignore
+├── .gitignore
+├── __pycache__/
+│
+├── backups/
+│
 ├── templates/
 │   ├── base.html
 │   ├── configuracoes.html
-│   ├── lista.html
-│   ├── form_gasto.html
 │   ├── dashboard.html
+│   ├── form_compra.html
+│   ├── form_gasto.html
 │   ├── form_manejo.html
 │   ├── form_venda.html
 │   ├── importar.html
+│   ├── lista.html
+│   ├── lista_visitas.html
 │   ├── login.html
-│   ├── relatorios.html
-│   ├── form_compra.html
+│   └── relatorios.html
 └── static/
     ├── favicon.ico
     ├── icon.svg

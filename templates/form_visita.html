@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+{% block title %}Nova Visita ao Sítio — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Nova Visita ao Sítio 🌾{% endblock %}
+
+{% block head %}
+<style>
+  .vis-section {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px 26px;
+    margin-bottom: 20px;
+  }
+  .vis-section h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    color: var(--green-700);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--cream-dk);
+    padding-bottom: 10px;
+  }
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+  }
+  .status-item label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    display: block;
+    margin-bottom: 6px;
+  }
+  .status-item select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid var(--cream-dk);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    color: var(--text);
+    background: var(--cream);
+    cursor: pointer;
+    transition: border-color .18s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+  .status-item select:focus { border-color: var(--green-500); outline: none; }
+  .status-item select.status-ok     { border-color: var(--green-500); background-color: #f0f8eb; }
+  .status-item select.status-warn   { border-color: var(--warn); background-color: #fef3e2; }
+  .status-item select.status-danger { border-color: var(--danger); background-color: #fde8e8; }
+  .gado-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+  .gado-display {
+    background: var(--cream);
+    border-radius: 8px;
+    padding: 12px 16px;
+    border: 1.5px solid var(--cream-dk);
+    text-align: center;
+  }
+  .gado-display .val {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--green-700);
+  }
+  .gado-display .lbl { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
+  #faltando-box .val { color: var(--danger); }
+  #faltando-box { border-color: #f5b7b1; background: #fff5f5; display:none; }
+  .chuva-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-top: 8px; }
+  .toggle-chuva { display: flex; gap: 10px; }
+  .toggle-chuva label {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 16px;
+    border: 1.5px solid var(--cream-dk);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13.5px;
+    transition: all .18s;
+  }
+  .toggle-chuva input[type=radio] { display:none; }
+  .toggle-chuva input[type=radio]:checked + span {
+    font-weight: 600;
+    color: var(--green-700);
+  }
+  .toggle-chuva label:has(input:checked) {
+    border-color: var(--green-500);
+    background: var(--green-50);
+  }
+  #mm-wrap { display:none; }
+  @media(max-width: 768px) {
+    .gado-box { grid-template-columns: 1fr 1fr; }
+    .status-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media(max-width: 480px) {
+    .gado-box { grid-template-columns: 1fr; }
+    .status-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:860px">
+
+  <!-- Cabeçalho -->
+  <div style="margin-bottom:22px">
+    <p style="color:var(--text-2);font-size:13.5px;margin-top:4px">
+      Registre tudo que você observou na visita de hoje. As sugestões são geradas automaticamente.
+    </p>
+  </div>
+
+  <form method="post" id="form-visita">
+
+    <!-- ── Seção 1: Identificação ───────────────────────────────────── -->
+    <div class="vis-section">
+      <h3>📋 Identificação da Visita</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Data da Visita</label>
+          <input type="date" name="data" value="{{ hoje }}" required>
+        </div>
+        <div class="form-group">
+          <label>Quem foi ao sítio</label>
+          <select name="responsavel" required>
+            <option value="">Selecione...</option>
+            {% for m in MEMBROS %}
+              <option value="{{ NOMES[m] }}">{{ NOMES[m] }}</option>
+            {% endfor %}
+            <option value="Todos">Todos juntos</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Seção 2: Contagem do Gado ────────────────────────────────── -->
+    <div class="vis-section">
+      <h3>🐄 Contagem do Gado</h3>
+      <div class="gado-box" style="margin-bottom:16px">
+        <div class="gado-display">
+          <div class="val" id="val-esperado">{{ estoque }}</div>
+          <div class="lbl">📦 Esperado no sistema</div>
+        </div>
+        <div class="gado-display">
+          <div class="val" id="val-contado">—</div>
+          <div class="lbl">👁️ Contado por você</div>
+        </div>
+        <div class="gado-display" id="faltando-box">
+          <div class="val" id="val-faltando">0</div>
+          <div class="lbl">⚠️ Faltando / a mais</div>
+        </div>
+      </div>
+      <div class="form-group" style="max-width:260px">
+        <label>Quantas cabeças você contou?</label>
+        <input type="number" name="gado_contado" id="inp-gado"
+               min="0" max="9999" placeholder="Ex: {{ estoque }}"
+               style="font-size:18px;font-weight:600;text-align:center">
+        <small style="color:var(--text-3);font-size:11px">
+          Deixe em branco se não contou hoje
+        </small>
+      </div>
+    </div>
+
+    <!-- ── Seção 3: Insumos ─────────────────────────────────────────── -->
+    <div class="vis-section">
+      <h3>🧂 Insumos — Sal, Ração e Proteinado</h3>
+      <div class="status-grid">
+        <div class="status-item">
+          <label>Sal / Ração</label>
+          <select name="sal_racao" class="status-sel" data-group="sal">
+            <option value="OK">✅ OK — cheio ou bom</option>
+            <option value="Baixo">⚠️ Baixo — precisa repor</option>
+            <option value="Vazio">🚨 Vazio — esgotou!</option>
+          </select>
+        </div>
+        <div class="status-item">
+          <label>Proteinado</label>
+          <select name="proteinado" class="status-sel" data-group="prot">
+            <option value="OK">✅ OK — cheio ou bom</option>
+            <option value="Baixo">⚠️ Baixo — precisa repor</option>
+            <option value="Vazio">🚨 Vazio — esgotou!</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Seção 4: Pastagem e Vegetação ────────────────────────────── -->
+    <div class="vis-section">
+      <h3>🌱 Pastagem e Vegetação</h3>
+      <div class="status-grid">
+        <div class="status-item">
+          <label>Grama / Pastagem</label>
+          <select name="grama" class="status-sel">
+            <option value="Boa">✅ Boa — pasto farto</option>
+            <option value="Regular">⚠️ Regular — está diminuindo</option>
+            <option value="Escassa">🚨 Escassa — pouco pasto!</option>
+          </select>
+        </div>
+        <div class="status-item">
+          <label>Mato / Vegetação daninha</label>
+          <select name="mato" class="status-sel">
+            <option value="Limpo">✅ Limpo — sem mato</option>
+            <option value="Precisa Capinar">⚠️ Precisa capinar</option>
+            <option value="Muito Mato">🚨 Muito mato — urgente!</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Seção 5: Água e Infraestrutura ───────────────────────────── -->
+    <div class="vis-section">
+      <h3>💧 Água e Infraestrutura</h3>
+      <div class="status-grid">
+        <div class="status-item">
+          <label>Córrego / Bebedouro / Água</label>
+          <select name="corrego" class="status-sel">
+            <option value="Normal">✅ Normal — água boa</option>
+            <option value="Baixo">⚠️ Baixo — pouca água</option>
+            <option value="Seco">🚨 Seco — sem água!</option>
+          </select>
+        </div>
+        <div class="status-item">
+          <label>Cisterna</label>
+          <select name="cisterna" class="status-sel">
+            <option value="OK">✅ OK — cheia ou boa</option>
+            <option value="Baixo">⚠️ Baixa — precisa encher</option>
+            <option value="Vazia">🚨 Vazia — esgotou!</option>
+          </select>
+        </div>
+        <div class="status-item">
+          <label>Quintal / Área da sede</label>
+          <select name="quintal" class="status-sel">
+            <option value="OK">✅ OK — tudo certo</option>
+            <option value="Precisa Atenção">⚠️ Precisa atenção</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Seção 6: Chuva ───────────────────────────────────────────── -->
+    <div class="vis-section">
+      <h3>🌧️ Chuva</h3>
+      <div class="chuva-row">
+        <div>
+          <label style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:8px">
+            Choveu nesta visita?
+          </label>
+          <div class="toggle-chuva">
+            <label>
+              <input type="radio" name="choveu" value="nao" checked id="r-nao">
+              <span>☀️ Não choveu</span>
+            </label>
+            <label>
+              <input type="radio" name="choveu" value="sim" id="r-sim">
+              <span>🌧️ Sim, choveu</span>
+            </label>
+          </div>
+        </div>
+        <div id="mm-wrap">
+          <label style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:8px">
+            Quantidade (mm)
+          </label>
+          <input type="number" name="chuva_mm" id="inp-mm"
+                 min="0" max="999" step="0.1" placeholder="Ex: 25"
+                 style="width:140px;font-size:16px;text-align:center">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Seção 7: Observações ─────────────────────────────────────── -->
+    <div class="vis-section">
+      <h3>📝 Observações Livres</h3>
+      <textarea name="observacoes" rows="4"
+                placeholder="Anote qualquer coisa que chamou atenção: animal doente, cerca quebrada, problema com vizinho, obra necessária..."
+                style="width:100%;padding:12px;border:1.5px solid var(--cream-dk);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13.5px;resize:vertical"></textarea>
+      <small style="color:var(--text-3);font-size:11px">
+        💡 As sugestões são geradas automaticamente com base no que você marcou acima.
+      </small>
+    </div>
+
+    <!-- Botões -->
+    <div style="display:flex;gap:12px;margin-bottom:40px">
+      <button type="submit" class="btn btn-primary" style="font-size:15px;padding:12px 28px">
+        🌾 Salvar Visita
+      </button>
+      <a href="{{ url_for('visitas') }}" class="btn btn-outline">Cancelar</a>
+    </div>
+
+  </form>
+</div>
+
+{% block scripts %}
+<script>
+  const estoque = {{ estoque }};
+  const inpGado = document.getElementById("inp-gado");
+  const valContado  = document.getElementById("val-contado");
+  const valFaltando = document.getElementById("val-faltando");
+  const faltBox = document.getElementById("faltando-box");
+
+  inpGado.addEventListener("input", function () {
+    const v = parseInt(this.value) || 0;
+    valContado.textContent = v || "—";
+    if (v > 0) {
+      const diff = estoque - v;
+      faltBox.style.display = "block";
+      if (diff > 0) {
+        valFaltando.textContent = `−${diff}`;
+        faltBox.style.borderColor = "var(--danger)";
+        faltBox.style.background = "#fff5f5";
+        valFaltando.style.color = "var(--danger)";
+      } else if (diff < 0) {
+        valFaltando.textContent = `+${Math.abs(diff)}`;
+        faltBox.style.borderColor = "var(--warn)";
+        faltBox.style.background = "#fef3e2";
+        valFaltando.style.color = "var(--warn)";
+      } else {
+        valFaltando.textContent = "✓ Certo";
+        faltBox.style.borderColor = "var(--green-500)";
+        faltBox.style.background = "var(--green-50)";
+        valFaltando.style.color = "var(--green-600)";
+      }
+    } else {
+      faltBox.style.display = "none";
+    }
+  });
+
+  // Colorir selects conforme valor
+  function colorirSelect(sel) {
+    const v = sel.value;
+    sel.className = "status-sel";
+    if (v === "OK" || v === "Boa" || v === "Limpo" || v === "Normal") {
+      sel.classList.add("status-ok");
+    } else if (v.includes("Baixo") || v.includes("Regular") || v.includes("Precisa") || v.includes("Atenção")) {
+      sel.classList.add("status-warn");
+    } else if (v === "Vazio" || v === "Vazia" || v === "Seco" || v === "Escassa" || v === "Muito Mato") {
+      sel.classList.add("status-danger");
+    }
+  }
+  document.querySelectorAll(".status-sel").forEach(sel => {
+    colorirSelect(sel);
+    sel.addEventListener("change", () => colorirSelect(sel));
+  });
+
+  // Toggle chuva/mm
+  document.querySelectorAll("[name='choveu']").forEach(r => {
+    r.addEventListener("change", function () {
+      document.getElementById("mm-wrap").style.display =
+        this.value === "sim" ? "block" : "none";
+    });
+  });
+</script>
+{% endblock %}
+{% endblock %}
