@@ -1,0 +1,42 @@
+gado/
+├── __pycache__/
+├── _internal/
+├── backups/
+├── app.py
+├── db.py
+├── calculos.py
+├── config.py
+├── estrutura.txt
+├── exportar.py
+├── gado_familia.xlsx
+├── iniciar.bat
+├── main.py
+├── migrar_gastos.py
+├── registros.py
+├── relatorios.py
+├── sistema_gado.py
+├── ui_helper.py
+├── build.bat
+├── gado.spec
+├── usuarios.json
+├── python-3.12.10-amd64.exe
+├── requirements.txt
+├── wsgi.py
+├── gitignore
+├── templates/
+│   ├── base.html
+│   ├── configuracoes.html
+│   ├── lista.html
+│   ├── form_gasto.html
+│   ├── dashboard.html
+│   ├── form_manejo.html
+│   ├── form_venda.html
+│   ├── importar.html
+│   ├── login.html
+│   ├── relatorios.html
+│   ├── form_compra.html
+└── static/
+    ├── favicon.ico
+    ├── icon.svg
+    ├── icon-192.png
+    └── icon-512.png

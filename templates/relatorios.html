@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Relatórios — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Relatórios 📈{% endblock %}
+
+{% block content %}
+
+<!-- Alertas -->
+{% if alertas %}
+<div style="margin-bottom:20px">
+  {% for a in alertas %}
+    <div class="alert-strip {{ a.nivel }}">
+      {% if a.nivel == 'danger' %}🚨{% elif a.nivel == 'warning' %}⚠️{% else %}💡{% endif %}
+      {{ a.msg }}
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Resumo financeiro -->
+<div class="two-col" style="margin-bottom:24px">
+  <div class="card">
+    <div class="card-title">📊 Resumo Financeiro</div>
+    <div class="kv"><span class="kv-key">Total Compras</span><span>{{ r.total_comp | brl }}</span></div>
+    <div class="kv"><span class="kv-key">Total Gastos</span><span>{{ r.total_gast | brl }}</span></div>
+    <div class="kv"><span class="kv-key">Custo Total</span><span style="font-weight:600">{{ r.total_custo | brl }}</span></div>
+    <div class="kv"><span class="kv-key">Receita (Vendas)</span><span>{{ r.total_vend | brl }}</span></div>
+    <div class="kv"><span class="kv-key">Resultado Realizado</span>
+      <span class="{{ 'pos' if r.resultado_realizado >= 0 else 'neg' }}">{{ r.resultado_realizado | brl }}</span></div>
+    <div class="kv"><span class="kv-key">ROI Realizado</span><span>{{ r.roi_realizado | pct }}</span></div>
+    <div class="kv"><span class="kv-key">Resultado + Estoque</span>
+      <span class="{{ 'pos' if r.resultado_total >= 0 else 'neg' }}">{{ r.resultado_total | brl }}</span></div>
+    <div class="kv"><span class="kv-key">ROI Total</span><span>{{ r.roi_total | pct }}</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">💲 Indicadores de Custo</div>
+    <div class="kv"><span class="kv-key">CMP (Custo Médio Ponderado)</span><span style="font-weight:600">{{ r.cmp | brl }}/cab.</span></div>
+    <div class="kv"><span class="kv-key">GPCab (Gastos acum./cabeça)</span><span>{{ r.gpcab | brl }}/cab.</span></div>
+    <div class="kv"><span class="kv-key">CTCab (Custo Total/cabeça)</span><span style="font-weight:600">{{ r.ctcab | brl }}/cab.</span></div>
+    <div class="kv"><span class="kv-key">Ticket Médio de Venda</span><span>{{ r.ticket_medio | brl }}/cab.</span></div>
+    <div class="kv"><span class="kv-key">Margem Bruta</span><span>{{ r.margem_bruta | pct }}</span></div>
+    <div class="kv"><span class="kv-key">Break-even do Estoque</span>
+      <span style="font-weight:600;color:var(--gold)">{{ r.break_even | brl }}/cab.</span></div>
+    <div class="kv"><span class="kv-key">Capital Imobilizado</span><span>{{ r.capital_imobilizado | brl }}</span></div>
+    <div style="margin-top:14px;padding:12px;background:var(--green-50);border-radius:8px;font-size:12px;color:var(--text-2)">
+      <strong>Glossário:</strong> CMP = custo médio ponderado de todas as compras · GPCab = gastos por cabeça no período ·
+      CTCab = CMP + GPCab · Break-even = preço mínimo p/ recuperar o capital do estoque atual
+    </div>
+  </div>
+</div>
+
+<!-- Gastos por categoria + Gráfico -->
+<div class="two-col" style="margin-bottom:24px">
+  <div class="card">
+    <div class="card-title">💸 Gastos por Categoria</div>
+    {% if gastos_tipo %}
+      {% for tipo, val in gastos_tipo.items() %}
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+          <span>{{ tipo }}</span>
+          <span style="font-weight:600">{{ val.valor | brl }}
+            <span style="color:var(--text-3);font-weight:400">
+              ({{ "%.1f"|format(val.pct) }}%)
+            </span>
+          </span>
+        </div>
+        <div style="background:var(--cream-dk);border-radius:99px;height:6px;overflow:hidden">
+          <div style="background:var(--green-500);height:100%;width:{{ "%.1f"|format(val.pct) }}%;border-radius:99px"></div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p style="font-size:13px;color:var(--text-3)">Nenhum gasto registrado.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 Distribuição de Gastos</div>
+    <canvas id="chartGastos" height="220"></canvas>
+  </div>
+</div>
+
+<!-- Resultado por membro -->
+<h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--green-700);margin-bottom:16px">
+  👨‍👩‍👦 Resultado por Membro
+</h2>
+<p style="font-size:13px;color:var(--text-3);margin-bottom:16px">
+  Calculado com CMP + GPCab no momento exato de cada venda — método mais preciso que dividir igualmente.
+</p>
+<div class="three-col" style="margin-bottom:24px">
+  {% for m in MEMBROS %}
+  {% set mr = mbr[m] %}
+  <div class="member-card">
+    <h3>{{ EMOJIS[m] }} {{ NOMES[m] }}</h3>
+    <div class="kv"><span class="kv-key">Cabeças vendidas</span><span>{{ mr.cabecas }}</span></div>
+    <div class="kv"><span class="kv-key">Receita</span><span>{{ mr.receita | brl }}</span></div>
+    <div class="kv"><span class="kv-key">Custo de compra</span><span>{{ mr.custo_compra | brl }}</span></div>
+    <div class="kv"><span class="kv-key">Custo de gastos</span><span>{{ mr.custo_gastos | brl }}</span></div>
+    <div class="kv"><span class="kv-key">Custo total</span><span>{{ mr.custo_total | brl }}</span></div>
+    <div class="kv">
+      <span class="kv-key">Resultado</span>
+      <span class="{{ 'pos' if mr.resultado >= 0 else 'neg' }}">{{ mr.resultado | brl }}</span>
+    </div>
+    <div class="kv"><span class="kv-key">Margem</span><span>{{ mr.margem_pct | pct }}</span></div>
+    <div class="kv"><span class="kv-key">Ticket médio</span><span>{{ mr.ticket_medio | brl }}/cab.</span></div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Detalhe de vendas por membro -->
+{% for m in MEMBROS %}
+{% set mr = mbr[m] %}
+{% if mr.vendas_detalhadas %}
+<div class="card" style="margin-bottom:16px">
+  <div class="card-title">{{ EMOJIS[m] }} {{ NOMES[m] }} — Histórico de Vendas</div>
+  <div class="table-wrap" style="box-shadow:none">
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th><th>Cabeças</th><th>Receita</th>
+          <th>CMP na data</th><th>GPCab na data</th>
+          <th>Custo</th><th>Resultado</th><th>Margem</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in mr.vendas_detalhadas %}
+        <tr>
+          <td>{{ v.data }}</td>
+          <td>{{ v.cabecas }}</td>
+          <td>{{ v.receita | brl }}</td>
+          <td>{{ v.cmp | brl }}</td>
+          <td>{{ v.gpcab | brl }}</td>
+          <td>{{ (v.custo_comp + v.custo_gast) | brl }}</td>
+          <td class="{{ 'pos' if v.resultado >= 0 else 'neg' }}">{{ v.resultado | brl }}</td>
+          <td>{{ v.margem_pct | pct }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<!-- Comparativo Anual -->
+{% if anual %}
+<h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--green-700);margin:24px 0 16px">
+  📅 Comparativo Anual
+</h2>
+<div class="table-wrap" style="margin-bottom:24px">
+  <table>
+    <thead>
+      <tr><th>Ano</th><th>Compras</th><th>Gastos</th><th>Custo</th><th>Receita</th><th>Resultado</th><th>ROI</th></tr>
+    </thead>
+    <tbody>
+      {% for a in anual %}
+      <tr>
+        <td style="font-weight:600">{{ a.ano }}</td>
+        <td>{{ a.compras | brl }}</td>
+        <td>{{ a.gastos | brl }}</td>
+        <td>{{ a.custo | brl }}</td>
+        <td>{{ a.vendas | brl }}</td>
+        <td class="{{ 'pos' if a.positivo else 'neg' }}">{{ a.lucro | brl }}</td>
+        <td class="{{ 'pos' if a.positivo else 'neg' }}">{{ a.roi | pct }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Exportar -->
+<div class="card" style="display:flex;align-items:center;justify-content:space-between">
+  <div>
+    <div style="font-weight:600;margin-bottom:4px">Exportar relatório completo</div>
+    <div style="font-size:13px;color:var(--text-3)">Gera Excel com todas as abas, fluxo de caixa e resultado por membro</div>
+  </div>
+  <a href="{{ url_for('exportar') }}" class="btn btn-gold">⬇️ Baixar Excel</a>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+fetch("/api/membros").then(r => r.json()).then(d => {
+  const gastosObj = {{ gastos_tipo | tojson }};
+  const tipos = Object.keys(gastosObj);
+  const vals  = tipos.map(t => gastosObj[t].valor);
+  const cores  = ["#3d7a34","#c9972a","#2980b9","#8e44ad","#e67e22","#95a5a6"];
+  new Chart(document.getElementById("chartGastos"), {
+    type: "doughnut",
+    data: {
+      labels: tipos,
+      datasets: [{ data: vals, backgroundColor: cores, borderWidth: 2, borderColor: "#fff" }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: "bottom", labels: { font: { family: "DM Sans", size: 11 }, boxWidth: 14 } },
+        tooltip: { callbacks: { label: ctx => " R$ " + ctx.raw.toLocaleString("pt-BR", {minimumFractionDigits:2}) } }
+      }
+    }
+  });
+});
+</script>
+{% endblock %}

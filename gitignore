@@ -1,0 +1,29 @@
+# Dados sensíveis — NÃO subir para o GitHub
+gado_familia.xlsx
+usuarios.json
+backups/
+*.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# PyInstaller
+*.spec.bak
+dist/
+build/
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log

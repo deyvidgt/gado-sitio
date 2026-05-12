@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{% if modo == 'editar' %}Editar Venda{% else %}Nova Venda{% endif %} — Sítio Santo Antonio{% endblock %}
+{% block page_title %}{% if modo == 'editar' %}Editar Venda ✏️{% else %}Nova Venda 🤝{% endif %}{% endblock %}
+
+{% block content %}
+<div style="max-width:720px">
+  <div class="alert-strip info" style="margin-bottom:20px">
+    💡 Estoque: <strong>{{ r_fin.estoque }} cabeças</strong> · 
+    CTCab: <strong>{{ r_fin.ctcab | brl }}/cabeça</strong> · 
+    Break-even: <strong>{{ r_fin.break_even | brl }}/cabeça</strong>
+  </div>
+
+  <div class="form-card" style="max-width:720px">
+    <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--green-700);margin-bottom:24px">
+      Registrar Venda
+    </h2>
+
+    <form method="post" action="{% if modo == 'editar' %}{{ url_for('editar_venda', idx=idx) }}{% endif %}">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Data da Venda</label>
+          <input type="date" name="data" value="{{ row.data_input if row else hoje }}" required>
+        </div>
+        <div class="form-group">
+          <label>Qtd Total de Cabeças</label>
+          <input type="number" name="cabecas" id="tot-cab" min="1"
+                 value="{{ row['Qtd Cabeças'] | int if row else '' }}" placeholder="ex: 10" required>
+        </div>
+        <div class="form-group">
+          <label>Valor Total Recebido (R$)</label>
+          <input type="text" name="valor" id="val-in" value="{{ row['Valor Total (R$)'] | brl | replace('R$ ','') if row else '' }}" placeholder="ex: 43500,00" required>
+        </div>
+        <div class="form-group">
+          <label>Valor da Arroba (R$/@) — opcional</label>
+          <input type="text" name="arroba" value="{{ row['Valor Arroba (R$)'] | brl | replace('R$ ','') if row and row.get('Valor Arroba (R$)') else '' }}" placeholder="ex: 330,98">
+        </div>
+        <div class="form-group full">
+          <label>Descrição</label>
+          <input type="text" name="descricao" value="{{ row['Descrição'] if row else '' }}" placeholder="ex: Nelore gordos para frigorífico">
+        </div>
+      </div>
+
+      <!-- Distribuição por membro -->
+      <div style="margin:24px 0 8px">
+        <label style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3)">
+          Distribuição por Membro
+        </label>
+        <p style="font-size:12px;color:var(--text-3);margin-top:4px">
+          A soma deve ser igual ao total de cabeças. Os valores são calculados automaticamente.
+        </p>
+      </div>
+      <div class="member-row">
+        {% for m in MEMBROS %}
+        <div class="member-box">
+          <h4>{{ NOMES[m] }}</h4>
+          <div class="form-group" style="margin-bottom:8px">
+            <label>Cabeças</label>
+            <input type="number" name="qtd_{{ m|lower }}" id="qtd-{{ m|lower }}" min="0" value="{{ row['Qtd ' + m] | int if row and row.get('Qtd ' + m) is not none else 0 }}" class="qtd-inp">
+          </div>
+          <div class="hint">Receita: <span id="val-{{ m|lower }}">R$ 0,00</span></div>
+          <div class="hint" style="margin-top:3px">Resultado: <span id="res-{{ m|lower }}">—</span></div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div id="soma-aviso" style="margin-top:10px;font-size:12.5px;color:var(--warn);display:none">
+        ⚠️ Soma das cabeças (<span id="soma-val">0</span>) ≠ total (<span id="tot-val">0</span>)
+      </div>
+
+      <div style="margin-top:28px;display:flex;gap:12px">
+        <button type="submit" class="btn btn-primary">{% if modo == "editar" %}💾 Salvar Alterações{% else %}✅ Salvar Venda{% endif %}</button>
+        <a href="{{ url_for('vendas') }}" class="btn btn-outline">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CTCAB = {{ r_fin.ctcab }};
+const membros = ["mae", "deyvid", "nilson"];
+
+function calc() {
+  const tot   = parseInt(document.getElementById("tot-cab").value) || 0;
+  const valor = parseFloat((document.getElementById("val-in").value || "").replace(",",".")) || 0;
+  document.getElementById("tot-val").textContent = tot;
+
+  let soma = 0;
+  membros.forEach(m => { soma += parseInt(document.getElementById("qtd-"+m).value) || 0; });
+  document.getElementById("soma-val").textContent = soma;
+  document.getElementById("soma-aviso").style.display = (soma > 0 && soma !== tot) ? "block" : "none";
+
+  membros.forEach(m => {
+    const qtd = parseInt(document.getElementById("qtd-"+m).value) || 0;
+    const valM = tot > 0 ? valor * qtd / tot : 0;
+    const custoM = qtd * CTCAB;
+    const resM = valM - custoM;
+    document.getElementById("val-"+m).textContent = "R$ " + valM.toFixed(2).replace(".",",");
+    const el = document.getElementById("res-"+m);
+    el.textContent = (resM >= 0 ? "+" : "") + "R$ " + resM.toFixed(2).replace(".",",");
+    el.style.color = resM >= 0 ? "var(--green-600)" : "var(--danger)";
+    el.style.fontWeight = "600";
+  });
+}
+
+document.getElementById("tot-cab").addEventListener("input", calc);
+document.getElementById("val-in").addEventListener("input", calc);
+document.querySelectorAll(".qtd-inp").forEach(el => el.addEventListener("input", calc));
+</script>
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }} — Sítio Santo Antonio{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="section-head">
+  <h2>{{ titulo }}</h2>
+  <div style="display:flex;gap:10px;align-items:center">
+    {% set ordem = ordem if ordem is defined else 'desc' %}
+    {% if secao in ['compras','gastos','vendas'] %}
+      {% set outra_ordem = 'asc' if ordem == 'desc' else 'desc' %}
+      <a href="?ordem={{ outra_ordem }}" class="btn btn-outline btn-sm">
+        {% if ordem == 'desc' %}📅 Mais antigos primeiro{% else %}📅 Mais recentes primeiro{% endif %}
+      </a>
+    {% endif %}
+    {% if secao == 'compras' %}
+      <a href="{{ url_for('nova_compra') }}" class="btn btn-primary">+ Nova Compra</a>
+    {% elif secao == 'gastos' %}
+      <a href="{{ url_for('novo_gasto') }}" class="btn btn-primary">+ Novo Gasto</a>
+    {% elif secao == 'vendas' %}
+      <a href="{{ url_for('nova_venda') }}" class="btn btn-primary">+ Nova Venda</a>
+    {% elif secao == 'manejo' %}
+      <a href="{{ url_for('novo_manejo') }}" class="btn btn-primary">+ Novo Manejo</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="table-wrap">
+  {% if rows %}
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        {% for col in colunas %}
+          {% if col == 'Data' and secao in ['compras','gastos','vendas'] %}
+            <th>
+              <a href="?ordem={{ 'asc' if ordem == 'desc' else 'desc' }}"
+                 style="color:rgba(255,255,255,.85);text-decoration:none;display:flex;align-items:center;gap:5px">
+                Data
+                <span style="font-size:12px;opacity:.8">
+                  {{ '↓ recente' if ordem == 'desc' else '↑ antigo' }}
+                </span>
+              </a>
+            </th>
+          {% else %}
+            <th>{{ col }}</th>
+          {% endif %}
+        {% endfor %}
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        {# _idx é o índice REAL do DataFrame (passado pelo app.py) — garante que
+           excluir/editar atuem no registro correto mesmo com tabela ordenada #}
+        {% set i = row._idx if row._idx is defined else loop.index0 %}
+      <tr>
+        <td style="color:var(--text-3);font-size:12px">{{ loop.index }}</td>
+        {% for col in colunas %}
+          <td>
+            {% set v = row.get(col, '') %}
+            {# Tratar None, NaN real e a string 'nan' que pode vir do pandas #}
+            {% if v is none or v == '' or v|string == 'nan' or v|string == 'NaT' %}—
+            {% elif col in ['Valor Total (R$)', 'Valor/Cabeça (R$)', 'Valor Arroba (R$)',
+                            'Valor Mae (R$)', 'Valor Deyvid (R$)', 'Valor Nilson (R$)',
+                            'Custo Mae (R$)', 'Custo Deyvid (R$)', 'Custo Nilson (R$)',
+                            'Resultado Mae (R$)', 'Resultado Deyvid (R$)', 'Resultado Nilson (R$)',
+                            'CMP no momento (R$)'] %}
+              {{ v | brl }}
+            {% elif col == 'Tipo' and secao == 'gastos' %}
+              <span class="badge badge-gasto">{{ v }}</span>
+            {% elif col == 'Tipo' and secao == 'manejo' %}
+              <span class="badge badge-manejo">{{ v }}</span>
+            {% else %}
+              {{ v if v else '—' }}
+            {% endif %}
+          </td>
+        {% endfor %}
+        <td style="white-space:nowrap">
+          {% if secao == 'compras' %}
+            <a href="{{ url_for('editar_compra', idx=i) }}" class="btn btn-outline btn-sm">✏️</a>
+          {% elif secao == 'gastos' %}
+            <a href="{{ url_for('editar_gasto', idx=i) }}" class="btn btn-outline btn-sm">✏️</a>
+          {% elif secao == 'vendas' %}
+            <a href="{{ url_for('editar_venda', idx=i) }}" class="btn btn-outline btn-sm">✏️</a>
+          {% endif %}
+          {% set aba_map = {'compras': 'Compras', 'gastos': 'Gastos', 'vendas': 'Vendas', 'manejo': 'Manejo'} %}
+          <form method="post" action="{{ url_for('excluir', aba=aba_map[secao], idx=i) }}"
+                onsubmit="return confirm('Excluir este registro?')" style="display:inline">
+            <button class="btn btn-danger btn-sm" type="submit">🗑</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <div style="background:var(--white);padding:48px;text-align:center;border-radius:var(--radius);box-shadow:var(--shadow)">
+      <div style="font-size:40px;margin-bottom:12px">📭</div>
+      <p style="color:var(--text-3);font-size:15px">Nenhum registro ainda.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Adicionar filtro enumerate ao Jinja2
+</script>
+{% endblock %}

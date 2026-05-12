@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login — Sítio Santo Antonio</title>
+  <link rel="icon" href="/static/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f2614 0%, #2d5a27 60%, #1a3a1f 100%);
+      font-family: "DM Sans", sans-serif;
+      padding: 20px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 44px 40px 36px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.35);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .logo-icon {
+      font-size: 52px;
+      display: block;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,.12));
+    }
+    .logo-title {
+      font-family: "Playfair Display", serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a3a1f;
+      line-height: 1.2;
+    }
+    .logo-sub {
+      font-size: 12px;
+      color: #666;
+      margin-top: 3px;
+    }
+
+    .divider {
+      height: 1px;
+      background: #eee;
+      margin: 0 -40px 28px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 6px;
+    }
+
+    .input-wrap {
+      position: relative;
+      margin-bottom: 18px;
+    }
+    .input-wrap input {
+      width: 100%;
+      padding: 11px 42px 11px 14px;
+      border: 1.5px solid #ddd;
+      border-radius: 10px;
+      font-size: 15px;
+      font-family: inherit;
+      color: #1a3a1f;
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+      background: #fafafa;
+    }
+    .input-wrap input:focus {
+      border-color: #3d7a34;
+      box-shadow: 0 0 0 3px rgba(61,122,52,.12);
+      background: #fff;
+    }
+    /* Botão olho — mostrar/ocultar senha */
+    .btn-eye {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: #999;
+      padding: 2px;
+      line-height: 1;
+    }
+    .btn-eye:hover { color: #3d7a34; }
+
+    /* Aviso CapsLock */
+    .capslock-warn {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: #fff8e1;
+      border: 1.5px solid #f9a825;
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 12px;
+      color: #7a5100;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+    .capslock-warn.show { display: flex; }
+
+    /* Erro de login */
+    .erro {
+      background: #ffebee;
+      border: 1.5px solid #ef9a9a;
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #c62828;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 13px;
+      background: #3d7a34;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+      margin-top: 4px;
+    }
+    .btn-login:hover  { background: #2d5a27; }
+    .btn-login:active { transform: scale(.98); }
+
+    .footer {
+      text-align: center;
+      margin-top: 22px;
+      font-size: 11px;
+      color: #aaa;
+    }
+
+    /* Tentativas restantes */
+    .tentativas {
+      font-size: 11px;
+      color: #999;
+      text-align: right;
+      margin-top: -12px;
+      margin-bottom: 14px;
+    }
+    .tentativas.poucas { color: #e65100; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">
+    <span class="logo-icon">🐄</span>
+    <div class="logo-title">Sítio Santo Antonio</div>
+    <div class="logo-sub">Sistema de Gestão de Gado</div>
+  </div>
+
+  <div class="divider"></div>
+
+  {% if erro %}
+  <div class="erro">🔒 {{ erro }}</div>
+  {% endif %}
+
+  {% if tentativas_restantes is defined and tentativas_restantes < 5 %}
+  <div class="tentativas {% if tentativas_restantes <= 2 %}poucas{% endif %}">
+    {{ tentativas_restantes }} tentativa{{ 's' if tentativas_restantes != 1 else '' }} restante{{ 's' if tentativas_restantes != 1 else '' }}
+  </div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('login') }}" autocomplete="off" id="form-login">
+
+    <label for="usuario">Usuário</label>
+    <div class="input-wrap" style="margin-bottom:22px">
+      <input type="text" id="usuario" name="usuario"
+             value="{{ usuario_digitado or '' }}"
+             placeholder="geane / deyvid / nilson"
+             autofocus autocomplete="username" spellcheck="false">
+    </div>
+
+    <label for="senha">Senha</label>
+    <div class="input-wrap" style="margin-bottom:10px">
+      <input type="password" id="senha" name="senha"
+             placeholder="••••••••"
+             autocomplete="current-password">
+      <button type="button" class="btn-eye" id="btn-eye"
+              onclick="toggleSenha()" title="Mostrar/ocultar senha">👁️</button>
+    </div>
+
+    <!-- Aviso CapsLock — aparece automaticamente -->
+    <div class="capslock-warn" id="caps-warn">
+      ⚠️ <span>CapsLock ativado — verifique as maiúsculas</span>
+    </div>
+
+    <button type="submit" class="btn-login" id="btn-submit">🔓 Entrar</button>
+  </form>
+
+  <div class="footer">
+    Senha padrão: <strong>sitio2025</strong> &nbsp;·&nbsp; v3.1
+  </div>
+</div>
+
+<script>
+  const senhaInput  = document.getElementById("senha");
+  const capsWarn    = document.getElementById("caps-warn");
+  const btnEye      = document.getElementById("btn-eye");
+  const btnSubmit   = document.getElementById("btn-submit");
+  const form        = document.getElementById("form-login");
+
+  // ── CapsLock detector ────────────────────────────────────────────────────
+  // Funciona em todos os navegadores modernos via event.getModifierState
+  function checkCaps(e) {
+    if (e.getModifierState) {
+      const caps = e.getModifierState("CapsLock");
+      capsWarn.classList.toggle("show", caps);
+    }
+  }
+
+  senhaInput.addEventListener("keyup",    checkCaps);
+  senhaInput.addEventListener("keydown",  checkCaps);
+  senhaInput.addEventListener("focus",    checkCaps);
+  // Também checar no campo usuário (CapsLock pode ativar enquanto digita lá)
+  document.getElementById("usuario").addEventListener("keyup", checkCaps);
+
+  // ── Mostrar / ocultar senha ──────────────────────────────────────────────
+  function toggleSenha() {
+    const tipo = senhaInput.type === "password" ? "text" : "password";
+    senhaInput.type = tipo;
+    btnEye.textContent = tipo === "password" ? "👁️" : "🙈";
+    senhaInput.focus();
+  }
+
+  // ── Feedback visual no botão durante submit ──────────────────────────────
+  form.addEventListener("submit", function() {
+    btnSubmit.textContent = "⏳ Verificando...";
+    btnSubmit.disabled = true;
+  });
+</script>
+
+</body>
+</html>

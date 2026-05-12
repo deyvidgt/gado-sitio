@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if modo == 'editar' else 'Novo' }} Gasto — Sítio Santo Antonio{% endblock %}
+{% block page_title %}{{ 'Editar Gasto ✏️' if modo == 'editar' else 'Novo Gasto 💸' }}{% endblock %}
+
+{% block content %}
+<div style="max-width:680px">
+  <div class="alert-strip info" style="margin-bottom:20px">
+    💡 Estoque atual: <strong>{{ estoque }} cabeças</strong> — GPCab acumulado: <strong>{{ gpcab | brl }}/cabeça</strong>
+  </div>
+
+  <div class="form-card">
+    <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--green-700);margin-bottom:24px">
+      {{ 'Editar Gasto' if modo == 'editar' else 'Registrar Gasto' }}
+    </h2>
+
+    <form method="post">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" name="data"
+                 value="{{ row.data_input if modo == 'editar' and row else hoje }}" required>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Gasto</label>
+          <select name="tipo" required>
+            <option value="">Selecione...</option>
+            {% for t in TIPOS %}
+              <option value="{{ t }}" {{ 'selected' if modo == 'editar' and row and row.Tipo == t }}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Descrição</label>
+          <input type="text" name="descricao"
+                 value="{{ row.get('Descrição','') if modo == 'editar' and row else '' }}"
+                 placeholder="ex: Sal proteínado 50kg">
+        </div>
+        <div class="form-group">
+          <label>Valor Total (R$)</label>
+          <input type="text" name="valor"
+                 value="{{ row.get('Valor Total (R$)','') if modo == 'editar' and row else '' }}"
+                 placeholder="ex: 850,00" required id="val-in">
+        </div>
+        <div class="form-group">
+          <label>Qtd Cabeças de Referência</label>
+          <input type="number" name="cabecas"
+                 value="{{ row.get('Qtd Cabeças', estoque) if modo == 'editar' and row else estoque }}"
+                 min="1" id="cab-in">
+          <span class="hint">Número de cabeças no rebanho neste momento</span>
+        </div>
+        <div class="form-group">
+          <label>Custo por Cabeça (R$)</label>
+          <input type="text" id="val-cab" placeholder="Calculado automaticamente" readonly
+                 style="background:var(--cream);color:var(--text-3)">
+        </div>
+        <div class="form-group">
+          <label>Registrado Por</label>
+          <select name="membro" required>
+            <option value="">Selecione...</option>
+            {% for m in MEMBROS %}
+              <option value="{{ m }}"
+                {{ 'selected' if modo == 'editar' and row and row.get('Registrado Por') == m }}>
+                {{ NOMES[m] }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:28px;display:flex;gap:12px">
+        <button type="submit" class="btn btn-primary">
+          {{ '✅ Salvar Alterações' if modo == 'editar' else '✅ Salvar Gasto' }}
+        </button>
+        <a href="{{ url_for('gastos') }}" class="btn btn-outline">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const val = document.getElementById("val-in");
+  const cab = document.getElementById("cab-in");
+  const res = document.getElementById("val-cab");
+  function calc() {
+    const v = parseFloat(val.value.replace(",", ".")) || 0;
+    const c = parseInt(cab.value) || 1;
+    res.value = "R$ " + (v / c).toFixed(4).replace(".", ",");
+  }
+  val.addEventListener("input", calc);
+  cab.addEventListener("input", calc);
+  calc();
+</script>
+{% endblock %}

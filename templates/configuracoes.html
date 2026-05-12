@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+{% block title %}Configurações — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Configurações ⚙️{% endblock %}
+
+{% block content %}
+
+<div class="two-col" style="align-items:start;gap:24px">
+
+  <!-- ── Trocar minha senha ──────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">🔑 Trocar Minha Senha</div>
+    <p style="font-size:13px;color:var(--text-3);margin-bottom:20px">
+      Usuário logado: <strong>{{ session.get('usuario','').capitalize() }}</strong>
+    </p>
+
+    <form method="post" action="{{ url_for('trocar_senha') }}" id="form-senha" autocomplete="off">
+
+      <label style="font-size:12px;font-weight:600;color:#444;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">
+        Senha Atual
+      </label>
+      <div style="position:relative;margin-bottom:14px">
+        <input type="password" name="senha_atual" id="s-atual" required
+               placeholder="••••••••"
+               style="width:100%;padding:10px 38px 10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none"
+               onfocus="this.style.borderColor='#3d7a34'" onblur="this.style.borderColor='#ddd'">
+        <button type="button" onclick="toggleInput('s-atual',this)"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:#999">👁️</button>
+      </div>
+
+      <label style="font-size:12px;font-weight:600;color:#444;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">
+        Nova Senha
+      </label>
+      <div style="position:relative;margin-bottom:6px">
+        <input type="password" name="senha_nova" id="s-nova" required minlength="4"
+               placeholder="mínimo 4 caracteres"
+               oninput="checkForca(this.value);checkMatch()"
+               onkeyup="checkCaps(event,'caps-nova')"
+               onkeydown="checkCaps(event,'caps-nova')"
+               onfocus="checkCaps(event,'caps-nova');this.style.borderColor='#3d7a34'"
+               onblur="this.style.borderColor='#ddd'"
+               style="width:100%;padding:10px 38px 10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none">
+        <button type="button" onclick="toggleInput('s-nova',this)"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:#999">👁️</button>
+      </div>
+
+      <!-- CapsLock nova senha -->
+      <div id="caps-nova" style="display:none;align-items:center;gap:6px;background:#fff8e1;border:1.5px solid #f9a825;border-radius:7px;padding:6px 10px;font-size:12px;color:#7a5100;font-weight:500;margin-bottom:8px">
+        ⚠️ CapsLock ativado
+      </div>
+
+      <!-- Força da senha -->
+      <div id="forca-wrap" style="margin-bottom:14px">
+        <div style="height:5px;background:#eee;border-radius:99px;overflow:hidden">
+          <div id="forca-bar" style="height:100%;width:0%;border-radius:99px;transition:width .3s,background .3s;background:#e53935"></div>
+        </div>
+        <div id="forca-txt" style="font-size:11px;color:#999;margin-top:3px"></div>
+      </div>
+
+      <label style="font-size:12px;font-weight:600;color:#444;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">
+        Confirmar Nova Senha
+      </label>
+      <div style="position:relative;margin-bottom:6px">
+        <input type="password" name="senha_conf" id="s-conf" required
+               placeholder="repita a nova senha"
+               oninput="checkMatch()"
+               onkeyup="checkCaps(event,'caps-conf')"
+               onkeydown="checkCaps(event,'caps-conf')"
+               onfocus="checkCaps(event,'caps-conf');this.style.borderColor='#3d7a34'"
+               onblur="this.style.borderColor='#ddd'"
+               style="width:100%;padding:10px 38px 10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none">
+        <button type="button" onclick="toggleInput('s-conf',this)"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:#999">👁️</button>
+      </div>
+
+      <!-- CapsLock confirmação -->
+      <div id="caps-conf" style="display:none;align-items:center;gap:6px;background:#fff8e1;border:1.5px solid #f9a825;border-radius:7px;padding:6px 10px;font-size:12px;color:#7a5100;font-weight:500;margin-bottom:8px">
+        ⚠️ CapsLock ativado
+      </div>
+
+      <!-- Match indicator -->
+      <div id="match-txt" style="font-size:12px;margin-bottom:16px;min-height:16px"></div>
+
+      <button type="submit" id="btn-trocar"
+              style="width:100%;padding:11px;background:#3d7a34;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .2s">
+        ✅ Salvar Nova Senha
+      </button>
+    </form>
+  </div>
+
+  <!-- ── Gerenciar usuários ─────────────────────────────────────────────── -->
+  <div>
+
+    <!-- Lista de usuários -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">👥 Usuários do Sistema</div>
+      {% for u, info in usuarios.items() %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--cream-dk)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">{{ '👑' if loop.first else '👤' }}</span>
+          <div>
+            <div style="font-weight:600;font-size:14px;color:var(--green-800)">
+              {{ u.capitalize() }}
+              {% if u == session.get('usuario') %}
+                <span style="font-size:10px;background:var(--green-100);color:var(--green-700);border-radius:99px;padding:2px 8px;margin-left:4px;font-weight:500">você</span>
+              {% endif %}
+            </div>
+            <div style="font-size:11px;color:var(--text-3)">{{ info.criado }}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <!-- Resetar senha -->
+          <button onclick="abrirReset('{{ u }}')"
+                  style="padding:5px 10px;background:var(--cream-dk);border:1.5px solid #ccc;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">
+            🔑 Resetar
+          </button>
+          <!-- Excluir (não pode excluir a si mesmo) -->
+          {% if u != session.get('usuario') %}
+          <form method="post" action="{{ url_for('excluir_usuario') }}" style="margin:0"
+                onsubmit="return confirm('Excluir o usuário {{ u.capitalize() }}?')">
+            <input type="hidden" name="usuario" value="{{ u }}">
+            <button type="submit"
+                    style="padding:5px 10px;background:#fff0f0;border:1.5px solid #ffcdd2;border-radius:7px;font-size:12px;cursor:pointer;color:#c62828;font-family:inherit">
+              🗑️ Excluir
+            </button>
+          </form>
+          {% else %}
+          <button disabled
+                  style="padding:5px 10px;background:#f5f5f5;border:1.5px solid #e0e0e0;border-radius:7px;font-size:12px;color:#bbb;cursor:not-allowed;font-family:inherit">
+            🗑️ Excluir
+          </button>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Adicionar novo usuário -->
+    <div class="card">
+      <div class="card-title">➕ Adicionar Usuário</div>
+      <form method="post" action="{{ url_for('adicionar_usuario') }}" autocomplete="off">
+
+        <label style="font-size:12px;font-weight:600;color:#444;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">
+          Nome de Usuário
+        </label>
+        <input type="text" name="usuario" required
+               placeholder="ex: pedro (só letras, sem espaço)"
+               pattern="[a-zA-Z]{2,20}"
+               title="Apenas letras, entre 2 e 20 caracteres"
+               oninput="this.value=this.value.toLowerCase().replace(/[^a-z]/g,'')"
+               style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;margin-bottom:14px;outline:none"
+               onfocus="this.style.borderColor='#3d7a34'" onblur="this.style.borderColor='#ddd'">
+
+        <label style="font-size:12px;font-weight:600;color:#444;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">
+          Senha Inicial
+        </label>
+        <div style="position:relative;margin-bottom:6px">
+          <input type="password" name="senha" id="s-novo" required minlength="4"
+                 placeholder="mínimo 4 caracteres"
+                 onkeyup="checkCaps(event,'caps-novo')"
+                 onkeydown="checkCaps(event,'caps-novo')"
+                 onfocus="checkCaps(event,'caps-novo');this.style.borderColor='#3d7a34'"
+                 onblur="this.style.borderColor='#ddd'"
+                 style="width:100%;padding:10px 38px 10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none">
+          <button type="button" onclick="toggleInput('s-novo',this)"
+                  style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:#999">👁️</button>
+        </div>
+
+        <div id="caps-novo" style="display:none;align-items:center;gap:6px;background:#fff8e1;border:1.5px solid #f9a825;border-radius:7px;padding:6px 10px;font-size:12px;color:#7a5100;font-weight:500;margin-bottom:10px">
+          ⚠️ CapsLock ativado
+        </div>
+
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:14px">
+          O usuário poderá trocar a senha após o primeiro acesso.
+        </div>
+
+        <button type="submit"
+                style="width:100%;padding:11px;background:var(--green-600);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer">
+          ➕ Criar Usuário
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Resetar senha de outro usuário ─────────────────────────────── -->
+<div id="modal-reset" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:32px;max-width:360px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="font-size:18px;font-weight:700;color:var(--green-800);margin-bottom:6px">🔑 Resetar Senha</div>
+    <div style="font-size:13px;color:var(--text-3);margin-bottom:20px">
+      Definir nova senha para: <strong id="modal-nome"></strong>
+    </div>
+    <form method="post" action="{{ url_for('resetar_senha') }}" autocomplete="off">
+      <input type="hidden" name="usuario" id="modal-usuario">
+
+      <div style="position:relative;margin-bottom:6px">
+        <input type="password" name="senha_nova" id="s-reset" required minlength="4"
+               placeholder="nova senha (mínimo 4 caracteres)"
+               onkeyup="checkCaps(event,'caps-reset')"
+               onkeydown="checkCaps(event,'caps-reset')"
+               onfocus="checkCaps(event,'caps-reset')"
+               style="width:100%;padding:10px 38px 10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none"
+               onfocusin="this.style.borderColor='#3d7a34'" onblur="this.style.borderColor='#ddd'">
+        <button type="button" onclick="toggleInput('s-reset',this)"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:#999">👁️</button>
+      </div>
+
+      <div id="caps-reset" style="display:none;align-items:center;gap:6px;background:#fff8e1;border:1.5px solid #f9a825;border-radius:7px;padding:6px 10px;font-size:12px;color:#7a5100;font-weight:500;margin-bottom:12px">
+        ⚠️ CapsLock ativado
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button type="button" onclick="fecharModal()"
+                style="flex:1;padding:10px;background:#f5f5f5;border:1.5px solid #ddd;border-radius:9px;font-size:14px;cursor:pointer;font-family:inherit">
+          Cancelar
+        </button>
+        <button type="submit"
+                style="flex:1;padding:10px;background:#3d7a34;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+          Salvar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── CapsLock universal ────────────────────────────────────────────────────────
+function checkCaps(e, warnId) {
+  if (!e.getModifierState) return;
+  const caps = e.getModifierState("CapsLock");
+  const el = document.getElementById(warnId);
+  if (el) el.style.display = caps ? "flex" : "none";
+}
+
+// ── Mostrar/ocultar senha ────────────────────────────────────────────────────
+function toggleInput(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === "password" ? "text" : "password";
+  btn.textContent = inp.type === "password" ? "👁️" : "🙈";
+  inp.focus();
+}
+
+// ── Força da senha ────────────────────────────────────────────────────────────
+function checkForca(v) {
+  const bar = document.getElementById("forca-bar");
+  const txt = document.getElementById("forca-txt");
+  let score = 0;
+  if (v.length >= 4)  score++;
+  if (v.length >= 8)  score++;
+  if (/[A-Z]/.test(v)) score++;
+  if (/[0-9]/.test(v)) score++;
+  if (/[^A-Za-z0-9]/.test(v)) score++;
+
+  const niveis = [
+    { w: "0%",   c: "#e0e0e0", t: "" },
+    { w: "25%",  c: "#e53935", t: "Fraca" },
+    { w: "50%",  c: "#fb8c00", t: "Razoável" },
+    { w: "75%",  c: "#fdd835", t: "Boa" },
+    { w: "90%",  c: "#43a047", t: "Forte" },
+    { w: "100%", c: "#1b5e20", t: "Muito forte 💪" },
+  ];
+  const n = niveis[Math.min(score, 5)];
+  bar.style.width = n.w;
+  bar.style.background = n.c;
+  txt.textContent = n.t;
+  txt.style.color = n.c;
+}
+
+// ── Conferir se senhas batem ─────────────────────────────────────────────────
+function checkMatch() {
+  const a = document.getElementById("s-nova").value;
+  const b = document.getElementById("s-conf").value;
+  const el = document.getElementById("match-txt");
+  if (!b) { el.textContent = ""; return; }
+  if (a === b) {
+    el.textContent = "✅ Senhas conferem";
+    el.style.color = "#2e7d32";
+  } else {
+    el.textContent = "❌ Senhas não coincidem";
+    el.style.color = "#c62828";
+  }
+}
+
+// ── Modal resetar senha ───────────────────────────────────────────────────────
+function abrirReset(usuario) {
+  document.getElementById("modal-usuario").value = usuario;
+  document.getElementById("modal-nome").textContent = usuario.charAt(0).toUpperCase() + usuario.slice(1);
+  document.getElementById("s-reset").value = "";
+  document.getElementById("caps-reset").style.display = "none";
+  const modal = document.getElementById("modal-reset");
+  modal.style.display = "flex";
+  setTimeout(() => document.getElementById("s-reset").focus(), 100);
+}
+function fecharModal() {
+  document.getElementById("modal-reset").style.display = "none";
+}
+// Fechar ao clicar fora
+document.getElementById("modal-reset").addEventListener("click", function(e) {
+  if (e.target === this) fecharModal();
+});
+
+// ── Validar antes de submeter troca de senha ─────────────────────────────────
+document.getElementById("form-senha").addEventListener("submit", function(e) {
+  const nova  = document.getElementById("s-nova").value;
+  const conf  = document.getElementById("s-conf").value;
+  if (nova !== conf) {
+    e.preventDefault();
+    alert("As senhas não coincidem. Verifique e tente novamente.");
+  }
+});
+</script>
+{% endblock %}

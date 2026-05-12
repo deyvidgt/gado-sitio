@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Novo Manejo — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Novo Manejo 🩺{% endblock %}
+
+{% block content %}
+<div style="max-width:680px">
+  <div class="form-card">
+    <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--green-700);margin-bottom:24px">
+      Registro de Manejo
+    </h2>
+    <form method="post">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" name="data" value="{{ hoje }}" required>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Manejo</label>
+          <select name="tipo" required>
+            <option value="">Selecione...</option>
+            {% for t in TIPOS %}
+              <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Qtd de Cabeças</label>
+          <input type="number" name="cabecas" min="0" value="{{ estoque }}" required>
+        </div>
+        <div class="form-group">
+          <label>Responsável</label>
+          <select name="responsavel" required>
+            <option value="">Selecione...</option>
+            {% for m in MEMBROS %}
+              <option value="{{ m }}">{{ NOMES[m] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Descrição / Observações</label>
+          <textarea name="descricao" rows="3" placeholder="Detalhes do manejo..."></textarea>
+        </div>
+      </div>
+      <div style="margin-top:28px;display:flex;gap:12px">
+        <button type="submit" class="btn btn-primary">✅ Salvar Manejo</button>
+        <a href="{{ url_for('manejo') }}" class="btn btn-outline">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

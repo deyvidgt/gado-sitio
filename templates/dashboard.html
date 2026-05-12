@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Alertas -->
+{% if alertas %}
+<div style="margin-bottom:20px">
+  {% for a in alertas %}
+    <div class="alert-strip {{ a.nivel }}">
+      {% if a.nivel == 'danger' %}🚨{% elif a.nivel == 'warning' %}⚠️{% else %}💡{% endif %}
+      {{ a.msg }}
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Métricas principais -->
+<div class="metrics">
+  <div class="metric">
+    <div class="metric-icon">🐄</div>
+    <div class="metric-label">Estoque Atual</div>
+    <div class="metric-val">{{ r.estoque }} cab.</div>
+    <div class="metric-sub">{{ r.cab_comp }} compradas / {{ r.cab_vend }} vendidas</div>
+  </div>
+  <div class="metric gold">
+    <div class="metric-icon">💲</div>
+    <div class="metric-label">CTCab (Custo/Cabeça)</div>
+    <div class="metric-val">{{ r.ctcab | brl }}</div>
+    <div class="metric-sub">CMP {{ r.cmp | brl }} + Gastos {{ r.gpcab | brl }}</div>
+  </div>
+  <div class="metric {% if r.resultado_realizado >= 0 %}{% else %}red{% endif %}">
+    <div class="metric-icon">📈</div>
+    <div class="metric-label">Resultado Realizado</div>
+    <div class="metric-val {{ 'pos' if r.resultado_realizado >= 0 else 'neg' }}">
+      {{ r.resultado_realizado | brl }}
+    </div>
+    <div class="metric-sub">ROI {{ r.roi_realizado | pct }}</div>
+  </div>
+  <div class="metric blue">
+    <div class="metric-icon">🎯</div>
+    <div class="metric-label">Break-even do Estoque</div>
+    <div class="metric-val">{{ r.break_even | brl }}</div>
+    <div class="metric-sub">Preço mín. por cabeça p/ lucrar</div>
+  </div>
+  <div class="metric">
+    <div class="metric-icon">🎫</div>
+    <div class="metric-label">Ticket Médio Venda</div>
+    <div class="metric-val">{{ r.ticket_medio | brl }}</div>
+    <div class="metric-sub">Margem bruta {{ r.margem_bruta | pct }}</div>
+  </div>
+  <div class="metric gold">
+    <div class="metric-icon">🏦</div>
+    <div class="metric-label">Capital Imobilizado</div>
+    <div class="metric-val">{{ r.capital_imobilizado | brl }}</div>
+    <div class="metric-sub">{{ r.estoque }} cab. × {{ r.ctcab | brl }}</div>
+  </div>
+</div>
+
+
+<!-- Estoque por Membro -->
+<div class="three-col" style="margin-bottom:24px">
+  {% for m in MEMBROS %}
+  <div class="member-card" style="border-top-color:var(--{% if loop.index==1 %}green-500{% elif loop.index==2 %}gold{% else %}info{% endif %})">
+    <h3 style="font-size:15px;margin-bottom:12px">{{ EMOJIS[m] }} {{ NOMES[m] }}</h3>
+    <div class="kv">
+      <span class="kv-key">Cabeças em estoque</span>
+      <span style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green-700)">
+        {{ estoque_membro[m] }}
+      </span>
+    </div>
+    {% set mr = membros[m] %}
+    <div class="kv"><span class="kv-key">Já vendeu</span><span>{{ mr.cabecas }} cab.</span></div>
+    <div class="kv">
+      <span class="kv-key">Resultado realizado</span>
+      <span class="{{ 'pos' if mr.resultado >= 0 else 'neg' }}">{{ mr.resultado | brl }}</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Cotações de Mercado — Scot Consultoria + IMEA -->
+<div class="card" style="margin-bottom:24px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+    <div class="card-title" style="margin-bottom:0">🌐 Cotações de Mercado</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="buscarCotacaoScot()" class="btn btn-outline btn-sm" id="btn-cotacao-scot">
+        🔄 Scot (Triângulo MG)
+      </button>
+      <button onclick="buscarCotacaoImea()" class="btn btn-outline btn-sm" id="btn-cotacao-imea">
+        🔄 IMEA (Sudeste)
+      </button>
+      <button onclick="buscarAmbas()" class="btn btn-sm" id="btn-cotacao-ambas"
+              style="background:var(--green-600);color:#fff;border:none">
+        🔄 Buscar Ambas
+      </button>
+    </div>
+  </div>
+
+  <!-- Break-even referência -->
+  <div id="cotacao-breakeven" style="display:none;background:var(--cream-dk);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px">
+    <strong>📌 Break-even do rebanho:</strong> <span id="val-breakeven">—</span>/cabeça &nbsp;|&nbsp;
+    <strong>CTCab:</strong> <span id="val-ctcab">—</span>/cabeça &nbsp;
+    <span style="color:var(--text-3)">(mínimo p/ não ter prejuízo)</span>
+  </div>
+
+  <div class="two-col" style="gap:16px">
+    <!-- Scot Consultoria -->
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
+        📊 Scot Consultoria — Novilha Triângulo Mineiro
+      </div>
+      <div id="cotacao-scot-wrap">
+        <p style="font-size:13px;color:var(--text-3)">Clique em "Buscar Ambas" ou "Scot" para carregar.</p>
+      </div>
+    </div>
+
+    <!-- IMEA -->
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
+        📋 IMEA — Reposição Nelore Sudeste
+      </div>
+      <div id="cotacao-imea-wrap">
+        <p style="font-size:13px;color:var(--text-3)">Clique em "Buscar Ambas" ou "IMEA" para carregar.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="cotacao-footer" style="display:none;margin-top:12px;font-size:11px;color:var(--text-3);border-top:1px solid var(--cream-dk);padding-top:10px">
+    <span id="cotacao-atualizado"></span>
+    &nbsp;·&nbsp; Preços para referência — não constituem oferta de compra ou venda.
+  </div>
+</div>
+
+<!-- Charts + Recentes -->
+<div class="two-col" style="margin-bottom:24px">
+  <div class="card">
+    <div class="card-title">💰 Fluxo de Caixa</div>
+    <canvas id="chartFluxo" height="200"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-title">👨‍👩‍👦 Resultado por Membro</div>
+    <canvas id="chartMembros" height="200"></canvas>
+  </div>
+</div>
+
+<!-- Resumo financeiro + Atividade recente -->
+<div class="two-col">
+  <div class="card">
+    <div class="card-title">📊 Financeiro Geral</div>
+    <div class="kv"><span class="kv-key">Total Compras</span><span>{{ r.total_comp | brl }}</span></div>
+    <div class="kv"><span class="kv-key">Total Gastos</span><span>{{ r.total_gast | brl }}</span></div>
+    <div class="kv"><span class="kv-key">Custo Total</span><span style="font-weight:600">{{ r.total_custo | brl }}</span></div>
+    <div class="kv"><span class="kv-key">Receita (Vendas)</span><span>{{ r.total_vend | brl }}</span></div>
+    <div class="kv">
+      <span class="kv-key">Resultado Realizado</span>
+      <span class="{{ 'pos' if r.resultado_realizado >= 0 else 'neg' }}">{{ r.resultado_realizado | brl }}</span>
+    </div>
+    <div class="kv">
+      <span class="kv-key">Resultado + Estoque</span>
+      <span class="{{ 'pos' if r.resultado_total >= 0 else 'neg' }}">{{ r.resultado_total | brl }}</span>
+    </div>
+    <div class="kv"><span class="kv-key">ROI Total</span><span>{{ r.roi_total | pct }}</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🕐 Atividade Recente</div>
+    {% if recentes %}
+      {% for rec in recentes %}
+        <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--cream-dk)">
+          <span class="badge badge-{{ rec.cor }}">{{ rec.tipo }}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ rec.desc or '—' }}</div>
+            <div style="font-size:11px;color:var(--text-3)">{{ rec.data }}</div>
+          </div>
+          <span style="font-size:13px;font-weight:600;color:var(--green-700)">{{ rec.val }}</span>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p style="color:var(--text-3);font-size:13px">Nenhuma atividade registrada ainda.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadCharts() {
+  const gFluxo   = await fetch("/api/fluxo").then(r => r.json());
+  const gMembros = await fetch("/api/membros").then(r => r.json());
+
+  // Chart Fluxo de Caixa
+  new Chart(document.getElementById("chartFluxo"), {
+    type: "bar",
+    data: {
+      labels: gFluxo.labels,
+      datasets: [
+        { label: "Entradas", data: gFluxo.entradas, backgroundColor: "rgba(61,122,52,.75)", borderRadius: 4 },
+        { label: "Saídas",   data: gFluxo.saidas,   backgroundColor: "rgba(192,57,43,.65)", borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { font: { family: "DM Sans", size: 12 } } } },
+      scales: {
+        y: { ticks: { callback: v => "R$ " + v.toLocaleString("pt-BR") } },
+        x: { ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+
+  // Chart Membros
+  new Chart(document.getElementById("chartMembros"), {
+    type: "bar",
+    data: {
+      labels: gMembros.nomes,
+      datasets: [
+        { label: "Receita",   data: gMembros.receitas,   backgroundColor: "rgba(61,122,52,.75)", borderRadius: 4 },
+        { label: "Custo",     data: gMembros.custos,     backgroundColor: "rgba(201,151,42,.75)", borderRadius: 4 },
+        { label: "Resultado", data: gMembros.resultados, backgroundColor: "rgba(41,128,185,.75)",  borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { font: { family: "DM Sans", size: 12 } } } },
+      scales: { y: { ticks: { callback: v => "R$ " + v.toLocaleString("pt-BR") } } }
+    }
+  });
+}
+loadCharts();
+
+// ── Cotações ──────────────────────────────────────────────────────────────────
+
+function brl(v) {
+  if (!v && v !== 0) return "—";
+  return "R$ " + Number(v).toLocaleString("pt-BR", {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function pct(v, prefix=true) {
+  if (!v && v !== 0) return "—";
+  const s = Number(v).toFixed(1).replace(".", ",");
+  return (prefix && v > 0 ? "+" : "") + s + "%";
+}
+
+async function buscarCotacaoScot() {
+  const btn  = document.getElementById("btn-cotacao-scot");
+  const wrap = document.getElementById("cotacao-scot-wrap");
+  btn.disabled = true; btn.textContent = "⏳ Buscando...";
+  wrap.innerHTML = '<p style="font-size:13px;color:var(--text-3)">🔎 Buscando na Scot Consultoria...</p>';
+  try {
+    const d = await fetch("/api/cotacao-scot").then(r => r.json());
+    if (d.ok && d.cotacoes && d.cotacoes.length > 0) {
+      let html = '';
+      d.cotacoes.forEach(c => {
+        const preco = c.preco ? brl(c.preco) + "/@" : c.raw;
+        html += `
+          <div style="background:var(--green-50);border:1.5px solid var(--green-100);border-radius:10px;padding:14px;margin-bottom:10px">
+            <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;margin-bottom:4px">📍 ${c.regiao}</div>
+            <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--green-700)">${preco}</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:4px">Novilha — preço de venda por arroba</div>
+          </div>`;
+      });
+      html += `<p style="font-size:11px;color:var(--text-3);margin-top:6px">Fonte: ${d.fonte} · ${d.atualizado}</p>`;
+      wrap.innerHTML = html;
+    } else if (d.ok) {
+      wrap.innerHTML = '<p style="font-size:13px;color:var(--warn)">⚠️ Triângulo Mineiro não encontrado. <a href="https://www.scotconsultoria.com.br/cotacoes/novilha/" target="_blank">Ver no site →</a></p>';
+    } else {
+      wrap.innerHTML = `<p style="font-size:13px;color:var(--danger)">❌ ${d.erro || "Erro desconhecido"}<br><a href="https://www.scotconsultoria.com.br/cotacoes/novilha/" target="_blank" style="color:var(--green-600)">Ver no site da Scot →</a></p>`;
+    }
+  } catch(e) {
+    wrap.innerHTML = `<p style="font-size:13px;color:var(--danger)">❌ Erro de conexão: ${e.message}</p>`;
+  }
+  btn.disabled = false; btn.textContent = "🔄 Scot (Triângulo MG)";
+}
+
+async function buscarCotacaoImea() {
+  const btn  = document.getElementById("btn-cotacao-imea");
+  const wrap = document.getElementById("cotacao-imea-wrap");
+  btn.disabled = true; btn.textContent = "⏳ Buscando...";
+  wrap.innerHTML = '<p style="font-size:13px;color:var(--text-3)">🔎 Buscando no IMEA...</p>';
+  try {
+    const d = await fetch("/api/cotacao-imea").then(r => r.json());
+
+    // Mostrar break-even de referência
+    if (d.break_even > 0 || d.ctcab > 0) {
+      document.getElementById("val-breakeven").textContent = brl(d.break_even);
+      document.getElementById("val-ctcab").textContent     = brl(d.ctcab);
+      document.getElementById("cotacao-breakeven").style.display = "block";
+    }
+
+    if (d.ok && d.cotacoes && d.cotacoes.length > 0) {
+      let html = '';
+      d.cotacoes.forEach(c => {
+        // Indicador sem preço (não encontrado)
+        if (c.preco_cab === null || c.preco_cab === undefined) {
+          html += `
+            <div style="background:var(--cream-dk);border:1.5px solid #ddd;border-radius:10px;padding:14px;margin-bottom:10px;opacity:.7">
+              <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;margin-bottom:2px">
+                ${c.emoji} ${c.nome}
+              </div>
+              <div style="font-size:12px;color:var(--text-3)">— não encontrado na página —</div>
+            </div>`;
+          return;
+        }
+
+        const corBorda = c.lucra ? "var(--green-200)" : "var(--danger-light, #FFCDD2)";
+        const corFundo = c.lucra ? "var(--green-50)"  : "#FFF8F8";
+        const sinalIcon = c.lucra ? "✅" : "❌";
+        const vsText = c.vs_breakeven >= 0
+          ? `<span style="color:var(--green-700);font-weight:600">+${brl(c.vs_breakeven)} acima do break-even</span>`
+          : `<span style="color:var(--danger,#c62828);font-weight:600">${brl(c.vs_breakeven)} abaixo do break-even</span>`;
+        const varHtml = c.variacao !== null && c.variacao !== undefined
+          ? `<span style="font-size:11px;color:${c.variacao>=0?'var(--green-700)':'#c62828'};margin-left:6px">${pct(c.variacao)}</span>`
+          : '';
+
+        html += `
+          <div style="background:${corFundo};border:1.5px solid ${corBorda};border-radius:10px;padding:14px;margin-bottom:10px">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+              <div>
+                <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;margin-bottom:2px">
+                  ${c.emoji} ${c.nome}
+                </div>
+                <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">
+                  📍 ${c.regiao} · ${c.kg}kg · ${c.arrobas}@
+                </div>
+                <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--green-700)">
+                  ${brl(c.preco_cab)}<span style="font-size:13px;font-weight:400;font-family:inherit">/cab.</span>${varHtml}
+                </div>
+                <div style="font-size:12px;color:var(--text-2);margin-top:2px">
+                  ≈ ${brl(c.preco_arroba)}/arroba
+                </div>
+              </div>
+              <div style="text-align:right;min-width:100px">
+                <div style="font-size:20px;margin-bottom:4px">${sinalIcon}</div>
+                <div style="font-size:11px;line-height:1.5">${vsText}</div>
+                <div style="font-size:11px;color:var(--text-3);margin-top:4px">${pct(c.vs_breakeven_pct)} vs break-even</div>
+              </div>
+            </div>
+          </div>`;
+      });
+
+      html += `
+        <div style="font-size:11px;color:var(--text-3);padding:8px 0;border-top:1px solid var(--cream-dk);margin-top:4px">
+          ${d.referencia}<br>
+          Fonte: ${d.fonte}
+        </div>`;
+      wrap.innerHTML = html;
+
+      document.getElementById("cotacao-atualizado").textContent = "IMEA atualizado: " + d.atualizado;
+      document.getElementById("cotacao-footer").style.display = "block";
+    } else {
+      wrap.innerHTML = `
+        <p style="font-size:13px;color:var(--warn)">
+          ⚠️ ${d.erro || "Cotações IMEA indisponíveis no momento."}<br>
+          <a href="https://www.imea.com.br/imea-site/indicador-boi" target="_blank" style="color:var(--green-600)">
+            Ver no site do IMEA →
+          </a>
+        </p>`;
+    }
+  } catch(e) {
+    wrap.innerHTML = `
+      <p style="font-size:13px;color:var(--danger)">
+        ❌ Erro de conexão: ${e.message}<br>
+        <a href="https://www.imea.com.br/imea-site/indicador-boi" target="_blank" style="color:var(--green-600)">
+          Abrir IMEA →
+        </a>
+      </p>`;
+  }
+  btn.disabled = false; btn.textContent = "🔄 IMEA (Sudeste)";
+}
+
+async function buscarAmbas() {
+  const btn = document.getElementById("btn-cotacao-ambas");
+  btn.disabled = true; btn.textContent = "⏳ Buscando...";
+  await Promise.all([buscarCotacaoScot(), buscarCotacaoImea()]);
+  btn.disabled = false; btn.textContent = "🔄 Buscar Ambas";
+}
+
+</script>
+{% endblock %}

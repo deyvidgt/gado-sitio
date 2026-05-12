@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Sítio Santo Antonio — Sistema de Gestão de Gado -->
+  <!-- Fundo arredondado verde escuro -->
+  <rect width="512" height="512" rx="102" fill="#1a3a1f"/>
+  <!-- Sol dourado -->
+  <circle cx="256" cy="168" r="68" fill="#c9972a" opacity="0.2"/>
+  <!-- Corpo da vaca -->
+  <ellipse cx="256" cy="332" rx="132" ry="90" fill="#f8f4ee"/>
+  <!-- Cabeça -->
+  <ellipse cx="256" cy="196" rx="76" ry="68" fill="#f8f4ee"/>
+  <!-- Focinho -->
+  <ellipse cx="256" cy="244" rx="42" ry="26" fill="#e8ddd0"/>
+  <circle cx="242" cy="244" r="8" fill="#c9a080" opacity="0.55"/>
+  <circle cx="270" cy="244" r="8" fill="#c9a080" opacity="0.55"/>
+  <!-- Olhos -->
+  <circle cx="222" cy="186" r="14" fill="#1a3a1f"/>
+  <circle cx="290" cy="186" r="14" fill="#1a3a1f"/>
+  <circle cx="226" cy="181" r="4" fill="white"/>
+  <circle cx="294" cy="181" r="4" fill="white"/>
+  <!-- Orelhas -->
+  <ellipse cx="176" cy="186" rx="26" ry="36" fill="#f8f4ee" transform="rotate(-18,176,186)"/>
+  <ellipse cx="336" cy="186" rx="26" ry="36" fill="#f8f4ee" transform="rotate(18,336,186)"/>
+  <ellipse cx="176" cy="186" rx="15" ry="22" fill="#f5c5b0" opacity="0.45" transform="rotate(-18,176,186)"/>
+  <ellipse cx="336" cy="186" rx="15" ry="22" fill="#f5c5b0" opacity="0.45" transform="rotate(18,336,186)"/>
+  <!-- Chifres dourados -->
+  <path d="M188 158 Q154 106 170 84" stroke="#c9972a" stroke-width="14" fill="none" stroke-linecap="round"/>
+  <path d="M324 158 Q358 106 342 84" stroke="#c9972a" stroke-width="14" fill="none" stroke-linecap="round"/>
+  <!-- Manchas no corpo -->
+  <ellipse cx="210" cy="316" rx="38" ry="26" fill="#3d7a34" opacity="0.3" transform="rotate(-12,210,316)"/>
+  <ellipse cx="306" cy="348" rx="30" ry="20" fill="#3d7a34" opacity="0.22" transform="rotate(10,306,348)"/>
+  <!-- Pernas -->
+  <rect x="170" y="406" width="30" height="76" rx="15" fill="#f0ebe4"/>
+  <rect x="222" y="412" width="30" height="70" rx="15" fill="#f0ebe4"/>
+  <rect x="260" y="412" width="30" height="70" rx="15" fill="#f0ebe4"/>
+  <rect x="312" y="406" width="30" height="76" rx="15" fill="#f0ebe4"/>
+  <!-- Cascos -->
+  <rect x="170" y="470" width="30" height="20" rx="8" fill="#1a3a1f" opacity="0.4"/>
+  <rect x="222" y="472" width="30" height="18" rx="8" fill="#1a3a1f" opacity="0.4"/>
+  <rect x="260" y="472" width="30" height="18" rx="8" fill="#1a3a1f" opacity="0.4"/>
+  <rect x="312" y="470" width="30" height="20" rx="8" fill="#1a3a1f" opacity="0.4"/>
+  <!-- Cauda -->
+  <path d="M388 298 Q428 268 422 308 Q416 348 446 358" stroke="#f8f4ee" stroke-width="13" fill="none" stroke-linecap="round"/>
+  <ellipse cx="452" cy="370" rx="18" ry="26" fill="#c9972a" opacity="0.65"/>
+  <!-- Faixa de grama -->
+  <rect x="0" y="480" width="512" height="32" rx="0" fill="#2d5a27" opacity="0.55"/>
+  <rect x="0" y="480" width="512" height="10" rx="0" fill="#52a044" opacity="0.35"/>
+  <!-- Canto redondo inferior -->
+  <rect x="0" y="476" width="512" height="102" rx="102" fill="#1a3a1f"/>
+  <!-- Texto SSA -->
+  <text x="256" y="508" text-anchor="middle" font-family="Georgia,serif" font-size="34" font-weight="700" fill="#c9972a" letter-spacing="8">SSA</text>
+</svg>

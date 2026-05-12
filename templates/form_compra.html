@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}{% if modo == "editar" %}Editar Compra{% else %}Nova Compra{% endif %} — Sítio Santo Antonio{% endblock %}
+{% block page_title %}{% if modo == "editar" %}Editar Compra ✏️{% else %}Nova Compra 🛒{% endif %}{% endblock %}
+
+{% block content %}
+<div style="max-width:720px">
+  {% if cmp_atual > 0 %}
+  <div class="alert-strip info" style="margin-bottom:20px">
+    💡 CMP atual: <strong>{{ cmp_atual | brl }}/cabeça</strong>{% if modo == "nova" %} — esta compra vai atualizar o custo médio.{% endif %}
+  </div>
+  {% endif %}
+
+  <div class="form-card" style="max-width:720px">
+    <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--green-700);margin-bottom:24px">
+      {% if modo == "editar" %}Editar registro de compra{% else %}Registrar Compra de Gado{% endif %}
+    </h2>
+
+    <form method="post">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Data da Compra</label>
+          <input type="date" name="data" value="{{ row.data_input if row else hoje }}" required>
+        </div>
+        <div class="form-group">
+          <label>Qtd Total de Cabeças</label>
+          <input type="number" name="cabecas" min="1" id="cab-input"
+                 value="{{ row["Qtd Cabeças"] | int if row else "" }}" placeholder="ex: 15" required>
+        </div>
+        <div class="form-group">
+          <label>Valor Total (R$)</label>
+          <input type="text" name="valor" id="val-input"
+                 value="{{ row["Valor Total (R$)"] | brl | replace("R$ ","") if row else "" }}"
+                 placeholder="ex: 31500,00" required>
+        </div>
+        <div class="form-group">
+          <label>Valor por Cabeça (calculado)</label>
+          <input type="text" id="val-cab" placeholder="Automático" readonly
+                 style="background:var(--cream);color:var(--text-3)"
+                 value="{{ row["Valor/Cabeça (R$)"] | brl if row else "" }}">
+        </div>
+      </div>
+
+      <!-- Distribuição por membro -->
+      <div style="margin:20px 0 8px">
+        <label style="font-size:12px;font-weight:600;text-transform:uppercase;color:var(--text-3)">
+          Cabeças por membro
+        </label>
+        <p style="font-size:12px;color:var(--text-3);margin-top:4px">
+          Se deixar em branco, será dividido igualmente. A soma deve ser igual ao total.
+        </p>
+      </div>
+      <div class="member-row" style="margin-bottom:20px">
+        <div class="member-box">
+          <h4>👩 Geane</h4>
+          <div class="form-group">
+            <label>Cabeças</label>
+            <input type="number" name="qtd_mae" id="qtd-mae" min="0" class="qtd-inp"
+                   value="{{ row["Qtd Geane"] | int if row and row.get("Qtd Geane") else 0 }}">
+          </div>
+        </div>
+        <div class="member-box">
+          <h4>👦 Deyvid</h4>
+          <div class="form-group">
+            <label>Cabeças</label>
+            <input type="number" name="qtd_deyvid" id="qtd-deyvid" min="0" class="qtd-inp"
+                   value="{{ row["Qtd Deyvid"] | int if row and row.get("Qtd Deyvid") else 0 }}">
+          </div>
+        </div>
+        <div class="member-box">
+          <h4>👦 Nilson</h4>
+          <div class="form-group">
+            <label>Cabeças</label>
+            <input type="number" name="qtd_nilson" id="qtd-nilson" min="0" class="qtd-inp"
+                   value="{{ row["Qtd Nilson"] | int if row and row.get("Qtd Nilson") else 0 }}">
+          </div>
+        </div>
+      </div>
+      <div id="soma-aviso" style="display:none;font-size:12.5px;color:var(--warn);margin-bottom:12px">
+        ⚠️ Soma (<span id="soma-val">0</span>) ≠ total (<span id="tot-val">0</span>)
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Descrição</label>
+          <input type="text" name="descricao"
+                 value="{{ row["Descrição"] if row else "" }}"
+                 placeholder="ex: Nelore Garrotes 2 anos">
+        </div>
+        <div class="form-group full">
+          <label>Registrado Por</label>
+          <select name="membro" required>
+            <option value="">Selecione...</option>
+            {% for m in MEMBROS %}
+              <option value="{{ m }}" {% if row and row.get("Registrado Por") == m %}selected{% endif %}>
+                {{ NOMES[m] }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:28px;display:flex;gap:12px">
+        <button type="submit" class="btn btn-primary">
+          {% if modo == "editar" %}💾 Salvar Alterações{% else %}✅ Salvar Compra{% endif %}
+        </button>
+        <a href="{{ url_for("compras") }}" class="btn btn-outline">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const cab = document.getElementById("cab-input");
+  const val = document.getElementById("val-input");
+  const res = document.getElementById("val-cab");
+
+  function calcCab() {
+    const c = parseInt(cab.value) || 0;
+    const v = parseFloat((val.value||"").replace(",",".")) || 0;
+    res.value = c > 0 ? "R$ " + (v/c).toFixed(2).replace(".",",") : "";
+    checkSoma();
+  }
+
+  function checkSoma() {
+    const tot = parseInt(cab.value) || 0;
+    let soma = 0;
+    document.querySelectorAll(".qtd-inp").forEach(el => soma += parseInt(el.value)||0);
+    document.getElementById("soma-val").textContent = soma;
+    document.getElementById("tot-val").textContent = tot;
+    document.getElementById("soma-aviso").style.display = (soma > 0 && soma !== tot) ? "block" : "none";
+  }
+
+  cab.addEventListener("input", calcCab);
+  val.addEventListener("input", calcCab);
+  document.querySelectorAll(".qtd-inp").forEach(el => el.addEventListener("input", checkSoma));
+</script>
+{% endblock %}

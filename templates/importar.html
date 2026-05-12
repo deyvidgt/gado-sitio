@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Importar Excel — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Importar Excel Antigo 📥{% endblock %}
+
+{% block content %}
+<div style="max-width:700px">
+
+{% if concluido %}
+  <!-- Resultado da importação -->
+  <div style="background:var(--green-100);border:1px solid var(--green-300);border-radius:var(--radius);padding:24px;margin-bottom:24px;display:flex;align-items:center;gap:16px">
+    <span style="font-size:40px">✅</span>
+    <div>
+      <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--green-700);margin-bottom:6px">
+        Importação concluída com sucesso!
+      </div>
+      <div style="font-size:13.5px;color:var(--green-700)">
+        Anos importados: <strong>{{ anos | join(", ") }}</strong><br>
+        <strong>{{ nc }}</strong> compras · <strong>{{ ng }}</strong> gastos · <strong>{{ nv }}</strong> vendas
+      </div>
+    </div>
+  </div>
+
+  {% if detalhes %}
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">📋 Detalhes da Importação</div>
+    {% for d in detalhes %}
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid var(--cream-dk)">
+      <span class="badge
+        {%- if d.tipo == 'compra' %} badge-compra
+        {%- elif d.tipo == 'gasto' %} badge-gasto
+        {%- else %} badge-venda{% endif %}">
+        {{ d.ano }}
+      </span>
+      <span style="font-size:13px;color:var(--text-2)">{{ d.msg }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div style="display:flex;gap:12px">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">🏠 Ver Dashboard</a>
+    <a href="{{ url_for('importar') }}" class="btn btn-outline">↩ Importar outro arquivo</a>
+  </div>
+
+{% else %}
+  <!-- Formulário de importação -->
+  <div class="alert-strip info" style="margin-bottom:20px">
+    💡 Esta função lê planilhas no <strong>formato antigo</strong> do Sítio Santo Antonio — abas nomeadas por ano (2024, 2025, 2026…). O arquivo <code>gado.xlsx</code> original é compatível.
+  </div>
+
+  <div class="form-card">
+    <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--green-700);margin-bottom:8px">
+      Importar planilha antiga
+    </h2>
+    <p style="font-size:13px;color:var(--text-3);margin-bottom:24px">
+      Selecione o arquivo Excel com os dados históricos. Os registros serão adicionados ao sistema sem apagar os existentes.
+    </p>
+
+    <form method="post" enctype="multipart/form-data">
+      <div class="form-group" style="margin-bottom:24px">
+        <label>Arquivo Excel (.xlsx)</label>
+        <input type="file" name="arquivo" accept=".xlsx" required
+               style="padding:10px;cursor:pointer">
+        <span class="hint">Formatos aceitos: .xlsx com abas por ano (ex: 2024, 2025, 2026)</span>
+      </div>
+
+      <div style="background:var(--cream);border-radius:10px;padding:16px;margin-bottom:24px;font-size:13px;color:var(--text-2)">
+        <div style="font-weight:600;margin-bottom:8px;color:var(--green-700)">📐 Estrutura esperada por aba de ano:</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div>· Célula B1 — quantidade de cabeças compradas</div>
+          <div>· Célula K1 — valor total da compra</div>
+          <div>· Coluna G — valores de cada gasto</div>
+          <div>· Coluna H — descrição de cada gasto</div>
+          <div>· Célula P2/P3/P4 — valores Mae/Deyvid/Nilson</div>
+          <div>· Célula T2/T3/T4 — qtd cabeças por membro</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px">
+        <button type="submit" class="btn btn-primary">⬆️ Importar Arquivo</button>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Cancelar</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Dica de backup -->
+  <div style="margin-top:16px;padding:14px 18px;background:var(--gold-lt);border:1px solid var(--gold);border-radius:10px;font-size:13px;color:#6b4a00">
+    <strong>⚠️ Recomendado:</strong> Faça um backup antes de importar — use o botão "💾 Fazer Backup" na barra lateral.
+  </div>
+{% endif %}
+
+</div>
+{% endblock %}
