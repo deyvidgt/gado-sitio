@@ -1498,6 +1498,513 @@ def resetar_senha():
     return redirect(url_for("configuracoes"))
 
 
+# ════════════════════════════════════════════════════════════════════
+#  VISITAS AO SÍTIO
+# ════════════════════════════════════════════════════════════════════
+
+def _gerar_sugestoes_visita(f: dict, estoque_esperado: int) -> str:
+    """Gera sugestões automáticas com base nos dados da visita."""
+    sug = []
+
+    gado_contado = int(f.get("gado_contado") or 0)
+    if gado_contado > 0 and estoque_esperado > 0:
+        if gado_contado < estoque_esperado:
+            falt = estoque_esperado - gado_contado
+            sug.append(f"⚠️ ALERTA: {falt} cabeça(s) não localizada(s)! Verificar pastagens vizinhas, cercas e comunicar a família.")
+        elif gado_contado > estoque_esperado:
+            sug.append(f"ℹ️ {gado_contado - estoque_esperado} cabeça(s) a mais que o esperado — possível animal de terceiro ou registro desatualizado.")
+
+    sal = f.get("sal_racao", "OK")
+    if sal == "Baixo":
+        sug.append("🧂 Sal/Ração baixo — reabastecer nos próximos 2 a 3 dias.")
+    elif sal == "Vazio":
+        sug.append("🚨 Sal/Ração ESGOTADO — abastecer com urgência! Gado sem mineral compromete saúde e ganho de peso.")
+
+    prot = f.get("proteinado", "OK")
+    if prot == "Baixo":
+        sug.append("🟡 Proteinado baixo — repor em breve para manter desempenho do rebanho.")
+    elif prot == "Vazio":
+        sug.append("🚨 Proteinado ESGOTADO — sem suplementação proteica o gado perde peso rapidamente. Comprar urgente!")
+
+    mato = f.get("mato", "Limpo")
+    if mato == "Precisa Capinar":
+        sug.append("🌿 Vegetação crescida — programar roçagem/capina nos próximos dias.")
+    elif mato == "Muito Mato":
+        sug.append("🌿 Mato excessivo — roçagem urgente! Reduz área de pastagem, esconde cobras e pode danificar cercas.")
+
+    grama = f.get("grama", "Boa")
+    if grama == "Regular":
+        sug.append("🌱 Pastagem regular — considerar rotação de pasto ou adubação para recuperação.")
+    elif grama == "Escassa":
+        sug.append("🚨 Pastagem escassa — rotacionar pasto IMEDIATAMENTE. Risco real de perda de peso. Avaliar suplementação volumosa se estiagem prolongada.")
+
+    corrego = f.get("corrego", "Normal")
+    if corrego == "Baixo":
+        sug.append("💧 Água no córrego/bebedouro baixa — monitorar e preparar alternativa de abastecimento.")
+    elif corrego == "Seco":
+        sug.append("🚨 SEM ÁGUA no córrego — providenciar abastecimento alternativo urgente (bebedouro portátil, carro-pipa). Gado sem água é emergência!")
+
+    quintal = f.get("quintal", "OK")
+    if quintal == "Precisa Atenção":
+        sug.append("🏡 Quintal necessita atenção — verificar o que precisa ser feito e resolver na próxima visita.")
+
+    cisterna = f.get("cisterna", "OK")
+    if cisterna == "Baixo":
+        sug.append("🪣 Cisterna baixa — programar reabastecimento antes da próxima visita.")
+    elif cisterna == "Vazia":
+        sug.append("🚨 Cisterna VAZIA — abastecer imediatamente!")
+
+    choveu = f.get("choveu", "nao") == "sim"
+    mm_raw = f.get("chuva_mm", "") or ""
+    try:
+        mm = float(str(mm_raw).replace(",", "."))
+    except Exception:
+        mm = 0.0
+
+    if choveu and mm >= 50:
+        sug.append(f"🌧️ Chuva forte ({mm:.0f}mm) — verificar erosão, entupimento de valetas e estado das cercas.")
+    elif choveu and mm >= 15:
+        sug.append(f"🌦️ Boa chuva ({mm:.0f}mm) — pastagem deve se recuperar bem nos próximos dias.")
+    elif choveu and mm > 0:
+        sug.append(f"🌂 Chuva leve ({mm:.0f}mm) — impacto pequeno na pastagem, continuar monitorando.")
+    elif choveu and mm == 0:
+        sug.append("🌧️ Chuva registrada sem quantidade — anotar os mm na próxima vez para histórico.")
+    else:
+        sug.append("☀️ Sem chuva — acompanhar estiagem para ajustar suplementação se necessário.")
+
+    if not sug:
+        sug.append("✅ Visita sem pendências — sítio em boas condições!")
+    return " | ".join(sug)
+
+
+@app.route("/visitas")
+@login_required
+def visitas():
+    df = carregar_aba("Visitas")
+    ordem = request.args.get("ordem", "desc")
+    if not df.empty and "Data" in df.columns:
+        df = df.sort_values("Data", ascending=(ordem == "asc"), na_position="last")
+
+    alertas = []
+    if not df.empty:
+        ultima = df.iloc[0] if ordem == "desc" else df.iloc[-1]
+        falt = ultima.get("Gado Faltando", 0)
+        try:
+            falt = int(falt or 0)
+        except Exception:
+            falt = 0
+        if falt > 0:
+            alertas.append(("danger", f"⚠️ Na última visita, {falt} cabeça(s) estavam faltando!"))
+        for campo, label in [("Sal/Ração", "Sal/Ração"), ("Proteinado", "Proteinado")]:
+            v = str(ultima.get(campo, "OK") or "OK")
+            if v == "Vazio":
+                alertas.append(("danger", f"🚨 {label} ESGOTADO conforme última visita!"))
+            elif v == "Baixo":
+                alertas.append(("warning", f"⚠️ {label} está baixo — repor em breve."))
+        corrego = str(ultima.get("Córrego/Água", "Normal") or "Normal")
+        if corrego == "Seco":
+            alertas.append(("danger", "🚨 Córrego/bebedouro SECO na última visita!"))
+        elif corrego == "Baixo":
+            alertas.append(("warning", "💧 Água no córrego estava baixa — verificar."))
+
+    rows = []
+    for real_idx, row in (df.iterrows() if not df.empty else []):
+        d = row.to_dict()
+        d["Data"] = fmt_data(d.get("Data"))
+        d["_idx"] = int(real_idx)
+        try:
+            d["Gado Faltando"] = int(d.get("Gado Faltando") or 0)
+        except Exception:
+            d["Gado Faltando"] = 0
+        rows.append(d)
+
+    return render_template("lista_visitas.html", rows=rows, ordem=ordem, alertas=alertas)
+
+
+@app.route("/visitas/nova", methods=["GET", "POST"])
+@login_required
+def nova_visita():
+    dados = carregar_todas()
+    estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
+
+    if request.method == "POST":
+        f = request.form
+        data        = f.get("data", datetime.now().strftime("%d/%m/%Y"))
+        responsavel = f.get("responsavel", "")
+        gado_cnt    = int(f.get("gado_contado") or 0)
+        gado_esp    = estoque
+        gado_falt   = max(0, gado_esp - gado_cnt) if gado_cnt > 0 else 0
+
+        sal      = f.get("sal_racao", "OK")
+        prot     = f.get("proteinado", "OK")
+        mato     = f.get("mato", "Limpo")
+        grama    = f.get("grama", "Boa")
+        corrego  = f.get("corrego", "Normal")
+        quintal  = f.get("quintal", "OK")
+        cisterna = f.get("cisterna", "OK")
+
+        choveu = "Sim" if f.get("choveu") == "sim" else "Não"
+        try:
+            chuva_mm = float(str(f.get("chuva_mm", "0") or "0").replace(",", "."))
+        except Exception:
+            chuva_mm = 0.0
+
+        obs = f.get("observacoes", "").strip()
+        sugestoes = _gerar_sugestoes_visita(f, estoque)
+
+        salvar_linha("Visitas", [
+            data, responsavel,
+            gado_cnt, gado_esp, gado_falt,
+            sal, prot, mato, grama, corrego,
+            quintal, cisterna,
+            choveu, chuva_mm if chuva_mm > 0 else None,
+            obs, sugestoes,
+        ])
+
+        if gado_falt > 0:
+            flash(f"⚠️ Visita salva — mas {gado_falt} cabeça(s) estão faltando! Verificar com urgência.", "warning")
+        else:
+            flash("✅ Visita registrada com sucesso!", "success")
+        return redirect(url_for("visitas"))
+
+    return render_template(
+        "form_visita.html",
+        estoque=estoque,
+        MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
+        hoje=datetime.now().strftime("%Y-%m-%d"),
+    )
+
+
+@app.route("/visitas/excluir/<int:idx>", methods=["POST"])
+@login_required
+def excluir_visita(idx):
+    fazer_backup()
+    _limpar_backups_antigos()
+    df = carregar_aba("Visitas")
+    # BUG CORRIGIDO: usa df.index para verificar existência real do índice,
+    # não apenas compara com len(df), evitando KeyError em índices não-contíguos
+    if df.empty or idx not in df.index:
+        flash("Registro não encontrado.", "error")
+        return redirect(url_for("visitas"))
+    df = df.drop(index=idx).reset_index(drop=True)
+    reescrever_aba("Visitas", df)
+    flash("Visita excluída.", "success")
+    return redirect(url_for("visitas"))
+
+
+@app.route("/api/ultima-visita")
+@login_required
+def api_ultima_visita():
+    df = carregar_aba("Visitas")
+    if df.empty:
+        return jsonify({"ok": False, "msg": "Nenhuma visita registrada."})
+
+    df_sorted = df.sort_values("Data", ascending=False, na_position="last")
+    row = df_sorted.iloc[0]
+
+    def _str(v):
+        return "" if (v is None or (isinstance(v, float) and pd.isna(v))) else str(v)
+
+    return jsonify({
+        "ok":            True,
+        "data":          fmt_data(row.get("Data")),
+        "responsavel":   _str(row.get("Responsável")),
+        "gado_contado":  int(row.get("Gado Contado") or 0),
+        "gado_esperado": int(row.get("Gado Esperado") or 0),
+        "gado_faltando": int(row.get("Gado Faltando") or 0),
+        "sal":           _str(row.get("Sal/Ração")),
+        "proteinado":    _str(row.get("Proteinado")),
+        "grama":         _str(row.get("Grama/Pastagem")),
+        "corrego":       _str(row.get("Córrego/Água")),
+        "choveu":        _str(row.get("Choveu")),
+        "chuva_mm":      float(row.get("Chuva mm") or 0),
+        "sugestoes":     _str(row.get("Sugestões")),
+    })
+
+
+# ════════════════════════════════════════════════════════════════════
+#  RELATÓRIO PDF
+# ════════════════════════════════════════════════════════════════════
+
+def _gerar_pdf_relatorio() -> bytes:
+    """
+    Gera um relatório PDF completo do rebanho usando reportlab.
+    Retorna os bytes do PDF.
+    """
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import (
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+        HRFlowable, PageBreak,
+    )
+
+    dados  = carregar_todas()
+    r      = calcular_resumo_financeiro(dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"])
+    mbr    = calcular_todos_membros(dados["Vendas"], dados["Compras"], dados["Gastos"], dados["Manejo"])
+    extras = calcular_indicadores_extras(
+        dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"],
+        r["ctcab"]
+    )
+    gastos_tipo = calcular_gasto_por_tipo(dados["Gastos"])
+    estoque_m   = calcular_estoque_por_membro(dados["Compras"], dados["Vendas"], dados["Manejo"])
+
+    buf    = BytesIO()
+    doc    = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=2*cm, rightMargin=2*cm,
+        topMargin=2*cm, bottomMargin=2*cm,
+    )
+
+    # ── Estilos ─────────────────────────────────────────────────────────────────
+    styles = getSampleStyleSheet()
+    VERDE  = colors.HexColor("#2e7d32")
+    VERDE_L = colors.HexColor("#e8f5e9")
+    CINZA  = colors.HexColor("#616161")
+    BRANCO = colors.white
+    AMARELO = colors.HexColor("#fff8e1")
+
+    titulo_style = ParagraphStyle("titulo", parent=styles["Title"],
+                                  textColor=VERDE, fontSize=20, spaceAfter=4)
+    sub_style    = ParagraphStyle("sub",    parent=styles["Normal"],
+                                  textColor=CINZA, fontSize=10, spaceAfter=16)
+    h2_style     = ParagraphStyle("h2",    parent=styles["Heading2"],
+                                  textColor=VERDE, fontSize=13, spaceBefore=14, spaceAfter=6)
+    body_style   = styles["Normal"]
+
+    def _brl(v):
+        try:
+            return f"R$ {float(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        except Exception:
+            return "—"
+
+    def _pct(v):
+        try:
+            f = float(v)
+            return f"{'+'if f>0 else ''}{f:.1f}%"
+        except Exception:
+            return "—"
+
+    def _tabela(dados_tab, col_widths=None, header=True):
+        """Cria um objeto Table com estilo padrão."""
+        t = Table(dados_tab, colWidths=col_widths)
+        estilos = [
+            ("FONTNAME",  (0, 0), (-1, -1), "Helvetica"),
+            ("FONTSIZE",  (0, 0), (-1, -1), 9),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [BRANCO, VERDE_L]),
+            ("GRID",      (0, 0), (-1, -1), 0.4, colors.HexColor("#c8e6c9")),
+            ("LEFTPADDING",  (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING",   (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
+        ]
+        if header:
+            estilos += [
+                ("BACKGROUND",  (0, 0), (-1, 0), VERDE),
+                ("TEXTCOLOR",   (0, 0), (-1, 0), BRANCO),
+                ("FONTNAME",    (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE",    (0, 0), (-1, 0), 9),
+            ]
+        t.setStyle(TableStyle(estilos))
+        return t
+
+    story = []
+    gerado_em = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+    # ── Cabeçalho ────────────────────────────────────────────────────────────────
+    story.append(Paragraph("🐄 Sítio Santo Antonio", titulo_style))
+    story.append(Paragraph(f"Relatório Financeiro do Rebanho — Gerado em {gerado_em}", sub_style))
+    story.append(HRFlowable(width="100%", thickness=2, color=VERDE, spaceAfter=12))
+
+    # ── Resumo do Estoque ────────────────────────────────────────────────────────
+    story.append(Paragraph("Resumo do Estoque e Custos", h2_style))
+    tab_resumo = [
+        ["Indicador", "Valor"],
+        ["Cabeças compradas",            str(int(r["cab_comp"]))],
+        ["Cabeças vendidas",             str(int(r["cab_vend"]))],
+        ["Estoque atual",                f"{int(r['estoque'])} cabeças"],
+        ["CMP — Custo Médio Ponderado",  _brl(r["cmp"]) + " / cabeça"],
+        ["GPCab — Gastos acum./cabeça",  _brl(r["gpcab"]) + " / cabeça"],
+        ["CTCab — Custo Total/cabeça",   _brl(r["ctcab"]) + " / cabeça"],
+        ["Break-even do estoque",        _brl(r["break_even"]) + " / cabeça"],
+        ["Capital imobilizado",          _brl(r["capital_imobilizado"])],
+    ]
+    story.append(_tabela(tab_resumo, col_widths=[10*cm, 7*cm]))
+    story.append(Spacer(1, 12))
+
+    # ── Resultado Financeiro ────────────────────────────────────────────────────
+    story.append(Paragraph("Resultado Financeiro", h2_style))
+    tab_fin = [
+        ["Indicador", "Valor"],
+        ["Total investido em compras",   _brl(r["total_comp"])],
+        ["Total de gastos operacionais", _brl(r["total_gast"])],
+        ["Custo total",                  _brl(r["total_custo"])],
+        ["Receita total (vendas)",       _brl(r["total_vend"])],
+        ["Resultado realizado",          _brl(r["resultado_realizado"])],
+        ["ROI realizado",                _pct(r["roi_realizado"])],
+        ["Resultado total (+ estoque)",  _brl(r["resultado_total"])],
+        ["ROI total (+ estoque)",        _pct(r["roi_total"])],
+        ["Margem bruta",                 _pct(r["margem_bruta"])],
+        ["Ticket médio de venda",        _brl(r.get("ticket_medio", 0)) + " / cabeça"],
+    ]
+    story.append(_tabela(tab_fin, col_widths=[10*cm, 7*cm]))
+    story.append(Spacer(1, 12))
+
+    # ── Indicadores Extras ───────────────────────────────────────────────────────
+    if any(v for v in extras.values()):
+        story.append(Paragraph("Indicadores de Gestão", h2_style))
+        tab_extra = [
+            ["Indicador", "Valor"],
+            ["Tempo médio de permanência (TMP)", f"{extras['tmp_dias']} dias"],
+            ["Custo por cabeça por dia",         _brl(extras['custo_dia_cab'])],
+            ["Arrobas mínimas para cobrir CTCab",f"{extras['arrobas_min_cab']:.1f} @"],
+            ["Gastos sobre investimento em compras", _pct(extras['pct_gasto_sobre_compra'])],
+            ["Ticket médio de venda",            _brl(extras['ticket_medio_venda'])],
+        ]
+        story.append(_tabela(tab_extra, col_widths=[10*cm, 7*cm]))
+        story.append(Spacer(1, 12))
+
+    # ── Estoque por Membro ───────────────────────────────────────────────────────
+    story.append(Paragraph("Estoque por Membro", h2_style))
+    tab_estq = [["Membro", "Cabeças no Estoque"]]
+    for m in MEMBROS:
+        tab_estq.append([NOMES_MEMBROS[m], str(estoque_m.get(m, 0))])
+    story.append(_tabela(tab_estq, col_widths=[10*cm, 7*cm]))
+    story.append(Spacer(1, 12))
+
+    # ── Resultado por Membro ─────────────────────────────────────────────────────
+    story.append(PageBreak())
+    story.append(Paragraph("Resultado por Membro", h2_style))
+    tab_mbr = [["Membro", "Cabeças Vend.", "Receita", "Custo Total", "Resultado", "Margem"]]
+    for m in MEMBROS:
+        mr = mbr[m]
+        sinal = "+" if mr["resultado"] >= 0 else ""
+        tab_mbr.append([
+            NOMES_MEMBROS[m],
+            str(mr["cabecas"]),
+            _brl(mr["receita"]),
+            _brl(mr["custo_total"]),
+            sinal + _brl(mr["resultado"]),
+            _pct(mr["margem_pct"]),
+        ])
+    story.append(_tabela(tab_mbr, col_widths=[3.5*cm, 2.5*cm, 3.5*cm, 3.5*cm, 3*cm, 2*cm]))
+    story.append(Spacer(1, 16))
+
+    # Detalhe por membro
+    for m in MEMBROS:
+        mr = mbr[m]
+        if not mr["vendas_detalhadas"]:
+            continue
+        story.append(Paragraph(f"Vendas — {NOMES_MEMBROS[m]}", h2_style))
+        tab_d = [["Data", "Cabeças", "Receita", "CMP", "GPCab", "Resultado", "Margem"]]
+        for v in mr["vendas_detalhadas"]:
+            sinal = "+" if v["resultado"] >= 0 else ""
+            tab_d.append([
+                v["data"], str(v["cabecas"]),
+                _brl(v["receita"]),
+                _brl(v["cmp"]),
+                _brl(v["gpcab"]),
+                sinal + _brl(v["resultado"]),
+                _pct(v["margem_pct"]),
+            ])
+        story.append(_tabela(tab_d, col_widths=[2.5*cm, 2*cm, 3*cm, 2.8*cm, 2.8*cm, 2.8*cm, 2.1*cm]))
+        story.append(Spacer(1, 10))
+
+    # ── Gastos por Tipo ──────────────────────────────────────────────────────────
+    if gastos_tipo:
+        story.append(PageBreak())
+        story.append(Paragraph("Gastos por Tipo / Categoria", h2_style))
+        tab_gasto = [["Tipo", "Valor Total", "% do Total"]]
+        for tipo, info in gastos_tipo.items():
+            tab_gasto.append([tipo, _brl(info["valor"]), f"{info['pct']:.1f}%"])
+        story.append(_tabela(tab_gasto, col_widths=[8*cm, 5*cm, 4*cm]))
+        story.append(Spacer(1, 12))
+
+    # ── Compras ─────────────────────────────────────────────────────────────────
+    df_comp = dados["Compras"]
+    if not df_comp.empty:
+        story.append(Paragraph("Histórico de Compras", h2_style))
+        tab_c = [["Data", "Cabeças", "Valor Total", "Valor/Cabeça", "Descrição"]]
+        for _, row in df_comp.sort_values("Data", na_position="last").iterrows():
+            tab_c.append([
+                fmt_data(row.get("Data")),
+                str(int(row.get("Qtd Cabeças", 0) or 0)),
+                _brl(row.get("Valor Total (R$)", 0)),
+                _brl(row.get("Valor/Cabeça (R$)", 0)),
+                str(row.get("Descrição", "") or "")[:40],
+            ])
+        story.append(_tabela(tab_c, col_widths=[2.5*cm, 2*cm, 3.5*cm, 3.5*cm, 6.5*cm]))
+        story.append(Spacer(1, 12))
+
+    # ── Vendas ──────────────────────────────────────────────────────────────────
+    df_vend = dados["Vendas"]
+    if not df_vend.empty:
+        story.append(Paragraph("Histórico de Vendas", h2_style))
+        tab_v = [["Data", "Cabeças", "Valor Total", "Valor/Cabeça", "Arroba", "Descrição"]]
+        for _, row in df_vend.sort_values("Data", na_position="last").iterrows():
+            tab_v.append([
+                fmt_data(row.get("Data")),
+                str(int(row.get("Qtd Cabeças", 0) or 0)),
+                _brl(row.get("Valor Total (R$)", 0)),
+                _brl(row.get("Valor/Cabeça (R$)", 0)),
+                _brl(row.get("Valor Arroba (R$)", 0)) if row.get("Valor Arroba (R$)") else "—",
+                str(row.get("Descrição", "") or "")[:35],
+            ])
+        story.append(_tabela(tab_v, col_widths=[2.5*cm, 2*cm, 3.2*cm, 3.2*cm, 2.5*cm, 5.6*cm]))
+        story.append(Spacer(1, 12))
+
+    # ── Gastos ──────────────────────────────────────────────────────────────────
+    df_gast = dados["Gastos"]
+    if not df_gast.empty:
+        story.append(PageBreak())
+        story.append(Paragraph("Histórico de Gastos Operacionais", h2_style))
+        tab_g = [["Data", "Tipo", "Descrição", "Valor Total", "Valor/Cabeça"]]
+        for _, row in df_gast.sort_values("Data", na_position="last").iterrows():
+            tab_g.append([
+                fmt_data(row.get("Data")),
+                str(row.get("Tipo", "") or ""),
+                str(row.get("Descrição", "") or "")[:35],
+                _brl(row.get("Valor Total (R$)", 0)),
+                _brl(row.get("Valor/Cabeça (R$)", 0)),
+            ])
+        story.append(_tabela(tab_g, col_widths=[2.5*cm, 3.5*cm, 5.5*cm, 3.2*cm, 3.3*cm]))
+
+    # ── Rodapé de nota ───────────────────────────────────────────────────────────
+    story.append(Spacer(1, 20))
+    story.append(HRFlowable(width="100%", thickness=1, color=CINZA))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(
+        f"<font size='8' color='grey'>Relatório gerado automaticamente pelo Sistema de Gado — "
+        f"Sítio Santo Antonio | {gerado_em}<br/>"
+        "CMP = Custo Médio Ponderado por cabeça | GPCab = Gasto acumulado por cabeça | "
+        "CTCab = Custo Total por cabeça | Break-even = preço mínimo para recuperar capital do estoque</font>",
+        body_style
+    ))
+
+    doc.build(story)
+    return buf.getvalue()
+
+
+@app.route("/relatorio-pdf")
+@login_required
+def relatorio_pdf():
+    """Gera e faz download do relatório financeiro em PDF."""
+    from flask import Response
+    try:
+        pdf_bytes = _gerar_pdf_relatorio()
+        nome_arquivo = f"relatorio_gado_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={nome_arquivo}"}
+        )
+    except Exception as e:
+        flash(f"Erro ao gerar PDF: {e}", "error")
+        return redirect(url_for("relatorios"))
+
+
 if __name__ == "__main__":
     inicializar()
     import webbrowser, threading

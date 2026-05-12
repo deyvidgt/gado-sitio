@@ -765,7 +765,9 @@ def calcular_indicadores_extras(df_comp: pd.DataFrame, df_gast: pd.DataFrame,
         # Esta é a "quantidade mínima" que a cabeça precisa produzir (em arrobas) para
         # cobrir custos se vendida ao menor preço histórico de arroba, ou usamos
         # a referência de que 1 arroba de boi gordo = ~R$ 280 (valor indicativo)
-        PRECO_ARROBA_REF = 280.0  # R$/@ — referência indicativa para cálculo
+        # Referência: R$320/@ — média boi gordo Sudeste/MG (atualizado 2025)
+        # Ajuste conforme cotação atual do mercado local se necessário
+        PRECO_ARROBA_REF = 320.0  # R$/@ — referência indicativa para cálculo
         resultado["arrobas_min_cab"] = ctcab / PRECO_ARROBA_REF
 
     # % Gastos sobre compras
