@@ -16,6 +16,18 @@
 </div>
 {% endif %}
 
+<!-- Aviso de reload PythonAnywhere (aparece dias 1–11 de cada mês) -->
+<div id="reload-banner" role="alert">
+  <span>
+    🔁 <strong>Lembrete mensal:</strong>
+    Antes do dia 12, acesse o PythonAnywhere e clique em <strong>Reload</strong>
+    para manter o site funcionando. &nbsp;
+    <a href="https://www.pythonanywhere.com/user/deyvidgt16/webapps/#tab_id_deyvidgt16_pythonanywhere_com"
+       target="_blank" rel="noopener">Ir para o painel →</a>
+  </span>
+  <span class="rb-close" onclick="fecharReloadBanner()" title="Fechar">✕</span>
+</div>
+
 <!-- Métricas principais -->
 <div class="metrics">
   <div class="metric">
@@ -128,18 +140,32 @@
       <div class="card-title" style="margin-bottom:2px">🌧️ Chuvas por Mês</div>
       <div style="font-size:12px;color:var(--text-3)">Alimentado pelas visitas ao sítio · clique num mês para detalhes</div>
     </div>
-    <a href="{{ url_for('visitas') }}" class="btn btn-outline btn-sm">🌾 Ver visitas</a>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div id="chuva-modo-btns" style="display:flex;gap:4px">
+        <button onclick="setChuvaMode('historico')" id="btn-modo-hist" class="btn btn-sm" style="padding:4px 10px;font-size:11px">Histórico</button>
+        <button onclick="setChuvaMode('comparativo')" id="btn-modo-comp" class="btn btn-outline btn-sm" style="padding:4px 10px;font-size:11px">Ano a Ano</button>
+      </div>
+      <a href="{{ url_for('visitas') }}" class="btn btn-outline btn-sm">🌾 Ver visitas</a>
+    </div>
   </div>
 
   <!-- KPIs rápidos de chuva -->
   <div id="chuva-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px">
     <div class="chuva-kpi" id="ck-total-ano">
       <div class="ck-val" id="ck-val-total">—</div>
-      <div class="ck-lbl">mm este ano</div>
+      <div class="ck-lbl" id="ck-lbl-total">mm este ano</div>
     </div>
     <div class="chuva-kpi" id="ck-media-mes">
       <div class="ck-val" id="ck-val-media">—</div>
-      <div class="ck-lbl">média mensal (mm)</div>
+      <div class="ck-lbl">média mm/mês este ano</div>
+    </div>
+    <div class="chuva-kpi" id="ck-media-ant">
+      <div class="ck-val" id="ck-val-media-ant">—</div>
+      <div class="ck-lbl" id="ck-lbl-media-ant">média mm/mês ano anterior</div>
+    </div>
+    <div class="chuva-kpi" id="ck-vs-ant" style="border-top-color:var(--gold)">
+      <div class="ck-val" id="ck-val-vs-ant" style="color:var(--gold)">—</div>
+      <div class="ck-lbl">vs. mesmo período anterior</div>
     </div>
     <div class="chuva-kpi" id="ck-melhor">
       <div class="ck-val" id="ck-val-melhor">—</div>
@@ -152,7 +178,7 @@
   </div>
 
   <!-- Gráfico de barras -->
-  <div style="position:relative;height:200px;margin-bottom:16px">
+  <div style="position:relative;height:220px;margin-bottom:16px">
     <canvas id="chartChuvas"></canvas>
   </div>
 
@@ -167,6 +193,8 @@
           <tr>
             <th>Mês</th>
             <th>Total (mm)</th>
+            <th>Ano anterior (mm)</th>
+            <th>Variação</th>
             <th>Média/visita</th>
             <th>Visitas c/ chuva</th>
             <th>Total visitas</th>
@@ -229,6 +257,35 @@
 
 {% block head %}
 <style>
+  /* ── Aviso de reload PythonAnywhere ── */
+  #reload-banner {
+    display: none;
+    background: linear-gradient(90deg, #e65100, #bf360c);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,.18);
+  }
+  #reload-banner a {
+    color: #ffe0b2;
+    font-weight: 700;
+    text-decoration: underline;
+  }
+  #reload-banner .rb-close {
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    opacity: .8;
+  }
+  #reload-banner .rb-close:hover { opacity: 1; }
+
   /* KPIs de chuva */
   .chuva-kpi {
     background: var(--surface-2);
@@ -253,6 +310,9 @@
   }
   [data-theme="dark"] .chuva-kpi { border-top-color: #5db3e8; }
   [data-theme="dark"] .ck-val    { color: #5db3e8; }
+  /* modo btn ativo */
+  #btn-modo-hist.ativo  { background:var(--green-600);color:#fff;border-color:var(--green-600); }
+  #btn-modo-comp.ativo  { background:var(--green-600);color:#fff;border-color:var(--green-600); }
 </style>
 {% endblock %}
 
@@ -267,6 +327,31 @@ function pct(v, prefix=true) {
   if (v === null || v === undefined) return "—";
   const s = Number(v).toFixed(1).replace(".", ",");
   return (prefix && v > 0 ? "+" : "") + s + "%";
+}
+
+/* ══════════════════════════════════════════════════
+   AVISO RELOAD PYTHONANYWHERE
+   Aparece nos dias 1–11 de cada mês.
+   Fecha ao clicar em ✕ e não reaparece no mesmo dia.
+══════════════════════════════════════════════════ */
+(function() {
+  const hoje = new Date();
+  const dia  = hoje.getDate();
+  if (dia < 1 || dia > 11) return;             // fora do período → silêncio
+
+  const chave = "reload_banner_fechado_" + hoje.getFullYear() + "_" + (hoje.getMonth()+1);
+  if (localStorage.getItem(chave)) return;     // já fechou hoje neste mês
+
+  const banner = document.getElementById("reload-banner");
+  if (banner) banner.style.display = "flex";
+})();
+
+function fecharReloadBanner() {
+  const banner = document.getElementById("reload-banner");
+  if (banner) banner.style.display = "none";
+  const hoje  = new Date();
+  const chave = "reload_banner_fechado_" + hoje.getFullYear() + "_" + (hoje.getMonth()+1);
+  try { localStorage.setItem(chave, "1"); } catch(e) {}
 }
 
 /* ── Fluxo + Membros ── */
@@ -311,9 +396,20 @@ async function loadCharts() {
 }
 
 /* ══════════════════════════════════════════════════
-   CHUVAS MENSAIS
+   CHUVAS MENSAIS — v2  (com comparativo ano a ano)
 ══════════════════════════════════════════════════ */
 let chartChuvas = null;
+let _dadosChuvas = null;   // cache dos dados da API
+let _modoAtual = "historico";  // "historico" | "comparativo"
+
+function setChuvaMode(modo) {
+  _modoAtual = modo;
+  document.getElementById("btn-modo-hist").className =
+    "btn btn-sm" + (modo === "historico" ? " ativo" : " btn-outline");
+  document.getElementById("btn-modo-comp").className =
+    "btn btn-sm" + (modo === "comparativo" ? " ativo" : " btn-outline");
+  if (_dadosChuvas) renderChuvas(_dadosChuvas);
+}
 
 async function loadChuvas() {
   document.getElementById("chuva-loading").style.display = "block";
@@ -322,7 +418,7 @@ async function loadChuvas() {
 
   try {
     const d = await fetch("/api/chuvas").then(r => r.json());
-
+    _dadosChuvas = d;
     document.getElementById("chuva-loading").style.display = "none";
 
     if (!d.labels || d.labels.length === 0) {
@@ -330,27 +426,101 @@ async function loadChuvas() {
       return;
     }
 
-    /* ── KPIs ── */
-    const anoAtual = new Date().getFullYear().toString();
-    const mesesAno = d.meses.filter(m => m.periodo.startsWith(anoAtual));
-    const totalAno = mesesAno.reduce((s, m) => s + m.total_mm, 0);
-    const mediaAno = mesesAno.length > 0
-      ? (mesesAno.reduce((s, m) => s + m.total_mm, 0) / mesesAno.length).toFixed(1)
-      : "—";
-    const melhor = d.meses.reduce((a, b) => b.total_mm > a.total_mm ? b : a, d.meses[0]);
-    const totalVisitas = d.meses.reduce((s, m) => s + m.visitas, 0);
+    renderChuvas(d);
+  } catch(e) {
+    document.getElementById("chuva-loading").innerHTML =
+      `<span style="color:var(--danger)">❌ Erro ao carregar chuvas: ${e.message}</span>`;
+  }
+}
 
-    document.getElementById("ck-val-total").textContent    = totalAno.toFixed(1) + " mm";
-    document.getElementById("ck-val-media").textContent    = mediaAno + " mm";
-    document.getElementById("ck-val-melhor").textContent   = melhor.label + " (" + melhor.total_mm + "mm)";
-    document.getElementById("ck-val-visitas").textContent  = totalVisitas;
+function renderChuvas(d) {
+  /* ── KPIs ── */
+  const anoAtual = (d.ano_atual || new Date().getFullYear()).toString();
+  const anoAnt   = (d.ano_anterior || (new Date().getFullYear()-1)).toString();
 
-    /* ── Gráfico de barras ── */
-    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-    const gridColor = isDark ? "rgba(255,255,255,.08)" : "rgba(0,0,0,.06)";
-    const textColor = isDark ? "#b0bfae" : "#888";
+  const mesesAno  = d.meses.filter(m => m.periodo.startsWith(anoAtual));
+  const totalAno  = d.total_ano_atual ?? mesesAno.reduce((s,m) => s+m.total_mm, 0);
+  const melhor    = d.meses.reduce((a,b) => b.total_mm > a.total_mm ? b : a, d.meses[0]);
+  const totalVis  = d.meses.reduce((s,m) => s+m.visitas, 0);
 
-    if (chartChuvas) chartChuvas.destroy();
+  // Média mensal (mm/mês) — mais clara do que mm/visita para KPIs
+  const mediaMesAtual = d.media_mensal_atual ?? (mesesAno.length ? (totalAno/mesesAno.length).toFixed(1) : "—");
+  const mediaMesAnt   = d.media_mensal_ant   ?? "—";
+
+  // KPI variação total vs mesmo período anterior
+  const varTotal = d.variacao_total_pct;
+  let varHtml = "—";
+  if (varTotal !== null && varTotal !== undefined) {
+    const cor = varTotal >= 0 ? "var(--green-700)" : "var(--danger)";
+    varHtml = `<span style="color:${cor}">${varTotal >= 0 ? "+" : ""}${varTotal.toFixed(1).replace(".",",")}%</span>`;
+    // Adiciona mm absolutos
+    const diffMm = d.total_ano_atual - d.total_ano_anterior;
+    varHtml += `<br><span style="font-size:14px;color:${cor}">${diffMm >= 0?"+":""}${diffMm.toFixed(1)} mm</span>`;
+  }
+
+  document.getElementById("ck-val-total").textContent   = totalAno.toFixed(1) + " mm";
+  document.getElementById("ck-lbl-total").textContent   = `mm em ${anoAtual}`;
+  document.getElementById("ck-val-media").textContent   = mediaMesAtual + " mm";
+  document.getElementById("ck-val-media-ant").textContent = mediaMesAnt + " mm";
+  document.getElementById("ck-lbl-media-ant").textContent = `média mm/mês em ${anoAnt}`;
+  document.getElementById("ck-val-vs-ant").innerHTML    = varHtml;
+  document.getElementById("ck-val-melhor").textContent  = melhor.label + " (" + melhor.total_mm + " mm)";
+  document.getElementById("ck-val-visitas").textContent = totalVis;
+
+  /* ── Gráfico ── */
+  const isDark    = document.documentElement.getAttribute("data-theme") === "dark";
+  const gridColor = isDark ? "rgba(255,255,255,.08)" : "rgba(0,0,0,.06)";
+  const textColor = isDark ? "#b0bfae" : "#888";
+
+  if (chartChuvas) chartChuvas.destroy();
+
+  if (_modoAtual === "comparativo" && d.labels_atual && d.labels_atual.length > 0) {
+    /* Modo comparativo: lado-a-lado, mesmo mês / dois anos */
+    chartChuvas = new Chart(document.getElementById("chartChuvas"), {
+      type: "bar",
+      data: {
+        labels: d.labels_atual,
+        datasets: [
+          {
+            label: `${anoAtual}`,
+            data: d.totais_atual,
+            backgroundColor: "rgba(21,101,192,.80)",
+            borderRadius: 5,
+          },
+          {
+            label: `${anoAnt}`,
+            data: d.totais_ant,
+            backgroundColor: "rgba(201,151,42,.65)",
+            borderRadius: 5,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { font: { family:"DM Sans", size:12 }, color: textColor } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.parsed.y;
+                return v === null ? " sem registro" : ` ${v} mm`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font: { family:"DM Sans", size:11 }, color: textColor }, grid: { color: gridColor } },
+          y: {
+            ticks: { callback: v => v + " mm", font: { family:"DM Sans", size:11 }, color: textColor },
+            grid: { color: gridColor },
+            title: { display: true, text: "mm", color: textColor, font: { size:11 } }
+          }
+        }
+      }
+    });
+  } else {
+    /* Modo histórico: barras totais + linha de média por visita */
     chartChuvas = new Chart(document.getElementById("chartChuvas"), {
       type: "bar",
       data: {
@@ -421,38 +591,59 @@ async function loadChuvas() {
         }
       }
     });
-
-    /* ── Tabela ── */
-    const tbody = document.getElementById("chuva-tbody");
-    tbody.innerHTML = "";
-    [...d.meses].reverse().forEach(m => {
-      const tr = document.createElement("tr");
-      const cor = m.total_mm >= 80 ? "var(--info)" : m.total_mm >= 40 ? "#42a5f5" : m.total_mm > 0 ? "#90caf9" : "var(--text-3)";
-      tr.innerHTML = `
-        <td style="font-weight:600">${m.label}</td>
-        <td style="color:${cor};font-weight:600">${m.total_mm} mm</td>
-        <td>${m.media_mm > 0 ? m.media_mm + " mm" : "—"}</td>
-        <td>${m.visitas_com_chuva} de ${m.visitas}</td>
-        <td>${m.visitas}</td>`;
-      tbody.appendChild(tr);
-    });
-    document.getElementById("chuva-tabela-wrap").style.display = "block";
-
-  } catch(e) {
-    document.getElementById("chuva-loading").innerHTML =
-      `<span style="color:var(--danger)">❌ Erro ao carregar chuvas: ${e.message}</span>`;
   }
+
+  /* ── Tabela ── */
+  const tbody = document.getElementById("chuva-tbody");
+  tbody.innerHTML = "";
+
+  // Montar lookup de comparativo por label para enriquecer a tabela
+  const compMap = {};
+  if (d.comparativo) {
+    d.comparativo.forEach(c => { compMap[c.label] = c; });
+  }
+
+  [...d.meses].reverse().forEach(m => {
+    const tr  = document.createElement("tr");
+    const cor = m.total_mm >= 80 ? "var(--info)" : m.total_mm >= 40 ? "#42a5f5" : m.total_mm > 0 ? "#90caf9" : "var(--text-3)";
+    const comp = compMap[m.label];
+
+    let antHtml = "—";
+    let varHtml2 = "—";
+    if (comp) {
+      antHtml = comp.anterior_mm !== null && comp.anterior_mm !== undefined
+        ? `${comp.anterior_mm} mm` : "—";
+      if (comp.variacao_pct !== null && comp.variacao_pct !== undefined) {
+        const cv = comp.variacao_pct;
+        const cc = cv >= 0 ? "var(--green-700)" : "var(--danger)";
+        varHtml2 = `<span style="color:${cc};font-weight:600">${cv>=0?"+":""}${cv.toFixed(1).replace(".",",")}%</span>`;
+        if (comp.diferenca_mm !== null) {
+          varHtml2 += ` <span style="font-size:11px;color:${cc}">(${comp.diferenca_mm>=0?"+":""}${comp.diferenca_mm} mm)</span>`;
+        }
+      } else if (comp.diferenca_mm === null && comp.anterior_mm === null) {
+        varHtml2 = '<span style="color:var(--text-3);font-size:11px">sem dado anterior</span>';
+      }
+    }
+
+    tr.innerHTML = `
+      <td style="font-weight:600">${m.label}</td>
+      <td style="color:${cor};font-weight:600">${m.total_mm} mm</td>
+      <td style="color:var(--text-2)">${antHtml}</td>
+      <td>${varHtml2}</td>
+      <td>${m.media_mm > 0 ? m.media_mm + " mm" : "—"}</td>
+      <td>${m.visitas_com_chuva} de ${m.visitas}</td>
+      <td>${m.visitas}</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById("chuva-tabela-wrap").style.display = "block";
 }
 
 function mostrarDetalhe(m) {
-  // Destaca o mês clicado com um flash visual no KPI de média
-  document.getElementById("ck-val-media").textContent = m.label + ": " + m.total_mm + "mm";
+  document.getElementById("ck-val-media").textContent = m.label + ": " + m.total_mm + " mm";
   setTimeout(() => {
-    const mediaGeral = chartChuvas?.data?.datasets?.[1]?.data;
-    if (mediaGeral) {
-      const soma = mediaGeral.reduce((a,b) => a+b, 0);
-      const med  = mediaGeral.length > 0 ? (soma / mediaGeral.length).toFixed(1) : "—";
-      document.getElementById("ck-val-media").textContent = med + " mm";
+    if (_dadosChuvas) {
+      document.getElementById("ck-val-media").textContent =
+        (_dadosChuvas.media_mensal_atual ?? "—") + " mm";
     }
   }, 3000);
 }
@@ -555,6 +746,8 @@ document.addEventListener("themeChanged", () => {
 });
 
 /* ── Init ── */
+// Ativar botão histórico por padrão
+setChuvaMode("historico");
 loadCharts();
 loadChuvas();
 </script>

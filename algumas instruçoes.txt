@@ -16,7 +16,7 @@ para atualizaçoes
 
 cmd
 git add .
-git commit -m "atualizacao 3.4"
+git commit -m "atualizacao 3.5"
 git push
 
 Depois no PythonAnywhere e em Bash:
