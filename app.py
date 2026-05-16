@@ -585,7 +585,12 @@ def api_cotacao_scot():
                         "atualizado": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "fonte": "Scot Consultoria"})
     except Exception as e:
-        return jsonify({"ok": False, "erro": str(e)})
+        msg = str(e)
+        if any(k in msg for k in ("ProxyError", "Max retries", "ConnectionError",
+                                   "Tunnel connection", "403 Forbidden", "timeout")):
+            msg = ("Servidor sem acesso direto à internet (proxy bloqueado). "
+                   "Acesse a cotação pelo link abaixo.")
+        return jsonify({"ok": False, "erro": msg})
 
 
 @app.route("/api/cotacao-imea")
@@ -1499,15 +1504,6 @@ def nova_visita():
             chuva_mm = 0.0
         obs = f.get("observacoes", "").strip()
         sugestoes = _gerar_sugestoes_visita(f, estoque)
-        # Quantidade de sacos em estoque (campos novos)
-        try:
-            sacos_sal  = int(f.get("sacos_sal",  "") or 0) or None
-        except Exception:
-            sacos_sal = None
-        try:
-            sacos_prot = int(f.get("sacos_prot", "") or 0) or None
-        except Exception:
-            sacos_prot = None
         salvar_linha("Visitas", [
             data, responsavel,
             gado_cnt, gado_esp, gado_falt,
@@ -1515,7 +1511,6 @@ def nova_visita():
             quintal, cisterna,
             choveu, chuva_mm if chuva_mm > 0 else None,
             obs, sugestoes,
-            sacos_sal, sacos_prot,
         ])
         if gado_falt > 0:
             flash(f"⚠️ Visita salva — mas {gado_falt} cabeça(s) estão faltando!", "warning")
