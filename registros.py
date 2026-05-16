@@ -94,9 +94,12 @@ def adicionar_gasto():
     cab_str = ui_input(
         f"Qtd cabeças de referência (Enter = estoque atual [{estoque}])", estoque
     ).strip()
+    # BUG CORRIGIDO: cab_str.isdigit() retornava False para entradas com espaços,
+    # valores negativos ou decimais (ex: "10 " ou "10.0"), caindo silenciosamente
+    # no fallback sem aviso. Substituído por try/except mais robusto.
     try:
-        ref_cab = int(cab_str) if cab_str.isdigit() and int(cab_str) > 0 else estoque
-    except ValueError:
+        ref_cab = max(1, int(float(cab_str.replace(",", ".")))) if cab_str else estoque
+    except (ValueError, TypeError):
         ref_cab = estoque
 
     registrado = ui_escolher_membro("Quem está registrando?")

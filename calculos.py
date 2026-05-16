@@ -59,6 +59,11 @@ import pandas as pd
 from datetime import datetime
 from config import MEMBROS
 
+# Preço de referência da arroba para cálculos de break-even e arrobas mínimas.
+# Atualize conforme cotação do mercado local (Triângulo/MG, Scot/IMEA).
+# Valor indicativo para boi gordo Nelore, Sudeste, 2026.
+PRECO_ARROBA_REF: float = 340.0   # R$/@
+
 
 # ── Estoque global ────────────────────────────────────────────────────────────
 
@@ -206,8 +211,11 @@ def _build_gpcab_timeline(df_gast: pd.DataFrame,
                    if pd.notna(data)
                    else calcular_estoque(df_comp, _df_vend, _df_man))
             if est <= 0:
-                est = total_cab_comp
-            inc = val / est
+                # Fallback: usa total de cabeças compradas no período inteiro.
+                # BUG ANTERIOR: se df_comp vazio, total_cab_comp era 1, causando
+                # inc = val (gasto inteiro imputado a 1 cabeça fictícia) → GPCab inflado.
+                est = total_cab_comp if total_cab_comp > 0 else 0
+            inc = val / est if est > 0 else 0.0
         else:
             inc = 0.0
 
@@ -366,13 +374,16 @@ def _calcular_custo_historico_vendas(df_vend: pd.DataFrame, df_comp: pd.DataFram
 
 def calcular_resultado_membro(membro: str, df_vend: pd.DataFrame,
                                df_comp: pd.DataFrame, df_gast: pd.DataFrame,
-                               df_man: pd.DataFrame | None = None) -> dict:
+                               df_man: pd.DataFrame | None = None,
+                               *, _cmp_datas=None, _cmp_vals=None,
+                               _gpcab_datas=None, _gpcab_cs=None) -> dict:
     """
     Resultado líquido de um membro usando CMP e GPCab históricos.
 
-    O custo de cada cabeça vendida pelo membro é calculado usando o
-    CMP e GPCab vigentes NA DATA da venda, não o valor atual.
-    Isso garante precisão mesmo quando os preços variaram ao longo do tempo.
+    Parâmetros opcionais (_cmp_datas, _cmp_vals, _gpcab_datas, _gpcab_cs):
+        Timelines pré-computadas. Use calcular_todos_membros() para calcular todos
+        os membros de uma vez — ele constrói as timelines uma única vez e repassa.
+        Se não fornecidos, as timelines são construídas internamente (modo standalone).
 
     MELHORIA v3.1: timelines pré-computadas → O(n log n) em vez de O(n²).
     """
@@ -398,9 +409,17 @@ def calcular_resultado_membro(membro: str, df_vend: pd.DataFrame,
 
     _df_man = df_man if (df_man is not None and not df_man.empty) else pd.DataFrame()
 
-    # Pré-computar timelines uma única vez
-    cmp_datas, cmp_vals   = _build_cmp_timeline(df_comp)
-    gpcab_datas, gpcab_cs = _build_gpcab_timeline(df_gast, df_comp, df_vend, _df_man)
+    # Usa timelines pré-computadas se fornecidas (via calcular_todos_membros),
+    # caso contrário constrói internamente (chamada standalone).
+    if _cmp_datas is not None and _cmp_vals is not None:
+        cmp_datas, cmp_vals = _cmp_datas, _cmp_vals
+    else:
+        cmp_datas, cmp_vals = _build_cmp_timeline(df_comp)
+
+    if _gpcab_datas is not None and _gpcab_cs is not None:
+        gpcab_datas, gpcab_cs = _gpcab_datas, _gpcab_cs
+    else:
+        gpcab_datas, gpcab_cs = _build_gpcab_timeline(df_gast, df_comp, df_vend, _df_man)
 
     cmp_global   = calcular_cmp(df_comp)
     gpcab_global = float(gpcab_cs[-1]) if len(gpcab_cs) > 0 else 0.0
@@ -456,8 +475,28 @@ def calcular_resultado_membro(membro: str, df_vend: pd.DataFrame,
 
 def calcular_todos_membros(df_vend, df_comp, df_gast,
                             df_man: pd.DataFrame | None = None) -> dict:
-    return {m: calcular_resultado_membro(m, df_vend, df_comp, df_gast, df_man)
-            for m in MEMBROS}
+    """
+    Calcula resultado para todos os membros.
+
+    MELHORIA: as timelines de CMP e GPCab são construídas uma única vez
+    e passadas para cada membro, evitando 3× o custo de reconstrução.
+    Anteriormente cada chamada a calcular_resultado_membro reconstruía
+    as timelines do zero — O(3n) em vez de O(n).
+    """
+    _df_man = df_man if (df_man is not None and not df_man.empty) else pd.DataFrame()
+
+    # Pré-computar timelines uma única vez para todos os membros
+    cmp_datas, cmp_vals     = _build_cmp_timeline(df_comp)
+    gpcab_datas, gpcab_cs   = _build_gpcab_timeline(df_gast, df_comp, df_vend, _df_man)
+
+    return {
+        m: calcular_resultado_membro(
+            m, df_vend, df_comp, df_gast, df_man,
+            _cmp_datas=cmp_datas, _cmp_vals=cmp_vals,
+            _gpcab_datas=gpcab_datas, _gpcab_cs=gpcab_cs,
+        )
+        for m in MEMBROS
+    }
 
 
 # ── Resumo financeiro global ──────────────────────────────────────────────────
@@ -538,12 +577,28 @@ def calcular_resumo_financeiro(df_comp, df_gast, df_vend, df_man) -> dict:
 
 def estimar_rebanho_arroba(estoque: int, peso_kg: float,
                             preco_arroba: float,
-                            ctcab: float) -> dict:
-    """Estima o valor do rebanho pelo preço da arroba."""
+                            ctcab: float,
+                            rendimento: float = 0.52) -> dict:
+    """
+    Estima o valor do rebanho pelo preço da arroba.
+
+    peso_kg   — peso VIVO por cabeça (kg).  Ex: 480 kg
+    rendimento — percentual de rendimento de carcaça (padrão 52 % para boi gordo Nelore).
+                 Esse valor converte peso vivo em peso de carcaça antes de dividir por 15.
+                 Use rendimento=1.0 se peso_kg já for informado em peso de carcaça.
+
+    Fórmula correta:
+        arrobas/cab = (peso_kg × rendimento) / 15
+    Exemplo:  480 kg vivo × 0,52 = 249,6 kg carcaça → 249,6 / 15 = 16,64 @
+
+    BUG CORRIGIDO: versão anterior usava peso_kg / 15 sem aplicar o rendimento,
+    o que dobrava o número de arrobas (ex: 480/15 = 32 @ em vez de ~16 @) quando
+    o usuário digitava o peso vivo — erro de ~100% no valor estimado do rebanho.
+    """
     if peso_kg <= 0 or preco_arroba <= 0:
         return {"arrobas_cab": 0, "valor_cab": 0, "valor_total": 0,
                 "capital_imob": ctcab * estoque, "lucro_pot": 0, "margem_pot": 0}
-    arrobas_cab  = peso_kg / 15.0
+    arrobas_cab  = (peso_kg * rendimento) / 15.0
     valor_cab    = arrobas_cab * preco_arroba
     valor_total  = valor_cab * estoque
     capital_imob = ctcab * estoque
@@ -765,9 +820,7 @@ def calcular_indicadores_extras(df_comp: pd.DataFrame, df_gast: pd.DataFrame,
         # Esta é a "quantidade mínima" que a cabeça precisa produzir (em arrobas) para
         # cobrir custos se vendida ao menor preço histórico de arroba, ou usamos
         # a referência de que 1 arroba de boi gordo = ~R$ 280 (valor indicativo)
-        # Referência: R$320/@ — média boi gordo Sudeste/MG (atualizado 2025)
-        # Ajuste conforme cotação atual do mercado local se necessário
-        PRECO_ARROBA_REF = 320.0  # R$/@ — referência indicativa para cálculo
+        # Usa PRECO_ARROBA_REF definido no topo do módulo (atualize conforme mercado).
         resultado["arrobas_min_cab"] = ctcab / PRECO_ARROBA_REF
 
     # % Gastos sobre compras

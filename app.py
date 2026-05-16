@@ -506,30 +506,17 @@ def api_chuvas():
     calculados a partir das visitas registradas.
 
     Resposta:
-      labels            — lista de "Mês/AAAA" (strings)
-      totais            — mm acumulados no mês
-      medias            — média de mm por visita que choveu
-      visitas           — total de visitas no mês
+      labels      — lista de "YYYY-MM" (strings)
+      totais      — mm acumulados no mês
+      medias      — média por visita que choveu
+      visitas     — total de visitas no mês
       visitas_com_chuva — visitas em que choveu
-      meses             — lista de objetos completos para a tabela
-      comparativo       — mesmo período: ano atual vs. ano anterior
-      media_mensal_atual  — média de mm por mês no ano atual
-      media_mensal_ant    — média de mm por mês no mesmo período do ano anterior
-      variacao_total_pct  — variação % acumulada ano atual vs. mesmo período anterior
-      ano_atual / ano_anterior — inteiros para labels no front-end
-      totais_ant        — totais do ano anterior (alinhados por mês, None se sem dado)
+      meses       — lista de objetos completos para a tabela
     """
     df = carregar_aba("Visitas")
-    _vazio = {
-        "labels": [], "totais": [], "medias": [],
-        "visitas": [], "visitas_com_chuva": [], "meses": [],
-        "comparativo": [], "media_mensal_atual": 0, "media_mensal_ant": 0,
-        "total_ano_atual": 0, "total_ano_anterior": 0,
-        "variacao_total_pct": None, "ano_atual": datetime.now().year,
-        "ano_anterior": datetime.now().year - 1, "totais_ant": [],
-    }
     if df.empty or "Data" not in df.columns:
-        return jsonify(_vazio)
+        return jsonify({"labels": [], "totais": [], "medias": [],
+                        "visitas": [], "visitas_com_chuva": [], "meses": []})
 
     df = df[df["Data"].notna()].copy()
     df["AnoMes"] = df["Data"].dt.to_period("M")
@@ -545,71 +532,18 @@ def api_chuvas():
         total_vis   = len(grp)
         vis_chuva   = int(grp["choveu_flag"].sum())
         total_mm    = float(grp.loc[grp["choveu_flag"], "mm"].sum())
-        # média por visita que choveu (útil para avaliar intensidade das chuvas)
-        media_visit = round(total_mm / vis_chuva, 1) if vis_chuva > 0 else 0.0
+        media_mm    = round(total_mm / vis_chuva, 1) if vis_chuva > 0 else 0.0
         meses_dados.append({
             "periodo":           str(periodo),
             "label":             periodo.strftime("%b/%Y"),
             "total_mm":          round(total_mm, 1),
-            "media_mm":          media_visit,   # mm por visita com chuva
+            "media_mm":          media_mm,
             "visitas":           total_vis,
             "visitas_com_chuva": vis_chuva,
             "dias_sem_chuva":    total_vis - vis_chuva,
         })
 
     meses_dados.sort(key=lambda x: x["periodo"])
-
-    # ── Comparativo ano a ano ────────────────────────────────────────────────
-    ano_atual = datetime.now().year
-    ano_ant   = ano_atual - 1
-    ano_atual_str = str(ano_atual)
-    ano_ant_str   = str(ano_ant)
-
-    def _mes_num(periodo_str: str) -> int:
-        return int(periodo_str.split("-")[1])
-
-    meses_atual = [m for m in meses_dados if m["periodo"].startswith(ano_atual_str)]
-    dict_ant    = {_mes_num(m["periodo"]): m
-                   for m in meses_dados if m["periodo"].startswith(ano_ant_str)}
-
-    comparativo = []
-    for m in meses_atual:
-        mes_n = _mes_num(m["periodo"])
-        ant   = dict_ant.get(mes_n)
-        diff  = round(m["total_mm"] - ant["total_mm"], 1) if ant else None
-        pct_v = (round(diff / ant["total_mm"] * 100, 1)
-                 if (ant and ant["total_mm"] > 0 and diff is not None) else None)
-        comparativo.append({
-            "mes":          mes_n,
-            "label":        m["label"],
-            "atual_mm":     m["total_mm"],
-            "anterior_mm":  ant["total_mm"] if ant else None,
-            "diferenca_mm": diff,
-            "variacao_pct": pct_v,
-        })
-
-    total_atual   = round(sum(m["total_mm"] for m in meses_atual), 1)
-    total_ant_per = round(sum(
-        dict_ant[_mes_num(m["periodo"])]["total_mm"]
-        for m in meses_atual if _mes_num(m["periodo"]) in dict_ant
-    ), 1)
-    var_total = None
-    if total_ant_per > 0:
-        var_total = round((total_atual - total_ant_per) / total_ant_per * 100, 1)
-
-    # Médias mensais (mm/mês) — mais intuitiva do que mm/visita para comparar períodos
-    n_meses_atual = len(meses_atual)
-    media_mensal_atual = round(total_atual / n_meses_atual, 1) if n_meses_atual > 0 else 0.0
-    # Média do ano anterior considerando apenas os mesmos meses disponíveis no atual
-    n_meses_ant_comuns = sum(1 for m in meses_atual if _mes_num(m["periodo"]) in dict_ant)
-    media_mensal_ant = (round(total_ant_per / n_meses_ant_comuns, 1)
-                        if n_meses_ant_comuns > 0 else 0.0)
-
-    # Totais do ano anterior alinhados com os labels do ano atual (para gráfico sobreposto)
-    totais_ant_alinhados = [
-        dict_ant[_mes_num(m["periodo"])]["total_mm"] if _mes_num(m["periodo"]) in dict_ant else None
-        for m in meses_atual
-    ]
 
     return jsonify({
         "labels":             [m["label"]             for m in meses_dados],
@@ -618,23 +552,13 @@ def api_chuvas():
         "visitas":            [m["visitas"]           for m in meses_dados],
         "visitas_com_chuva":  [m["visitas_com_chuva"] for m in meses_dados],
         "meses":              meses_dados,
-        # ── comparativo ──
-        "comparativo":           comparativo,
-        "total_ano_atual":       total_atual,
-        "total_ano_anterior":    total_ant_per,
-        "variacao_total_pct":    var_total,
-        "media_mensal_atual":    media_mensal_atual,
-        "media_mensal_ant":      media_mensal_ant,
-        "ano_atual":             ano_atual,
-        "ano_anterior":          ano_ant,
-        # labels e totais só do ano atual (para gráfico comparativo)
-        "labels_atual":          [m["label"] for m in meses_atual],
-        "totais_atual":          [m["total_mm"] for m in meses_atual],
-        "totais_ant":            totais_ant_alinhados,
     })
 
 
 @app.route("/api/cotacao-scot")
+@login_required   # BUG CORRIGIDO: rota exposta publicamente permitia que qualquer
+                  # pessoa (não autenticada) disparasse requisições HTTP externas
+                  # do servidor. Adicionado @login_required para consistência.
 def api_cotacao_scot():
     try:
         import requests, re

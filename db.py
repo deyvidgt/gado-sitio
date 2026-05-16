@@ -141,14 +141,21 @@ def salvar_linha(aba: str, linha: list):
 
 
 def reescrever_aba(aba: str, df: pd.DataFrame):
-    """Reescreve completamente uma aba a partir de um DataFrame."""
+    """
+    Reescreve completamente uma aba a partir de um DataFrame.
+
+    BUG CORRIGIDO: a versão anterior apenas limpava os valores das células
+    (cell.value = None) sem deletar as linhas. O openpyxl mantinha o max_row
+    apontando para as antigas linhas vazias, causando crescimento progressivo
+    do arquivo .xlsx e potencial confusão em leituras via max_row direto.
+    Agora as linhas de dados são deletadas antes de inserir as novas.
+    """
     wb = load_workbook(ARQUIVO_PATH)
     ws = wb[aba]
 
-    # Limpar linhas de dados (mantém cabeçalho na linha 1)
-    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
-        for cell in row:
-            cell.value = None
+    # Deletar todas as linhas de dados (mantém só o cabeçalho na linha 1)
+    if ws.max_row > 1:
+        ws.delete_rows(2, ws.max_row - 1)
 
     for _, row in df.iterrows():
         ws.append([_preparar_valor(v) for v in row])
