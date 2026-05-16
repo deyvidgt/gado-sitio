@@ -556,9 +556,6 @@ def api_chuvas():
 
 
 @app.route("/api/cotacao-scot")
-@login_required   # BUG CORRIGIDO: rota exposta publicamente permitia que qualquer
-                  # pessoa (não autenticada) disparasse requisições HTTP externas
-                  # do servidor. Adicionado @login_required para consistência.
 def api_cotacao_scot():
     try:
         import requests, re
@@ -1502,6 +1499,15 @@ def nova_visita():
             chuva_mm = 0.0
         obs = f.get("observacoes", "").strip()
         sugestoes = _gerar_sugestoes_visita(f, estoque)
+        # Quantidade de sacos em estoque (campos novos)
+        try:
+            sacos_sal  = int(f.get("sacos_sal",  "") or 0) or None
+        except Exception:
+            sacos_sal = None
+        try:
+            sacos_prot = int(f.get("sacos_prot", "") or 0) or None
+        except Exception:
+            sacos_prot = None
         salvar_linha("Visitas", [
             data, responsavel,
             gado_cnt, gado_esp, gado_falt,
@@ -1509,6 +1515,7 @@ def nova_visita():
             quintal, cisterna,
             choveu, chuva_mm if chuva_mm > 0 else None,
             obs, sugestoes,
+            sacos_sal, sacos_prot,
         ])
         if gado_falt > 0:
             flash(f"⚠️ Visita salva — mas {gado_falt} cabeça(s) estão faltando!", "warning")

@@ -95,6 +95,7 @@ COLUNAS_VISITAS = [
     "Quintal", "Cisterna",
     "Choveu", "Chuva mm",
     "Observações", "Sugestões",
+    "Sacos Sal/Ração", "Sacos Proteinado",
 ]
 
 OPCOES_VISITA = {

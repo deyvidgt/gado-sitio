@@ -175,23 +175,59 @@
     <!-- ── Seção 3: Insumos ─────────────────────────────────────────── -->
     <div class="vis-section">
       <h3>🧂 Insumos — Sal, Ração e Proteinado</h3>
-      <div class="status-grid">
+      <div class="status-grid" style="grid-template-columns: repeat(auto-fill, minmax(210px, 1fr))">
+
+        <!-- Sal -->
         <div class="status-item">
-          <label>Sal / Ração</label>
-          <select name="sal_racao" class="status-sel" data-group="sal">
+          <label>Sal</label>
+          <select name="sal_racao" class="status-sel">
             <option value="OK">✅ OK — cheio ou bom</option>
             <option value="Baixo">⚠️ Baixo — precisa repor</option>
             <option value="Vazio">🚨 Vazio — esgotou!</option>
           </select>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;font-weight:500;color:var(--text-2);white-space:nowrap">Sacos:</span>
+            <input type="number" name="sacos_sal" min="0" max="999" placeholder="—"
+                   style="width:72px;padding:5px 8px;border:1.5px solid var(--cream-dk);
+                          border-radius:7px;font-size:14px;font-weight:600;text-align:center;
+                          font-family:'DM Sans',sans-serif;background:var(--cream)">
+          </div>
         </div>
+
+        <!-- Ração -->
+        <div class="status-item">
+          <label>Ração</label>
+          <select name="racao" class="status-sel">
+            <option value="OK">✅ OK — cheio ou bom</option>
+            <option value="Baixo">⚠️ Baixo — precisa repor</option>
+            <option value="Vazio">🚨 Vazio — esgotou!</option>
+          </select>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;font-weight:500;color:var(--text-2);white-space:nowrap">Sacos:</span>
+            <input type="number" name="sacos_racao" min="0" max="999" placeholder="—"
+                   style="width:72px;padding:5px 8px;border:1.5px solid var(--cream-dk);
+                          border-radius:7px;font-size:14px;font-weight:600;text-align:center;
+                          font-family:'DM Sans',sans-serif;background:var(--cream)">
+          </div>
+        </div>
+
+        <!-- Proteinado -->
         <div class="status-item">
           <label>Proteinado</label>
-          <select name="proteinado" class="status-sel" data-group="prot">
+          <select name="proteinado" class="status-sel">
             <option value="OK">✅ OK — cheio ou bom</option>
             <option value="Baixo">⚠️ Baixo — precisa repor</option>
             <option value="Vazio">🚨 Vazio — esgotou!</option>
           </select>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;font-weight:500;color:var(--text-2);white-space:nowrap">Sacos:</span>
+            <input type="number" name="sacos_prot" min="0" max="999" placeholder="—"
+                   style="width:72px;padding:5px 8px;border:1.5px solid var(--cream-dk);
+                          border-radius:7px;font-size:14px;font-weight:600;text-align:center;
+                          font-family:'DM Sans',sans-serif;background:var(--cream)">
+          </div>
         </div>
+
       </div>
     </div>
 
@@ -234,7 +270,6 @@
           <label>Cisterna</label>
           <select name="cisterna" class="status-sel">
             <option value="OK">✅ OK — cheia ou boa</option>
-            <option value="Baixo">⚠️ Baixa — precisa encher</option>
             <option value="Vazia">🚨 Vazia — esgotou!</option>
           </select>
         </div>
