@@ -1,0 +1,137 @@
+Sistema de Gestão de Gado — Sítio Santo Antonio
+Versão 3.3 | Família: Geane, Deyvid e Nilson
+================================================
+
+programa sitio/                          ← pasta raiz do projeto
+│
+├── app.py                               ← servidor web Flask (ponto de entrada)
+│                                           rotas, autenticação, CSRF, cache, PDF
+├── config.py                            ← constantes: membros, colunas, tipos, cores
+├── db.py                                ← acesso ao Excel (ler, salvar, backup)
+├── calculos.py                          ← motor de cálculos financeiros
+│                                           CMP, GPCab, CTCab, break-even, etc.
+├── registros.py                         ← CRUD via linha de comando (compras,
+│                                           gastos, vendas, manejo, editar, excluir)
+├── relatorios.py                        ← relatórios e gráficos (CLI)
+├── exportar.py                          ← geração de relatório Excel formatado
+├── ui_helper.py                         ← helpers de terminal (tabelas, inputs, fmt)
+├── main.py                              ← menu principal CLI (alternativa ao web)
+├── wsgi.py                              ← entry-point para deploy (PythonAnywhere)
+├── visitas_routes.py                    ← [OBSOLETO] rotas de visitas já integradas
+│                                           no app.py — pode ser apagado com segurança
+│
+├── gado_familia.xlsx                    ← banco de dados (abas: Compras, Gastos,
+│                                           Vendas, Manejo, Visitas, Resumo)
+├── usuarios.json                        ← senhas em bcrypt/SHA-256 (gerado
+│                                           automaticamente no primeiro login)
+│
+├── templates/                           ← páginas HTML (Jinja2)
+│   ├── base.html                        ← layout base (navbar, flash, PWA)
+│   ├── login.html                       ← tela de login
+│   ├── dashboard.html                   ← painel principal com gráficos e KPIs
+│   ├── lista.html                       ← listagem de compras/gastos/vendas/manejo
+│   ├── form_compra.html                 ← formulário de nova compra
+│   ├── form_gasto.html                  ← formulário de novo gasto
+│   ├── form_venda.html                  ← formulário de nova venda
+│   ├── form_manejo.html                 ← formulário de manejo (vacina, morte, etc.)
+│   ├── form_visita.html                 ← formulário de visita ao sítio
+│   ├── lista_visitas.html               ← histórico de visitas
+│   ├── relatorios.html                  ← página de relatórios e gráficos web
+│   ├── importar.html                    ← importação de dados via Excel
+│   └── configuracoes.html               ← gerenciar usuários e senhas
+│
+├── static/                              ← arquivos estáticos (servidos pelo Flask)
+│   ├── favicon.ico                      ← ícone do site e do .exe
+│   ├── icon192.png                      ← ícone PWA 192×192
+│   ├── icon512.png                      ← ícone PWA 512×512
+│   └── manifest.json                    ← manifesto PWA (instalar como app)
+│
+├── backups/                             ← backups automáticos do Excel
+│   └── backup_YYYYMMDD_HHMMSS.xlsx      ← criado antes de cada alteração
+│                                           (máximo 15 arquivos, os mais antigos
+│                                            são apagados automaticamente)
+│
+├── requirements.txt                     ← dependências Python (pip install -r)
+├── gado.spec                            ← configuração do PyInstaller (.exe)
+├── build.bat                            ← script para compilar o .exe (Windows)
+├── iniciar.bat                          ← atalho para iniciar o servidor
+├── migrar_gastos.py                     ← utilitário de migração de dados legados
+└── .gitignore                           ← arquivos ignorados pelo Git
+
+================================================
+FLUXO DE DADOS
+================================================
+
+  [Navegador] ←→ app.py (Flask)
+                     │
+                     ├── db.py ←→ gado_familia.xlsx
+                     ├── calculos.py  (CMP, GPCab, CTCab...)
+                     ├── exportar.py  (relatório .xlsx)
+                     └── config.py    (constantes)
+
+================================================
+ROTAS PRINCIPAIS (app.py)
+================================================
+
+  GET  /                          → dashboard
+  GET  /lista?aba=Compras         → listagem de registros
+  POST /compra/nova               → salvar nova compra
+  POST /gasto/novo                → salvar novo gasto
+  POST /venda/nova                → salvar nova venda
+  POST /manejo/novo               → salvar manejo
+  GET  /visitas                   → histórico de visitas
+  POST /visitas/nova              → registrar nova visita
+  GET  /relatorios                → página de relatórios
+  GET  /relatorio-pdf             → baixar PDF do relatório
+  GET  /exportar                  → baixar Excel formatado
+  GET  /configuracoes             → gerenciar usuários
+  GET  /api/fluxo                 → JSON fluxo de caixa (gráfico)
+  GET  /api/membros               → JSON resultado por membro (gráfico)
+  GET  /api/chuvas                → JSON chuvas mensais (gráfico)
+  GET  /api/cotacao-imea          → cotação boi gordo (IMEA/Playwright)
+  GET  /api/cotacao-scot          → cotação novilha (Scot Consultoria)
+
+================================================
+INDICADORES FINANCEIROS (calculos.py)
+================================================
+
+  CMP   = Custo Médio Ponderado por cabeça
+          = Σ(valor_compra) / Σ(qtd_compra)
+
+  GPCab = Gasto acumulado por cabeça
+          = Σ(valor_gasto / estoque_na_data_do_gasto)
+
+  CTCab = Custo Total por cabeça = CMP + GPCab
+
+  Break-even = capital_imobilizado / estoque_atual
+               (preço mínimo por cabeça para recuperar o capital)
+
+  Resultado realizado = receita_vendas − custo_histórico_vendidos
+  ROI realizado       = resultado_realizado / custo_vendidos × 100
+
+================================================
+SENHAS E SEGURANÇA
+================================================
+
+  Arquivo de senhas : usuarios.json (na pasta do programa)
+  Formato           : bcrypt (após primeiro login) ou SHA-256 (legado)
+  Senha padrão      : sitio2025
+  Sessão            : 8 horas (configurável em config.py → SESSAO_MINUTOS)
+  Proteção CSRF     : token automático em todos os formulários POST
+  Secret key        : variável de ambiente GADO_SECRET_KEY
+                      (se não definida, usa valor padrão — só para desenvolvimento)
+
+  Para gerar secret key segura:
+    python -c "import secrets; print(secrets.token_hex(32))"
+
+================================================
+COMPILAR .EXE (Windows)
+================================================
+
+  1. Ter Python 3.11+ instalado
+  2. Rodar: build.bat
+  3. O executável fica em: dist\GadoSitioSantoAntonio\
+  4. Copiar a pasta inteira para outro computador
+     (não precisa de Python instalado para usar)
+
+================================================
