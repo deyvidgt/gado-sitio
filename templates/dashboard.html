@@ -30,7 +30,7 @@
     <div class="metric-val">{{ r.ctcab | brl }}</div>
     <div class="metric-sub">CMP {{ r.cmp | brl }} + Gastos {{ r.gpcab | brl }}</div>
   </div>
-  <div class="metric {% if r.resultado_realizado >= 0 %}{% else %}red{% endif %}">
+  <div class="metric {% if r.resultado_realizado < 0 %}red{% endif %}">
     <div class="metric-icon">📈</div>
     <div class="metric-label">Resultado Realizado</div>
     <div class="metric-val {{ 'pos' if r.resultado_realizado >= 0 else 'neg' }}">
@@ -58,7 +58,6 @@
   </div>
 </div>
 
-
 <!-- Estoque por Membro -->
 <div class="three-col" style="margin-bottom:24px">
   {% for m in MEMBROS %}
@@ -80,60 +79,37 @@
   {% endfor %}
 </div>
 
-<!-- Cotações de Mercado — Scot Consultoria + IMEA -->
+<!-- Cotações de Mercado -->
 <div class="card" style="margin-bottom:24px">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
     <div class="card-title" style="margin-bottom:0">🌐 Cotações de Mercado</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button onclick="buscarCotacaoScot()" class="btn btn-outline btn-sm" id="btn-cotacao-scot">
-        🔄 Scot (Triângulo MG)
-      </button>
-      <button onclick="buscarCotacaoImea()" class="btn btn-outline btn-sm" id="btn-cotacao-imea">
-        🔄 IMEA (Sudeste)
-      </button>
+      <button onclick="buscarCotacaoScot()" class="btn btn-outline btn-sm" id="btn-cotacao-scot">🔄 Scot (Triângulo MG)</button>
+      <button onclick="buscarCotacaoImea()" class="btn btn-outline btn-sm" id="btn-cotacao-imea">🔄 IMEA (Sudeste)</button>
       <button onclick="buscarAmbas()" class="btn btn-sm" id="btn-cotacao-ambas"
-              style="background:var(--green-600);color:#fff;border:none">
-        🔄 Buscar Ambas
-      </button>
+              style="background:var(--green-600);color:#fff;border:none">🔄 Buscar Ambas</button>
     </div>
   </div>
-
-  <!-- Break-even referência -->
   <div id="cotacao-breakeven" style="display:none;background:var(--cream-dk);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px">
-    <strong>📌 Break-even do rebanho:</strong> <span id="val-breakeven">—</span>/cabeça &nbsp;|&nbsp;
-    <strong>CTCab:</strong> <span id="val-ctcab">—</span>/cabeça &nbsp;
-    <span style="color:var(--text-3)">(mínimo p/ não ter prejuízo)</span>
+    <strong>📌 Break-even:</strong> <span id="val-breakeven">—</span>/cabeça &nbsp;|&nbsp;
+    <strong>CTCab:</strong> <span id="val-ctcab">—</span>/cabeça
   </div>
-
   <div class="two-col" style="gap:16px">
-    <!-- Scot Consultoria -->
     <div>
-      <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
-        📊 Scot Consultoria — Novilha Triângulo Mineiro
-      </div>
-      <div id="cotacao-scot-wrap">
-        <p style="font-size:13px;color:var(--text-3)">Clique em "Buscar Ambas" ou "Scot" para carregar.</p>
-      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📊 Scot — Novilha Triângulo MG</div>
+      <div id="cotacao-scot-wrap"><p style="font-size:13px;color:var(--text-3)">Clique em "Buscar Ambas" para carregar.</p></div>
     </div>
-
-    <!-- IMEA -->
     <div>
-      <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
-        📋 IMEA — Reposição Nelore Sudeste
-      </div>
-      <div id="cotacao-imea-wrap">
-        <p style="font-size:13px;color:var(--text-3)">Clique em "Buscar Ambas" ou "IMEA" para carregar.</p>
-      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📋 IMEA — Reposição Nelore Sudeste</div>
+      <div id="cotacao-imea-wrap"><p style="font-size:13px;color:var(--text-3)">Clique em "Buscar Ambas" para carregar.</p></div>
     </div>
   </div>
-
   <div id="cotacao-footer" style="display:none;margin-top:12px;font-size:11px;color:var(--text-3);border-top:1px solid var(--cream-dk);padding-top:10px">
-    <span id="cotacao-atualizado"></span>
-    &nbsp;·&nbsp; Preços para referência — não constituem oferta de compra ou venda.
+    <span id="cotacao-atualizado"></span> · Preços para referência.
   </div>
 </div>
 
-<!-- Charts + Recentes -->
+<!-- Fluxo de caixa + Membros -->
 <div class="two-col" style="margin-bottom:24px">
   <div class="card">
     <div class="card-title">💰 Fluxo de Caixa</div>
@@ -144,6 +120,72 @@
     <canvas id="chartMembros" height="200"></canvas>
   </div>
 </div>
+
+<!-- ═══ CARD DE CHUVAS MENSAIS ══════════════════════════════════════════════ -->
+<div class="card" style="margin-bottom:24px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px">
+    <div>
+      <div class="card-title" style="margin-bottom:2px">🌧️ Chuvas por Mês</div>
+      <div style="font-size:12px;color:var(--text-3)">Alimentado pelas visitas ao sítio · clique num mês para detalhes</div>
+    </div>
+    <a href="{{ url_for('visitas') }}" class="btn btn-outline btn-sm">🌾 Ver visitas</a>
+  </div>
+
+  <!-- KPIs rápidos de chuva -->
+  <div id="chuva-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px">
+    <div class="chuva-kpi" id="ck-total-ano">
+      <div class="ck-val" id="ck-val-total">—</div>
+      <div class="ck-lbl">mm este ano</div>
+    </div>
+    <div class="chuva-kpi" id="ck-media-mes">
+      <div class="ck-val" id="ck-val-media">—</div>
+      <div class="ck-lbl">média mensal (mm)</div>
+    </div>
+    <div class="chuva-kpi" id="ck-melhor">
+      <div class="ck-val" id="ck-val-melhor">—</div>
+      <div class="ck-lbl">mês mais chuvoso</div>
+    </div>
+    <div class="chuva-kpi" id="ck-visitas">
+      <div class="ck-val" id="ck-val-visitas">—</div>
+      <div class="ck-lbl">visitas registradas</div>
+    </div>
+  </div>
+
+  <!-- Gráfico de barras -->
+  <div style="position:relative;height:200px;margin-bottom:16px">
+    <canvas id="chartChuvas"></canvas>
+  </div>
+
+  <!-- Tabela detalhada -->
+  <div id="chuva-tabela-wrap" style="display:none">
+    <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
+      📋 Histórico mensal completo
+    </div>
+    <div class="table-wrap" style="box-shadow:none">
+      <table id="chuva-tabela">
+        <thead>
+          <tr>
+            <th>Mês</th>
+            <th>Total (mm)</th>
+            <th>Média/visita</th>
+            <th>Visitas c/ chuva</th>
+            <th>Total visitas</th>
+          </tr>
+        </thead>
+        <tbody id="chuva-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="chuva-vazio" style="display:none;text-align:center;padding:32px;color:var(--text-3);font-size:13px">
+    Nenhuma visita com dados de chuva registrada ainda.<br>
+    <a href="{{ url_for('nova_visita') }}" style="color:var(--green-600)">Registrar primeira visita →</a>
+  </div>
+  <div id="chuva-loading" style="text-align:center;padding:32px;color:var(--text-3);font-size:13px">
+    ⏳ Carregando dados de chuva...
+  </div>
+</div>
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
 
 <!-- Resumo financeiro + Atividade recente -->
 <div class="two-col">
@@ -185,13 +227,55 @@
 
 {% endblock %}
 
+{% block head %}
+<style>
+  /* KPIs de chuva */
+  .chuva-kpi {
+    background: var(--surface-2);
+    border: 1.5px solid var(--bg-2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+    border-top: 3px solid var(--info);
+  }
+  .ck-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--info);
+    margin-bottom: 4px;
+  }
+  .ck-lbl {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  [data-theme="dark"] .chuva-kpi { border-top-color: #5db3e8; }
+  [data-theme="dark"] .ck-val    { color: #5db3e8; }
+</style>
+{% endblock %}
+
 {% block scripts %}
 <script>
-async function loadCharts() {
-  const gFluxo   = await fetch("/api/fluxo").then(r => r.json());
-  const gMembros = await fetch("/api/membros").then(r => r.json());
+/* ── helpers ── */
+function brl(v) {
+  if (v === null || v === undefined) return "—";
+  return "R$ " + Number(v).toLocaleString("pt-BR", {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function pct(v, prefix=true) {
+  if (v === null || v === undefined) return "—";
+  const s = Number(v).toFixed(1).replace(".", ",");
+  return (prefix && v > 0 ? "+" : "") + s + "%";
+}
 
-  // Chart Fluxo de Caixa
+/* ── Fluxo + Membros ── */
+async function loadCharts() {
+  const [gFluxo, gMembros] = await Promise.all([
+    fetch("/api/fluxo").then(r => r.json()),
+    fetch("/api/membros").then(r => r.json()),
+  ]);
+
   new Chart(document.getElementById("chartFluxo"), {
     type: "bar",
     data: {
@@ -203,73 +287,201 @@ async function loadCharts() {
     },
     options: {
       responsive: true,
-      plugins: { legend: { labels: { font: { family: "DM Sans", size: 12 } } } },
-      scales: {
-        y: { ticks: { callback: v => "R$ " + v.toLocaleString("pt-BR") } },
-        x: { ticks: { font: { size: 11 } } }
-      }
+      plugins: { legend: { labels: { font: { family:"DM Sans", size:12 } } } },
+      scales: { y: { ticks: { callback: v => "R$ " + v.toLocaleString("pt-BR") } } }
     }
   });
 
-  // Chart Membros
   new Chart(document.getElementById("chartMembros"), {
     type: "bar",
     data: {
       labels: gMembros.nomes,
       datasets: [
-        { label: "Receita",   data: gMembros.receitas,   backgroundColor: "rgba(61,122,52,.75)", borderRadius: 4 },
+        { label: "Receita",   data: gMembros.receitas,   backgroundColor: "rgba(61,122,52,.75)",  borderRadius: 4 },
         { label: "Custo",     data: gMembros.custos,     backgroundColor: "rgba(201,151,42,.75)", borderRadius: 4 },
-        { label: "Resultado", data: gMembros.resultados, backgroundColor: "rgba(41,128,185,.75)",  borderRadius: 4 },
+        { label: "Resultado", data: gMembros.resultados, backgroundColor: "rgba(41,128,185,.75)", borderRadius: 4 },
       ]
     },
     options: {
       responsive: true,
-      plugins: { legend: { labels: { font: { family: "DM Sans", size: 12 } } } },
+      plugins: { legend: { labels: { font: { family:"DM Sans", size:12 } } } },
       scales: { y: { ticks: { callback: v => "R$ " + v.toLocaleString("pt-BR") } } }
     }
   });
 }
-loadCharts();
 
-// ── Cotações ──────────────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════════════
+   CHUVAS MENSAIS
+══════════════════════════════════════════════════ */
+let chartChuvas = null;
 
-function brl(v) {
-  if (!v && v !== 0) return "—";
-  return "R$ " + Number(v).toLocaleString("pt-BR", {minimumFractionDigits:2, maximumFractionDigits:2});
+async function loadChuvas() {
+  document.getElementById("chuva-loading").style.display = "block";
+  document.getElementById("chuva-vazio").style.display   = "none";
+  document.getElementById("chuva-tabela-wrap").style.display = "none";
+
+  try {
+    const d = await fetch("/api/chuvas").then(r => r.json());
+
+    document.getElementById("chuva-loading").style.display = "none";
+
+    if (!d.labels || d.labels.length === 0) {
+      document.getElementById("chuva-vazio").style.display = "block";
+      return;
+    }
+
+    /* ── KPIs ── */
+    const anoAtual = new Date().getFullYear().toString();
+    const mesesAno = d.meses.filter(m => m.periodo.startsWith(anoAtual));
+    const totalAno = mesesAno.reduce((s, m) => s + m.total_mm, 0);
+    const mediaAno = mesesAno.length > 0
+      ? (mesesAno.reduce((s, m) => s + m.total_mm, 0) / mesesAno.length).toFixed(1)
+      : "—";
+    const melhor = d.meses.reduce((a, b) => b.total_mm > a.total_mm ? b : a, d.meses[0]);
+    const totalVisitas = d.meses.reduce((s, m) => s + m.visitas, 0);
+
+    document.getElementById("ck-val-total").textContent    = totalAno.toFixed(1) + " mm";
+    document.getElementById("ck-val-media").textContent    = mediaAno + " mm";
+    document.getElementById("ck-val-melhor").textContent   = melhor.label + " (" + melhor.total_mm + "mm)";
+    document.getElementById("ck-val-visitas").textContent  = totalVisitas;
+
+    /* ── Gráfico de barras ── */
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    const gridColor = isDark ? "rgba(255,255,255,.08)" : "rgba(0,0,0,.06)";
+    const textColor = isDark ? "#b0bfae" : "#888";
+
+    if (chartChuvas) chartChuvas.destroy();
+    chartChuvas = new Chart(document.getElementById("chartChuvas"), {
+      type: "bar",
+      data: {
+        labels: d.labels,
+        datasets: [
+          {
+            label: "Total mm",
+            data: d.totais,
+            backgroundColor: d.totais.map(v =>
+              v === 0 ? "rgba(136,136,136,.25)" :
+              v >= 80  ? "rgba(21,101,192,.80)" :
+              v >= 40  ? "rgba(41,128,185,.70)" :
+                         "rgba(100,181,246,.70)"
+            ),
+            borderRadius: 5,
+            order: 1,
+          },
+          {
+            label: "Média/visita",
+            data: d.medias,
+            type: "line",
+            borderColor: "rgba(46,125,50,.85)",
+            backgroundColor: "rgba(46,125,50,.12)",
+            borderWidth: 2,
+            pointRadius: 4,
+            pointBackgroundColor: "rgba(46,125,50,.9)",
+            tension: 0.3,
+            fill: false,
+            order: 0,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        onClick: (evt, elements) => {
+          if (elements.length > 0) {
+            const idx = elements[0].index;
+            mostrarDetalhe(d.meses[idx]);
+          }
+        },
+        plugins: {
+          legend: { labels: { font: { family:"DM Sans", size:12 }, color: textColor } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                if (ctx.datasetIndex === 0) return ` ${ctx.parsed.y} mm acumulados`;
+                return ` ${ctx.parsed.y} mm/visita (média)`;
+              },
+              afterBody: (items) => {
+                const idx = items[0].dataIndex;
+                const m = d.meses[idx];
+                return [
+                  `Visitas c/ chuva: ${m.visitas_com_chuva}/${m.visitas}`,
+                  `Dias sem chuva: ${m.dias_sem_chuva}`,
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font: { family:"DM Sans", size:11 }, color: textColor }, grid: { color: gridColor } },
+          y: {
+            ticks: { callback: v => v + " mm", font: { family:"DM Sans", size:11 }, color: textColor },
+            grid: { color: gridColor },
+            title: { display: true, text: "mm", color: textColor, font: { size:11 } }
+          }
+        }
+      }
+    });
+
+    /* ── Tabela ── */
+    const tbody = document.getElementById("chuva-tbody");
+    tbody.innerHTML = "";
+    [...d.meses].reverse().forEach(m => {
+      const tr = document.createElement("tr");
+      const cor = m.total_mm >= 80 ? "var(--info)" : m.total_mm >= 40 ? "#42a5f5" : m.total_mm > 0 ? "#90caf9" : "var(--text-3)";
+      tr.innerHTML = `
+        <td style="font-weight:600">${m.label}</td>
+        <td style="color:${cor};font-weight:600">${m.total_mm} mm</td>
+        <td>${m.media_mm > 0 ? m.media_mm + " mm" : "—"}</td>
+        <td>${m.visitas_com_chuva} de ${m.visitas}</td>
+        <td>${m.visitas}</td>`;
+      tbody.appendChild(tr);
+    });
+    document.getElementById("chuva-tabela-wrap").style.display = "block";
+
+  } catch(e) {
+    document.getElementById("chuva-loading").innerHTML =
+      `<span style="color:var(--danger)">❌ Erro ao carregar chuvas: ${e.message}</span>`;
+  }
 }
-function pct(v, prefix=true) {
-  if (!v && v !== 0) return "—";
-  const s = Number(v).toFixed(1).replace(".", ",");
-  return (prefix && v > 0 ? "+" : "") + s + "%";
+
+function mostrarDetalhe(m) {
+  // Destaca o mês clicado com um flash visual no KPI de média
+  document.getElementById("ck-val-media").textContent = m.label + ": " + m.total_mm + "mm";
+  setTimeout(() => {
+    const mediaGeral = chartChuvas?.data?.datasets?.[1]?.data;
+    if (mediaGeral) {
+      const soma = mediaGeral.reduce((a,b) => a+b, 0);
+      const med  = mediaGeral.length > 0 ? (soma / mediaGeral.length).toFixed(1) : "—";
+      document.getElementById("ck-val-media").textContent = med + " mm";
+    }
+  }, 3000);
 }
 
+/* ── Cotações ── */
 async function buscarCotacaoScot() {
   const btn  = document.getElementById("btn-cotacao-scot");
   const wrap = document.getElementById("cotacao-scot-wrap");
   btn.disabled = true; btn.textContent = "⏳ Buscando...";
-  wrap.innerHTML = '<p style="font-size:13px;color:var(--text-3)">🔎 Buscando na Scot Consultoria...</p>';
+  wrap.innerHTML = '<p style="font-size:13px;color:var(--text-3)">🔎 Buscando na Scot...</p>';
   try {
     const d = await fetch("/api/cotacao-scot").then(r => r.json());
     if (d.ok && d.cotacoes && d.cotacoes.length > 0) {
       let html = '';
       d.cotacoes.forEach(c => {
         const preco = c.preco ? brl(c.preco) + "/@" : c.raw;
-        html += `
-          <div style="background:var(--green-50);border:1.5px solid var(--green-100);border-radius:10px;padding:14px;margin-bottom:10px">
-            <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;margin-bottom:4px">📍 ${c.regiao}</div>
-            <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--green-700)">${preco}</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:4px">Novilha — preço de venda por arroba</div>
-          </div>`;
+        html += `<div style="background:var(--green-50);border:1.5px solid var(--green-100);border-radius:10px;padding:14px;margin-bottom:10px">
+          <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;margin-bottom:4px">📍 ${c.regiao}</div>
+          <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--green-700)">${preco}</div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:4px">Novilha — preço por arroba</div>
+        </div>`;
       });
       html += `<p style="font-size:11px;color:var(--text-3);margin-top:6px">Fonte: ${d.fonte} · ${d.atualizado}</p>`;
       wrap.innerHTML = html;
-    } else if (d.ok) {
-      wrap.innerHTML = '<p style="font-size:13px;color:var(--warn)">⚠️ Triângulo Mineiro não encontrado. <a href="https://www.scotconsultoria.com.br/cotacoes/novilha/" target="_blank">Ver no site →</a></p>';
     } else {
-      wrap.innerHTML = `<p style="font-size:13px;color:var(--danger)">❌ ${d.erro || "Erro desconhecido"}<br><a href="https://www.scotconsultoria.com.br/cotacoes/novilha/" target="_blank" style="color:var(--green-600)">Ver no site da Scot →</a></p>`;
+      wrap.innerHTML = `<p style="font-size:13px;color:var(--warn)">⚠️ ${d.erro || "Não encontrado"}<br><a href="https://www.scotconsultoria.com.br/cotacoes/novilha/" target="_blank" style="color:var(--green-600)">Ver no site →</a></p>`;
     }
   } catch(e) {
-    wrap.innerHTML = `<p style="font-size:13px;color:var(--danger)">❌ Erro de conexão: ${e.message}</p>`;
+    wrap.innerHTML = `<p style="font-size:13px;color:var(--danger)">❌ Erro: ${e.message}</p>`;
   }
   btn.disabled = false; btn.textContent = "🔄 Scot (Triângulo MG)";
 }
@@ -278,94 +490,54 @@ async function buscarCotacaoImea() {
   const btn  = document.getElementById("btn-cotacao-imea");
   const wrap = document.getElementById("cotacao-imea-wrap");
   btn.disabled = true; btn.textContent = "⏳ Buscando...";
-  wrap.innerHTML = '<p style="font-size:13px;color:var(--text-3)">🔎 Buscando no IMEA...</p>';
+  wrap.innerHTML = '<p style="font-size:13px;color:var(--text-3)">🔎 Buscando no IMEA (pode levar ~30s)...</p>';
   try {
     const d = await fetch("/api/cotacao-imea").then(r => r.json());
-
-    // Mostrar break-even de referência
     if (d.break_even > 0 || d.ctcab > 0) {
       document.getElementById("val-breakeven").textContent = brl(d.break_even);
       document.getElementById("val-ctcab").textContent     = brl(d.ctcab);
       document.getElementById("cotacao-breakeven").style.display = "block";
     }
-
     if (d.ok && d.cotacoes && d.cotacoes.length > 0) {
       let html = '';
       d.cotacoes.forEach(c => {
-        // Indicador sem preço (não encontrado)
-        if (c.preco_cab === null || c.preco_cab === undefined) {
-          html += `
-            <div style="background:var(--cream-dk);border:1.5px solid #ddd;border-radius:10px;padding:14px;margin-bottom:10px;opacity:.7">
-              <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;margin-bottom:2px">
-                ${c.emoji} ${c.nome}
-              </div>
-              <div style="font-size:12px;color:var(--text-3)">— não encontrado na página —</div>
-            </div>`;
+        if (c.preco_cab === null) {
+          html += `<div style="background:var(--cream-dk);border-radius:10px;padding:14px;margin-bottom:10px;opacity:.7">
+            <div style="font-size:11px;font-weight:600;color:var(--text-3)">${c.emoji} ${c.nome}</div>
+            <div style="font-size:12px;color:var(--text-3)">— não encontrado —</div></div>`;
           return;
         }
-
-        const corBorda = c.lucra ? "var(--green-200)" : "var(--danger-light, #FFCDD2)";
-        const corFundo = c.lucra ? "var(--green-50)"  : "#FFF8F8";
-        const sinalIcon = c.lucra ? "✅" : "❌";
-        const vsText = c.vs_breakeven >= 0
-          ? `<span style="color:var(--green-700);font-weight:600">+${brl(c.vs_breakeven)} acima do break-even</span>`
-          : `<span style="color:var(--danger,#c62828);font-weight:600">${brl(c.vs_breakeven)} abaixo do break-even</span>`;
-        const varHtml = c.variacao !== null && c.variacao !== undefined
-          ? `<span style="font-size:11px;color:${c.variacao>=0?'var(--green-700)':'#c62828'};margin-left:6px">${pct(c.variacao)}</span>`
+        const sinal = c.lucra ? "✅" : "❌";
+        const vs = c.vs_breakeven >= 0
+          ? `<span style="color:var(--green-700);font-weight:600">+${brl(c.vs_breakeven)}</span>`
+          : `<span style="color:var(--danger);font-weight:600">${brl(c.vs_breakeven)}</span>`;
+        const varHtml = c.variacao !== null
+          ? `<span style="font-size:11px;color:${c.variacao>=0?"var(--green-700)":"#c62828"};margin-left:6px">${c.variacao>=0?"+":""}${c.variacao}%</span>`
           : '';
-
-        html += `
-          <div style="background:${corFundo};border:1.5px solid ${corBorda};border-radius:10px;padding:14px;margin-bottom:10px">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-              <div>
-                <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;margin-bottom:2px">
-                  ${c.emoji} ${c.nome}
-                </div>
-                <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">
-                  📍 ${c.regiao} · ${c.kg}kg · ${c.arrobas}@
-                </div>
-                <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--green-700)">
-                  ${brl(c.preco_cab)}<span style="font-size:13px;font-weight:400;font-family:inherit">/cab.</span>${varHtml}
-                </div>
-                <div style="font-size:12px;color:var(--text-2);margin-top:2px">
-                  ≈ ${brl(c.preco_arroba)}/arroba
-                </div>
-              </div>
-              <div style="text-align:right;min-width:100px">
-                <div style="font-size:20px;margin-bottom:4px">${sinalIcon}</div>
-                <div style="font-size:11px;line-height:1.5">${vsText}</div>
-                <div style="font-size:11px;color:var(--text-3);margin-top:4px">${pct(c.vs_breakeven_pct)} vs break-even</div>
-              </div>
+        html += `<div style="background:${c.lucra?"var(--green-50)":"#FFF8F8"};border:1.5px solid ${c.lucra?"var(--green-200)":"#FFCDD2"};border-radius:10px;padding:14px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;gap:8px">
+            <div>
+              <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;margin-bottom:2px">${c.emoji} ${c.nome}</div>
+              <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--green-700)">${brl(c.preco_cab)}/cab.${varHtml}</div>
+              <div style="font-size:12px;color:var(--text-2)">≈ ${brl(c.preco_arroba)}/arroba</div>
             </div>
-          </div>`;
-      });
-
-      html += `
-        <div style="font-size:11px;color:var(--text-3);padding:8px 0;border-top:1px solid var(--cream-dk);margin-top:4px">
-          ${d.referencia}<br>
-          Fonte: ${d.fonte}
+            <div style="text-align:right;min-width:90px">
+              <div style="font-size:20px;margin-bottom:4px">${sinal}</div>
+              <div style="font-size:11px;line-height:1.5">${vs} vs break-even</div>
+              <div style="font-size:11px;color:var(--text-3)">${pct(c.vs_breakeven_pct)}</div>
+            </div>
+          </div>
         </div>`;
+      });
+      html += `<div style="font-size:11px;color:var(--text-3);padding-top:8px;border-top:1px solid var(--cream-dk)">${d.referencia}<br>Fonte: ${d.fonte}</div>`;
       wrap.innerHTML = html;
-
-      document.getElementById("cotacao-atualizado").textContent = "IMEA atualizado: " + d.atualizado;
+      document.getElementById("cotacao-atualizado").textContent = "IMEA: " + d.atualizado;
       document.getElementById("cotacao-footer").style.display = "block";
     } else {
-      wrap.innerHTML = `
-        <p style="font-size:13px;color:var(--warn)">
-          ⚠️ ${d.erro || "Cotações IMEA indisponíveis no momento."}<br>
-          <a href="https://www.imea.com.br/imea-site/indicador-boi" target="_blank" style="color:var(--green-600)">
-            Ver no site do IMEA →
-          </a>
-        </p>`;
+      wrap.innerHTML = `<p style="font-size:13px;color:var(--warn)">⚠️ ${d.erro || "Indisponível"}<br><a href="https://www.imea.com.br/imea-site/indicador-boi" target="_blank" style="color:var(--green-600)">Ver no IMEA →</a></p>`;
     }
   } catch(e) {
-    wrap.innerHTML = `
-      <p style="font-size:13px;color:var(--danger)">
-        ❌ Erro de conexão: ${e.message}<br>
-        <a href="https://www.imea.com.br/imea-site/indicador-boi" target="_blank" style="color:var(--green-600)">
-          Abrir IMEA →
-        </a>
-      </p>`;
+    wrap.innerHTML = `<p style="font-size:13px;color:var(--danger)">❌ ${e.message}</p>`;
   }
   btn.disabled = false; btn.textContent = "🔄 IMEA (Sudeste)";
 }
@@ -377,5 +549,13 @@ async function buscarAmbas() {
   btn.disabled = false; btn.textContent = "🔄 Buscar Ambas";
 }
 
+/* ── Recarregar chuvas ao trocar tema ── */
+document.addEventListener("themeChanged", () => {
+  if (chartChuvas) loadChuvas();
+});
+
+/* ── Init ── */
+loadCharts();
+loadChuvas();
 </script>
 {% endblock %}

@@ -4,7 +4,6 @@
 
 {% block content %}
 
-<!-- Alertas -->
 {% if alertas %}
 <div style="margin-bottom:20px">
   {% for a in alertas %}
@@ -43,13 +42,14 @@
       <span style="font-weight:600;color:var(--gold)">{{ r.break_even | brl }}/cab.</span></div>
     <div class="kv"><span class="kv-key">Capital Imobilizado</span><span>{{ r.capital_imobilizado | brl }}</span></div>
     <div style="margin-top:14px;padding:12px;background:var(--green-50);border-radius:8px;font-size:12px;color:var(--text-2)">
-      <strong>Glossário:</strong> CMP = custo médio ponderado de todas as compras · GPCab = gastos por cabeça no período ·
-      CTCab = CMP + GPCab · Break-even = preço mínimo p/ recuperar o capital do estoque atual
+      <strong>Glossário:</strong> CMP = custo médio ponderado de todas as compras ·
+      GPCab = gastos por cabeça no período · CTCab = CMP + GPCab ·
+      Break-even = preço mínimo p/ recuperar o capital do estoque atual
     </div>
   </div>
 </div>
 
-<!-- Gastos por categoria + Gráfico -->
+<!-- Gastos por categoria -->
 <div class="two-col" style="margin-bottom:24px">
   <div class="card">
     <div class="card-title">💸 Gastos por Categoria</div>
@@ -59,9 +59,7 @@
         <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
           <span>{{ tipo }}</span>
           <span style="font-weight:600">{{ val.valor | brl }}
-            <span style="color:var(--text-3);font-weight:400">
-              ({{ "%.1f"|format(val.pct) }}%)
-            </span>
+            <span style="color:var(--text-3);font-weight:400">({{ "%.1f"|format(val.pct) }}%)</span>
           </span>
         </div>
         <div style="background:var(--cream-dk);border-radius:99px;height:6px;overflow:hidden">
@@ -73,7 +71,6 @@
       <p style="font-size:13px;color:var(--text-3)">Nenhum gasto registrado.</p>
     {% endif %}
   </div>
-
   <div class="card">
     <div class="card-title">📊 Distribuição de Gastos</div>
     <canvas id="chartGastos" height="220"></canvas>
@@ -116,20 +113,13 @@
   <div class="table-wrap" style="box-shadow:none">
     <table>
       <thead>
-        <tr>
-          <th>Data</th><th>Cabeças</th><th>Receita</th>
-          <th>CMP na data</th><th>GPCab na data</th>
-          <th>Custo</th><th>Resultado</th><th>Margem</th>
-        </tr>
+        <tr><th>Data</th><th>Cabeças</th><th>Receita</th><th>CMP na data</th><th>GPCab na data</th><th>Custo</th><th>Resultado</th><th>Margem</th></tr>
       </thead>
       <tbody>
         {% for v in mr.vendas_detalhadas %}
         <tr>
-          <td>{{ v.data }}</td>
-          <td>{{ v.cabecas }}</td>
-          <td>{{ v.receita | brl }}</td>
-          <td>{{ v.cmp | brl }}</td>
-          <td>{{ v.gpcab | brl }}</td>
+          <td>{{ v.data }}</td><td>{{ v.cabecas }}</td>
+          <td>{{ v.receita | brl }}</td><td>{{ v.cmp | brl }}</td><td>{{ v.gpcab | brl }}</td>
           <td>{{ (v.custo_comp + v.custo_gast) | brl }}</td>
           <td class="{{ 'pos' if v.resultado >= 0 else 'neg' }}">{{ v.resultado | brl }}</td>
           <td>{{ v.margem_pct | pct }}</td>
@@ -142,7 +132,48 @@
 {% endif %}
 {% endfor %}
 
-<!-- Comparativo Anual -->
+<!-- ═══ CHUVAS MENSAIS ═══════════════════════════════════════════════════════ -->
+<h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--green-700);margin:28px 0 6px">
+  🌧️ Chuvas Mensais
+</h2>
+<p style="font-size:13px;color:var(--text-3);margin-bottom:16px">
+  Totais e médias calculados a partir das visitas registradas ao sítio.
+</p>
+
+<div class="two-col" style="margin-bottom:24px">
+  <!-- Gráfico -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px">📊 Precipitação por Mês</div>
+    <div style="position:relative;height:220px">
+      <canvas id="chartChuvasRel"></canvas>
+    </div>
+    <div id="chuva-rel-loading" style="text-align:center;padding:20px;font-size:13px;color:var(--text-3)">
+      ⏳ Carregando...
+    </div>
+    <div id="chuva-rel-vazio" style="display:none;text-align:center;padding:20px;font-size:13px;color:var(--text-3)">
+      Nenhuma visita com dados de chuva registrada.
+    </div>
+  </div>
+
+  <!-- KPIs de chuva -->
+  <div class="card">
+    <div class="card-title">📋 Resumo de Chuvas</div>
+    <div id="chuva-kpis-rel">
+      <div style="text-align:center;padding:20px;font-size:13px;color:var(--text-3)">⏳ Carregando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabela mensal completa -->
+<div class="card" style="margin-bottom:24px">
+  <div class="card-title">🗂️ Histórico Mensal de Chuvas</div>
+  <div id="chuva-tabela-rel-wrap">
+    <div style="text-align:center;padding:20px;font-size:13px;color:var(--text-3)">⏳ Carregando...</div>
+  </div>
+</div>
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+
+<!-- Comparativo anual -->
 {% if anual %}
 <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--green-700);margin:24px 0 16px">
   📅 Comparativo Anual
@@ -156,10 +187,8 @@
       {% for a in anual %}
       <tr>
         <td style="font-weight:600">{{ a.ano }}</td>
-        <td>{{ a.compras | brl }}</td>
-        <td>{{ a.gastos | brl }}</td>
-        <td>{{ a.custo | brl }}</td>
-        <td>{{ a.vendas | brl }}</td>
+        <td>{{ a.compras | brl }}</td><td>{{ a.gastos | brl }}</td>
+        <td>{{ a.custo | brl }}</td><td>{{ a.vendas | brl }}</td>
         <td class="{{ 'pos' if a.positivo else 'neg' }}">{{ a.lucro | brl }}</td>
         <td class="{{ 'pos' if a.positivo else 'neg' }}">{{ a.roi | pct }}</td>
       </tr>
@@ -170,23 +199,28 @@
 {% endif %}
 
 <!-- Exportar -->
-<div class="card" style="display:flex;align-items:center;justify-content:space-between">
+<div class="card" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
   <div>
     <div style="font-weight:600;margin-bottom:4px">Exportar relatório completo</div>
     <div style="font-size:13px;color:var(--text-3)">Gera Excel com todas as abas, fluxo de caixa e resultado por membro</div>
   </div>
-  <a href="{{ url_for('exportar') }}" class="btn btn-gold">⬇️ Baixar Excel</a>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <a href="{{ url_for('exportar') }}"     class="btn btn-gold">⬇️ Baixar Excel</a>
+    <a href="{{ url_for('relatorio_pdf') }}" class="btn btn-outline">📄 Baixar PDF</a>
+  </div>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-fetch("/api/membros").then(r => r.json()).then(d => {
+/* Gráfico de gastos por tipo */
+fetch("/api/membros").then(r => r.json()).then(() => {
   const gastosObj = {{ gastos_tipo | tojson }};
   const tipos = Object.keys(gastosObj);
   const vals  = tipos.map(t => gastosObj[t].valor);
-  const cores  = ["#3d7a34","#c9972a","#2980b9","#8e44ad","#e67e22","#95a5a6"];
+  const cores = ["#3d7a34","#c9972a","#2980b9","#8e44ad","#e67e22","#95a5a6"];
+  if (tipos.length === 0) return;
   new Chart(document.getElementById("chartGastos"), {
     type: "doughnut",
     data: {
@@ -196,11 +230,144 @@ fetch("/api/membros").then(r => r.json()).then(d => {
     options: {
       responsive: true,
       plugins: {
-        legend: { position: "bottom", labels: { font: { family: "DM Sans", size: 11 }, boxWidth: 14 } },
-        tooltip: { callbacks: { label: ctx => " R$ " + ctx.raw.toLocaleString("pt-BR", {minimumFractionDigits:2}) } }
+        legend: { position:"bottom", labels:{ font:{family:"DM Sans",size:11}, boxWidth:14 } },
+        tooltip: { callbacks: { label: ctx => " R$ " + ctx.raw.toLocaleString("pt-BR",{minimumFractionDigits:2}) } }
       }
     }
   });
 });
+
+/* ═══ CHUVAS NA PÁGINA DE RELATÓRIOS ═══ */
+async function loadChuvasRelatorio() {
+  try {
+    const d = await fetch("/api/chuvas").then(r => r.json());
+
+    document.getElementById("chuva-rel-loading").style.display = "none";
+
+    if (!d.labels || d.labels.length === 0) {
+      document.getElementById("chuva-rel-vazio").style.display = "block";
+      document.getElementById("chuva-kpis-rel").innerHTML =
+        '<p style="font-size:13px;color:var(--text-3)">Nenhum dado de chuva registrado ainda.</p>';
+      document.getElementById("chuva-tabela-rel-wrap").innerHTML =
+        '<p style="font-size:13px;color:var(--text-3);padding:16px">Nenhum dado de chuva registrado ainda. <a href="/visitas/nova" style="color:var(--green-600)">Registrar visita →</a></p>';
+      return;
+    }
+
+    /* ── Gráfico ── */
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    const gridC  = isDark ? "rgba(255,255,255,.08)" : "rgba(0,0,0,.06)";
+    const textC  = isDark ? "#b0bfae" : "#888";
+
+    new Chart(document.getElementById("chartChuvasRel"), {
+      type: "bar",
+      data: {
+        labels: d.labels,
+        datasets: [
+          {
+            label: "Total mm",
+            data: d.totais,
+            backgroundColor: d.totais.map(v =>
+              v === 0     ? "rgba(136,136,136,.25)" :
+              v >= 80     ? "rgba(21,101,192,.80)"  :
+              v >= 40     ? "rgba(41,128,185,.70)"  :
+                            "rgba(100,181,246,.70)"
+            ),
+            borderRadius: 4, order: 1,
+          },
+          {
+            label: "Média/visita",
+            data: d.medias, type: "line",
+            borderColor: "rgba(46,125,50,.85)",
+            backgroundColor: "rgba(46,125,50,.1)",
+            borderWidth: 2, pointRadius: 4,
+            pointBackgroundColor: "rgba(46,125,50,.9)",
+            tension: 0.3, fill: false, order: 0,
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { labels:{ font:{family:"DM Sans",size:11}, color:textC } },
+          tooltip: {
+            callbacks: {
+              label: ctx => ctx.datasetIndex === 0
+                ? ` ${ctx.parsed.y} mm acumulados`
+                : ` ${ctx.parsed.y} mm/visita (média)`,
+              afterBody: items => {
+                const m = d.meses[items[0].dataIndex];
+                return [`Visitas c/ chuva: ${m.visitas_com_chuva}/${m.visitas}`];
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks:{ font:{family:"DM Sans",size:10}, color:textC }, grid:{ color:gridC } },
+          y: { ticks:{ callback: v => v + "mm", font:{size:10}, color:textC }, grid:{ color:gridC } }
+        }
+      }
+    });
+
+    /* ── KPIs ── */
+    const anoAtual = new Date().getFullYear().toString();
+    const mesesAno = d.meses.filter(m => m.periodo.startsWith(anoAtual));
+    const totalAno = mesesAno.reduce((s, m) => s + m.total_mm, 0).toFixed(1);
+    const mediaAno = mesesAno.length > 0
+      ? (mesesAno.reduce((s, m) => s + m.total_mm, 0) / mesesAno.length).toFixed(1)
+      : "0";
+    const melhor = d.meses.reduce((a, b) => b.total_mm > a.total_mm ? b : a, d.meses[0]);
+    const totalGeral = d.meses.reduce((s, m) => s + m.total_mm, 0).toFixed(1);
+    const totalVisitas = d.meses.reduce((s, m) => s + m.visitas, 0);
+    const visitasComChuva = d.meses.reduce((s, m) => s + m.visitas_com_chuva, 0);
+
+    document.getElementById("chuva-kpis-rel").innerHTML = `
+      <div class="kv"><span class="kv-key">Total acumulado (todos os meses)</span><span style="font-weight:600;color:var(--info)">${totalGeral} mm</span></div>
+      <div class="kv"><span class="kv-key">Total em ${anoAtual}</span><span>${totalAno} mm</span></div>
+      <div class="kv"><span class="kv-key">Média mensal em ${anoAtual}</span><span>${mediaAno} mm/mês</span></div>
+      <div class="kv"><span class="kv-key">Mês mais chuvoso</span><span style="font-weight:600">${melhor.label} (${melhor.total_mm} mm)</span></div>
+      <div class="kv"><span class="kv-key">Total de visitas</span><span>${totalVisitas}</span></div>
+      <div class="kv"><span class="kv-key">Visitas com chuva registrada</span><span>${visitasComChuva} (${Math.round(visitasComChuva/totalVisitas*100)}%)</span></div>
+      <div style="margin-top:14px;padding:10px 12px;background:var(--green-50);border-radius:8px;font-size:12px;color:var(--text-2)">
+        💡 Os dados são calculados a partir das visitas ao sítio. Quanto mais visitas você registrar, mais precisa fica a média.
+      </div>`;
+
+    /* ── Tabela ── */
+    const linhas = [...d.meses].reverse().map(m => {
+      const cor = m.total_mm >= 80 ? "var(--info)" : m.total_mm >= 40 ? "#42a5f5" : m.total_mm > 0 ? "#90caf9" : "var(--text-3)";
+      const pctChuva = m.visitas > 0 ? Math.round(m.visitas_com_chuva / m.visitas * 100) : 0;
+      return `<tr>
+        <td style="font-weight:600">${m.label}</td>
+        <td style="color:${cor};font-weight:600">${m.total_mm} mm</td>
+        <td>${m.media_mm > 0 ? m.media_mm + " mm" : "—"}</td>
+        <td>${m.visitas_com_chuva} de ${m.visitas} (${pctChuva}%)</td>
+        <td>${m.dias_sem_chuva}</td>
+        <td>${m.visitas}</td>
+      </tr>`;
+    }).join("");
+
+    document.getElementById("chuva-tabela-rel-wrap").innerHTML = `
+      <div class="table-wrap" style="box-shadow:none">
+        <table>
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th>Total (mm)</th>
+              <th>Média/visita</th>
+              <th>Visitas c/ chuva</th>
+              <th>Visitas sem chuva</th>
+              <th>Total visitas</th>
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>`;
+
+  } catch(e) {
+    document.getElementById("chuva-rel-loading").innerHTML =
+      `<span style="color:var(--danger)">❌ Erro ao carregar chuvas: ${e.message}</span>`;
+  }
+}
+
+loadChuvasRelatorio();
 </script>
 {% endblock %}

@@ -14,6 +14,7 @@
     </p>
 
     <form method="post" action="{{ url_for('trocar_senha') }}" id="form-senha" autocomplete="off">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
       <label style="font-size:12px;font-weight:600;color:#444;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">
         Senha Atual
@@ -138,6 +139,7 @@
     <div class="card">
       <div class="card-title">➕ Adicionar Usuário</div>
       <form method="post" action="{{ url_for('adicionar_usuario') }}" autocomplete="off">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
         <label style="font-size:12px;font-weight:600;color:#444;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">
           Nome de Usuário
@@ -190,6 +192,7 @@
       Definir nova senha para: <strong id="modal-nome"></strong>
     </div>
     <form method="post" action="{{ url_for('resetar_senha') }}" autocomplete="off">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="usuario" id="modal-usuario">
 
       <div style="position:relative;margin-bottom:6px">

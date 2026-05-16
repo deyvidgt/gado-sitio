@@ -87,6 +87,7 @@
           {% set aba_map = {'compras': 'Compras', 'gastos': 'Gastos', 'vendas': 'Vendas', 'manejo': 'Manejo'} %}
           <form method="post" action="{{ url_for('excluir', aba=aba_map[secao], idx=i) }}"
                 onsubmit="return confirm('Excluir este registro?')" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button class="btn btn-danger btn-sm" type="submit">🗑</button>
           </form>
         </td>

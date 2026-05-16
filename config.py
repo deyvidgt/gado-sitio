@@ -3,10 +3,13 @@
 """
 Configurações e constantes do Sistema de Gestão de Gado
 Sítio Santo Antonio — Família: Geane, Deyvid, Nilson
+v3.3
 """
 
+import os
+
 ARQUIVO_DADOS = "gado_familia.xlsx"
-VERSAO = "3.2"
+VERSAO = "3.3"
 NOME_SITIO = "Sítio Santo Antonio"
 FAMILIA = "Geane, Deyvid e Nilson"
 
@@ -14,11 +17,16 @@ MEMBROS = ["Mae", "Deyvid", "Nilson"]
 NOMES_MEMBROS = {"Mae": "Geane", "Deyvid": "Deyvid", "Nilson": "Nilson"}
 EMOJIS_MEMBROS = {"Mae": "👩", "Deyvid": "👦", "Nilson": "👦"}
 
+# ── Segurança ─────────────────────────────────────────────────────────────────
+# Em produção, defina a variável de ambiente GADO_SECRET_KEY com um valor aleatório:
+#   python -c "import secrets; print(secrets.token_hex(32))"
+SECRET_KEY = os.environ.get(
+    "GADO_SECRET_KEY",
+    "gado_sitio_dev_only_nao_usar_em_producao_xK9mP3r7"
+)
+
 # ── Login ──────────────────────────────────────────────────────────────────────
-# Senhas armazenadas como SHA-256. Para trocar a senha de um usuário:
-#   python -c "import hashlib; print(hashlib.sha256('NOVA_SENHA'.encode()).hexdigest())"
-# Cole o hash resultante no campo abaixo.
-#
+# Hashes SHA-256 legados — migrados para bcrypt no primeiro login bem-sucedido.
 # Senha padrão de todos: sitio2025
 USUARIOS = {
     "geane":  "490235b01db7dfb8844ff53d572f905ad3cdfeed4c2e866d335c4ee48aeeaecf",
@@ -26,9 +34,12 @@ USUARIOS = {
     "nilson": "490235b01db7dfb8844ff53d572f905ad3cdfeed4c2e866d335c4ee48aeeaecf",
 }
 
-# Tempo de sessão em minutos (0 = até fechar o navegador)
-SESSAO_MINUTOS = 480   # 8 horas
+SESSAO_MINUTOS = 480        # 8 horas
+MAX_TENTATIVAS_LOGIN = 7
 
+# ── Cache do resumo financeiro ────────────────────────────────────────────────
+# Evita recalcular tudo a cada request. Invalida automaticamente após salvar.
+CACHE_RESUMO_TTL = 30       # segundos
 
 TIPOS_GASTO = [
     "Remédio/Vacina",
@@ -50,13 +61,11 @@ TIPOS_MANEJO = [
     "Outro",
 ]
 
-# Limites de alerta para saúde do rebanho (em dias)
 ALERTAS_SAUDE = {
-    "Vacinação": 180,       # 6 meses
-    "Vermifugação": 120,    # 4 meses
+    "Vacinação": 180,
+    "Vermifugação": 120,
 }
 
-# Colunas de cada aba
 COLUNAS_COMPRAS = [
     "Data", "Qtd Cabeças", "Valor Total (R$)", "Valor/Cabeça (R$)",
     "Qtd Mae", "Qtd Deyvid", "Qtd Nilson",
@@ -78,8 +87,6 @@ COLUNAS_VENDAS = [
 COLUNAS_MANEJO = [
     "Data", "Tipo", "Qtd Cabeças", "Descrição", "Responsável",
 ]
-
-# ── VISITAS AO SÍTIO ──────────────────────────────────────────────────────────
 COLUNAS_VISITAS = [
     "Data", "Responsável",
     "Gado Contado", "Gado Esperado", "Gado Faltando",
@@ -90,7 +97,6 @@ COLUNAS_VISITAS = [
     "Observações", "Sugestões",
 ]
 
-# Opções para campos de status da visita
 OPCOES_VISITA = {
     "sal_racao":  ["OK", "Baixo", "Vazio"],
     "proteinado": ["OK", "Baixo", "Vazio"],
@@ -101,7 +107,6 @@ OPCOES_VISITA = {
     "cisterna":   ["OK", "Baixo", "Vazia"],
 }
 
-# Pesos de cores para exportação Excel
 CORES = {
     "verde_escuro":  "1B5E20",
     "verde_medio":   "388E3C",

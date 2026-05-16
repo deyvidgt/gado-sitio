@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Sistema de Gestão de Gado — Sítio Santo Antonio"""
+"""
+Sistema de Gestão de Gado — Sítio Santo Antonio
+v3.3 — melhorias de segurança, cache, CSRF e chuvas mensais
+"""
 
-import sys, os, tempfile, hashlib
+import sys, os, tempfile, hashlib, time, threading
 from functools import wraps
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Caminho base: pasta do .exe quando compilado, pasta do script quando em Python
 if getattr(sys, "frozen", False):
     BASE_DIR = os.path.dirname(sys.executable)
     BUNDLE_DIR = sys._MEIPASS
@@ -17,42 +19,155 @@ else:
 sys.path.insert(0, BUNDLE_DIR)
 
 from flask import (Flask, render_template, request, redirect, url_for,
-                   jsonify, flash, send_file, session)
+                   jsonify, flash, send_file, session, abort)
 import pandas as pd
 from datetime import datetime, timedelta
 
-from db import carregar_todas, carregar_aba, salvar_linha, reescrever_aba, inicializar, fazer_backup
+from db import (carregar_todas, carregar_aba, salvar_linha,
+                reescrever_aba, inicializar, fazer_backup)
 from calculos import (
     calcular_estoque, calcular_resumo_financeiro, calcular_todos_membros,
     calcular_fluxo_caixa, calcular_cmp_ate_data, calcular_gpcab_ate_data,
     calcular_cmp, calcular_gpcab, calcular_estoque_por_membro,
     calcular_indicadores_extras, calcular_gasto_por_tipo, calcular_evolucao_cmp,
 )
-from config import (TIPOS_GASTO, TIPOS_MANEJO, MEMBROS, NOMES_MEMBROS,
-                    EMOJIS_MEMBROS, USUARIOS, SESSAO_MINUTOS, OPCOES_VISITA)
+from config import (
+    TIPOS_GASTO, TIPOS_MANEJO, MEMBROS, NOMES_MEMBROS, EMOJIS_MEMBROS,
+    USUARIOS, SESSAO_MINUTOS, OPCOES_VISITA, SECRET_KEY,
+    MAX_TENTATIVAS_LOGIN, CACHE_RESUMO_TTL,
+)
 from exportar import exportar_relatorio_excel
 
 app = Flask(__name__,
             template_folder=os.path.join(BUNDLE_DIR, "templates"),
             static_folder=os.path.join(BUNDLE_DIR, "static"))
-app.secret_key = "gado_sitio_santo_antonio_2025_xK9mP"
+
+# ── Secret key vem do config (que lê variável de ambiente) ───────────────────
+app.secret_key = SECRET_KEY
 app.jinja_env.globals["enumerate"] = enumerate
 
-# Sessão expira após SESSAO_MINUTOS de inatividade
 @app.before_request
 def _renovar_sessao():
     session.permanent = True
     app.permanent_session_lifetime = timedelta(minutes=SESSAO_MINUTOS)
 
-# ── Autenticação ──────────────────────────────────────────────────────────────
 
-MAX_TENTATIVAS = 7   # bloqueio temporário após N erros seguidos
+# ══════════════════════════════════════════════════════════════════════════════
+#  CACHE DO RESUMO FINANCEIRO
+#  Evita recalcular tudo do zero a cada request.
+#  Invalidado automaticamente após qualquer escrita (salvar_linha / reescrever_aba).
+# ══════════════════════════════════════════════════════════════════════════════
 
-def _hash(senha: str) -> str:
+_cache_lock = threading.Lock()
+_cache: dict = {}          # { "resumo": (timestamp, valor), "dados": (timestamp, valor) }
+
+def _cache_invalidar():
+    with _cache_lock:
+        _cache.clear()
+
+def _cache_get(chave):
+    with _cache_lock:
+        entry = _cache.get(chave)
+        if entry and (time.time() - entry[0]) < CACHE_RESUMO_TTL:
+            return entry[1]
+    return None
+
+def _cache_set(chave, valor):
+    with _cache_lock:
+        _cache[chave] = (time.time(), valor)
+
+def _get_dados_cache():
+    dados = _cache_get("dados")
+    if dados is None:
+        dados = carregar_todas()
+        _cache_set("dados", dados)
+    return dados
+
+def _get_resumo_cache():
+    r = _cache_get("resumo")
+    if r is None:
+        dados = _get_dados_cache()
+        r = calcular_resumo_financeiro(
+            dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"]
+        )
+        _cache_set("resumo", r)
+    return r
+
+# Monkey-patch: invalidar cache em toda escrita
+_orig_salvar = salvar_linha
+def _salvar_e_invalidar(aba, linha):
+    _orig_salvar(aba, linha)
+    _cache_invalidar()
+
+_orig_reescrever = reescrever_aba
+def _reescrever_e_invalidar(aba, df):
+    _orig_reescrever(aba, df)
+    _cache_invalidar()
+
+import db as _db_mod
+_db_mod.salvar_linha = _salvar_e_invalidar
+_db_mod.reescrever_aba = _reescrever_e_invalidar
+
+# Redirecionar imports locais para versões com cache
+salvar_linha = _salvar_e_invalidar
+reescrever_aba = _reescrever_e_invalidar
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  CSRF — proteção simples sem dependência externa
+# ══════════════════════════════════════════════════════════════════════════════
+
+import secrets as _secrets
+
+def _gerar_csrf():
+    if "csrf_token" not in session:
+        session["csrf_token"] = _secrets.token_hex(32)
+    return session["csrf_token"]
+
+def _validar_csrf():
+    token_form = request.form.get("csrf_token", "")
+    token_sess = session.get("csrf_token", "")
+    if not token_form or not token_sess or token_form != token_sess:
+        abort(403)
+
+# Injetar csrf_token em todos os templates automaticamente
+@app.context_processor
+def _inject_csrf():
+    return {"csrf_token": _gerar_csrf()}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  AUTENTICAÇÃO — bcrypt com fallback SHA-256 legado
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _sha256(senha: str) -> str:
     return hashlib.sha256(senha.strip().encode()).hexdigest()
 
+def _bcrypt_disponivel() -> bool:
+    try:
+        import bcrypt  # noqa
+        return True
+    except ImportError:
+        return False
+
+def _hash_bcrypt(senha: str) -> str:
+    import bcrypt
+    return bcrypt.hashpw(senha.strip().encode(), bcrypt.gensalt(rounds=12)).decode()
+
+def _verificar_hash(senha: str, stored: str) -> bool:
+    """
+    Aceita hashes bcrypt ($2b$...) e SHA-256 legados (hex de 64 chars).
+    Retorna (válido: bool, deve_migrar: bool).
+    """
+    if stored.startswith("$2b$") or stored.startswith("$2a$"):
+        if _bcrypt_disponivel():
+            import bcrypt
+            return bcrypt.checkpw(senha.strip().encode(), stored.encode())
+        return False
+    # SHA-256 legado
+    return _sha256(senha) == stored
+
 def login_required(f):
-    """Decorator: redireciona para login se não autenticado."""
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get("logado"):
@@ -62,7 +177,6 @@ def login_required(f):
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    # Já logado → ir direto
     if session.get("logado"):
         return redirect(url_for("dashboard"))
 
@@ -70,26 +184,33 @@ def login():
     usuario_digitado = ""
 
     if request.method == "POST":
+        _validar_csrf()
         usuario = request.form.get("usuario", "").strip().lower()
         senha   = request.form.get("senha",   "").strip()
         usuario_digitado = usuario
 
-        # Controle de tentativas por sessão
         tentativas = session.get("tentativas_login", 0)
         usuarios_db = _carregar_usuarios()
 
-        if tentativas >= MAX_TENTATIVAS:
-            erro = f"Muitas tentativas. Feche e abra o programa para desbloquear."
-        elif usuario in usuarios_db and _hash(senha) == usuarios_db[usuario]["hash"]:
-            # ✅ Login bem-sucedido
+        if tentativas >= MAX_TENTATIVAS_LOGIN:
+            erro = "Muitas tentativas. Feche e abra o programa para desbloquear."
+        elif usuario in usuarios_db and _verificar_hash(senha, usuarios_db[usuario]["hash"]):
+            # ✅ Login OK — migrar SHA-256 → bcrypt se possível
+            if _bcrypt_disponivel():
+                stored = usuarios_db[usuario]["hash"]
+                if not (stored.startswith("$2b$") or stored.startswith("$2a$")):
+                    dados = usuarios_db
+                    dados[usuario]["hash"] = _hash_bcrypt(senha)
+                    _salvar_usuarios(dados)
             session.clear()
             session["logado"]  = True
             session["usuario"] = usuario
+            _gerar_csrf()   # novo token após login
             next_url = request.args.get("next") or url_for("dashboard")
             return redirect(next_url)
         else:
             session["tentativas_login"] = tentativas + 1
-            restantes = MAX_TENTATIVAS - session["tentativas_login"]
+            restantes = MAX_TENTATIVAS_LOGIN - session["tentativas_login"]
             if restantes <= 0:
                 erro = "Acesso bloqueado. Feche e abra o programa para tentar novamente."
             elif usuario and usuario not in usuarios_db:
@@ -97,27 +218,29 @@ def login():
             else:
                 erro = "Usuário ou senha incorretos."
 
-    tentativas_restantes = MAX_TENTATIVAS - session.get("tentativas_login", 0)
+    tentativas_restantes = MAX_TENTATIVAS_LOGIN - session.get("tentativas_login", 0)
     return render_template("login.html", erro=erro,
                            usuario_digitado=usuario_digitado,
                            tentativas_restantes=tentativas_restantes)
 
 @app.route("/logout", methods=["POST"])
 def logout():
+    _validar_csrf()
     usuario = session.get("usuario", "")
     session.clear()
     flash(f"Até logo, {usuario.capitalize()}! 👋", "success")
     return redirect(url_for("login"))
 
-# Rota de fallback para o favicon na raiz
 @app.route("/favicon.ico")
 def favicon():
-    import os as _os
     from flask import send_from_directory
-    static = _os.path.join(BUNDLE_DIR, "static")
-    if _os.path.exists(_os.path.join(static, "favicon.ico")):
+    static = os.path.join(BUNDLE_DIR, "static")
+    if os.path.exists(os.path.join(static, "favicon.ico")):
         return send_from_directory(static, "favicon.ico")
     return "", 204
+
+
+# ── Filtros de template ───────────────────────────────────────────────────────
 
 @app.template_filter("brl")
 def fmt_brl(v):
@@ -147,49 +270,29 @@ def _safe(v, fallback=0):
     except Exception:
         return fallback
 
-
 def parse_valor(s):
-    """Converte string de valor monetário para float.
-    Aceita: 60.000,00 | 60000,00 | 60000.00 | 60.000 | 60.000.00
-    """
     try:
         s = str(s).strip().replace("R$", "").replace(" ", "").replace("\xa0", "")
         if not s or s in ("0", "0.0", "0,0"):
             return 0.0
         if "," in s and "." in s:
-            # BR: ponto=milhar, vírgula=decimal  →  60.000,00
             s = s.replace(".", "").replace(",", ".")
         elif "," in s:
-            # Só vírgula=decimal  →  60000,00
             s = s.replace(",", ".")
         else:
             partes = s.split(".")
-            if len(partes) == 1:
-                pass  # só número inteiro
-            elif len(partes) == 2:
-                if len(partes[1]) == 3:
-                    # Ponto de milhar (60.000)
-                    s = s.replace(".", "")
-                # else: ponto decimal normal (60000.00 ou 60.50)
-            else:
-                # Múltiplos pontos: 60.000.00 ou 1.000.000
-                # Se última parte tem 1-2 dígitos → é decimal
+            if len(partes) == 2 and len(partes[1]) == 3:
+                s = s.replace(".", "")
+            elif len(partes) > 2:
                 if len(partes[-1]) <= 2:
-                    inteiro = "".join(partes[:-1])
-                    s = inteiro + "." + partes[-1]
+                    s = "".join(partes[:-1]) + "." + partes[-1]
                 else:
-                    # Todos são milhares (1.000.000)
                     s = s.replace(".", "")
         return float(s)
     except Exception:
         return 0.0
 
-
 def _limpar_backups_antigos(max_backups: int = 15):
-    """
-    Mantém apenas os N backups mais recentes na pasta backups/.
-    Evita que o disco encha com backups acumulados.
-    """
     from db import DATA_DIR
     backup_dir = os.path.join(DATA_DIR, "backups")
     if not os.path.exists(backup_dir):
@@ -203,7 +306,6 @@ def _limpar_backups_antigos(max_backups: int = 15):
             os.remove(arquivos.pop(0))
         except OSError:
             break
-
 
 def _gerar_alertas(dados):
     from config import ALERTAS_SAUDE
@@ -222,21 +324,14 @@ def _gerar_alertas(dados):
         if d > dias:
             alertas.append({"nivel": "danger",
                              "msg": f"{tipo} atrasada! Última: {ultima.strftime('%d/%m/%Y')} ({d} dias)"})
-    r_fin = calcular_resumo_financeiro(dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"])
+    r_fin = _get_resumo_cache()
     if r_fin["resultado_realizado"] < 0:
         alertas.append({"nivel": "danger", "msg": f"Resultado negativo: {fmt_brl(r_fin['resultado_realizado'])}"})
     if r_fin["estoque"] > 0:
         alertas.append({"nivel": "info", "msg": f"Break-even do estoque: {fmt_brl(r_fin['break_even'])}/cabeça"})
     return alertas
 
-
 def _calc_anual(dados):
-    """
-    Resumo financeiro por ano.
-    NOTA: o 'custo' aqui é a soma de compras + gastos registrados NAQUELE ano.
-    Para resultado verdadeiro por ano (considerando custo histórico das vendas),
-    veja o relatório completo que usa CTCab histórico.
-    """
     result = []
     anos = set()
     for df in dados.values():
@@ -254,17 +349,12 @@ def _calc_anual(dados):
         custo = tc + tg
         lucro = tv - custo
         result.append({
-            "ano":      int(ano),
-            "compras":  tc,
-            "gastos":   tg,
-            "custo":    custo,
-            "vendas":   tv,
-            "lucro":    lucro,
-            "roi":      round(lucro / custo * 100, 1) if custo > 0 else 0,
+            "ano": int(ano), "compras": tc, "gastos": tg, "custo": custo,
+            "vendas": tv, "lucro": lucro,
+            "roi": round(lucro / custo * 100, 1) if custo > 0 else 0,
             "positivo": lucro >= 0,
         })
     return result
-
 
 def _salvar_venda(f, dados, idx=None):
     data    = f.get("data", datetime.now().strftime("%d/%m/%Y"))
@@ -273,7 +363,6 @@ def _salvar_venda(f, dados, idx=None):
     arroba  = parse_valor(f.get("arroba") or "0")
     desc    = f.get("descricao", "").strip()
 
-    # Validação básica
     if cabecas <= 0:
         cabecas = 1
     if valor < 0:
@@ -284,13 +373,11 @@ def _salvar_venda(f, dados, idx=None):
     qtd_nilson = int(f.get("qtd_nilson", 0) or 0)
     soma = qtd_mae + qtd_deyvid + qtd_nilson
     if soma == 0:
-        # Nenhum membro informado: dividir igualmente
         base = cabecas // 3
         qtd_mae    = base
         qtd_deyvid = base
         qtd_nilson = cabecas - base * 2
     elif soma != cabecas:
-        # Ajustar proporcionalmente para fechar em cabecas
         fator = cabecas / soma
         qtd_mae    = round(qtd_mae    * fator)
         qtd_deyvid = round(qtd_deyvid * fator)
@@ -309,7 +396,6 @@ def _salvar_venda(f, dados, idx=None):
         except Exception:
             data_ts = pd.Timestamp.now()
 
-    # CTCab histórico na data da venda (contexto completo passado corretamente)
     cmp_v   = calcular_cmp_ate_data(dados["Compras"], data_ts)
     gpcab_v = calcular_gpcab_ate_data(
         dados["Gastos"], data_ts,
@@ -347,13 +433,15 @@ def _salvar_venda(f, dados, idx=None):
         reescrever_aba("Vendas", df)
 
 
-# ── DASHBOARD ──
+# ══════════════════════════════════════════════════════════════════════════════
+#  DASHBOARD
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/")
 @login_required
 def dashboard():
-    dados = carregar_todas()
-    r = calcular_resumo_financeiro(dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"])
+    dados = _get_dados_cache()
+    r = _get_resumo_cache()
     membros_r      = calcular_todos_membros(dados["Vendas"], dados["Compras"], dados["Gastos"], dados["Manejo"])
     estoque_membro = calcular_estoque_por_membro(dados["Compras"], dados["Vendas"], dados["Manejo"])
     recentes = []
@@ -372,7 +460,6 @@ def dashboard():
         recentes.append({"tipo": "Venda", "cor": "venda", "data": fmt_data(ts),
                           "_ts": ts if pd.notna(ts) else pd.Timestamp.min,
                           "desc": row.get("Descrição", ""), "val": fmt_brl(row.get("Valor Total (R$)", 0))})
-    # Ordenar por data real (Timestamp)
     recentes.sort(key=lambda x: x["_ts"], reverse=True)
     for rec in recentes:
         rec.pop("_ts", None)
@@ -382,12 +469,14 @@ def dashboard():
                            NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS, MEMBROS=MEMBROS)
 
 
-# ── API ──
+# ══════════════════════════════════════════════════════════════════════════════
+#  APIs
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/api/fluxo")
 @login_required
 def api_fluxo():
-    dados = carregar_todas()
+    dados = _get_dados_cache()
     df = calcular_fluxo_caixa(dados["Compras"], dados["Gastos"], dados["Vendas"])
     if df.empty:
         return jsonify({"labels": [], "entradas": [], "saidas": [], "saldo": []})
@@ -399,12 +488,72 @@ def api_fluxo():
 @app.route("/api/membros")
 @login_required
 def api_membros():
-    dados = carregar_todas()
+    dados = _get_dados_cache()
     mbr = calcular_todos_membros(dados["Vendas"], dados["Compras"], dados["Gastos"], dados["Manejo"])
     return jsonify({"nomes":      [NOMES_MEMBROS[m] for m in MEMBROS],
                     "receitas":   [round(mbr[m]["receita"],    2) for m in MEMBROS],
                     "custos":     [round(mbr[m]["custo_total"], 2) for m in MEMBROS],
                     "resultados": [round(mbr[m]["resultado"],  2) for m in MEMBROS]})
+
+
+# ── API: Chuvas mensais ───────────────────────────────────────────────────────
+
+@app.route("/api/chuvas")
+@login_required
+def api_chuvas():
+    """
+    Retorna média, total e contagem de registros de chuva por mês,
+    calculados a partir das visitas registradas.
+
+    Resposta:
+      labels      — lista de "YYYY-MM" (strings)
+      totais      — mm acumulados no mês
+      medias      — média por visita que choveu
+      visitas     — total de visitas no mês
+      visitas_com_chuva — visitas em que choveu
+      meses       — lista de objetos completos para a tabela
+    """
+    df = carregar_aba("Visitas")
+    if df.empty or "Data" not in df.columns:
+        return jsonify({"labels": [], "totais": [], "medias": [],
+                        "visitas": [], "visitas_com_chuva": [], "meses": []})
+
+    df = df[df["Data"].notna()].copy()
+    df["AnoMes"] = df["Data"].dt.to_period("M")
+
+    # Chuva mm: tratar valores nulos / zero como "não choveu"
+    df["mm"] = pd.to_numeric(df.get("Chuva mm", 0), errors="coerce").fillna(0)
+    df["choveu_flag"] = df.get("Choveu", "Não").apply(
+        lambda v: str(v).strip().lower() in ("sim", "yes", "1", "true")
+    )
+
+    meses_dados = []
+    for periodo, grp in df.groupby("AnoMes"):
+        total_vis   = len(grp)
+        vis_chuva   = int(grp["choveu_flag"].sum())
+        total_mm    = float(grp.loc[grp["choveu_flag"], "mm"].sum())
+        media_mm    = round(total_mm / vis_chuva, 1) if vis_chuva > 0 else 0.0
+        meses_dados.append({
+            "periodo":           str(periodo),
+            "label":             periodo.strftime("%b/%Y"),
+            "total_mm":          round(total_mm, 1),
+            "media_mm":          media_mm,
+            "visitas":           total_vis,
+            "visitas_com_chuva": vis_chuva,
+            "dias_sem_chuva":    total_vis - vis_chuva,
+        })
+
+    meses_dados.sort(key=lambda x: x["periodo"])
+
+    return jsonify({
+        "labels":             [m["label"]             for m in meses_dados],
+        "totais":             [m["total_mm"]          for m in meses_dados],
+        "medias":             [m["media_mm"]          for m in meses_dados],
+        "visitas":            [m["visitas"]           for m in meses_dados],
+        "visitas_com_chuva":  [m["visitas_com_chuva"] for m in meses_dados],
+        "meses":              meses_dados,
+    })
+
 
 @app.route("/api/cotacao-scot")
 def api_cotacao_scot():
@@ -412,10 +561,9 @@ def api_cotacao_scot():
         import requests, re
         from bs4 import BeautifulSoup
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "pt-BR,pt;q=0.9",
-            "Referer": "https://www.google.com/",
         }
         r = requests.get("https://www.scotconsultoria.com.br/cotacoes/novilha/",
                          headers=headers, timeout=12)
@@ -423,8 +571,7 @@ def api_cotacao_scot():
         cotacoes = []
         regioes_alvo = ["triângulo", "triangulo", "uberlândia", "uberaba", "patos de minas"]
         for table in soup.find_all("table"):
-            rows_t = table.find_all("tr")
-            for row_t in rows_t[1:]:
+            for row_t in table.find_all("tr")[1:]:
                 cols = row_t.find_all(["td", "th"])
                 if not cols:
                     continue
@@ -434,19 +581,6 @@ def api_cotacao_scot():
                     nums = re.findall(r"\d{2,3}[.,]\d{2}", preco_str)
                     preco = float(nums[0].replace(",", ".")) if nums else None
                     cotacoes.append({"regiao": regiao, "preco": preco, "raw": preco_str})
-        # Fallback: buscar no texto
-        if not cotacoes:
-            text = soup.get_text()
-            lines = text.split("\n")
-            for i, line in enumerate(lines):
-                if any(k in line.lower() for k in regioes_alvo):
-                    context = " ".join(lines[i:i + 4])
-                    nums = re.findall(r"\d{2,3}[.,]\d{2}", context)
-                    if nums:
-                        cotacoes.append({"regiao": "Triângulo Mineiro",
-                                         "preco": float(nums[0].replace(",", ".")),
-                                         "raw": nums[0]})
-                        break
         return jsonify({"ok": True, "cotacoes": cotacoes,
                         "atualizado": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "fonte": "Scot Consultoria"})
@@ -454,384 +588,39 @@ def api_cotacao_scot():
         return jsonify({"ok": False, "erro": str(e)})
 
 
-# ── Cotação IMEA (Playwright) ─────────────────────────────────────────────────
-# O IMEA usa Angular — a página só tem dados após o JS renderizar.
-# Playwright abre um Chromium headless real, executa o Angular e retorna
-# o HTML completo com os dados.
-#
-# Instalar UMA VEZ no terminal:
-#   pip install playwright
-#   python -m playwright install chromium
-
-def _parse_preco_imea(texto: str) -> float | None:
-    """Extrai preço monetário BR: 2.940,17 | 2940,17 | 2940.17"""
-    import re
-    m = re.search(r"\d{1,3}(?:\.\d{3})*,\d{2}", texto)
-    if m:
-        return float(m.group().replace(".", "").replace(",", "."))
-    m = re.search(r"\d{3,6}\.\d{2}", texto)
-    if m:
-        return float(m.group())
-    return None
-
-
-def _parse_variacao_imea(texto: str) -> float | None:
-    """Extrai variação percentual (positiva ou negativa)."""
-    import re
-    m = re.search(r"([+-]?\d{1,3}[.,]\d{1,2})%?", texto)
-    if m:
-        return float(m.group(1).replace(",", "."))
-    return None
-
-
-def _garantir_chromium():
-    """
-    Verifica se o Chromium do Playwright está instalado.
-    Se não estiver, instala automaticamente (pode demorar ~1 min na 1ª vez).
-    Retorna (ok: bool, mensagem: str).
-    """
-    import subprocess, sys
-    from playwright.sync_api import sync_playwright
-
-    try:
-        # Testa se consegue criar o browser sem lançar
-        with sync_playwright() as p:
-            info = p.chromium.executable_path
-            if not os.path.exists(info):
-                raise FileNotFoundError(info)
-        return True, "Chromium OK"
-    except Exception:
-        pass
-
-    # Chromium não existe — instalar agora
-    try:
-        resultado = subprocess.run(
-            [sys.executable, "-m", "playwright", "install", "chromium"],
-            capture_output=True, text=True, timeout=180,
-        )
-        if resultado.returncode == 0:
-            return True, "Chromium instalado com sucesso"
-        return False, f"Falha ao instalar: {resultado.stderr[:300]}"
-    except subprocess.TimeoutExpired:
-        return False, "Timeout ao instalar Chromium (>3 min). Rode manualmente: python -m playwright install chromium"
-    except Exception as e:
-        return False, str(e)
-
-
-def _fetch_imea_playwright() -> tuple[str, str]:
-    """
-    Abre o IMEA com Chromium headless, aguarda o Angular renderizar
-    e retorna (html_completo, log_debug).
-
-    Instala o Chromium automaticamente se ainda não estiver baixado.
-    """
-    import subprocess, sys
-    from playwright.sync_api import sync_playwright, TimeoutError as PwTimeout
-
-    log = []
-    URL = "https://www.imea.com.br/imea-site/indicador-boi"
-
-    SELETORES = [
-        "table", "mat-table", "tbody tr",
-        "[class*='table']", "[class*='indicador']",
-        "[class*='cotacao']", "[class*='card']",
-    ]
-
-    def _launch_browser(p):
-        """Tenta lançar o Chromium; se executável não existir, instala e tenta de novo."""
-        try:
-            return p.chromium.launch(
-                headless=True,
-                args=["--no-sandbox", "--disable-setuid-sandbox",
-                      "--disable-blink-features=AutomationControlled"],
-            )
-        except Exception as e:
-            msg = str(e)
-            if "Executable doesn't exist" in msg or "executable" in msg.lower():
-                log.append("Chromium não encontrado — instalando automaticamente...")
-                result = subprocess.run(
-                    [sys.executable, "-m", "playwright", "install", "chromium"],
-                    capture_output=True, text=True, timeout=180,
-                )
-                if result.returncode != 0:
-                    raise RuntimeError(
-                        f"Falha ao instalar Chromium: {result.stderr[:300]}\n"
-                        "Execute manualmente: python -m playwright install chromium"
-                    )
-                log.append("Chromium instalado! Iniciando navegador...")
-                return p.chromium.launch(
-                    headless=True,
-                    args=["--no-sandbox", "--disable-setuid-sandbox",
-                          "--disable-blink-features=AutomationControlled"],
-                )
-            raise
-
-    with sync_playwright() as p:
-        browser = _launch_browser(p)
-        ctx = browser.new_context(
-            locale="pt-BR",
-            timezone_id="America/Sao_Paulo",
-            viewport={"width": 1280, "height": 900},
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
-            ),
-        )
-        page = ctx.new_page()
-        try:
-            log.append("Navegando...")
-            page.goto(URL, wait_until="networkidle", timeout=40000)
-            log.append("networkidle OK")
-
-            # Esperar seletor de conteúdo
-            achou_sel = False
-            for sel in SELETORES:
-                try:
-                    page.wait_for_selector(sel, timeout=8000)
-                    log.append(f"Seletor: {sel}")
-                    achou_sel = True
-                    break
-                except PwTimeout:
-                    continue
-            if not achou_sel:
-                log.append("Nenhum seletor — aguardando 6s...")
-                page.wait_for_timeout(6000)
-
-            # Scroll completo para forçar lazy-load
-            page.evaluate("""() => new Promise(resolve => {
-                let d = 0;
-                const t = setInterval(() => {
-                    window.scrollBy(0, 250);
-                    d += 250;
-                    if (d >= document.body.scrollHeight) {
-                        clearInterval(t);
-                        window.scrollTo(0, 0);
-                        resolve();
-                    }
-                }, 60);
-            })""")
-            page.wait_for_timeout(2500)
-
-            # Se conteúdo ainda não apareceu, tentar clicar em abas/botões
-            chk = page.content().upper()
-            if not any(k in chk for k in ["NOVILHA", "BEZERRA", "NELORE", "BOI GORDO"]):
-                log.append("Conteúdo ausente — tentando interagir...")
-                for txt in ["BOI", "INDICADOR", "COTAÇÃO", "PREÇO"]:
-                    try:
-                        page.locator(
-                            f"button:has-text('{txt}'), a:has-text('{txt}')"
-                        ).first.click(timeout=3000)
-                        page.wait_for_timeout(3500)
-                        break
-                    except Exception:
-                        pass
-
-            html = page.content()
-            log.append(f"HTML: {len(html)} chars")
-
-        except PwTimeout as e:
-            html = page.content()
-            log.append(f"Timeout parcial: {e}")
-        except Exception as e:
-            html = ""
-            log.append(f"Erro: {e}")
-        finally:
-            browser.close()
-
-    return html, " | ".join(log)
-
-
-def _buscar_indicador_imea(soup, palavras_chave: list[str]) -> dict | None:
-    """
-    Localiza bloco de indicador pelo título e extrai linha da região Sudeste.
-
-    Suporta <table> normal e Angular Material (<mat-table>, <mat-row>).
-    Score: Sudeste=10, sinônimos=5, qualquer linha=0 (fallback).
-    """
-    REGIOES_SUDESTE = [
-        "sudeste", "são paulo", "sao paulo", "sp",
-        "minas gerais", "minas", "mg",
-        "goiás", "goias", "go",
-        "espírito santo", "espirito santo", "es",
-        "rio de janeiro", "rj",
-        "centro-sul",
-    ]
-
-    candidatos = [
-        el for el in soup.find_all(string=True)
-        if all(p.upper() in str(el).upper().strip() for p in palavras_chave)
-    ]
-
-    for cand in candidatos:
-        container = cand.parent
-        tabela = None
-        for _ in range(14):
-            if container is None:
-                break
-            tabela = (
-                container.find(["table", "mat-table"])
-                or container.find(attrs={"class": lambda c: c and "table" in " ".join(c).lower()})
-            )
-            if tabela:
-                break
-            container = container.parent
-        if tabela is None:
-            continue
-
-        titulo_bloco = cand.strip()
-
-        # Linhas — suporta tr, mat-row e role=row
-        linhas = (tabela.find_all(["tr", "mat-row"])
-                  or tabela.find_all(attrs={"role": "row"}))
-        if not linhas:
-            continue
-
-        # Detectar colunas pelo cabeçalho
-        preco_col = 1
-        var_col   = 2
-        hdr = linhas[0].find_all(["th", "td", "mat-header-cell"])
-        for i, c in enumerate(hdr):
-            t = c.get_text(strip=True).lower()
-            if any(k in t for k in ["r$", "preço", "preco", "cab", "@", "arroba"]):
-                preco_col = i
-            elif any(k in t for k in ["varia", "%", "var."]):
-                var_col = i
-
-        # Encontrar melhor linha (Sudeste em primeiro lugar)
-        melhor = None
-        score_max = -1
-        for tr in linhas[1:]:
-            cells = (tr.find_all(["td", "th", "mat-cell"])
-                     or tr.find_all(attrs={"role": lambda r: r in ("cell", "gridcell")}))
-            if not cells:
-                continue
-            reg = cells[0].get_text(strip=True).lower()
-            score = 10 if "sudeste" in reg else (5 if any(s in reg for s in REGIOES_SUDESTE) else 0)
-            if score > score_max:
-                score_max = score
-                melhor = cells
-
-        # Fallback absoluto: primeira linha de dados
-        if melhor is None:
-            for tr in linhas[1:]:
-                cells = tr.find_all(["td", "th", "mat-cell"])
-                if cells and len(cells) >= 2:
-                    melhor = cells
-                    break
-
-        if melhor is None:
-            continue
-
-        preco_txt = melhor[preco_col].get_text(strip=True) if preco_col < len(melhor) else ""
-        var_txt   = melhor[var_col].get_text(strip=True)   if var_col   < len(melhor) else ""
-
-        preco = _parse_preco_imea(preco_txt)
-        if preco is not None:
-            return {
-                "titulo":   titulo_bloco,
-                "regiao":   melhor[0].get_text(strip=True),
-                "preco":    preco,
-                "variacao": _parse_variacao_imea(var_txt),
-            }
-
-    return None
-
-
 @app.route("/api/cotacao-imea")
 @login_required
 def api_cotacao_imea():
-    """
-    Busca os 3 indicadores IMEA (Sudeste) via Playwright (Chromium headless).
-    Retorna cotacoes[] no formato que o dashboard.html espera.
-
-    Indicadores:
-        • NOVILHA NELORE 18M 255KG 8,5@
-        • BEZERRA NELORE 12M 180KG 6@
-        • BEZERRA NELORE 8M 150KG 5@  (variante 165KG/5,5@ incluída)
-    """
-    # ── Dados financeiros do rebanho ──────────────────────────────────────────
-    dados      = carregar_todas()
-    r_fin      = calcular_resumo_financeiro(
-        dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"]
-    )
+    dados = _get_dados_cache()
+    r_fin = _get_resumo_cache()
     break_even = round(r_fin["break_even"], 2)
     ctcab      = round(r_fin["ctcab"],      2)
 
     def _erro(msg, debug=""):
-        return jsonify({
-            "ok": False, "cotacoes": [],
-            "break_even": break_even, "ctcab": ctcab,
-            "erro": msg, "debug": debug,
-        })
+        return jsonify({"ok": False, "cotacoes": [],
+                        "break_even": break_even, "ctcab": ctcab,
+                        "erro": msg, "debug": debug})
 
-    # ── Verificar / instalar Playwright + Chromium ───────────────────────────
     try:
-        import playwright  # noqa: F401
+        import playwright  # noqa
     except ImportError:
-        return _erro(
-            "Playwright não instalado. Abra o terminal e execute:\n"
-            "  pip install playwright\n"
-            "  python -m playwright install chromium\n"
-            "Depois clique em Buscar novamente."
-        )
+        return _erro("Playwright não instalado. Execute: pip install playwright && python -m playwright install chromium")
 
-    # ── Definição dos 3 indicadores ──────────────────────────────────────────
     INDICADORES = [
-        {
-            "emoji": "🐮", "nome": "Novilha 18M 255kg 8,5@",
-            "kg": 255, "arrobas": 8.5,
-            "chaves": [
-                ["NOVILHA", "255"],
-                ["NOVILHA", "18M", "8,5"],
-                ["NOVILHA", "18M", "8.5"],
-                ["NOVILHA", "NELORE", "18"],
-                ["NOVILHA", "NELORE"],
-            ],
-        },
-        {
-            "emoji": "🐄", "nome": "Bezerra 12M 180kg 6@",
-            "kg": 180, "arrobas": 6.0,
-            "chaves": [
-                ["BEZERRA", "180", "6"],
-                ["BEZERRA", "12M", "180"],
-                ["BEZERRA", "12M", "6"],
-                ["BEZERRA", "180"],
-                ["BEZERRA", "NELORE", "12"],
-            ],
-        },
-        {
-            "emoji": "🐄", "nome": "Bezerra 8M 150kg 5@",
-            "kg": 150, "arrobas": 5.0,
-            "chaves": [
-                ["BEZERRA", "150", "5"],
-                ["BEZERRA", "8M", "150"],
-                ["BEZERRA", "8M", "5"],
-                ["BEZERRA", "150"],
-                ["BEZERRA", "165"],       # variante visível no screenshot
-                ["BEZERRA", "8M", "5,5"],
-                ["BEZERRA", "NELORE", "8"],
-            ],
-        },
+        {"emoji": "🐮", "nome": "Novilha 18M 255kg 8,5@", "kg": 255, "arrobas": 8.5,
+         "chaves": [["NOVILHA", "255"], ["NOVILHA", "18M", "8,5"], ["NOVILHA", "NELORE", "18"]]},
+        {"emoji": "🐄", "nome": "Bezerra 12M 180kg 6@",   "kg": 180, "arrobas": 6.0,
+         "chaves": [["BEZERRA", "180", "6"], ["BEZERRA", "12M", "180"], ["BEZERRA", "NELORE", "12"]]},
+        {"emoji": "🐄", "nome": "Bezerra 8M 150kg 5@",    "kg": 150, "arrobas": 5.0,
+         "chaves": [["BEZERRA", "150", "5"], ["BEZERRA", "8M", "150"], ["BEZERRA", "165"]]},
     ]
 
-    # ── Buscar HTML via Playwright ────────────────────────────────────────────
     try:
-        html, debug_log = _fetch_imea_playwright()
-    except RuntimeError as e:
-        # RuntimeError com mensagem clara (ex: falha ao instalar Chromium)
-        return _erro(str(e))
-    except Exception as e:
-        import traceback
-        msg = str(e)
-        if "Executable doesn't exist" in msg or "executable" in msg.lower():
-            return _erro(
-                "Chromium não encontrado. Abra o terminal (cmd) e execute:\n"
-                "  python -m playwright install chromium\n"
-                "Depois clique em Buscar novamente.",
-                msg,
-            )
-        return _erro(f"Erro ao iniciar Playwright: {e}", traceback.format_exc())
+        from _imea_playwright import fetch_imea, buscar_indicador
+        html, debug_log = fetch_imea()
+    except ImportError:
+        # fallback inline
+        html, debug_log = _fetch_imea_inline()
 
     if not html:
         return _erro("Playwright não retornou HTML.", debug_log)
@@ -839,15 +628,9 @@ def api_cotacao_imea():
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(html, "html.parser")
     texto = soup.get_text(" ", strip=True).upper()
+    if not any(k in texto for k in ["NOVILHA", "BEZERRA", "NELORE"]):
+        return _erro("Página renderizou mas sem dados. Verifique imea.com.br/imea-site/indicador-boi", debug_log)
 
-    if not any(k in texto for k in ["NOVILHA", "BEZERRA", "BEZERRO", "BOI GORDO", "NELORE"]):
-        return _erro(
-            "Angular renderizou mas sem dados de cotação. "
-            "Verifique: imea.com.br/imea-site/indicador-boi",
-            debug_log,
-        )
-
-    # ── Montar cotacoes[] ────────────────────────────────────────────────────
     cotacoes = []
     for ind in INDICADORES:
         achado = None
@@ -855,59 +638,187 @@ def api_cotacao_imea():
             achado = _buscar_indicador_imea(soup, chave)
             if achado:
                 break
-
         if achado and achado.get("preco"):
-            pc   = achado["preco"]
+            pc = achado["preco"]
             arrs = ind["arrobas"]
-            vs   = round(pc - break_even, 2)
+            vs = round(pc - break_even, 2)
             cotacoes.append({
-                "emoji":            ind["emoji"],
-                "nome":             ind["nome"],
-                "kg":               ind["kg"],
-                "arrobas":          arrs,
-                "regiao":           achado.get("regiao", "Sudeste"),
-                "preco_cab":        round(pc, 2),
-                "preco_arroba":     round(pc / arrs, 2) if arrs else 0.0,
-                "variacao":         achado.get("variacao"),
-                "lucra":            pc >= break_even,
-                "vs_breakeven":     vs,
+                "emoji": ind["emoji"], "nome": ind["nome"],
+                "kg": ind["kg"], "arrobas": arrs,
+                "regiao": achado.get("regiao", "Sudeste"),
+                "preco_cab": round(pc, 2),
+                "preco_arroba": round(pc / arrs, 2) if arrs else 0.0,
+                "variacao": achado.get("variacao"),
+                "lucra": pc >= break_even,
+                "vs_breakeven": vs,
                 "vs_breakeven_pct": round(vs / break_even * 100, 1) if break_even else 0.0,
             })
         else:
             cotacoes.append({
                 "emoji": ind["emoji"], "nome": ind["nome"],
                 "kg": ind["kg"], "arrobas": ind["arrobas"],
-                "regiao": "Sudeste",
-                "preco_cab": None, "preco_arroba": None,
-                "variacao": None, "lucra": None,
-                "vs_breakeven": None, "vs_breakeven_pct": None,
+                "regiao": "Sudeste", "preco_cab": None, "preco_arroba": None,
+                "variacao": None, "lucra": None, "vs_breakeven": None, "vs_breakeven_pct": None,
             })
 
     algum_ok = any(c["preco_cab"] is not None for c in cotacoes)
-
     return jsonify({
-        "ok":         algum_ok,
-        "cotacoes":   cotacoes,
-        "break_even": break_even,
-        "ctcab":      ctcab,
-        "fonte":      "IMEA — imea.com.br",
-        "url":        "https://www.imea.com.br/imea-site/indicador-boi",
+        "ok": algum_ok, "cotacoes": cotacoes,
+        "break_even": break_even, "ctcab": ctcab,
+        "fonte": "IMEA", "url": "https://www.imea.com.br/imea-site/indicador-boi",
         "atualizado": datetime.now().strftime("%d/%m/%Y %H:%M"),
         "referencia": "Região: Sudeste | Fonte: IMEA",
-        "debug":      debug_log,
-        "erro":       None if algum_ok else (
-            "Nenhum indicador encontrado na página renderizada. "
-            f"Debug: {debug_log}"
-        ),
+        "debug": debug_log,
+        "erro": None if algum_ok else f"Nenhum indicador encontrado. Debug: {debug_log}",
     })
 
 
-# ── COMPRAS ──
+def _fetch_imea_inline():
+    """Playwright inline (sem módulo separado)."""
+    import subprocess
+    from playwright.sync_api import sync_playwright, TimeoutError as PwTimeout
+    log = []
+    URL = "https://www.imea.com.br/imea-site/indicador-boi"
+
+    def _launch(p):
+        try:
+            return p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
+        except Exception as e:
+            if "executable" in str(e).lower():
+                subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"],
+                               capture_output=True, timeout=180)
+                return p.chromium.launch(headless=True, args=["--no-sandbox"])
+            raise
+
+    with sync_playwright() as p:
+        browser = _launch(p)
+        ctx = browser.new_context(locale="pt-BR", timezone_id="America/Sao_Paulo")
+        page = ctx.new_page()
+        try:
+            page.goto(URL, wait_until="networkidle", timeout=40000)
+            for sel in ["table", "mat-table", "tbody tr"]:
+                try:
+                    page.wait_for_selector(sel, timeout=8000)
+                    log.append(f"sel:{sel}")
+                    break
+                except PwTimeout:
+                    continue
+            page.wait_for_timeout(2500)
+            html = page.content()
+            log.append(f"{len(html)}chars")
+        except Exception as e:
+            html = ""
+            log.append(f"err:{e}")
+        finally:
+            browser.close()
+
+    return html, " | ".join(log)
+
+
+def _parse_preco_imea(texto):
+    import re
+    m = re.search(r"\d{1,3}(?:\.\d{3})*,\d{2}", texto)
+    if m:
+        return float(m.group().replace(".", "").replace(",", "."))
+    m = re.search(r"\d{3,6}\.\d{2}", texto)
+    return float(m.group()) if m else None
+
+def _parse_var_imea(texto):
+    import re
+    m = re.search(r"([+-]?\d{1,3}[.,]\d{1,2})%?", texto)
+    return float(m.group(1).replace(",", ".")) if m else None
+
+def _buscar_indicador_imea(soup, palavras_chave):
+    REGIOES = ["sudeste", "são paulo", "sao paulo", "minas gerais", "minas", "mg",
+               "goiás", "goias", "espírito santo", "rio de janeiro", "centro-sul"]
+    candidatos = [el for el in soup.find_all(string=True)
+                  if all(p.upper() in str(el).upper() for p in palavras_chave)]
+    for cand in candidatos:
+        container = cand.parent
+        tabela = None
+        for _ in range(14):
+            if container is None:
+                break
+            tabela = container.find(["table", "mat-table"])
+            if tabela:
+                break
+            container = container.parent
+        if tabela is None:
+            continue
+        linhas = tabela.find_all(["tr", "mat-row"]) or tabela.find_all(attrs={"role": "row"})
+        if not linhas:
+            continue
+        preco_col, var_col = 1, 2
+        hdr = linhas[0].find_all(["th", "td", "mat-header-cell"])
+        for i, c in enumerate(hdr):
+            t = c.get_text(strip=True).lower()
+            if any(k in t for k in ["r$", "preço", "preco", "cab", "@"]):
+                preco_col = i
+            elif any(k in t for k in ["varia", "%"]):
+                var_col = i
+        melhor = None
+        score_max = -1
+        for tr in linhas[1:]:
+            cells = tr.find_all(["td", "th", "mat-cell"])
+            if not cells:
+                continue
+            reg = cells[0].get_text(strip=True).lower()
+            score = 10 if "sudeste" in reg else (5 if any(s in reg for s in REGIOES) else 0)
+            if score > score_max:
+                score_max = score
+                melhor = cells
+        if melhor is None:
+            for tr in linhas[1:]:
+                cells = tr.find_all(["td", "th", "mat-cell"])
+                if cells and len(cells) >= 2:
+                    melhor = cells
+                    break
+        if melhor is None:
+            continue
+        preco_txt = melhor[preco_col].get_text(strip=True) if preco_col < len(melhor) else ""
+        var_txt   = melhor[var_col].get_text(strip=True)   if var_col   < len(melhor) else ""
+        preco = _parse_preco_imea(preco_txt)
+        if preco:
+            return {"titulo": str(cand).strip(), "regiao": melhor[0].get_text(strip=True),
+                    "preco": preco, "variacao": _parse_var_imea(var_txt)}
+    return None
+
+
+@app.route("/api/ultima-visita")
+@login_required
+def api_ultima_visita():
+    df = carregar_aba("Visitas")
+    if df.empty:
+        return jsonify({"ok": False, "msg": "Nenhuma visita registrada."})
+    df_sorted = df.sort_values("Data", ascending=False, na_position="last")
+    row = df_sorted.iloc[0]
+    def _str(v):
+        return "" if (v is None or (isinstance(v, float) and pd.isna(v))) else str(v)
+    return jsonify({
+        "ok": True,
+        "data":           fmt_data(row.get("Data")),
+        "responsavel":    _str(row.get("Responsável")),
+        "gado_contado":   int(row.get("Gado Contado") or 0),
+        "gado_esperado":  int(row.get("Gado Esperado") or 0),
+        "gado_faltando":  int(row.get("Gado Faltando") or 0),
+        "sal":            _str(row.get("Sal/Ração")),
+        "proteinado":     _str(row.get("Proteinado")),
+        "grama":          _str(row.get("Grama/Pastagem")),
+        "corrego":        _str(row.get("Córrego/Água")),
+        "choveu":         _str(row.get("Choveu")),
+        "chuva_mm":       float(row.get("Chuva mm") or 0),
+        "sugestoes":      _str(row.get("Sugestões")),
+    })
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  COMPRAS
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/compras")
 @login_required
 def compras():
-    dados = carregar_todas()
+    dados = _get_dados_cache()
     df = dados["Compras"]
     ordem = request.args.get("ordem", "desc")
     if not df.empty and "Data" in df.columns:
@@ -919,28 +830,26 @@ def compras():
         d["_idx"] = int(real_idx)
         rows.append(d)
     return render_template("lista.html", titulo="Compras 🛒", secao="compras", aba="Compras",
-                           colunas=["Data", "Qtd Cabeças", "Valor Total (R$)", "Valor/Cabeça (R$)",
-                                    "Qtd Mae", "Qtd Deyvid", "Qtd Nilson", "Descrição", "Registrado Por"],
+                           colunas=["Data","Qtd Cabeças","Valor Total (R$)","Valor/Cabeça (R$)",
+                                    "Qtd Mae","Qtd Deyvid","Qtd Nilson","Descrição","Registrado Por"],
                            rows=rows, ordem=ordem)
 
 @app.route("/compras/nova", methods=["GET", "POST"])
 @login_required
 def nova_compra():
-    dados = carregar_todas()
+    dados = _get_dados_cache()
     cmp_atual = calcular_cmp(dados["Compras"])
     if request.method == "POST":
+        _validar_csrf()
         f = request.form
         data    = f.get("data", datetime.now().strftime("%d/%m/%Y"))
         cabecas = int(f.get("cabecas", 0) or 0)
         valor   = parse_valor(f.get("valor", 0))
         desc    = f.get("descricao", "").strip()
         membro  = f.get("membro", "")
-
-        # Validação
         if cabecas <= 0:
             flash("Informe ao menos 1 cabeça.", "error")
             return redirect(url_for("nova_compra"))
-
         qtd_mae    = int(f.get("qtd_mae",    0) or 0)
         qtd_deyvid = int(f.get("qtd_deyvid", 0) or 0)
         qtd_nilson = int(f.get("qtd_nilson", 0) or 0)
@@ -970,17 +879,16 @@ def editar_compra(idx):
         flash("Registro não encontrado.", "error")
         return redirect(url_for("compras"))
     if request.method == "POST":
+        _validar_csrf()
         f = request.form
         data    = f.get("data", "")
         cabecas = int(f.get("cabecas", 0) or 0)
         valor   = parse_valor(f.get("valor", 0))
         desc    = f.get("descricao", "").strip()
         membro  = f.get("membro", "")
-
         if cabecas <= 0:
             flash("Informe ao menos 1 cabeça.", "error")
             return redirect(url_for("editar_compra", idx=idx))
-
         qtd_mae    = int(f.get("qtd_mae",    0) or 0)
         qtd_deyvid = int(f.get("qtd_deyvid", 0) or 0)
         qtd_nilson = int(f.get("qtd_nilson", 0) or 0)
@@ -1006,25 +914,28 @@ def editar_compra(idx):
             if col in df.columns:
                 df.at[idx, col] = val
             else:
-                df[col] = None
-                df.at[idx, col] = val
+                df[col] = None; df.at[idx, col] = val
         reescrever_aba("Compras", df)
         flash("Compra atualizada!", "success")
         return redirect(url_for("compras"))
     row = df.iloc[idx].to_dict()
     row["Data"] = fmt_data(row.get("Data"))
     row["data_input"] = df.iloc[idx]["Data"].strftime("%Y-%m-%d") if pd.notna(df.iloc[idx]["Data"]) else ""
+    # Fix: coluna correta para o template
+    row["Qtd Geane"] = row.get("Qtd Mae", 0)
     return render_template("form_compra.html", modo="editar", row=row, idx=idx,
                            cmp_atual=calcular_cmp(df), MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            hoje=datetime.now().strftime("%Y-%m-%d"))
 
 
-# ── GASTOS ──
+# ══════════════════════════════════════════════════════════════════════════════
+#  GASTOS
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/gastos")
 @login_required
 def gastos():
-    dados = carregar_todas()
+    dados = _get_dados_cache()
     df = dados["Gastos"]
     ordem = request.args.get("ordem", "desc")
     if not df.empty and "Data" in df.columns:
@@ -1036,19 +947,18 @@ def gastos():
         d["_idx"] = int(real_idx)
         rows.append(d)
     return render_template("lista.html", titulo="Gastos 💸", secao="gastos", aba="Gastos",
-                           colunas=["Data", "Tipo", "Descrição", "Valor Total (R$)",
-                                    "Qtd Cabeças", "Valor/Cabeça (R$)", "Registrado Por"],
+                           colunas=["Data","Tipo","Descrição","Valor Total (R$)",
+                                    "Qtd Cabeças","Valor/Cabeça (R$)","Registrado Por"],
                            rows=rows, ordem=ordem)
 
 @app.route("/gastos/novo", methods=["GET", "POST"])
 @login_required
 def novo_gasto():
-    dados = carregar_todas()
+    dados = _get_dados_cache()
     estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
-    # BUG CORRIGIDO: passa contexto completo para GPCab ser calculado corretamente,
-    # incluindo gastos importados com Qtd=0 e Val/Cab=0
-    gpcab = calcular_gpcab(dados["Gastos"], dados["Compras"], dados["Vendas"], dados["Manejo"])
+    gpcab   = calcular_gpcab(dados["Gastos"], dados["Compras"], dados["Vendas"], dados["Manejo"])
     if request.method == "POST":
+        _validar_csrf()
         f = request.form
         data   = f.get("data", datetime.now().strftime("%d/%m/%Y"))
         tipo   = f.get("tipo", "")
@@ -1056,7 +966,6 @@ def novo_gasto():
         valor  = parse_valor(f.get("valor", 0))
         cab    = int(f.get("cabecas", estoque) or estoque)
         membro = f.get("membro", "")
-
         if cab <= 0:
             cab = max(1, estoque)
         v_cab = round(valor / cab, 4) if cab > 0 else 0
@@ -1070,15 +979,15 @@ def novo_gasto():
 @app.route("/gastos/editar/<int:idx>", methods=["GET", "POST"])
 @login_required
 def editar_gasto(idx):
-    dados   = carregar_todas()
+    dados   = _get_dados_cache()
     df      = carregar_aba("Gastos")
     estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
-    # BUG CORRIGIDO: passa contexto completo
     gpcab   = calcular_gpcab(dados["Gastos"], dados["Compras"], dados["Vendas"], dados["Manejo"])
     if df.empty or idx >= len(df):
         flash("Registro não encontrado.", "error")
         return redirect(url_for("gastos"))
     if request.method == "POST":
+        _validar_csrf()
         f      = request.form
         data   = f.get("data", "")
         tipo   = f.get("tipo", "")
@@ -1088,21 +997,18 @@ def editar_gasto(idx):
         membro = f.get("membro", "")
         if cab <= 0:
             cab = max(1, estoque)
-        v_cab  = round(valor / cab, 4) if cab > 0 else 0
+        v_cab = round(valor / cab, 4) if cab > 0 else 0
         fazer_backup()
         _limpar_backups_antigos()
-        updates = {
-            "Data": pd.to_datetime(data, dayfirst=True, errors="coerce"),
-            "Tipo": tipo, "Descrição": desc,
-            "Valor Total (R$)": valor, "Qtd Cabeças": cab,
-            "Valor/Cabeça (R$)": v_cab, "Registrado Por": membro,
-        }
+        updates = {"Data": pd.to_datetime(data, dayfirst=True, errors="coerce"),
+                   "Tipo": tipo, "Descrição": desc,
+                   "Valor Total (R$)": valor, "Qtd Cabeças": cab,
+                   "Valor/Cabeça (R$)": v_cab, "Registrado Por": membro}
         for col, val in updates.items():
             if col in df.columns:
                 df.at[idx, col] = val
             else:
-                df[col] = None
-                df.at[idx, col] = val
+                df[col] = None; df.at[idx, col] = val
         reescrever_aba("Gastos", df)
         flash("Gasto atualizado!", "success")
         return redirect(url_for("gastos"))
@@ -1115,12 +1021,14 @@ def editar_gasto(idx):
                            hoje=datetime.now().strftime("%Y-%m-%d"))
 
 
-# ── VENDAS ──
+# ══════════════════════════════════════════════════════════════════════════════
+#  VENDAS
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/vendas")
 @login_required
 def vendas():
-    dados = carregar_todas()
+    dados = _get_dados_cache()
     df = dados["Vendas"]
     ordem = request.args.get("ordem", "desc")
     if not df.empty and "Data" in df.columns:
@@ -1132,17 +1040,18 @@ def vendas():
         d["_idx"] = int(real_idx)
         rows.append(d)
     return render_template("lista.html", titulo="Vendas 🤝", secao="vendas", aba="Vendas",
-                           colunas=["Data", "Qtd Cabeças", "Valor Total (R$)", "Valor/Cabeça (R$)",
-                                    "Valor Arroba (R$)", "Qtd Mae", "Qtd Deyvid", "Qtd Nilson",
-                                    "Valor Mae (R$)", "Valor Deyvid (R$)", "Valor Nilson (R$)", "Descrição"],
+                           colunas=["Data","Qtd Cabeças","Valor Total (R$)","Valor/Cabeça (R$)",
+                                    "Valor Arroba (R$)","Qtd Mae","Qtd Deyvid","Qtd Nilson",
+                                    "Valor Mae (R$)","Valor Deyvid (R$)","Valor Nilson (R$)","Descrição"],
                            rows=rows, ordem=ordem)
 
 @app.route("/vendas/nova", methods=["GET", "POST"])
 @login_required
 def nova_venda():
-    dados = carregar_todas()
-    r_fin = calcular_resumo_financeiro(dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"])
+    dados = _get_dados_cache()
+    r_fin = _get_resumo_cache()
     if request.method == "POST":
+        _validar_csrf()
         cabecas = int(request.form.get("cabecas", 0) or 0)
         if cabecas <= 0:
             flash("Informe ao menos 1 cabeça.", "error")
@@ -1157,13 +1066,14 @@ def nova_venda():
 @app.route("/vendas/editar/<int:idx>", methods=["GET", "POST"])
 @login_required
 def editar_venda(idx):
-    dados = carregar_todas()
+    dados = _get_dados_cache()
     df    = carregar_aba("Vendas")
     if df.empty or idx >= len(df):
         flash("Registro não encontrado.", "error")
         return redirect(url_for("vendas"))
-    r_fin = calcular_resumo_financeiro(dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"])
+    r_fin = _get_resumo_cache()
     if request.method == "POST":
+        _validar_csrf()
         fazer_backup()
         _limpar_backups_antigos()
         _salvar_venda(request.form, dados, idx=idx)
@@ -1177,12 +1087,14 @@ def editar_venda(idx):
                            hoje=datetime.now().strftime("%Y-%m-%d"))
 
 
-# ── MANEJO ──
+# ══════════════════════════════════════════════════════════════════════════════
+#  MANEJO
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/manejo")
 @login_required
 def manejo():
-    dados = carregar_todas()
+    dados = _get_dados_cache()
     df = dados["Manejo"]
     rows = []
     for real_idx, row in (df.iterrows() if not df.empty else []):
@@ -1191,15 +1103,16 @@ def manejo():
         d["_idx"] = int(real_idx)
         rows.append(d)
     return render_template("lista.html", titulo="Manejo 🩺", secao="manejo", aba="Manejo",
-                           colunas=["Data", "Tipo", "Qtd Cabeças", "Descrição", "Responsável"],
+                           colunas=["Data","Tipo","Qtd Cabeças","Descrição","Responsável"],
                            rows=rows)
 
 @app.route("/manejo/novo", methods=["GET", "POST"])
 @login_required
 def novo_manejo():
-    dados   = carregar_todas()
+    dados   = _get_dados_cache()
     estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
     if request.method == "POST":
+        _validar_csrf()
         f = request.form
         salvar_linha("Manejo", [f.get("data"), f.get("tipo"), int(f.get("cabecas", 0) or 0),
                                 f.get("descricao", "").strip(), f.get("responsavel", "")])
@@ -1210,18 +1123,19 @@ def novo_manejo():
                            hoje=datetime.now().strftime("%Y-%m-%d"))
 
 
-# ── RELATÓRIOS ──
+# ══════════════════════════════════════════════════════════════════════════════
+#  RELATÓRIOS
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/relatorios")
 @login_required
 def relatorios():
-    dados = carregar_todas()
-    r_fin = calcular_resumo_financeiro(dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"])
+    dados = _get_dados_cache()
+    r_fin = _get_resumo_cache()
     mbr   = calcular_todos_membros(dados["Vendas"], dados["Compras"], dados["Gastos"], dados["Manejo"])
     gastos_tipo = calcular_gasto_por_tipo(dados["Gastos"])
     extras      = calcular_indicadores_extras(
-        dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"],
-        r_fin["ctcab"]
+        dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"], r_fin["ctcab"]
     )
     return render_template("relatorios.html", r=r_fin, mbr=mbr,
                            alertas=_gerar_alertas(dados), anual=_calc_anual(dados),
@@ -1229,11 +1143,14 @@ def relatorios():
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS)
 
 
-# ── EXCLUIR ──
+# ══════════════════════════════════════════════════════════════════════════════
+#  EXCLUIR
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/excluir/<aba>/<int:idx>", methods=["POST"])
 @login_required
 def excluir(aba, idx):
+    _validar_csrf()
     fazer_backup()
     _limpar_backups_antigos()
     df = carregar_aba(aba)
@@ -1245,12 +1162,15 @@ def excluir(aba, idx):
                               "Vendas": "vendas", "Manejo": "manejo"}.get(aba, "dashboard")))
 
 
-# ── IMPORTAR ──
+# ══════════════════════════════════════════════════════════════════════════════
+#  IMPORTAR
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/importar", methods=["GET", "POST"])
 @login_required
 def importar():
     if request.method == "POST":
+        _validar_csrf()
         arquivo = request.files.get("arquivo")
         if not arquivo or not arquivo.filename.endswith(".xlsx"):
             flash("Envie um arquivo .xlsx válido.", "error")
@@ -1270,14 +1190,12 @@ def importar():
             detalhes = []
             for ano in anos:
                 df_raw = pd.read_excel(tmp.name, sheet_name=ano, header=None)
-
                 def _f(r, c):
                     try:
                         x = safe_val(df_raw, r, c)
                         return float(str(x).replace(",", ".")) if x not in (None, "") else 0.0
                     except Exception:
                         return 0.0
-
                 cab_c = _f(0, 1)
                 preco_c = _f(0, 10)
                 if cab_c > 0 and preco_c > 0:
@@ -1289,7 +1207,6 @@ def importar():
                     nc += 1
                     detalhes.append({"tipo": "compra", "ano": ano,
                                      "msg": f"Compra: {int(cab_c)} cabeças — R$ {preco_c:,.2f}"})
-
                 gastos_ano = 0
                 for ri in range(1, len(df_raw)):
                     vg = _f(ri, 6)
@@ -1297,12 +1214,9 @@ def importar():
                     if vg > 0:
                         salvar_linha("Gastos", [f"01/01/{ano}", "Manutenção/Outros",
                                                 str(dg).strip() if dg else "", vg, 0, 0, "Importação"])
-                        ng += 1
-                        gastos_ano += 1
+                        ng += 1; gastos_ano += 1
                 if gastos_ano:
-                    detalhes.append({"tipo": "gasto", "ano": ano,
-                                     "msg": f"{gastos_ano} gastos importados"})
-
+                    detalhes.append({"tipo": "gasto", "ano": ano, "msg": f"{gastos_ano} gastos importados"})
                 mae_v = _f(1, 15); dev_v = _f(2, 15); nil_v = _f(3, 15)
                 mae_q = _f(1, 19); dev_q = _f(2, 19); nil_q = _f(3, 19)
                 tv = mae_v + dev_v + nil_v
@@ -1317,12 +1231,10 @@ def importar():
                                             round(tv / tq, 2) if tq else 0, _f(0, 12),
                                             int(mae_q), int(dev_q), int(nil_q),
                                             mae_v, dev_v, nil_v,
-                                            0, 0, 0, 0, 0, 0, 0,
-                                            f"Importado de {ano}"])
+                                            0, 0, 0, 0, 0, 0, 0, f"Importado de {ano}"])
                     nv += 1
                     detalhes.append({"tipo": "venda", "ano": ano,
-                                     "msg": f"Venda: {tq} cabeças — R$ {tv:,.2f} "
-                                            f"(Geane {int(mae_q)} · Deyvid {int(dev_q)} · Nilson {int(nil_q)})"})
+                                     "msg": f"Venda: {tq} cabeças — R$ {tv:,.2f}"})
             return render_template("importar.html", concluido=True, anos=anos,
                                    nc=nc, ng=ng, nv=nv, detalhes=detalhes)
         except Exception as e:
@@ -1333,7 +1245,9 @@ def importar():
     return render_template("importar.html", concluido=False, anos=[], detalhes=[])
 
 
-# ── EXPORTAR / BACKUP ──
+# ══════════════════════════════════════════════════════════════════════════════
+#  EXPORTAR / BACKUP
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/exportar")
 @login_required
@@ -1347,25 +1261,22 @@ def exportar():
 @app.route("/backup", methods=["POST"])
 @login_required
 def backup():
+    _validar_csrf()
     nome = fazer_backup()
     _limpar_backups_antigos()
     flash(f"Backup salvo: {nome}", "success")
     return redirect(url_for("dashboard"))
 
 
-# ── Gerenciamento de usuários ─────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+#  USUÁRIOS E CONFIGURAÇÕES
+# ══════════════════════════════════════════════════════════════════════════════
 
-def _usuarios_path() -> str:
+def _usuarios_path():
     from db import DATA_DIR
     return os.path.join(DATA_DIR, "usuarios.json")
 
-
-def _carregar_usuarios() -> dict:
-    """
-    Carrega usuários do arquivo usuarios.json (DATA_DIR).
-    Se não existir ainda, inicializa a partir do config.py e salva o JSON.
-    Formato: { "nome": {"hash": "...", "criado": "DD/MM/YYYY"} }
-    """
+def _carregar_usuarios():
     import json
     caminho = _usuarios_path()
     if os.path.exists(caminho):
@@ -1374,29 +1285,21 @@ def _carregar_usuarios() -> dict:
                 return json.load(f)
         except Exception:
             pass
-    # Primeira execução — migrar do config.py
-    dados = {
-        u: {"hash": h, "criado": datetime.now().strftime("%d/%m/%Y")}
-        for u, h in USUARIOS.items()
-    }
+    dados = {u: {"hash": h, "criado": datetime.now().strftime("%d/%m/%Y")}
+             for u, h in USUARIOS.items()}
     _salvar_usuarios(dados)
     return dados
 
-
-def _salvar_usuarios(dados: dict):
+def _salvar_usuarios(dados):
     import json
-    caminho = _usuarios_path()
-    with open(caminho, "w", encoding="utf-8") as f:
+    with open(_usuarios_path(), "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=2)
 
-
-def _verificar_senha(usuario: str, senha: str) -> bool:
-    """Verifica se a senha bate com o hash armazenado (JSON ou config.py fallback)."""
+def _verificar_senha(usuario, senha):
     usuarios = _carregar_usuarios()
     if usuario not in usuarios:
         return False
-    return _hash(senha) == usuarios[usuario]["hash"]
-
+    return _verificar_hash(senha, usuarios[usuario]["hash"])
 
 @app.route("/configuracoes")
 @login_required
@@ -1404,15 +1307,14 @@ def configuracoes():
     usuarios = _carregar_usuarios()
     return render_template("configuracoes.html", usuarios=usuarios)
 
-
 @app.route("/configuracoes/trocar-senha", methods=["POST"])
 @login_required
 def trocar_senha():
-    usuario   = session["usuario"]
-    atual     = request.form.get("senha_atual",  "").strip()
-    nova      = request.form.get("senha_nova",   "").strip()
-    conf      = request.form.get("senha_conf",   "").strip()
-
+    _validar_csrf()
+    usuario = session["usuario"]
+    atual   = request.form.get("senha_atual", "").strip()
+    nova    = request.form.get("senha_nova",  "").strip()
+    conf    = request.form.get("senha_conf",  "").strip()
     if not _verificar_senha(usuario, atual):
         flash("Senha atual incorreta.", "error")
         return redirect(url_for("configuracoes"))
@@ -1422,156 +1324,116 @@ def trocar_senha():
     if nova != conf:
         flash("As senhas não coincidem.", "error")
         return redirect(url_for("configuracoes"))
-
     dados = _carregar_usuarios()
-    dados[usuario]["hash"] = _hash(nova)
+    dados[usuario]["hash"] = _hash_bcrypt(nova) if _bcrypt_disponivel() else _sha256(nova)
     _salvar_usuarios(dados)
     flash("✅ Senha alterada com sucesso!", "success")
     return redirect(url_for("configuracoes"))
 
-
 @app.route("/configuracoes/adicionar-usuario", methods=["POST"])
 @login_required
 def adicionar_usuario():
+    _validar_csrf()
     import re
     novo_user = request.form.get("usuario", "").strip().lower()
     senha     = request.form.get("senha",   "").strip()
-
     if not re.match(r"^[a-z]{2,20}$", novo_user):
         flash("Nome de usuário inválido (apenas letras, 2–20 caracteres).", "error")
         return redirect(url_for("configuracoes"))
     if len(senha) < 4:
         flash("A senha precisa ter pelo menos 4 caracteres.", "error")
         return redirect(url_for("configuracoes"))
-
     dados = _carregar_usuarios()
     if novo_user in dados:
         flash(f"Usuário '{novo_user}' já existe.", "error")
         return redirect(url_for("configuracoes"))
-
     dados[novo_user] = {
-        "hash":   _hash(senha),
+        "hash":   _hash_bcrypt(senha) if _bcrypt_disponivel() else _sha256(senha),
         "criado": datetime.now().strftime("%d/%m/%Y"),
     }
     _salvar_usuarios(dados)
     flash(f"✅ Usuário '{novo_user.capitalize()}' criado!", "success")
     return redirect(url_for("configuracoes"))
 
-
 @app.route("/configuracoes/excluir-usuario", methods=["POST"])
 @login_required
 def excluir_usuario():
+    _validar_csrf()
     alvo = request.form.get("usuario", "").strip().lower()
     if alvo == session["usuario"]:
         flash("Você não pode excluir sua própria conta.", "error")
         return redirect(url_for("configuracoes"))
-
     dados = _carregar_usuarios()
     if alvo not in dados:
         flash("Usuário não encontrado.", "error")
         return redirect(url_for("configuracoes"))
-
     del dados[alvo]
     _salvar_usuarios(dados)
     flash(f"Usuário '{alvo.capitalize()}' excluído.", "warning")
     return redirect(url_for("configuracoes"))
 
-
 @app.route("/configuracoes/resetar-senha", methods=["POST"])
 @login_required
 def resetar_senha():
+    _validar_csrf()
     alvo  = request.form.get("usuario",    "").strip().lower()
     senha = request.form.get("senha_nova", "").strip()
-
     if len(senha) < 4:
         flash("A senha precisa ter pelo menos 4 caracteres.", "error")
         return redirect(url_for("configuracoes"))
-
     dados = _carregar_usuarios()
     if alvo not in dados:
         flash("Usuário não encontrado.", "error")
         return redirect(url_for("configuracoes"))
-
-    dados[alvo]["hash"] = _hash(senha)
+    dados[alvo]["hash"] = _hash_bcrypt(senha) if _bcrypt_disponivel() else _sha256(senha)
     _salvar_usuarios(dados)
     flash(f"✅ Senha de '{alvo.capitalize()}' redefinida!", "success")
     return redirect(url_for("configuracoes"))
 
 
-# ════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
 #  VISITAS AO SÍTIO
-# ════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
 
-def _gerar_sugestoes_visita(f: dict, estoque_esperado: int) -> str:
-    """Gera sugestões automáticas com base nos dados da visita."""
+def _gerar_sugestoes_visita(f, estoque_esperado):
     sug = []
-
     gado_contado = int(f.get("gado_contado") or 0)
     if gado_contado > 0 and estoque_esperado > 0:
         if gado_contado < estoque_esperado:
             falt = estoque_esperado - gado_contado
-            sug.append(f"⚠️ ALERTA: {falt} cabeça(s) não localizada(s)! Verificar pastagens vizinhas, cercas e comunicar a família.")
+            sug.append(f"⚠️ ALERTA: {falt} cabeça(s) não localizada(s)! Verificar pastagens vizinhas e cercas.")
         elif gado_contado > estoque_esperado:
-            sug.append(f"ℹ️ {gado_contado - estoque_esperado} cabeça(s) a mais que o esperado — possível animal de terceiro ou registro desatualizado.")
-
+            sug.append(f"ℹ️ {gado_contado - estoque_esperado} cabeça(s) a mais — possível animal de terceiro.")
     sal = f.get("sal_racao", "OK")
-    if sal == "Baixo":
-        sug.append("🧂 Sal/Ração baixo — reabastecer nos próximos 2 a 3 dias.")
-    elif sal == "Vazio":
-        sug.append("🚨 Sal/Ração ESGOTADO — abastecer com urgência! Gado sem mineral compromete saúde e ganho de peso.")
-
+    if sal == "Baixo":   sug.append("🧂 Sal/Ração baixo — reabastecer nos próximos 2 a 3 dias.")
+    elif sal == "Vazio": sug.append("🚨 Sal/Ração ESGOTADO — abastecer com urgência!")
     prot = f.get("proteinado", "OK")
-    if prot == "Baixo":
-        sug.append("🟡 Proteinado baixo — repor em breve para manter desempenho do rebanho.")
-    elif prot == "Vazio":
-        sug.append("🚨 Proteinado ESGOTADO — sem suplementação proteica o gado perde peso rapidamente. Comprar urgente!")
-
+    if prot == "Baixo":   sug.append("🟡 Proteinado baixo — repor em breve.")
+    elif prot == "Vazio": sug.append("🚨 Proteinado ESGOTADO — comprar urgente!")
     mato = f.get("mato", "Limpo")
-    if mato == "Precisa Capinar":
-        sug.append("🌿 Vegetação crescida — programar roçagem/capina nos próximos dias.")
-    elif mato == "Muito Mato":
-        sug.append("🌿 Mato excessivo — roçagem urgente! Reduz área de pastagem, esconde cobras e pode danificar cercas.")
-
+    if mato == "Precisa Capinar": sug.append("🌿 Vegetação crescida — programar roçagem.")
+    elif mato == "Muito Mato":    sug.append("🌿 Mato excessivo — roçagem urgente!")
     grama = f.get("grama", "Boa")
-    if grama == "Regular":
-        sug.append("🌱 Pastagem regular — considerar rotação de pasto ou adubação para recuperação.")
-    elif grama == "Escassa":
-        sug.append("🚨 Pastagem escassa — rotacionar pasto IMEDIATAMENTE. Risco real de perda de peso. Avaliar suplementação volumosa se estiagem prolongada.")
-
+    if grama == "Regular": sug.append("🌱 Pastagem regular — considerar rotação ou adubação.")
+    elif grama == "Escassa": sug.append("🚨 Pastagem escassa — rotacionar IMEDIATAMENTE.")
     corrego = f.get("corrego", "Normal")
-    if corrego == "Baixo":
-        sug.append("💧 Água no córrego/bebedouro baixa — monitorar e preparar alternativa de abastecimento.")
-    elif corrego == "Seco":
-        sug.append("🚨 SEM ÁGUA no córrego — providenciar abastecimento alternativo urgente (bebedouro portátil, carro-pipa). Gado sem água é emergência!")
-
+    if corrego == "Baixo": sug.append("💧 Água baixa — monitorar e preparar alternativa.")
+    elif corrego == "Seco": sug.append("🚨 SEM ÁGUA — providenciar abastecimento urgente!")
     quintal = f.get("quintal", "OK")
-    if quintal == "Precisa Atenção":
-        sug.append("🏡 Quintal necessita atenção — verificar o que precisa ser feito e resolver na próxima visita.")
-
+    if quintal == "Precisa Atenção": sug.append("🏡 Quintal necessita atenção.")
     cisterna = f.get("cisterna", "OK")
-    if cisterna == "Baixo":
-        sug.append("🪣 Cisterna baixa — programar reabastecimento antes da próxima visita.")
-    elif cisterna == "Vazia":
-        sug.append("🚨 Cisterna VAZIA — abastecer imediatamente!")
-
+    if cisterna == "Baixo": sug.append("🪣 Cisterna baixa — programar reabastecimento.")
+    elif cisterna == "Vazia": sug.append("🚨 Cisterna VAZIA — abastecer imediatamente!")
     choveu = f.get("choveu", "nao") == "sim"
-    mm_raw = f.get("chuva_mm", "") or ""
     try:
-        mm = float(str(mm_raw).replace(",", "."))
+        mm = float(str(f.get("chuva_mm", "0") or "0").replace(",", "."))
     except Exception:
         mm = 0.0
-
-    if choveu and mm >= 50:
-        sug.append(f"🌧️ Chuva forte ({mm:.0f}mm) — verificar erosão, entupimento de valetas e estado das cercas.")
-    elif choveu and mm >= 15:
-        sug.append(f"🌦️ Boa chuva ({mm:.0f}mm) — pastagem deve se recuperar bem nos próximos dias.")
-    elif choveu and mm > 0:
-        sug.append(f"🌂 Chuva leve ({mm:.0f}mm) — impacto pequeno na pastagem, continuar monitorando.")
-    elif choveu and mm == 0:
-        sug.append("🌧️ Chuva registrada sem quantidade — anotar os mm na próxima vez para histórico.")
-    else:
-        sug.append("☀️ Sem chuva — acompanhar estiagem para ajustar suplementação se necessário.")
-
+    if choveu and mm >= 50:   sug.append(f"🌧️ Chuva forte ({mm:.0f}mm) — verificar erosão e cercas.")
+    elif choveu and mm >= 15: sug.append(f"🌦️ Boa chuva ({mm:.0f}mm) — pastagem deve se recuperar.")
+    elif choveu and mm > 0:   sug.append(f"🌂 Chuva leve ({mm:.0f}mm).")
+    elif choveu:              sug.append("🌧️ Chuva registrada — anotar os mm na próxima vez.")
+    else:                     sug.append("☀️ Sem chuva — acompanhar estiagem.")
     if not sug:
         sug.append("✅ Visita sem pendências — sítio em boas condições!")
     return " | ".join(sug)
@@ -1584,57 +1446,45 @@ def visitas():
     ordem = request.args.get("ordem", "desc")
     if not df.empty and "Data" in df.columns:
         df = df.sort_values("Data", ascending=(ordem == "asc"), na_position="last")
-
     alertas = []
     if not df.empty:
         ultima = df.iloc[0] if ordem == "desc" else df.iloc[-1]
-        falt = ultima.get("Gado Faltando", 0)
-        try:
-            falt = int(falt or 0)
-        except Exception:
-            falt = 0
+        falt = int(ultima.get("Gado Faltando") or 0) if ultima.get("Gado Faltando") is not None else 0
+        try: falt = int(falt)
+        except Exception: falt = 0
         if falt > 0:
             alertas.append(("danger", f"⚠️ Na última visita, {falt} cabeça(s) estavam faltando!"))
         for campo, label in [("Sal/Ração", "Sal/Ração"), ("Proteinado", "Proteinado")]:
             v = str(ultima.get(campo, "OK") or "OK")
-            if v == "Vazio":
-                alertas.append(("danger", f"🚨 {label} ESGOTADO conforme última visita!"))
-            elif v == "Baixo":
-                alertas.append(("warning", f"⚠️ {label} está baixo — repor em breve."))
+            if v == "Vazio":  alertas.append(("danger",  f"🚨 {label} ESGOTADO conforme última visita!"))
+            elif v == "Baixo": alertas.append(("warning", f"⚠️ {label} está baixo — repor em breve."))
         corrego = str(ultima.get("Córrego/Água", "Normal") or "Normal")
-        if corrego == "Seco":
-            alertas.append(("danger", "🚨 Córrego/bebedouro SECO na última visita!"))
-        elif corrego == "Baixo":
-            alertas.append(("warning", "💧 Água no córrego estava baixa — verificar."))
-
+        if corrego == "Seco":  alertas.append(("danger",  "🚨 Córrego/bebedouro SECO na última visita!"))
+        elif corrego == "Baixo": alertas.append(("warning", "💧 Água no córrego estava baixa — verificar."))
     rows = []
     for real_idx, row in (df.iterrows() if not df.empty else []):
         d = row.to_dict()
         d["Data"] = fmt_data(d.get("Data"))
         d["_idx"] = int(real_idx)
-        try:
-            d["Gado Faltando"] = int(d.get("Gado Faltando") or 0)
-        except Exception:
-            d["Gado Faltando"] = 0
+        try:    d["Gado Faltando"] = int(d.get("Gado Faltando") or 0)
+        except: d["Gado Faltando"] = 0
         rows.append(d)
-
     return render_template("lista_visitas.html", rows=rows, ordem=ordem, alertas=alertas)
 
 
 @app.route("/visitas/nova", methods=["GET", "POST"])
 @login_required
 def nova_visita():
-    dados = carregar_todas()
+    dados = _get_dados_cache()
     estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
-
     if request.method == "POST":
+        _validar_csrf()
         f = request.form
         data        = f.get("data", datetime.now().strftime("%d/%m/%Y"))
         responsavel = f.get("responsavel", "")
         gado_cnt    = int(f.get("gado_contado") or 0)
         gado_esp    = estoque
         gado_falt   = max(0, gado_esp - gado_cnt) if gado_cnt > 0 else 0
-
         sal      = f.get("sal_racao", "OK")
         prot     = f.get("proteinado", "OK")
         mato     = f.get("mato", "Limpo")
@@ -1642,16 +1492,13 @@ def nova_visita():
         corrego  = f.get("corrego", "Normal")
         quintal  = f.get("quintal", "OK")
         cisterna = f.get("cisterna", "OK")
-
         choveu = "Sim" if f.get("choveu") == "sim" else "Não"
         try:
             chuva_mm = float(str(f.get("chuva_mm", "0") or "0").replace(",", "."))
         except Exception:
             chuva_mm = 0.0
-
         obs = f.get("observacoes", "").strip()
         sugestoes = _gerar_sugestoes_visita(f, estoque)
-
         salvar_linha("Visitas", [
             data, responsavel,
             gado_cnt, gado_esp, gado_falt,
@@ -1660,29 +1507,23 @@ def nova_visita():
             choveu, chuva_mm if chuva_mm > 0 else None,
             obs, sugestoes,
         ])
-
         if gado_falt > 0:
-            flash(f"⚠️ Visita salva — mas {gado_falt} cabeça(s) estão faltando! Verificar com urgência.", "warning")
+            flash(f"⚠️ Visita salva — mas {gado_falt} cabeça(s) estão faltando!", "warning")
         else:
             flash("✅ Visita registrada com sucesso!", "success")
         return redirect(url_for("visitas"))
-
-    return render_template(
-        "form_visita.html",
-        estoque=estoque,
-        MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
-        hoje=datetime.now().strftime("%Y-%m-%d"),
-    )
+    return render_template("form_visita.html", estoque=estoque,
+                           MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
+                           hoje=datetime.now().strftime("%Y-%m-%d"))
 
 
 @app.route("/visitas/excluir/<int:idx>", methods=["POST"])
 @login_required
 def excluir_visita(idx):
+    _validar_csrf()
     fazer_backup()
     _limpar_backups_antigos()
     df = carregar_aba("Visitas")
-    # BUG CORRIGIDO: usa df.index para verificar existência real do índice,
-    # não apenas compara com len(df), evitando KeyError em índices não-contíguos
     if df.empty or idx not in df.index:
         flash("Registro não encontrado.", "error")
         return redirect(url_for("visitas"))
@@ -1692,297 +1533,118 @@ def excluir_visita(idx):
     return redirect(url_for("visitas"))
 
 
-@app.route("/api/ultima-visita")
-@login_required
-def api_ultima_visita():
-    df = carregar_aba("Visitas")
-    if df.empty:
-        return jsonify({"ok": False, "msg": "Nenhuma visita registrada."})
-
-    df_sorted = df.sort_values("Data", ascending=False, na_position="last")
-    row = df_sorted.iloc[0]
-
-    def _str(v):
-        return "" if (v is None or (isinstance(v, float) and pd.isna(v))) else str(v)
-
-    return jsonify({
-        "ok":            True,
-        "data":          fmt_data(row.get("Data")),
-        "responsavel":   _str(row.get("Responsável")),
-        "gado_contado":  int(row.get("Gado Contado") or 0),
-        "gado_esperado": int(row.get("Gado Esperado") or 0),
-        "gado_faltando": int(row.get("Gado Faltando") or 0),
-        "sal":           _str(row.get("Sal/Ração")),
-        "proteinado":    _str(row.get("Proteinado")),
-        "grama":         _str(row.get("Grama/Pastagem")),
-        "corrego":       _str(row.get("Córrego/Água")),
-        "choveu":        _str(row.get("Choveu")),
-        "chuva_mm":      float(row.get("Chuva mm") or 0),
-        "sugestoes":     _str(row.get("Sugestões")),
-    })
-
-
-# ════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
 #  RELATÓRIO PDF
-# ════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
 
-def _gerar_pdf_relatorio() -> bytes:
-    """
-    Gera um relatório PDF completo do rebanho usando reportlab.
-    Retorna os bytes do PDF.
-    """
+def _gerar_pdf_relatorio():
     from io import BytesIO
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import cm
-    from reportlab.platypus import (
-        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-        HRFlowable, PageBreak,
-    )
-
-    dados  = carregar_todas()
-    r      = calcular_resumo_financeiro(dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"])
+    from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
+                                    Table, TableStyle, HRFlowable, PageBreak)
+    dados  = _get_dados_cache()
+    r      = _get_resumo_cache()
     mbr    = calcular_todos_membros(dados["Vendas"], dados["Compras"], dados["Gastos"], dados["Manejo"])
     extras = calcular_indicadores_extras(
-        dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"],
-        r["ctcab"]
-    )
+        dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"], r["ctcab"])
     gastos_tipo = calcular_gasto_por_tipo(dados["Gastos"])
     estoque_m   = calcular_estoque_por_membro(dados["Compras"], dados["Vendas"], dados["Manejo"])
-
     buf    = BytesIO()
-    doc    = SimpleDocTemplate(
-        buf, pagesize=A4,
-        leftMargin=2*cm, rightMargin=2*cm,
-        topMargin=2*cm, bottomMargin=2*cm,
-    )
-
-    # ── Estilos ─────────────────────────────────────────────────────────────────
+    doc    = SimpleDocTemplate(buf, pagesize=A4,
+                               leftMargin=2*cm, rightMargin=2*cm,
+                               topMargin=2*cm, bottomMargin=2*cm)
     styles = getSampleStyleSheet()
-    VERDE  = colors.HexColor("#2e7d32")
+    VERDE   = colors.HexColor("#2e7d32")
     VERDE_L = colors.HexColor("#e8f5e9")
-    CINZA  = colors.HexColor("#616161")
-    BRANCO = colors.white
-    AMARELO = colors.HexColor("#fff8e1")
-
+    CINZA   = colors.HexColor("#616161")
+    BRANCO  = colors.white
     titulo_style = ParagraphStyle("titulo", parent=styles["Title"],
                                   textColor=VERDE, fontSize=20, spaceAfter=4)
-    sub_style    = ParagraphStyle("sub",    parent=styles["Normal"],
+    sub_style    = ParagraphStyle("sub", parent=styles["Normal"],
                                   textColor=CINZA, fontSize=10, spaceAfter=16)
-    h2_style     = ParagraphStyle("h2",    parent=styles["Heading2"],
+    h2_style     = ParagraphStyle("h2", parent=styles["Heading2"],
                                   textColor=VERDE, fontSize=13, spaceBefore=14, spaceAfter=6)
     body_style   = styles["Normal"]
 
     def _brl(v):
-        try:
-            return f"R$ {float(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        except Exception:
-            return "—"
-
+        try: return f"R$ {float(v):,.2f}".replace(",","X").replace(".","¸").replace("X",".")
+        except: return "—"
     def _pct(v):
         try:
             f = float(v)
             return f"{'+'if f>0 else ''}{f:.1f}%"
-        except Exception:
-            return "—"
-
-    def _tabela(dados_tab, col_widths=None, header=True):
-        """Cria um objeto Table com estilo padrão."""
+        except: return "—"
+    def _tabela(dados_tab, col_widths=None):
         t = Table(dados_tab, colWidths=col_widths)
-        estilos = [
-            ("FONTNAME",  (0, 0), (-1, -1), "Helvetica"),
-            ("FONTSIZE",  (0, 0), (-1, -1), 9),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [BRANCO, VERDE_L]),
-            ("GRID",      (0, 0), (-1, -1), 0.4, colors.HexColor("#c8e6c9")),
-            ("LEFTPADDING",  (0, 0), (-1, -1), 6),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-            ("TOPPADDING",   (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
-        ]
-        if header:
-            estilos += [
-                ("BACKGROUND",  (0, 0), (-1, 0), VERDE),
-                ("TEXTCOLOR",   (0, 0), (-1, 0), BRANCO),
-                ("FONTNAME",    (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE",    (0, 0), (-1, 0), 9),
-            ]
-        t.setStyle(TableStyle(estilos))
+        t.setStyle(TableStyle([
+            ("FONTNAME",  (0,0), (-1,-1), "Helvetica"),
+            ("FONTSIZE",  (0,0), (-1,-1), 9),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [BRANCO, VERDE_L]),
+            ("GRID",      (0,0), (-1,-1), 0.4, colors.HexColor("#c8e6c9")),
+            ("LEFTPADDING", (0,0), (-1,-1), 6),
+            ("RIGHTPADDING",(0,0), (-1,-1), 6),
+            ("TOPPADDING",  (0,0), (-1,-1), 4),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 4),
+            ("BACKGROUND",  (0,0), (-1,0), VERDE),
+            ("TEXTCOLOR",   (0,0), (-1,0), BRANCO),
+            ("FONTNAME",    (0,0), (-1,0), "Helvetica-Bold"),
+        ]))
         return t
 
     story = []
     gerado_em = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-    # ── Cabeçalho ────────────────────────────────────────────────────────────────
     story.append(Paragraph("🐄 Sítio Santo Antonio", titulo_style))
-    story.append(Paragraph(f"Relatório Financeiro do Rebanho — Gerado em {gerado_em}", sub_style))
+    story.append(Paragraph(f"Relatório Financeiro — {gerado_em}", sub_style))
     story.append(HRFlowable(width="100%", thickness=2, color=VERDE, spaceAfter=12))
 
-    # ── Resumo do Estoque ────────────────────────────────────────────────────────
     story.append(Paragraph("Resumo do Estoque e Custos", h2_style))
-    tab_resumo = [
+    story.append(_tabela([
         ["Indicador", "Valor"],
-        ["Cabeças compradas",            str(int(r["cab_comp"]))],
-        ["Cabeças vendidas",             str(int(r["cab_vend"]))],
-        ["Estoque atual",                f"{int(r['estoque'])} cabeças"],
-        ["CMP — Custo Médio Ponderado",  _brl(r["cmp"]) + " / cabeça"],
-        ["GPCab — Gastos acum./cabeça",  _brl(r["gpcab"]) + " / cabeça"],
-        ["CTCab — Custo Total/cabeça",   _brl(r["ctcab"]) + " / cabeça"],
-        ["Break-even do estoque",        _brl(r["break_even"]) + " / cabeça"],
-        ["Capital imobilizado",          _brl(r["capital_imobilizado"])],
-    ]
-    story.append(_tabela(tab_resumo, col_widths=[10*cm, 7*cm]))
+        ["Cabeças compradas",           str(int(r["cab_comp"]))],
+        ["Cabeças vendidas",            str(int(r["cab_vend"]))],
+        ["Estoque atual",               f"{int(r['estoque'])} cabeças"],
+        ["CMP",                         _brl(r["cmp"]) + "/cab."],
+        ["GPCab",                       _brl(r["gpcab"]) + "/cab."],
+        ["CTCab",                       _brl(r["ctcab"]) + "/cab."],
+        ["Break-even",                  _brl(r["break_even"]) + "/cab."],
+        ["Capital imobilizado",         _brl(r["capital_imobilizado"])],
+    ], col_widths=[10*cm, 7*cm]))
     story.append(Spacer(1, 12))
 
-    # ── Resultado Financeiro ────────────────────────────────────────────────────
     story.append(Paragraph("Resultado Financeiro", h2_style))
-    tab_fin = [
+    story.append(_tabela([
         ["Indicador", "Valor"],
-        ["Total investido em compras",   _brl(r["total_comp"])],
-        ["Total de gastos operacionais", _brl(r["total_gast"])],
-        ["Custo total",                  _brl(r["total_custo"])],
-        ["Receita total (vendas)",       _brl(r["total_vend"])],
-        ["Resultado realizado",          _brl(r["resultado_realizado"])],
-        ["ROI realizado",                _pct(r["roi_realizado"])],
-        ["Resultado total (+ estoque)",  _brl(r["resultado_total"])],
-        ["ROI total (+ estoque)",        _pct(r["roi_total"])],
-        ["Margem bruta",                 _pct(r["margem_bruta"])],
-        ["Ticket médio de venda",        _brl(r.get("ticket_medio", 0)) + " / cabeça"],
-    ]
-    story.append(_tabela(tab_fin, col_widths=[10*cm, 7*cm]))
+        ["Total compras",               _brl(r["total_comp"])],
+        ["Total gastos",                _brl(r["total_gast"])],
+        ["Custo total",                 _brl(r["total_custo"])],
+        ["Receita (vendas)",            _brl(r["total_vend"])],
+        ["Resultado realizado",         _brl(r["resultado_realizado"])],
+        ["ROI realizado",               _pct(r["roi_realizado"])],
+        ["Resultado total (+ estoque)", _brl(r["resultado_total"])],
+        ["ROI total",                   _pct(r["roi_total"])],
+        ["Margem bruta",                _pct(r["margem_bruta"])],
+    ], col_widths=[10*cm, 7*cm]))
     story.append(Spacer(1, 12))
 
-    # ── Indicadores Extras ───────────────────────────────────────────────────────
-    if any(v for v in extras.values()):
-        story.append(Paragraph("Indicadores de Gestão", h2_style))
-        tab_extra = [
-            ["Indicador", "Valor"],
-            ["Tempo médio de permanência (TMP)", f"{extras['tmp_dias']} dias"],
-            ["Custo por cabeça por dia",         _brl(extras['custo_dia_cab'])],
-            ["Arrobas mínimas para cobrir CTCab",f"{extras['arrobas_min_cab']:.1f} @"],
-            ["Gastos sobre investimento em compras", _pct(extras['pct_gasto_sobre_compra'])],
-            ["Ticket médio de venda",            _brl(extras['ticket_medio_venda'])],
-        ]
-        story.append(_tabela(tab_extra, col_widths=[10*cm, 7*cm]))
-        story.append(Spacer(1, 12))
-
-    # ── Estoque por Membro ───────────────────────────────────────────────────────
-    story.append(Paragraph("Estoque por Membro", h2_style))
-    tab_estq = [["Membro", "Cabeças no Estoque"]]
-    for m in MEMBROS:
-        tab_estq.append([NOMES_MEMBROS[m], str(estoque_m.get(m, 0))])
-    story.append(_tabela(tab_estq, col_widths=[10*cm, 7*cm]))
-    story.append(Spacer(1, 12))
-
-    # ── Resultado por Membro ─────────────────────────────────────────────────────
     story.append(PageBreak())
     story.append(Paragraph("Resultado por Membro", h2_style))
-    tab_mbr = [["Membro", "Cabeças Vend.", "Receita", "Custo Total", "Resultado", "Margem"]]
+    tab_mbr = [["Membro","Cabeças","Receita","Custo Total","Resultado","Margem"]]
     for m in MEMBROS:
         mr = mbr[m]
-        sinal = "+" if mr["resultado"] >= 0 else ""
-        tab_mbr.append([
-            NOMES_MEMBROS[m],
-            str(mr["cabecas"]),
-            _brl(mr["receita"]),
-            _brl(mr["custo_total"]),
-            sinal + _brl(mr["resultado"]),
-            _pct(mr["margem_pct"]),
-        ])
-    story.append(_tabela(tab_mbr, col_widths=[3.5*cm, 2.5*cm, 3.5*cm, 3.5*cm, 3*cm, 2*cm]))
-    story.append(Spacer(1, 16))
+        tab_mbr.append([NOMES_MEMBROS[m], str(mr["cabecas"]), _brl(mr["receita"]),
+                        _brl(mr["custo_total"]), _brl(mr["resultado"]), _pct(mr["margem_pct"])])
+    story.append(_tabela(tab_mbr, col_widths=[3.5*cm,2.5*cm,3.5*cm,3.5*cm,3*cm,2*cm]))
+    story.append(Spacer(1,16))
 
-    # Detalhe por membro
-    for m in MEMBROS:
-        mr = mbr[m]
-        if not mr["vendas_detalhadas"]:
-            continue
-        story.append(Paragraph(f"Vendas — {NOMES_MEMBROS[m]}", h2_style))
-        tab_d = [["Data", "Cabeças", "Receita", "CMP", "GPCab", "Resultado", "Margem"]]
-        for v in mr["vendas_detalhadas"]:
-            sinal = "+" if v["resultado"] >= 0 else ""
-            tab_d.append([
-                v["data"], str(v["cabecas"]),
-                _brl(v["receita"]),
-                _brl(v["cmp"]),
-                _brl(v["gpcab"]),
-                sinal + _brl(v["resultado"]),
-                _pct(v["margem_pct"]),
-            ])
-        story.append(_tabela(tab_d, col_widths=[2.5*cm, 2*cm, 3*cm, 2.8*cm, 2.8*cm, 2.8*cm, 2.1*cm]))
-        story.append(Spacer(1, 10))
-
-    # ── Gastos por Tipo ──────────────────────────────────────────────────────────
-    if gastos_tipo:
-        story.append(PageBreak())
-        story.append(Paragraph("Gastos por Tipo / Categoria", h2_style))
-        tab_gasto = [["Tipo", "Valor Total", "% do Total"]]
-        for tipo, info in gastos_tipo.items():
-            tab_gasto.append([tipo, _brl(info["valor"]), f"{info['pct']:.1f}%"])
-        story.append(_tabela(tab_gasto, col_widths=[8*cm, 5*cm, 4*cm]))
-        story.append(Spacer(1, 12))
-
-    # ── Compras ─────────────────────────────────────────────────────────────────
-    df_comp = dados["Compras"]
-    if not df_comp.empty:
-        story.append(Paragraph("Histórico de Compras", h2_style))
-        tab_c = [["Data", "Cabeças", "Valor Total", "Valor/Cabeça", "Descrição"]]
-        for _, row in df_comp.sort_values("Data", na_position="last").iterrows():
-            tab_c.append([
-                fmt_data(row.get("Data")),
-                str(int(row.get("Qtd Cabeças", 0) or 0)),
-                _brl(row.get("Valor Total (R$)", 0)),
-                _brl(row.get("Valor/Cabeça (R$)", 0)),
-                str(row.get("Descrição", "") or "")[:40],
-            ])
-        story.append(_tabela(tab_c, col_widths=[2.5*cm, 2*cm, 3.5*cm, 3.5*cm, 6.5*cm]))
-        story.append(Spacer(1, 12))
-
-    # ── Vendas ──────────────────────────────────────────────────────────────────
-    df_vend = dados["Vendas"]
-    if not df_vend.empty:
-        story.append(Paragraph("Histórico de Vendas", h2_style))
-        tab_v = [["Data", "Cabeças", "Valor Total", "Valor/Cabeça", "Arroba", "Descrição"]]
-        for _, row in df_vend.sort_values("Data", na_position="last").iterrows():
-            tab_v.append([
-                fmt_data(row.get("Data")),
-                str(int(row.get("Qtd Cabeças", 0) or 0)),
-                _brl(row.get("Valor Total (R$)", 0)),
-                _brl(row.get("Valor/Cabeça (R$)", 0)),
-                _brl(row.get("Valor Arroba (R$)", 0)) if row.get("Valor Arroba (R$)") else "—",
-                str(row.get("Descrição", "") or "")[:35],
-            ])
-        story.append(_tabela(tab_v, col_widths=[2.5*cm, 2*cm, 3.2*cm, 3.2*cm, 2.5*cm, 5.6*cm]))
-        story.append(Spacer(1, 12))
-
-    # ── Gastos ──────────────────────────────────────────────────────────────────
-    df_gast = dados["Gastos"]
-    if not df_gast.empty:
-        story.append(PageBreak())
-        story.append(Paragraph("Histórico de Gastos Operacionais", h2_style))
-        tab_g = [["Data", "Tipo", "Descrição", "Valor Total", "Valor/Cabeça"]]
-        for _, row in df_gast.sort_values("Data", na_position="last").iterrows():
-            tab_g.append([
-                fmt_data(row.get("Data")),
-                str(row.get("Tipo", "") or ""),
-                str(row.get("Descrição", "") or "")[:35],
-                _brl(row.get("Valor Total (R$)", 0)),
-                _brl(row.get("Valor/Cabeça (R$)", 0)),
-            ])
-        story.append(_tabela(tab_g, col_widths=[2.5*cm, 3.5*cm, 5.5*cm, 3.2*cm, 3.3*cm]))
-
-    # ── Rodapé de nota ───────────────────────────────────────────────────────────
     story.append(Spacer(1, 20))
     story.append(HRFlowable(width="100%", thickness=1, color=CINZA))
     story.append(Spacer(1, 6))
     story.append(Paragraph(
-        f"<font size='8' color='grey'>Relatório gerado automaticamente pelo Sistema de Gado — "
-        f"Sítio Santo Antonio | {gerado_em}<br/>"
-        "CMP = Custo Médio Ponderado por cabeça | GPCab = Gasto acumulado por cabeça | "
-        "CTCab = Custo Total por cabeça | Break-even = preço mínimo para recuperar capital do estoque</font>",
-        body_style
-    ))
-
+        f"<font size='8' color='grey'>Gerado pelo Sistema de Gado — Sítio Santo Antonio | {gerado_em}</font>",
+        body_style))
     doc.build(story)
     return buf.getvalue()
 
@@ -1990,39 +1652,27 @@ def _gerar_pdf_relatorio() -> bytes:
 @app.route("/relatorio-pdf")
 @login_required
 def relatorio_pdf():
-    """Gera e faz download do relatório financeiro em PDF."""
     from flask import Response
     try:
         pdf_bytes = _gerar_pdf_relatorio()
         nome_arquivo = f"relatorio_gado_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-        return Response(
-            pdf_bytes,
-            mimetype="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename={nome_arquivo}"}
-        )
+        return Response(pdf_bytes, mimetype="application/pdf",
+                        headers={"Content-Disposition": f"attachment; filename={nome_arquivo}"})
     except Exception as e:
         flash(f"Erro ao gerar PDF: {e}", "error")
         return redirect(url_for("relatorios"))
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ENTRYPOINT
+# ══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
     inicializar()
     import webbrowser, threading
 
     PORTA = 5000
-
-    # ── Ngrok (opcional) ──────────────────────────────────────────────────────
-    # Para ativar: defina a variável de ambiente NGROK_TOKEN com seu authtoken,
-    # ou cole o token direto na variável abaixo (entre as aspas).
-    # Obtenha em: https://dashboard.ngrok.com/get-started/your-authtoken
-    #
-    # BUG CORRIGIDO: antes, o token estava sendo usado como NOME da variável de
-    # ambiente (os.environ.get("<token>", "")) — nunca funcionava.
-    # Agora usa corretamente a variável de ambiente "NGROK_TOKEN".
     NGROK_TOKEN = os.environ.get("NGROK_TOKEN", "")
-    # Para usar sem variável de ambiente, cole o token aqui:
-    # NGROK_TOKEN = "3DbSQ7lb5EZX0tZuB6n6sN2uhDF_57PYTKk99ViUqVPhLSt2H"
-
     url_publica = None
     if NGROK_TOKEN:
         try:
@@ -2032,22 +1682,20 @@ if __name__ == "__main__":
                                         domain="sitiosantoantonio.ngrok-free.dev")
             url_publica = listener.url()
         except ImportError:
-            print("⚠️  ngrok não instalado. Rode:  pip install ngrok")
+            print("⚠️  ngrok não instalado. Rode: pip install ngrok")
         except Exception as e:
             print(f"⚠️  ngrok não iniciou: {e}")
-    # ─────────────────────────────────────────────────────────────────────────
 
     def abrir_browser():
         webbrowser.open(f"http://localhost:{PORTA}")
 
     threading.Timer(1.2, abrir_browser).start()
 
-    print("\n🐄 Sítio Santo Antonio — Sistema de Gado")
+    print("\n🐄 Sítio Santo Antonio — Sistema de Gado v3.3")
     print(f"   Local:  http://localhost:{PORTA}")
     if url_publica:
-        print(f"   🌐 Ngrok: {url_publica}  ← compartilhe este link")
-    else:
-        print("   (ngrok inativo — defina NGROK_TOKEN para acesso externo)")
+        print(f"   🌐 Ngrok: {url_publica}")
+    print("   SECRET_KEY:", "via variável GADO_SECRET_KEY" if os.environ.get("GADO_SECRET_KEY") else "PADRÃO (defina GADO_SECRET_KEY em produção)")
     print("   Para encerrar: Ctrl+C\n")
 
     app.run(debug=False, port=PORTA)

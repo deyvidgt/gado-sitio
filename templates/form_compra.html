@@ -16,6 +16,7 @@
     </h2>
 
     <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="form-grid">
         <div class="form-group">
           <label>Data da Compra</label>
@@ -55,7 +56,7 @@
           <div class="form-group">
             <label>Cabeças</label>
             <input type="number" name="qtd_mae" id="qtd-mae" min="0" class="qtd-inp"
-                   value="{{ row["Qtd Geane"] | int if row and row.get("Qtd Geane") else 0 }}">
+                   value="{{ row.get("Qtd Geane", row.get("Qtd Mae", 0)) | int if row and row.get("Qtd Geane") else 0 }}">
           </div>
         </div>
         <div class="member-box">
