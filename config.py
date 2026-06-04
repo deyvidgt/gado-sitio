@@ -41,6 +41,12 @@ MAX_TENTATIVAS_LOGIN = 7
 # Evita recalcular tudo a cada request. Invalida automaticamente após salvar.
 CACHE_RESUMO_TTL = 30       # segundos
 
+# ── Referência de mercado ─────────────────────────────────────────────────────
+# Preço de referência da arroba para cálculos de break-even e arrobas mínimas.
+# Atualize conforme cotação local (Triângulo/MG, Scot/IMEA).
+# Valor indicativo para boi gordo Nelore, Sudeste.
+PRECO_ARROBA_REF: float = 340.0   # R$/@
+
 TIPOS_GASTO = [
     "Remédio/Vacina",
     "Sal/Proteínado",
@@ -95,7 +101,7 @@ COLUNAS_VISITAS = [
     "Quintal", "Cisterna",
     "Choveu", "Chuva mm",
     "Observações", "Sugestões",
-    "Sacos Sal/Ração", "Sacos Proteinado",
+    "Sacos Sal/Ração", "Sacos Ração", "Sacos Proteinado",
 ]
 
 OPCOES_VISITA = {

@@ -57,12 +57,9 @@ import bisect
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from config import MEMBROS
+from config import MEMBROS, PRECO_ARROBA_REF
 
-# Preço de referência da arroba para cálculos de break-even e arrobas mínimas.
-# Atualize conforme cotação do mercado local (Triângulo/MG, Scot/IMEA).
-# Valor indicativo para boi gordo Nelore, Sudeste, 2026.
-PRECO_ARROBA_REF: float = 340.0   # R$/@
+# PRECO_ARROBA_REF importado de config.py — atualize lá conforme cotação do mercado.
 
 
 # ── Estoque global ────────────────────────────────────────────────────────────
@@ -186,11 +183,6 @@ def _build_gpcab_timeline(df_gast: pd.DataFrame,
 
     _df_vend = df_vend if (df_vend is not None and not df_vend.empty) else pd.DataFrame()
     _df_man  = df_man  if (df_man  is not None and not df_man.empty)  else pd.DataFrame()
-    total_cab_comp = (
-        max(1, int(df_comp["Qtd Cabeças"].sum()))
-        if df_comp is not None and not df_comp.empty
-        else 1
-    )
 
     incrementos = []
     datas_list  = []
@@ -211,11 +203,14 @@ def _build_gpcab_timeline(df_gast: pd.DataFrame,
                    if pd.notna(data)
                    else calcular_estoque(df_comp, _df_vend, _df_man))
             if est <= 0:
-                # Fallback: usa total de cabeças compradas no período inteiro.
-                # BUG ANTERIOR: se df_comp vazio, total_cab_comp era 1, causando
-                # inc = val (gasto inteiro imputado a 1 cabeça fictícia) → GPCab inflado.
-                est = total_cab_comp if total_cab_comp > 0 else 0
-            inc = val / est if est > 0 else 0.0
+                # BUG CORRIGIDO v3.2: quando o estoque na data do gasto é 0
+                # (gasto registrado antes da primeira compra, ou após todas as vendas),
+                # não há cabeças no rebanho para absorver a despesa — inc = 0.0.
+                # O fallback anterior usava total_cab_comp (mín. 1), imputando o gasto
+                # integral a 1 cabeça fictícia e inflando todo o GPCab histórico.
+                inc = 0.0
+            else:
+                inc = val / est
         else:
             inc = 0.0
 
@@ -298,7 +293,6 @@ def enriquecer_gastos(df_gast: pd.DataFrame,
 
     _df_vend = df_vend if (df_vend is not None and not df_vend.empty) else pd.DataFrame()
     _df_man  = df_man  if (df_man  is not None and not df_man.empty)  else pd.DataFrame()
-    total_cab_comp = max(1, int(df_comp["Qtd Cabeças"].sum()))
 
     df = df_gast.copy()
     # Garantir que colunas numéricas aceitem float (importação pode deixá-las como int64)
@@ -316,10 +310,10 @@ def enriquecer_gastos(df_gast: pd.DataFrame,
                 est  = (calcular_estoque_ate_data(df_comp, _df_vend, _df_man, data)
                         if pd.notna(data)
                         else calcular_estoque(df_comp, _df_vend, _df_man))
-                if est <= 0:
-                    est = total_cab_comp
-                df.at[idx, "Qtd Cabeças"]        = float(est)
-                df.at[idx, "Valor/Cabeça (R$)"]  = round(val / est, 4)
+                # BUG CORRIGIDO v3.2: se nao ha rebanho na data, nao preencher
+                if est > 0:
+                    df.at[idx, "Qtd Cabeças"]       = float(est)
+                    df.at[idx, "Valor/Cabeça (R$)"] = round(val / est, 4)
     return df
 
 

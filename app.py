@@ -1504,6 +1504,19 @@ def nova_visita():
             chuva_mm = 0.0
         obs = f.get("observacoes", "").strip()
         sugestoes = _gerar_sugestoes_visita(f, estoque)
+        # BUG CORRIGIDO v3.2: campos de sacos coletados no formulário mas nunca salvos
+        try:
+            sacos_sal  = int(f.get("sacos_sal",  0) or 0)
+        except (ValueError, TypeError):
+            sacos_sal  = 0
+        try:
+            sacos_racao = int(f.get("sacos_racao", 0) or 0)
+        except (ValueError, TypeError):
+            sacos_racao = 0
+        try:
+            sacos_prot = int(f.get("sacos_prot", 0) or 0)
+        except (ValueError, TypeError):
+            sacos_prot = 0
         salvar_linha("Visitas", [
             data, responsavel,
             gado_cnt, gado_esp, gado_falt,
@@ -1511,6 +1524,9 @@ def nova_visita():
             quintal, cisterna,
             choveu, chuva_mm if chuva_mm > 0 else None,
             obs, sugestoes,
+            sacos_sal if sacos_sal > 0 else None,
+            sacos_racao if sacos_racao > 0 else None,
+            sacos_prot if sacos_prot > 0 else None,
         ])
         if gado_falt > 0:
             flash(f"⚠️ Visita salva — mas {gado_falt} cabeça(s) estão faltando!", "warning")
@@ -1529,10 +1545,10 @@ def excluir_visita(idx):
     fazer_backup()
     _limpar_backups_antigos()
     df = carregar_aba("Visitas")
-    if df.empty or idx not in df.index:
+    if df.empty or idx >= len(df):
         flash("Registro não encontrado.", "error")
         return redirect(url_for("visitas"))
-    df = df.drop(index=idx).reset_index(drop=True)
+    df = df.drop(df.index[idx]).reset_index(drop=True)
     reescrever_aba("Visitas", df)
     flash("Visita excluída.", "success")
     return redirect(url_for("visitas"))

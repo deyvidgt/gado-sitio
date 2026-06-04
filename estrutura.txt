@@ -41,6 +41,7 @@ programa sitio/                          ← pasta raiz do projeto
 │   └── configuracoes.html               ← gerenciar usuários e senhas
 │
 ├── static/                              ← arquivos estáticos (servidos pelo Flask)
+│   ├── icon.svg
 │   ├── favicon.ico                      ← ícone do site e do .exe
 │   ├── icon192.png                      ← ícone PWA 192×192
 │   ├── icon512.png                      ← ícone PWA 512×512
