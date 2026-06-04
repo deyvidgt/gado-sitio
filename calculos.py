@@ -58,12 +58,11 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 from config import MEMBROS
-try:
-    from config import PRECO_ARROBA_REF
-except ImportError:
-    PRECO_ARROBA_REF: float = 340.0  # fallback — defina em config.py para alterar
 
-# PRECO_ARROBA_REF importado de config.py — atualize lá conforme cotação do mercado.
+# Preço de referência da arroba para cálculos de break-even e arrobas mínimas.
+# Atualize conforme cotação do mercado local (Triângulo/MG, Scot/IMEA).
+# Valor indicativo para boi gordo Nelore, Sudeste, 2026.
+PRECO_ARROBA_REF: float = 340.0   # R$/@
 
 
 # ── Estoque global ────────────────────────────────────────────────────────────
@@ -207,11 +206,8 @@ def _build_gpcab_timeline(df_gast: pd.DataFrame,
                    if pd.notna(data)
                    else calcular_estoque(df_comp, _df_vend, _df_man))
             if est <= 0:
-                # BUG CORRIGIDO v3.2: quando o estoque na data do gasto é 0
-                # (gasto registrado antes da primeira compra, ou após todas as vendas),
-                # não há cabeças no rebanho para absorver a despesa — inc = 0.0.
-                # O fallback anterior usava total_cab_comp (mín. 1), imputando o gasto
-                # integral a 1 cabeça fictícia e inflando todo o GPCab histórico.
+                # BUG CORRIGIDO v3.2: sem rebanho na data, o gasto não tem
+                # cabeças para absorver — inc=0.0 evita GPCab inflado.
                 inc = 0.0
             else:
                 inc = val / est
@@ -314,7 +310,7 @@ def enriquecer_gastos(df_gast: pd.DataFrame,
                 est  = (calcular_estoque_ate_data(df_comp, _df_vend, _df_man, data)
                         if pd.notna(data)
                         else calcular_estoque(df_comp, _df_vend, _df_man))
-                # BUG CORRIGIDO v3.2: se nao ha rebanho na data, nao preencher
+                # BUG CORRIGIDO v3.2: se não há rebanho na data, não preencher
                 if est > 0:
                     df.at[idx, "Qtd Cabeças"]       = float(est)
                     df.at[idx, "Valor/Cabeça (R$)"] = round(val / est, 4)
