@@ -57,7 +57,11 @@ import bisect
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from config import MEMBROS, PRECO_ARROBA_REF
+from config import MEMBROS
+try:
+    from config import PRECO_ARROBA_REF
+except ImportError:
+    PRECO_ARROBA_REF: float = 340.0  # fallback — defina em config.py para alterar
 
 # PRECO_ARROBA_REF importado de config.py — atualize lá conforme cotação do mercado.
 

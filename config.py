@@ -35,7 +35,7 @@ USUARIOS = {
 }
 
 SESSAO_MINUTOS = 480        # 8 horas
-MAX_TENTATIVAS_LOGIN = 7
+MAX_TENTATIVAS_LOGIN = 5
 
 # ── Cache do resumo financeiro ────────────────────────────────────────────────
 # Evita recalcular tudo a cada request. Invalida automaticamente após salvar.
