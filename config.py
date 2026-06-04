@@ -41,12 +41,6 @@ MAX_TENTATIVAS_LOGIN = 7
 # Evita recalcular tudo a cada request. Invalida automaticamente após salvar.
 CACHE_RESUMO_TTL = 30       # segundos
 
-# ── Referência de mercado ─────────────────────────────────────────────────────
-# Preço de referência da arroba para cálculos de break-even e arrobas mínimas.
-# Atualize conforme cotação local (Triângulo/MG, Scot/IMEA).
-# Valor indicativo para boi gordo Nelore, Sudeste.
-PRECO_ARROBA_REF: float = 340.0   # R$/@
-
 TIPOS_GASTO = [
     "Remédio/Vacina",
     "Sal/Proteínado",
@@ -68,9 +62,16 @@ TIPOS_MANEJO = [
 ]
 
 ALERTAS_SAUDE = {
-    "Vacinação": 180,
-    "Vermifugação": 120,
+    "Vacinação":              180,   # dias entre vacinações
+    "Vermifugação":           120,   # dias entre vermifugações
+    "Pesagem":                90,    # dias entre pesagens
+    "Tratamento Veterinário": 365,   # revisão anual
 }
+
+# ── WhatsApp (CallMeBot) ──────────────────────────────────────────────────────
+# Deixe vazio; cada usuário configura o próprio número nas Configurações do sistema.
+# Documentação: https://www.callmebot.com/blog/free-api-whatsapp-messages/
+WHATSAPP_LEMBRETES_HORA = 7   # hora do dia para envio automático (se implementado via cron)
 
 COLUNAS_COMPRAS = [
     "Data", "Qtd Cabeças", "Valor Total (R$)", "Valor/Cabeça (R$)",
@@ -101,7 +102,7 @@ COLUNAS_VISITAS = [
     "Quintal", "Cisterna",
     "Choveu", "Chuva mm",
     "Observações", "Sugestões",
-    "Sacos Sal/Ração", "Sacos Ração", "Sacos Proteinado",
+    "Sacos Sal/Ração", "Sacos Proteinado",
 ]
 
 OPCOES_VISITA = {

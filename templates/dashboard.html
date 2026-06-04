@@ -77,7 +77,112 @@
     </div>
   </div>
   {% endfor %}
+
+<!-- ═══ ÚLTIMA VISITA + CALENDÁRIO DE MANEJO ════════════════════════════════ -->
+<div class="two-col" style="margin-bottom:24px">
+
+  <!-- Card: Última Visita -->
+  <div class="card" id="card-ultima-visita">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div class="card-title" style="margin-bottom:0">🌾 Última Visita ao Sítio</div>
+      <a href="{{ url_for('nova_visita') }}" class="btn btn-outline btn-sm">+ Registrar visita</a>
+    </div>
+    <div id="vis-loading" style="font-size:13px;color:var(--text-3)">⏳ Carregando...</div>
+    <div id="vis-vazio"   style="display:none;font-size:13px;color:var(--text-3)">
+      Nenhuma visita registrada ainda.<br>
+      <a href="{{ url_for('nova_visita') }}" style="color:var(--green-600)">Registrar primeira visita →</a>
+    </div>
+    <div id="vis-corpo"   style="display:none">
+      <!-- Cabeçalho: data + responsável -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <span id="vis-data" style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--green-700)"></span>
+        <span id="vis-resp" style="font-size:12px;color:var(--text-3);background:var(--cream);padding:3px 10px;border-radius:20px"></span>
+        <span id="vis-chuva-pill" style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px"></span>
+      </div>
+      <!-- Gado -->
+      <div id="vis-gado-wrap" style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap"></div>
+      <!-- Badges de status -->
+      <div id="vis-badges" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px"></div>
+      <!-- Sugestões -->
+      <div id="vis-sugestoes" style="background:var(--cream);border-radius:8px;padding:10px 14px;font-size:12.5px;color:var(--text-2);line-height:1.7"></div>
+    </div>
+  </div>
+
+  <!-- Card: Calendário de Manejo -->
+  <div class="card" id="card-calendario">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div class="card-title" style="margin-bottom:0">📅 Agenda de Manejo</div>
+      <a href="{{ url_for('novo_manejo') }}" class="btn btn-outline btn-sm">+ Registrar</a>
+    </div>
+    <div id="cal-loading" style="font-size:13px;color:var(--text-3)">⏳ Carregando...</div>
+    <div id="cal-corpo"   style="display:none">
+      <!-- Mini-calendário do mês -->
+      <div id="mini-cal" style="margin-bottom:14px"></div>
+      <!-- Próximas intervenções -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:8px">Próximas intervenções</div>
+      <div id="cal-proximas"></div>
+    </div>
+  </div>
+
 </div>
+
+<!-- ═══ PAINEL WHATSAPP ═══════════════════════════════════════════════════════ -->
+<div class="card" style="margin-bottom:24px" id="card-whatsapp">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+    <div>
+      <div class="card-title" style="margin-bottom:2px">📱 Lembretes via WhatsApp</div>
+      <div style="font-size:12px;color:var(--text-3)">Receba alertas de vacinação, sal, gado faltando e resultado diretamente no WhatsApp</div>
+    </div>
+    <button onclick="toggleWppPanel()" class="btn btn-outline btn-sm" id="btn-wpp-toggle">⚙️ Configurar</button>
+  </div>
+
+  <!-- Status rápido dos alertas -->
+  <div id="wpp-status-wrap" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+    <div id="wpp-status-cfg" style="font-size:12px;color:var(--text-3)">⏳ Verificando configuração...</div>
+  </div>
+
+  <!-- Painel de configuração (oculto por padrão) -->
+  <div id="wpp-panel" style="display:none;margin-top:18px;border-top:1px solid var(--cream-dk);padding-top:18px">
+    <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:10px">
+      🔧 Configuração do seu WhatsApp
+    </div>
+
+    <!-- Instruções -->
+    <div style="background:var(--cream);border-radius:8px;padding:12px 14px;font-size:12.5px;color:var(--text-2);margin-bottom:14px;line-height:1.7">
+      <strong>Como ativar (1 vez só):</strong><br>
+      1. Adicione o número <strong>+34 644 60 91 44</strong> nos seus contatos como "CallMeBot"<br>
+      2. Envie a mensagem: <code style="background:var(--bg-2);padding:1px 6px;border-radius:4px">I allow callmebot to send me messages</code><br>
+      3. Você receberá sua API Key por WhatsApp em segundos<br>
+      <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank"
+         style="color:var(--green-600);font-weight:600">Ver instruções completas →</a>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px">
+          Telefone (com DDD e código país)
+        </label>
+        <input type="text" id="wpp-telefone" placeholder="5534999990000"
+               style="width:100%;padding:9px 12px;border:1.5px solid var(--cream-dk);border-radius:8px;font-size:14px;font-family:inherit;background:var(--surface-2);color:var(--text)">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px">
+          API Key (recebida via WhatsApp)
+        </label>
+        <input type="text" id="wpp-apikey" placeholder="1234567"
+               style="width:100%;padding:9px 12px;border:1.5px solid var(--cream-dk);border-radius:8px;font-size:14px;font-family:inherit;background:var(--surface-2);color:var(--text)">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button onclick="salvarWpp()" class="btn btn-primary">💾 Salvar configuração</button>
+      <button onclick="testarWpp()" class="btn btn-outline" id="btn-wpp-testar">📤 Enviar mensagem de teste</button>
+      <button onclick="enviarAlertas()" class="btn btn-outline" id="btn-wpp-alertas">🚨 Enviar alertas agora</button>
+    </div>
+    <div id="wpp-feedback" style="margin-top:10px;font-size:13px"></div>
+  </div>
+</div>
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
 
 <!-- Cotações de Mercado -->
 <div class="card" style="margin-bottom:24px">
@@ -253,6 +358,46 @@
   }
   [data-theme="dark"] .chuva-kpi { border-top-color: #5db3e8; }
   [data-theme="dark"] .ck-val    { color: #5db3e8; }
+
+  /* ── Última Visita ── */
+  .vis-badge { font-size:11.5px;font-weight:500;padding:4px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px; }
+  .vb-ok     { background:var(--green-100);color:var(--green-700); }
+  .vb-warn   { background:#fef3e2;color:#8a5a00; }
+  .vb-danger { background:#fde8e8;color:var(--danger); }
+  .vis-gado-box { text-align:center;min-width:70px;background:var(--cream);border-radius:8px;padding:10px 14px;border:1.5px solid var(--cream-dk); }
+  .vis-gado-box .n { font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--green-700);display:block; }
+  .vis-gado-box .n.miss { color:var(--danger); }
+  .vis-gado-box .l { font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em; }
+  [data-theme="dark"] .vis-gado-box .n { color:var(--green-300); }
+
+  /* ── Calendário de Manejo ── */
+  .mini-cal-grid { display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:8px; }
+  .mc-dow { font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text-3);text-align:center;padding:2px 0; }
+  .mc-day { font-size:12px;text-align:center;padding:5px 2px;border-radius:6px;cursor:default;position:relative;min-height:28px; }
+  .mc-day.hoje { background:var(--green-600);color:#fff;font-weight:700; }
+  .mc-day.tem-evento { background:var(--green-100);color:var(--green-700);font-weight:600;cursor:pointer; }
+  .mc-day.tem-evento:hover { background:var(--green-200); }
+  [data-theme="dark"] .mc-day.tem-evento { background:rgba(144,201,127,.2);color:var(--green-300); }
+  .mc-day.outro-mes { color:var(--text-3);opacity:.4; }
+  .mc-dot { position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--green-600); }
+  .prox-item { display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--cream-dk); }
+  .prox-item:last-child { border-bottom:none; }
+  .prox-icon { width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0; }
+  .pi-ok      { background:var(--green-100); }
+  .pi-proximo { background:#e3f2fd; }
+  .pi-urgente { background:#fff8e1; }
+  .pi-atrasado{ background:#fde8e8; }
+  .pi-sem_reg { background:var(--cream-dk); }
+  .prox-dias  { font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px; }
+  .pd-ok      { background:var(--green-100);color:var(--green-700); }
+  .pd-proximo { background:#bbdefb;color:#1565c0; }
+  .pd-urgente { background:#fff9c4;color:#7a5100; }
+  .pd-atrasado{ background:#fde8e8;color:var(--danger); }
+  .pd-sem_reg { background:var(--cream-dk);color:var(--text-3); }
+
+  /* ── Tooltip calendário ── */
+  .cal-tooltip { display:none;position:fixed;z-index:999;background:var(--surface);border:1px solid var(--cream-dk);border-radius:10px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,.15);font-size:12.5px;max-width:220px;pointer-events:none; }
+  .cal-tooltip.show { display:block; }
 </style>
 {% endblock %}
 
@@ -268,6 +413,345 @@ function pct(v, prefix=true) {
   const s = Number(v).toFixed(1).replace(".", ",");
   return (prefix && v > 0 ? "+" : "") + s + "%";
 }
+
+
+/* ══════════════════════════════════════════════════
+   ÚLTIMA VISITA
+══════════════════════════════════════════════════ */
+async function loadUltimaVisita() {
+  try {
+    const d = await fetch("/api/ultima-visita").then(r => r.json());
+    document.getElementById("vis-loading").style.display = "none";
+    if (!d.ok) { document.getElementById("vis-vazio").style.display = "block"; return; }
+    document.getElementById("vis-corpo").style.display = "block";
+
+    document.getElementById("vis-data").textContent = "📅 " + d.data;
+    document.getElementById("vis-resp").textContent = d.responsavel ? "👤 " + d.responsavel : "";
+
+    // Chuva
+    const pill = document.getElementById("vis-chuva-pill");
+    if (d.choveu === "Sim") {
+      const mm = d.chuva_mm || 0;
+      const cls = mm >= 50 ? "background:rgba(21,101,192,.15);color:#1565c0" :
+                  mm >= 15 ? "background:rgba(41,128,185,.12);color:#1976d2" :
+                             "background:rgba(100,181,246,.15);color:#0288d1";
+      pill.style.cssText = cls + ";padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600";
+      pill.textContent = mm > 0 ? `🌧️ ${mm}mm` : "🌧️ Choveu";
+    } else {
+      pill.style.cssText = "background:var(--cream-dk);color:var(--text-3);padding:3px 10px;border-radius:20px;font-size:12px";
+      pill.textContent = "☀️ Sem chuva";
+    }
+
+    // Gado
+    const gadoWrap = document.getElementById("vis-gado-wrap");
+    if (d.gado_contado > 0) {
+      const diff = d.gado_esperado - d.gado_contado;
+      gadoWrap.innerHTML = `
+        <div class="vis-gado-box"><span class="n">${d.gado_esperado}</span><span class="l">Esperado</span></div>
+        <div class="vis-gado-box"><span class="n">${d.gado_contado}</span><span class="l">Contado</span></div>
+        <div class="vis-gado-box">
+          <span class="n ${diff > 0 ? 'miss' : ''}">${diff > 0 ? '−'+diff : diff < 0 ? '+'+Math.abs(diff) : '✓'}</span>
+          <span class="l">${diff > 0 ? '⚠️ Faltando' : diff < 0 ? 'A mais' : 'Conferido'}</span>
+        </div>`;
+    } else {
+      gadoWrap.style.display = "none";
+    }
+
+    // Badges
+    const badgeMap = {
+      sal:       {v: d.sal,       ok:"🧂 Sal OK",         warn:"🧂 Sal Baixo",        danger:"🧂 Sal VAZIO"},
+      proteinado:{v: d.proteinado,ok:"🟢 Proteín. OK",    warn:"🟡 Proteín. Baixo",   danger:"🔴 Proteín. VAZIO"},
+      grama:     {v: d.grama,     ok:"🌱 Pasto Bom",      warn:"🌱 Pasto Regular",    danger:"🌱 Pasto Escasso"},
+      corrego:   {v: d.corrego,   ok:"💧 Água Normal",    warn:"💧 Água Baixa",       danger:"💧 Água SECA"},
+    };
+    const okVals    = ["OK","Boa","Normal"];
+    const warnVals  = ["Baixo","Regular"];
+    let badgesHtml  = "";
+    for (const [, cfg] of Object.entries(badgeMap)) {
+      const cls = okVals.includes(cfg.v) ? "vb-ok" : warnVals.includes(cfg.v) ? "vb-warn" : "vb-danger";
+      const lbl = okVals.includes(cfg.v) ? cfg.ok : warnVals.includes(cfg.v) ? cfg.warn : cfg.danger;
+      badgesHtml += `<span class="vis-badge ${cls}">${lbl}</span>`;
+    }
+    document.getElementById("vis-badges").innerHTML = badgesHtml;
+
+    // Sugestões
+    const sug = document.getElementById("vis-sugestoes");
+    if (d.sugestoes) {
+      sug.innerHTML = d.sugestoes.split(" | ").map(s => s.trim()).filter(Boolean)
+        .map(s => `<div style="margin-bottom:2px">${s}</div>`).join("");
+    } else { sug.style.display = "none"; }
+
+  } catch(e) {
+    document.getElementById("vis-loading").textContent = "❌ Erro ao carregar visita.";
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   CALENDÁRIO DE MANEJO
+══════════════════════════════════════════════════ */
+const TIPO_EMOJI = {
+  "Vacinação": "💉", "Vermifugação": "🧪", "Pesagem": "⚖️",
+  "Morte/Perda": "💀", "Nascimento": "🐣", "Tratamento Veterinário": "🩺",
+  "Movimentação de Pasto": "🌿", "Outro": "📋",
+};
+const STATUS_LABEL = {
+  ok: "Em dia", proximo: "Próximo", urgente: "Urgente",
+  atrasado: "Atrasado", sem_registro: "Sem registro",
+};
+
+let _calData = null;
+
+async function loadCalendario() {
+  try {
+    const d = await fetch("/api/calendario-manejo").then(r => r.json());
+    _calData = d;
+    document.getElementById("cal-loading").style.display = "none";
+    document.getElementById("cal-corpo").style.display   = "block";
+    renderMiniCal(d);
+    renderProximas(d.proximas);
+  } catch(e) {
+    document.getElementById("cal-loading").textContent = "❌ Erro ao carregar calendário.";
+  }
+}
+
+function renderMiniCal(d) {
+  const hoje    = new Date(d.hoje);
+  const ano     = hoje.getFullYear();
+  const mes     = hoje.getMonth();
+  const meses   = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+                   "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  const dias    = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+
+  // Mapear eventos do mês atual
+  const eventosDoMes = {};
+  (d.eventos || []).forEach(ev => {
+    const dt = new Date(ev.data + "T12:00:00");
+    if (dt.getFullYear() === ano && dt.getMonth() === mes) {
+      const k = dt.getDate();
+      if (!eventosDoMes[k]) eventosDoMes[k] = [];
+      eventosDoMes[k].push(ev);
+    }
+  });
+
+  // Próximas previstas neste mês
+  const previstasMes = {};
+  (d.proximas || []).forEach(p => {
+    const dt = new Date(p.data_prevista + "T12:00:00");
+    if (dt.getFullYear() === ano && dt.getMonth() === mes) {
+      const k = dt.getDate();
+      if (!previstasMes[k]) previstasMes[k] = [];
+      previstasMes[k].push(p);
+    }
+  });
+
+  const primeiroDia = new Date(ano, mes, 1).getDay();
+  const ultimoDia   = new Date(ano, mes + 1, 0).getDate();
+
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <button onclick="navCal(-1)" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-3);padding:2px 6px">‹</button>
+    <span style="font-size:13px;font-weight:600;color:var(--text-2)">${meses[mes]} ${ano}</span>
+    <button onclick="navCal(1)"  style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-3);padding:2px 6px">›</button>
+  </div>
+  <div class="mini-cal-grid">`;
+
+  dias.forEach(d => { html += `<div class="mc-dow">${d}</div>`; });
+
+  // Células vazias antes do dia 1
+  for (let i = 0; i < primeiroDia; i++) html += `<div class="mc-day outro-mes"></div>`;
+
+  for (let dia = 1; dia <= ultimoDia; dia++) {
+    const isHoje  = dia === hoje.getDate();
+    const temEv   = eventosDoMes[dia] || previstasMes[dia];
+    const classes = [
+      "mc-day",
+      isHoje ? "hoje" : "",
+      temEv && !isHoje ? "tem-evento" : "",
+    ].filter(Boolean).join(" ");
+    const dot = temEv && !isHoje ? '<span class="mc-dot"></span>' : "";
+    const evList = JSON.stringify((eventosDoMes[dia] || []).concat(previstasMes[dia] || []));
+    html += `<div class="${classes}" onclick="mostrarTooltipCal(event,${dia},'${mes+1}','${ano}')">${dia}${dot}</div>`;
+  }
+  html += `</div>`;
+
+  document.getElementById("mini-cal").innerHTML = html;
+}
+
+let _calMesOffset = 0;
+function navCal(dir) {
+  _calMesOffset += dir;
+  if (!_calData) return;
+  const base  = new Date(_calData.hoje);
+  base.setMonth(base.getMonth() + _calMesOffset);
+  const fake = { ..._calData, hoje: base.toISOString().slice(0,10) };
+  renderMiniCal(fake);
+}
+
+function mostrarTooltipCal(e, dia, mes, ano) {
+  if (!_calData) return;
+  const dt = `${ano}-${String(mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+  const evs = (_calData.eventos || []).filter(ev => ev.data === dt);
+  const prev= (_calData.proximas|| []).filter(p  => p.data_prevista === dt);
+  if (!evs.length && !prev.length) return;
+
+  let tip = document.getElementById("cal-tooltip");
+  if (!tip) { tip = document.createElement("div"); tip.id="cal-tooltip"; tip.className="cal-tooltip"; document.body.appendChild(tip); }
+
+  let html = `<div style="font-weight:600;margin-bottom:6px">${String(dia).padStart(2,'0')}/${mes}/${ano}</div>`;
+  evs.forEach(ev  => { html += `<div style="margin-bottom:3px">${TIPO_EMOJI[ev.tipo]||"📋"} <strong>${ev.tipo}</strong> — ${ev.cabecas} cab.<br><span style="color:var(--text-3);font-size:11px">${ev.desc||""}</span></div>`; });
+  prev.forEach(p  => { html += `<div style="margin-bottom:3px;color:var(--info)">📌 Previsto: ${p.tipo}</div>`; });
+  tip.innerHTML = html;
+  tip.style.left = (e.clientX + 10) + "px";
+  tip.style.top  = (e.clientY - 10) + "px";
+  tip.classList.add("show");
+  setTimeout(() => tip.classList.remove("show"), 3500);
+}
+document.addEventListener("click", () => {
+  const tip = document.getElementById("cal-tooltip");
+  if (tip) tip.classList.remove("show");
+});
+
+function renderProximas(proximas) {
+  const wrap = document.getElementById("cal-proximas");
+  const cls = s => ({ok:"pi-ok",proximo:"pi-proximo",urgente:"pi-urgente",atrasado:"pi-atrasado",sem_registro:"pi-sem_reg"}[s]||"pi-sem_reg");
+  const dcls= s => ({ok:"pd-ok",proximo:"pd-proximo",urgente:"pd-urgente",atrasado:"pd-atrasado",sem_registro:"pd-sem_reg"}[s]||"pd-sem_reg");
+
+  wrap.innerHTML = proximas.map(p => {
+    const emoji = TIPO_EMOJI[p.tipo] || "📋";
+    const diasTxt = p.status === "sem_registro" ? "—" :
+                    p.status === "atrasado" ? `${Math.abs(p.dias_restantes)}d atrasado` :
+                    p.dias_restantes === 0  ? "Hoje!" : `em ${p.dias_restantes}d`;
+    const ultimaTxt = p.ultima_data
+      ? `<div style="font-size:11px;color:var(--text-3)">Última: ${p.ultima_data}</div>`
+      : `<div style="font-size:11px;color:var(--text-3)">Sem registro</div>`;
+    return `<div class="prox-item">
+      <div class="prox-icon ${cls(p.status)}">${emoji}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${p.tipo}</div>
+        ${ultimaTxt}
+      </div>
+      <span class="prox-dias ${dcls(p.status)}">${diasTxt}</span>
+    </div>`;
+  }).join("");
+}
+
+/* ══════════════════════════════════════════════════
+   WHATSAPP / CALLMEBOT
+══════════════════════════════════════════════════ */
+async function loadWppStatus() {
+  try {
+    const d = await fetch("/api/config-whatsapp").then(r => r.json());
+    const wrap = document.getElementById("wpp-status-cfg");
+    if (d.apikey_configurada && d.telefone) {
+      wrap.innerHTML = `<span style="font-size:12px;background:var(--green-100);color:var(--green-700);padding:3px 10px;border-radius:20px;font-weight:500">✅ WhatsApp configurado — ${d.telefone}</span>
+        <span style="font-size:12px;color:var(--text-3);margin-left:4px">Alertas ${d.alertas_ativos ? "ativos" : "pausados"}</span>`;
+      // Pré-preencher campos
+      document.getElementById("wpp-telefone").value = d.telefone;
+      document.getElementById("wpp-apikey").value   = d.apikey_configurada ? "••••••" : "";
+    } else {
+      wrap.innerHTML = `<span style="font-size:12px;background:var(--cream-dk);color:var(--text-3);padding:3px 10px;border-radius:20px">⚙️ WhatsApp não configurado</span>`;
+    }
+  } catch(e) {}
+}
+
+function toggleWppPanel() {
+  const p = document.getElementById("wpp-panel");
+  p.style.display = p.style.display === "none" ? "block" : "none";
+}
+
+async function salvarWpp() {
+  const tel = document.getElementById("wpp-telefone").value.trim().replace(/\D/g,"");
+  const key = document.getElementById("wpp-apikey").value.trim();
+  if (!tel || !key || key === "••••••") {
+    wppFeedback("⚠️ Preencha telefone e API Key.", "warn"); return;
+  }
+  const r = await fetch("/api/config-whatsapp", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ telefone: tel, apikey: key, alertas_ativos: true })
+  }).then(r => r.json());
+  if (r.ok) { wppFeedback("✅ Configuração salva!", "ok"); loadWppStatus(); }
+  else       { wppFeedback("❌ Erro ao salvar.", "err"); }
+}
+
+async function testarWpp() {
+  const tel = document.getElementById("wpp-telefone").value.trim().replace(/\D/g,"");
+  const key = document.getElementById("wpp-apikey").value.trim();
+  if (!tel || !key || key==="••••••") { wppFeedback("⚠️ Salve a configuração antes de testar.","warn"); return; }
+  const btn = document.getElementById("btn-wpp-testar");
+  btn.disabled = true; btn.textContent = "⏳ Enviando...";
+  const msg = `🐄 Sítio Santo Antonio\nTeste de notificação — ${new Date().toLocaleString("pt-BR")}\nSistema funcionando! ✅`;
+  const r = await fetch("/api/enviar-lembrete-whatsapp", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ telefone: tel, apikey: key, msg })
+  }).then(r => r.json());
+  btn.disabled = false; btn.textContent = "📤 Enviar mensagem de teste";
+  if (r.ok) wppFeedback("✅ Mensagem enviada! Verifique seu WhatsApp.", "ok");
+  else       wppFeedback("❌ Erro: " + (r.erro||"desconhecido"), "err");
+}
+
+async function enviarAlertas() {
+  const tel = document.getElementById("wpp-telefone").value.trim().replace(/\D/g,"");
+  const key = document.getElementById("wpp-apikey").value.trim();
+  if (!tel || !key || key==="••••••") { wppFeedback("⚠️ Salve a configuração primeiro.","warn"); return; }
+  const btn = document.getElementById("btn-wpp-alertas");
+  btn.disabled = true; btn.textContent = "⏳ Montando alertas...";
+
+  // Montar mensagem com alertas reais do sistema
+  const [vis, cal] = await Promise.all([
+    fetch("/api/ultima-visita").then(r => r.json()).catch(()=>null),
+    fetch("/api/calendario-manejo").then(r => r.json()).catch(()=>null),
+  ]);
+
+  let linhas = [`🐄 *Sítio Santo Antonio* — Alertas do sistema`, `📅 ${new Date().toLocaleDateString("pt-BR")}`,""];
+
+  if (vis && vis.ok) {
+    linhas.push(`📋 *Última visita:* ${vis.data} (${vis.responsavel||"?"})`);
+    if (vis.gado_faltando > 0) linhas.push(`⚠️ ${vis.gado_faltando} cabeça(s) FALTANDO!`);
+    if (vis.sal && !["OK"].includes(vis.sal)) linhas.push(`🧂 Sal/Ração: *${vis.sal}*`);
+    if (vis.proteinado && !["OK"].includes(vis.proteinado)) linhas.push(`🟡 Proteinado: *${vis.proteinado}*`);
+    if (vis.corrego && !["Normal"].includes(vis.corrego)) linhas.push(`💧 Água: *${vis.corrego}*`);
+  }
+
+  if (cal && cal.proximas) {
+    const urgentes = cal.proximas.filter(p => ["atrasado","urgente","sem_registro"].includes(p.status));
+    if (urgentes.length) {
+      linhas.push("","📅 *Manejos pendentes:*");
+      urgentes.forEach(p => {
+        const txt = p.status==="atrasado" ? `ATRASADO ${Math.abs(p.dias_restantes)}d` :
+                    p.status==="urgente"  ? `em ${p.dias_restantes}d` : "sem registro";
+        linhas.push(`  • ${p.tipo}: ${txt}`);
+      });
+    }
+  }
+
+  linhas.push("","_Sistema de Gestão de Gado_ 🐄");
+  const msg = linhas.join("\n");
+
+  const r = await fetch("/api/enviar-lembrete-whatsapp", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ telefone: tel, apikey: key, msg })
+  }).then(r => r.json());
+  btn.disabled = false; btn.textContent = "🚨 Enviar alertas agora";
+  if (r.ok) wppFeedback("✅ Alertas enviados para o WhatsApp!", "ok");
+  else       wppFeedback("❌ " + (r.erro||"Falha no envio"), "err");
+}
+
+function wppFeedback(msg, tipo) {
+  const el = document.getElementById("wpp-feedback");
+  const cor = tipo==="ok" ? "var(--green-700)" : tipo==="warn" ? "#c87000" : "var(--danger)";
+  el.style.color = cor;
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ""; }, 6000);
+}
+
+/* ── Recarregar calendário ao trocar tema ── */
+document.addEventListener("themeChanged", () => {
+  if (_calData) renderMiniCal(_calData);
+});
+
+/* ── Init ── */
+loadUltimaVisita();
+loadCalendario();
+loadWppStatus();
 
 /* ── Fluxo + Membros ── */
 async function loadCharts() {

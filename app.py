@@ -816,6 +816,140 @@ def api_ultima_visita():
     })
 
 
+@app.route("/api/calendario-manejo")
+@login_required
+def api_calendario_manejo():
+    """
+    Retorna próximas intervenções de manejo previstas com base nas datas
+    dos últimos registros e nos intervalos de ALERTAS_SAUDE.
+    Também devolve todos os registros de manejo do mês atual para o calendário.
+    """
+    from config import ALERTAS_SAUDE, TIPOS_MANEJO
+    dados = _get_dados_cache()
+    df_man = dados["Manejo"]
+    hoje = datetime.now()
+
+    # 1) Próximas intervenções programadas (baseadas em ALERTAS_SAUDE)
+    proximas = []
+    for tipo, intervalo_dias in ALERTAS_SAUDE.items():
+        ultima_data = None
+        dias_passados = None
+        if not df_man.empty and "Tipo" in df_man.columns:
+            df_t = df_man[df_man["Tipo"] == tipo]
+            if not df_t.empty:
+                ultima_ts = df_t["Data"].dropna().max()
+                if pd.notna(ultima_ts):
+                    ultima_data = ultima_ts.strftime("%d/%m/%Y")
+                    dias_passados = (hoje - ultima_ts.to_pydatetime()).days
+
+        if ultima_data and dias_passados is not None:
+            dias_restantes = intervalo_dias - dias_passados
+            data_prevista = (hoje + timedelta(days=max(0, dias_restantes))).strftime("%Y-%m-%d")
+            status = "atrasado" if dias_passados > intervalo_dias else (
+                "urgente" if dias_restantes <= 14 else (
+                "proximo" if dias_restantes <= 30 else "ok"))
+        else:
+            data_prevista = hoje.strftime("%Y-%m-%d")
+            dias_restantes = 0
+            status = "sem_registro"
+
+        proximas.append({
+            "tipo": tipo,
+            "intervalo_dias": intervalo_dias,
+            "ultima_data": ultima_data,
+            "dias_passados": dias_passados,
+            "dias_restantes": dias_restantes,
+            "data_prevista": data_prevista,
+            "status": status,
+        })
+
+    # 2) Todos os registros de manejo (para marcar no calendário)
+    eventos = []
+    if not df_man.empty:
+        for _, row in df_man.iterrows():
+            data_ev = row.get("Data")
+            if pd.isna(data_ev):
+                continue
+            eventos.append({
+                "data":     data_ev.strftime("%Y-%m-%d"),
+                "tipo":     str(row.get("Tipo", "") or ""),
+                "cabecas":  int(row.get("Qtd Cabeças", 0) or 0),
+                "desc":     str(row.get("Descrição", "") or ""),
+                "resp":     str(row.get("Responsável", "") or ""),
+            })
+
+    return jsonify({"proximas": proximas, "eventos": eventos, "hoje": hoje.strftime("%Y-%m-%d")})
+
+
+@app.route("/api/enviar-lembrete-whatsapp", methods=["POST"])
+@login_required
+def api_enviar_lembrete_whatsapp():
+    """
+    Envia mensagem via CallMeBot (gratuito, sem conta paga).
+    Requer que o número tenha adicionado o bot do WhatsApp antes:
+      https://www.callmebot.com/blog/free-api-whatsapp-messages/
+    Body JSON: { "telefone": "5534999999999", "apikey": "XXXXX", "msg": "texto" }
+    """
+    import urllib.request, urllib.parse
+    data = request.get_json(silent=True) or {}
+    telefone = str(data.get("telefone", "")).strip().replace(" ", "").replace("+", "")
+    apikey   = str(data.get("apikey", "")).strip()
+    msg      = str(data.get("msg", "")).strip()
+
+    if not telefone or not apikey or not msg:
+        return jsonify({"ok": False, "erro": "Campos obrigatórios: telefone, apikey, msg"})
+
+    url = (
+        f"https://api.callmebot.com/whatsapp.php"
+        f"?phone={urllib.parse.quote(telefone)}"
+        f"&text={urllib.parse.quote(msg)}"
+        f"&apikey={urllib.parse.quote(apikey)}"
+    )
+    try:
+        with urllib.request.urlopen(url, timeout=15) as resp:
+            body = resp.read().decode("utf-8", errors="ignore")
+        ok = "message queued" in body.lower() or resp.status == 200
+        return jsonify({"ok": ok, "resposta": body[:300]})
+    except Exception as e:
+        return jsonify({"ok": False, "erro": str(e)})
+
+
+@app.route("/api/config-whatsapp", methods=["GET", "POST"])
+@login_required
+def api_config_whatsapp():
+    """
+    GET  → retorna configurações salvas (sem expor apikey completa)
+    POST → salva telefone + apikey dos membros em usuarios.json
+    """
+    usuarios = _carregar_usuarios()
+    usuario  = session["usuario"]
+
+    if request.method == "GET":
+        cfg = usuarios.get(usuario, {}).get("whatsapp", {})
+        return jsonify({
+            "telefone": cfg.get("telefone", ""),
+            "apikey_configurada": bool(cfg.get("apikey")),
+            "alertas_ativos": cfg.get("alertas_ativos", True),
+        })
+
+    # POST
+    data = request.get_json(silent=True) or {}
+    telefone = str(data.get("telefone", "")).strip()
+    apikey   = str(data.get("apikey",   "")).strip()
+    alertas  = bool(data.get("alertas_ativos", True))
+
+    if usuario not in usuarios:
+        usuarios[usuario] = {}
+    usuarios[usuario]["whatsapp"] = {
+        "telefone": telefone,
+        "apikey":   apikey,
+        "alertas_ativos": alertas,
+    }
+    _salvar_usuarios(usuarios)
+    return jsonify({"ok": True})
+
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  COMPRAS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1504,19 +1638,6 @@ def nova_visita():
             chuva_mm = 0.0
         obs = f.get("observacoes", "").strip()
         sugestoes = _gerar_sugestoes_visita(f, estoque)
-        # BUG CORRIGIDO v3.2: campos de sacos coletados no formulário mas nunca salvos
-        try:
-            sacos_sal  = int(f.get("sacos_sal",  0) or 0)
-        except (ValueError, TypeError):
-            sacos_sal  = 0
-        try:
-            sacos_racao = int(f.get("sacos_racao", 0) or 0)
-        except (ValueError, TypeError):
-            sacos_racao = 0
-        try:
-            sacos_prot = int(f.get("sacos_prot", 0) or 0)
-        except (ValueError, TypeError):
-            sacos_prot = 0
         salvar_linha("Visitas", [
             data, responsavel,
             gado_cnt, gado_esp, gado_falt,
@@ -1524,9 +1645,6 @@ def nova_visita():
             quintal, cisterna,
             choveu, chuva_mm if chuva_mm > 0 else None,
             obs, sugestoes,
-            sacos_sal if sacos_sal > 0 else None,
-            sacos_racao if sacos_racao > 0 else None,
-            sacos_prot if sacos_prot > 0 else None,
         ])
         if gado_falt > 0:
             flash(f"⚠️ Visita salva — mas {gado_falt} cabeça(s) estão faltando!", "warning")
@@ -1545,10 +1663,10 @@ def excluir_visita(idx):
     fazer_backup()
     _limpar_backups_antigos()
     df = carregar_aba("Visitas")
-    if df.empty or idx >= len(df):
+    if df.empty or idx not in df.index:
         flash("Registro não encontrado.", "error")
         return redirect(url_for("visitas"))
-    df = df.drop(df.index[idx]).reset_index(drop=True)
+    df = df.drop(index=idx).reset_index(drop=True)
     reescrever_aba("Visitas", df)
     flash("Visita excluída.", "success")
     return redirect(url_for("visitas"))
