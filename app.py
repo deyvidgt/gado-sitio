@@ -38,6 +38,17 @@ from config import (
 )
 from exportar import exportar_relatorio_excel
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+# Define o fuso de Brasília
+fuso_brasilia = ZoneInfo("America/Sao_Paulo")
+
+# Pega a hora certa
+agora_no_brasil = datetime.now(fuso_brasilia)
+
+print(agora_no_brasil.strftime("%d/%m/%Y %H:%M:%S"))
+
 app = Flask(__name__,
             template_folder=os.path.join(BUNDLE_DIR, "templates"),
             static_folder=os.path.join(BUNDLE_DIR, "static"))
