@@ -22,6 +22,17 @@ from flask import (Flask, render_template, request, redirect, url_for,
                    jsonify, flash, send_file, session, abort)
 import pandas as pd
 from datetime import datetime, timedelta
+try:
+    from zoneinfo import ZoneInfo
+    _TZ_BR = ZoneInfo("America/Sao_Paulo")
+except ImportError:
+    _TZ_BR = None  # Python < 3.9 — fallback para horário local
+
+def _agora():
+    """Retorna datetime atual no fuso de Brasília (ou local como fallback)."""
+    if _TZ_BR:
+        return datetime.now(_TZ_BR).replace(tzinfo=None)
+    return _agora()
 
 from db import (carregar_todas, carregar_aba, salvar_linha,
                 reescrever_aba, inicializar, fazer_backup)
@@ -37,17 +48,6 @@ from config import (
     MAX_TENTATIVAS_LOGIN, CACHE_RESUMO_TTL,
 )
 from exportar import exportar_relatorio_excel
-
-from datetime import datetime
-from zoneinfo import ZoneInfo
-
-# Define o fuso de Brasília
-fuso_brasilia = ZoneInfo("America/Sao_Paulo")
-
-# Pega a hora certa
-agora_no_brasil = datetime.now(fuso_brasilia)
-
-print(agora_no_brasil.strftime("%d/%m/%Y %H:%M:%S"))
 
 app = Flask(__name__,
             template_folder=os.path.join(BUNDLE_DIR, "templates"),
@@ -321,7 +321,7 @@ def _limpar_backups_antigos(max_backups: int = 15):
 def _gerar_alertas(dados):
     from config import ALERTAS_SAUDE
     alertas = []
-    hoje = datetime.now()
+    hoje = _agora()
     df_man = dados["Manejo"]
     for tipo, dias in ALERTAS_SAUDE.items():
         df_t = df_man[df_man["Tipo"] == tipo] if not df_man.empty else pd.DataFrame()
@@ -368,7 +368,7 @@ def _calc_anual(dados):
     return result
 
 def _salvar_venda(f, dados, idx=None):
-    data    = f.get("data", datetime.now().strftime("%d/%m/%Y"))
+    data    = f.get("data", _agora().strftime("%d/%m/%Y"))
     cabecas = int(f.get("cabecas", 0) or 0)
     valor   = parse_valor(f.get("valor", 0))
     arroba  = parse_valor(f.get("arroba") or "0")
@@ -593,7 +593,7 @@ def api_cotacao_scot():
                     preco = float(nums[0].replace(",", ".")) if nums else None
                     cotacoes.append({"regiao": regiao, "preco": preco, "raw": preco_str})
         return jsonify({"ok": True, "cotacoes": cotacoes,
-                        "atualizado": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "atualizado": _agora().strftime("%d/%m/%Y %H:%M"),
                         "fonte": "Scot Consultoria"})
     except Exception as e:
         msg = str(e)
@@ -682,7 +682,7 @@ def api_cotacao_imea():
         "ok": algum_ok, "cotacoes": cotacoes,
         "break_even": break_even, "ctcab": ctcab,
         "fonte": "IMEA", "url": "https://www.imea.com.br/imea-site/indicador-boi",
-        "atualizado": datetime.now().strftime("%d/%m/%Y %H:%M"),
+        "atualizado": _agora().strftime("%d/%m/%Y %H:%M"),
         "referencia": "Região: Sudeste | Fonte: IMEA",
         "debug": debug_log,
         "erro": None if algum_ok else f"Nenhum indicador encontrado. Debug: {debug_log}",
@@ -827,140 +827,6 @@ def api_ultima_visita():
     })
 
 
-@app.route("/api/calendario-manejo")
-@login_required
-def api_calendario_manejo():
-    """
-    Retorna próximas intervenções de manejo previstas com base nas datas
-    dos últimos registros e nos intervalos de ALERTAS_SAUDE.
-    Também devolve todos os registros de manejo do mês atual para o calendário.
-    """
-    from config import ALERTAS_SAUDE, TIPOS_MANEJO
-    dados = _get_dados_cache()
-    df_man = dados["Manejo"]
-    hoje = datetime.now()
-
-    # 1) Próximas intervenções programadas (baseadas em ALERTAS_SAUDE)
-    proximas = []
-    for tipo, intervalo_dias in ALERTAS_SAUDE.items():
-        ultima_data = None
-        dias_passados = None
-        if not df_man.empty and "Tipo" in df_man.columns:
-            df_t = df_man[df_man["Tipo"] == tipo]
-            if not df_t.empty:
-                ultima_ts = df_t["Data"].dropna().max()
-                if pd.notna(ultima_ts):
-                    ultima_data = ultima_ts.strftime("%d/%m/%Y")
-                    dias_passados = (hoje - ultima_ts.to_pydatetime()).days
-
-        if ultima_data and dias_passados is not None:
-            dias_restantes = intervalo_dias - dias_passados
-            data_prevista = (hoje + timedelta(days=max(0, dias_restantes))).strftime("%Y-%m-%d")
-            status = "atrasado" if dias_passados > intervalo_dias else (
-                "urgente" if dias_restantes <= 14 else (
-                "proximo" if dias_restantes <= 30 else "ok"))
-        else:
-            data_prevista = hoje.strftime("%Y-%m-%d")
-            dias_restantes = 0
-            status = "sem_registro"
-
-        proximas.append({
-            "tipo": tipo,
-            "intervalo_dias": intervalo_dias,
-            "ultima_data": ultima_data,
-            "dias_passados": dias_passados,
-            "dias_restantes": dias_restantes,
-            "data_prevista": data_prevista,
-            "status": status,
-        })
-
-    # 2) Todos os registros de manejo (para marcar no calendário)
-    eventos = []
-    if not df_man.empty:
-        for _, row in df_man.iterrows():
-            data_ev = row.get("Data")
-            if pd.isna(data_ev):
-                continue
-            eventos.append({
-                "data":     data_ev.strftime("%Y-%m-%d"),
-                "tipo":     str(row.get("Tipo", "") or ""),
-                "cabecas":  int(row.get("Qtd Cabeças", 0) or 0),
-                "desc":     str(row.get("Descrição", "") or ""),
-                "resp":     str(row.get("Responsável", "") or ""),
-            })
-
-    return jsonify({"proximas": proximas, "eventos": eventos, "hoje": hoje.strftime("%Y-%m-%d")})
-
-
-@app.route("/api/enviar-lembrete-whatsapp", methods=["POST"])
-@login_required
-def api_enviar_lembrete_whatsapp():
-    """
-    Envia mensagem via CallMeBot (gratuito, sem conta paga).
-    Requer que o número tenha adicionado o bot do WhatsApp antes:
-      https://www.callmebot.com/blog/free-api-whatsapp-messages/
-    Body JSON: { "telefone": "5534999999999", "apikey": "XXXXX", "msg": "texto" }
-    """
-    import urllib.request, urllib.parse
-    data = request.get_json(silent=True) or {}
-    telefone = str(data.get("telefone", "")).strip().replace(" ", "").replace("+", "")
-    apikey   = str(data.get("apikey", "")).strip()
-    msg      = str(data.get("msg", "")).strip()
-
-    if not telefone or not apikey or not msg:
-        return jsonify({"ok": False, "erro": "Campos obrigatórios: telefone, apikey, msg"})
-
-    url = (
-        f"https://api.callmebot.com/whatsapp.php"
-        f"?phone={urllib.parse.quote(telefone)}"
-        f"&text={urllib.parse.quote(msg)}"
-        f"&apikey={urllib.parse.quote(apikey)}"
-    )
-    try:
-        with urllib.request.urlopen(url, timeout=15) as resp:
-            body = resp.read().decode("utf-8", errors="ignore")
-        ok = "message queued" in body.lower() or resp.status == 200
-        return jsonify({"ok": ok, "resposta": body[:300]})
-    except Exception as e:
-        return jsonify({"ok": False, "erro": str(e)})
-
-
-@app.route("/api/config-whatsapp", methods=["GET", "POST"])
-@login_required
-def api_config_whatsapp():
-    """
-    GET  → retorna configurações salvas (sem expor apikey completa)
-    POST → salva telefone + apikey dos membros em usuarios.json
-    """
-    usuarios = _carregar_usuarios()
-    usuario  = session["usuario"]
-
-    if request.method == "GET":
-        cfg = usuarios.get(usuario, {}).get("whatsapp", {})
-        return jsonify({
-            "telefone": cfg.get("telefone", ""),
-            "apikey_configurada": bool(cfg.get("apikey")),
-            "alertas_ativos": cfg.get("alertas_ativos", True),
-        })
-
-    # POST
-    data = request.get_json(silent=True) or {}
-    telefone = str(data.get("telefone", "")).strip()
-    apikey   = str(data.get("apikey",   "")).strip()
-    alertas  = bool(data.get("alertas_ativos", True))
-
-    if usuario not in usuarios:
-        usuarios[usuario] = {}
-    usuarios[usuario]["whatsapp"] = {
-        "telefone": telefone,
-        "apikey":   apikey,
-        "alertas_ativos": alertas,
-    }
-    _salvar_usuarios(usuarios)
-    return jsonify({"ok": True})
-
-
-
 # ══════════════════════════════════════════════════════════════════════════════
 #  COMPRAS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -992,7 +858,7 @@ def nova_compra():
     if request.method == "POST":
         _validar_csrf()
         f = request.form
-        data    = f.get("data", datetime.now().strftime("%d/%m/%Y"))
+        data    = f.get("data", _agora().strftime("%d/%m/%Y"))
         cabecas = int(f.get("cabecas", 0) or 0)
         valor   = parse_valor(f.get("valor", 0))
         desc    = f.get("descricao", "").strip()
@@ -1019,7 +885,7 @@ def nova_compra():
         return redirect(url_for("compras"))
     return render_template("form_compra.html", modo="nova", cmp_atual=cmp_atual,
                            row=None, idx=None, MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
-                           hoje=datetime.now().strftime("%Y-%m-%d"))
+                           hoje=_agora().strftime("%Y-%m-%d"))
 
 @app.route("/compras/editar/<int:idx>", methods=["GET", "POST"])
 @login_required
@@ -1075,7 +941,7 @@ def editar_compra(idx):
     row["Qtd Geane"] = row.get("Qtd Mae", 0)
     return render_template("form_compra.html", modo="editar", row=row, idx=idx,
                            cmp_atual=calcular_cmp(df), MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
-                           hoje=datetime.now().strftime("%Y-%m-%d"))
+                           hoje=_agora().strftime("%Y-%m-%d"))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1110,7 +976,7 @@ def novo_gasto():
     if request.method == "POST":
         _validar_csrf()
         f = request.form
-        data   = f.get("data", datetime.now().strftime("%d/%m/%Y"))
+        data   = f.get("data", _agora().strftime("%d/%m/%Y"))
         tipo   = f.get("tipo", "")
         desc   = f.get("descricao", "").strip()
         valor  = parse_valor(f.get("valor", 0))
@@ -1124,7 +990,7 @@ def novo_gasto():
         return redirect(url_for("gastos"))
     return render_template("form_gasto.html", estoque=estoque, gpcab=gpcab,
                            TIPOS=TIPOS_GASTO, MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
-                           hoje=datetime.now().strftime("%Y-%m-%d"))
+                           hoje=_agora().strftime("%Y-%m-%d"))
 
 @app.route("/gastos/editar/<int:idx>", methods=["GET", "POST"])
 @login_required
@@ -1168,7 +1034,7 @@ def editar_gasto(idx):
     return render_template("form_gasto.html", modo="editar", row=row, idx=idx,
                            estoque=estoque, gpcab=gpcab,
                            TIPOS=TIPOS_GASTO, MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
-                           hoje=datetime.now().strftime("%Y-%m-%d"))
+                           hoje=_agora().strftime("%Y-%m-%d"))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1211,7 +1077,7 @@ def nova_venda():
         return redirect(url_for("vendas"))
     return render_template("form_venda.html", modo="nova", row=None, idx=None, r_fin=r_fin,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
-                           hoje=datetime.now().strftime("%Y-%m-%d"))
+                           hoje=_agora().strftime("%Y-%m-%d"))
 
 @app.route("/vendas/editar/<int:idx>", methods=["GET", "POST"])
 @login_required
@@ -1234,7 +1100,7 @@ def editar_venda(idx):
     row["data_input"] = df.iloc[idx]["Data"].strftime("%Y-%m-%d") if pd.notna(df.iloc[idx]["Data"]) else ""
     return render_template("form_venda.html", modo="editar", row=row, idx=idx, r_fin=r_fin,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
-                           hoje=datetime.now().strftime("%Y-%m-%d"))
+                           hoje=_agora().strftime("%Y-%m-%d"))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1270,7 +1136,7 @@ def novo_manejo():
         return redirect(url_for("manejo"))
     return render_template("form_manejo.html", estoque=estoque, TIPOS=TIPOS_MANEJO,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
-                           hoje=datetime.now().strftime("%Y-%m-%d"))
+                           hoje=_agora().strftime("%Y-%m-%d"))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1406,7 +1272,7 @@ def exportar():
     nome = exportar_relatorio_excel()
     nome_abs = nome if os.path.isabs(nome) else os.path.join(DATA_DIR, nome)
     return send_file(nome_abs, as_attachment=True,
-                     download_name=f"relatorio_gado_{datetime.now().strftime('%Y%m%d')}.xlsx")
+                     download_name=f"relatorio_gado_{_agora().strftime('%Y%m%d')}.xlsx")
 
 @app.route("/backup", methods=["POST"])
 @login_required
@@ -1435,7 +1301,7 @@ def _carregar_usuarios():
                 return json.load(f)
         except Exception:
             pass
-    dados = {u: {"hash": h, "criado": datetime.now().strftime("%d/%m/%Y")}
+    dados = {u: {"hash": h, "criado": _agora().strftime("%d/%m/%Y")}
              for u, h in USUARIOS.items()}
     _salvar_usuarios(dados)
     return dados
@@ -1499,7 +1365,7 @@ def adicionar_usuario():
         return redirect(url_for("configuracoes"))
     dados[novo_user] = {
         "hash":   _hash_bcrypt(senha) if _bcrypt_disponivel() else _sha256(senha),
-        "criado": datetime.now().strftime("%d/%m/%Y"),
+        "criado": _agora().strftime("%d/%m/%Y"),
     }
     _salvar_usuarios(dados)
     flash(f"✅ Usuário '{novo_user.capitalize()}' criado!", "success")
@@ -1630,7 +1496,7 @@ def nova_visita():
     if request.method == "POST":
         _validar_csrf()
         f = request.form
-        data        = f.get("data", datetime.now().strftime("%d/%m/%Y"))
+        data        = f.get("data", _agora().strftime("%d/%m/%Y"))
         responsavel = f.get("responsavel", "")
         gado_cnt    = int(f.get("gado_contado") or 0)
         gado_esp    = estoque
@@ -1664,7 +1530,7 @@ def nova_visita():
         return redirect(url_for("visitas"))
     return render_template("form_visita.html", estoque=estoque,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
-                           hoje=datetime.now().strftime("%Y-%m-%d"))
+                           hoje=_agora().strftime("%Y-%m-%d"))
 
 
 @app.route("/visitas/excluir/<int:idx>", methods=["POST"])
@@ -1745,7 +1611,7 @@ def _gerar_pdf_relatorio():
         return t
 
     story = []
-    gerado_em = datetime.now().strftime("%d/%m/%Y %H:%M")
+    gerado_em = _agora().strftime("%d/%m/%Y %H:%M")
     story.append(Paragraph("🐄 Sítio Santo Antonio", titulo_style))
     story.append(Paragraph(f"Relatório Financeiro — {gerado_em}", sub_style))
     story.append(HRFlowable(width="100%", thickness=2, color=VERDE, spaceAfter=12))
@@ -1805,7 +1671,7 @@ def relatorio_pdf():
     from flask import Response
     try:
         pdf_bytes = _gerar_pdf_relatorio()
-        nome_arquivo = f"relatorio_gado_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+        nome_arquivo = f"relatorio_gado_{_agora().strftime('%Y%m%d_%H%M')}.pdf"
         return Response(pdf_bytes, mimetype="application/pdf",
                         headers={"Content-Disposition": f"attachment; filename={nome_arquivo}"})
     except Exception as e:

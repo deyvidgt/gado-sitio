@@ -1,29 +1,44 @@
-# Dados sensíveis — NÃO subir para o GitHub
+# ═══════════════════════════════════════════════════════
+#  .gitignore — Sítio Santo Antonio
+#  IMPORTANTE: este arquivo deve se chamar .gitignore
+#  (com ponto no início), não "gitignore"
+# ═══════════════════════════════════════════════════════
+
+# ── Banco de dados e dados sensíveis ───────────────────
+# NUNCA versionar — contém dados reais da família
 gado_familia.xlsx
 usuarios.json
 backups/
 *.bak
+fotos/
 
-# Python
+# ── Cache Python ────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
+*.pyc
+
+# ── Ambiente virtual ────────────────────────────────────
 .env
 venv/
 .venv/
 *.egg-info/
+
+# ── Build / compilação ──────────────────────────────────
 dist/
 build/
-
-# PyInstaller
 *.spec.bak
-dist/
-build/
+_internal/
 
-# Sistema
+# ── Sistema operacional ─────────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Logs
+# ── Logs e temporários ──────────────────────────────────
 *.log
+*.tmp
+relatorio_gado_*.xlsx
+
+# ── Relatórios gerados (não são código) ─────────────────
+relatorio_gado_*.xlsx
