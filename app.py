@@ -303,13 +303,20 @@ def parse_valor(s):
     except Exception:
         return 0.0
 
-def _limpar_backups_antigos(max_backups: int = 15):
+# ── Backup inteligente: máximo 1 por hora + limite de arquivos ───────────────
+_ultimo_backup: float = 0.0          # timestamp do último backup feito
+_BACKUP_INTERVALO = 3600             # segundos entre backups automáticos (1 hora)
+_BACKUP_MAX       = 30               # máximo de arquivos .xlsx na pasta backups/
+
+def _limpar_backups_antigos(max_backups: int = _BACKUP_MAX):
+    """Remove backups antigos mantendo apenas os mais recentes."""
     from db import DATA_DIR
     backup_dir = os.path.join(DATA_DIR, "backups")
     if not os.path.exists(backup_dir):
         return
     arquivos = sorted(
-        [os.path.join(backup_dir, f) for f in os.listdir(backup_dir) if f.endswith(".xlsx")],
+        [os.path.join(backup_dir, f) for f in os.listdir(backup_dir)
+         if f.endswith(".xlsx") and f.startswith("backup_")],
         key=os.path.getmtime
     )
     while len(arquivos) > max_backups:
@@ -317,6 +324,26 @@ def _limpar_backups_antigos(max_backups: int = 15):
             os.remove(arquivos.pop(0))
         except OSError:
             break
+
+def _fazer_backup_inteligente(forcar: bool = False) -> str | None:
+    """
+    Faz backup apenas se passaram pelo menos _BACKUP_INTERVALO segundos
+    desde o último backup automático — evita acumular dezenas de arquivos
+    por dia quando o usuário edita vários registros seguidos.
+
+    Use forcar=True apenas no botão manual de backup do dashboard.
+
+    Retorna o caminho do backup criado ou None se pulado.
+    """
+    global _ultimo_backup
+    agora_ts = time.time()
+    if not forcar and (agora_ts - _ultimo_backup) < _BACKUP_INTERVALO:
+        return None          # pulado — backup recente já existe
+    nome = fazer_backup()
+    if nome:
+        _ultimo_backup = agora_ts
+        _limpar_backups_antigos()
+    return nome
 
 def _gerar_alertas(dados):
     from config import ALERTAS_SAUDE
@@ -919,8 +946,7 @@ def editar_compra(idx):
             qtd_deyvid = round(qtd_deyvid * fator)
             qtd_nilson = cabecas - qtd_mae - qtd_deyvid
         val_cab = round(valor / cabecas, 2) if cabecas > 0 else 0
-        fazer_backup()
-        _limpar_backups_antigos()
+        _fazer_backup_inteligente()
         updates = {"Data": pd.to_datetime(data, dayfirst=True, errors="coerce"),
                    "Qtd Cabeças": cabecas, "Valor Total (R$)": valor,
                    "Valor/Cabeça (R$)": val_cab, "Qtd Mae": qtd_mae,
@@ -1014,8 +1040,7 @@ def editar_gasto(idx):
         if cab <= 0:
             cab = max(1, estoque)
         v_cab = round(valor / cab, 4) if cab > 0 else 0
-        fazer_backup()
-        _limpar_backups_antigos()
+        _fazer_backup_inteligente()
         updates = {"Data": pd.to_datetime(data, dayfirst=True, errors="coerce"),
                    "Tipo": tipo, "Descrição": desc,
                    "Valor Total (R$)": valor, "Qtd Cabeças": cab,
@@ -1090,8 +1115,7 @@ def editar_venda(idx):
     r_fin = _get_resumo_cache()
     if request.method == "POST":
         _validar_csrf()
-        fazer_backup()
-        _limpar_backups_antigos()
+        _fazer_backup_inteligente()
         _salvar_venda(request.form, dados, idx=idx)
         flash("Venda atualizada!", "success")
         return redirect(url_for("vendas"))
@@ -1167,8 +1191,7 @@ def relatorios():
 @login_required
 def excluir(aba, idx):
     _validar_csrf()
-    fazer_backup()
-    _limpar_backups_antigos()
+    _fazer_backup_inteligente()
     df = carregar_aba(aba)
     if not df.empty and idx < len(df):
         df = df.drop(df.index[idx]).reset_index(drop=True)
@@ -1278,8 +1301,7 @@ def exportar():
 @login_required
 def backup():
     _validar_csrf()
-    nome = fazer_backup()
-    _limpar_backups_antigos()
+    nome = _fazer_backup_inteligente(forcar=True)
     flash(f"Backup salvo: {nome}", "success")
     return redirect(url_for("dashboard"))
 
@@ -1537,8 +1559,7 @@ def nova_visita():
 @login_required
 def excluir_visita(idx):
     _validar_csrf()
-    fazer_backup()
-    _limpar_backups_antigos()
+    _fazer_backup_inteligente()
     df = carregar_aba("Visitas")
     if df.empty or idx not in df.index:
         flash("Registro não encontrado.", "error")
