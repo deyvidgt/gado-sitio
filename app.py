@@ -303,20 +303,13 @@ def parse_valor(s):
     except Exception:
         return 0.0
 
-# ── Backup inteligente: máximo 1 por hora + limite de arquivos ───────────────
-_ultimo_backup: float = 0.0          # timestamp do último backup feito
-_BACKUP_INTERVALO = 3600             # segundos entre backups automáticos (1 hora)
-_BACKUP_MAX       = 30               # máximo de arquivos .xlsx na pasta backups/
-
-def _limpar_backups_antigos(max_backups: int = _BACKUP_MAX):
-    """Remove backups antigos mantendo apenas os mais recentes."""
+def _limpar_backups_antigos(max_backups: int = 15):
     from db import DATA_DIR
     backup_dir = os.path.join(DATA_DIR, "backups")
     if not os.path.exists(backup_dir):
         return
     arquivos = sorted(
-        [os.path.join(backup_dir, f) for f in os.listdir(backup_dir)
-         if f.endswith(".xlsx") and f.startswith("backup_")],
+        [os.path.join(backup_dir, f) for f in os.listdir(backup_dir) if f.endswith(".xlsx")],
         key=os.path.getmtime
     )
     while len(arquivos) > max_backups:
@@ -324,26 +317,6 @@ def _limpar_backups_antigos(max_backups: int = _BACKUP_MAX):
             os.remove(arquivos.pop(0))
         except OSError:
             break
-
-def _fazer_backup_inteligente(forcar: bool = False) -> str | None:
-    """
-    Faz backup apenas se passaram pelo menos _BACKUP_INTERVALO segundos
-    desde o último backup automático — evita acumular dezenas de arquivos
-    por dia quando o usuário edita vários registros seguidos.
-
-    Use forcar=True apenas no botão manual de backup do dashboard.
-
-    Retorna o caminho do backup criado ou None se pulado.
-    """
-    global _ultimo_backup
-    agora_ts = time.time()
-    if not forcar and (agora_ts - _ultimo_backup) < _BACKUP_INTERVALO:
-        return None          # pulado — backup recente já existe
-    nome = fazer_backup()
-    if nome:
-        _ultimo_backup = agora_ts
-        _limpar_backups_antigos()
-    return nome
 
 def _gerar_alertas(dados):
     from config import ALERTAS_SAUDE
@@ -470,6 +443,24 @@ def _salvar_venda(f, dados, idx=None):
             df.at[idx, "Data"] = pd.to_datetime(data, dayfirst=True, errors="coerce")
         reescrever_aba("Vendas", df)
 
+
+
+@app.route("/sw.js")
+def service_worker():
+    """Service worker deve ser servido da raiz para ter scope completo."""
+    from flask import send_from_directory, make_response
+    resp = make_response(send_from_directory(BASE_DIR, "sw.js"))
+    resp.headers["Content-Type"]  = "application/javascript"
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Service-Worker-Allowed"] = "/"
+    return resp
+
+@app.route("/manifest.json")
+def manifest():
+    """Manifest PWA."""
+    from flask import send_from_directory
+    return send_from_directory(BASE_DIR, "manifest.json",
+                               mimetype="application/manifest+json")
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  DASHBOARD
@@ -854,6 +845,70 @@ def api_ultima_visita():
     })
 
 
+
+
+@app.route("/api/historico-arroba")
+@login_required
+def api_historico_arroba():
+    """
+    Retorna o histórico de preços de arroba registrados nas vendas,
+    ordenados por data. Usado no gráfico de tendência do dashboard.
+    """
+    dados = _get_dados_cache()
+    df_v  = dados["Vendas"]
+
+    if df_v.empty:
+        return jsonify({"labels": [], "precos": [], "medias": [], "total": 0})
+
+    # Filtrar vendas com arroba informado (> 0)
+    df = df_v[
+        df_v["Data"].notna() &
+        df_v["Valor Arroba (R$)"].notna() &
+        (df_v["Valor Arroba (R$)"] > 0)
+    ].copy()
+
+    if df.empty:
+        return jsonify({"labels": [], "precos": [], "medias": [], "total": 0})
+
+    df = df.sort_values("Data")
+    df["label"] = df["Data"].dt.strftime("%d/%m/%Y")
+
+    # Média móvel de 3 pontos para suavizar tendência
+    precos = df["Valor Arroba (R$)"].tolist()
+    medias = []
+    for i, p in enumerate(precos):
+        inicio = max(0, i - 1)
+        fim    = min(len(precos), i + 2)
+        medias.append(round(sum(precos[inicio:fim]) / (fim - inicio), 2))
+
+    # Estatísticas gerais
+    p_min   = round(float(df["Valor Arroba (R$)"].min()), 2)
+    p_max   = round(float(df["Valor Arroba (R$)"].max()), 2)
+    p_medio = round(float(df["Valor Arroba (R$)"].mean()), 2)
+    p_ult   = round(float(df["Valor Arroba (R$)"].iloc[-1]), 2)
+
+    # Tendência: comparar última metade com primeira metade
+    metade = len(precos) // 2
+    if metade > 0:
+        media_inicio = sum(precos[:metade]) / metade
+        media_fim    = sum(precos[metade:]) / (len(precos) - metade)
+        tendencia = "alta" if media_fim > media_inicio * 1.02 else (
+                    "baixa" if media_fim < media_inicio * 0.98 else "estavel")
+    else:
+        tendencia = "estavel"
+
+    return jsonify({
+        "labels":    df["label"].tolist(),
+        "precos":    [round(float(v), 2) for v in precos],
+        "medias":    medias,
+        "total":     len(precos),
+        "min":       p_min,
+        "max":       p_max,
+        "medio":     p_medio,
+        "ultimo":    p_ult,
+        "tendencia": tendencia,
+    })
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  COMPRAS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -946,7 +1001,8 @@ def editar_compra(idx):
             qtd_deyvid = round(qtd_deyvid * fator)
             qtd_nilson = cabecas - qtd_mae - qtd_deyvid
         val_cab = round(valor / cabecas, 2) if cabecas > 0 else 0
-        _fazer_backup_inteligente()
+        fazer_backup()
+        _limpar_backups_antigos()
         updates = {"Data": pd.to_datetime(data, dayfirst=True, errors="coerce"),
                    "Qtd Cabeças": cabecas, "Valor Total (R$)": valor,
                    "Valor/Cabeça (R$)": val_cab, "Qtd Mae": qtd_mae,
@@ -1040,7 +1096,8 @@ def editar_gasto(idx):
         if cab <= 0:
             cab = max(1, estoque)
         v_cab = round(valor / cab, 4) if cab > 0 else 0
-        _fazer_backup_inteligente()
+        fazer_backup()
+        _limpar_backups_antigos()
         updates = {"Data": pd.to_datetime(data, dayfirst=True, errors="coerce"),
                    "Tipo": tipo, "Descrição": desc,
                    "Valor Total (R$)": valor, "Qtd Cabeças": cab,
@@ -1115,7 +1172,8 @@ def editar_venda(idx):
     r_fin = _get_resumo_cache()
     if request.method == "POST":
         _validar_csrf()
-        _fazer_backup_inteligente()
+        fazer_backup()
+        _limpar_backups_antigos()
         _salvar_venda(request.form, dados, idx=idx)
         flash("Venda atualizada!", "success")
         return redirect(url_for("vendas"))
@@ -1191,7 +1249,8 @@ def relatorios():
 @login_required
 def excluir(aba, idx):
     _validar_csrf()
-    _fazer_backup_inteligente()
+    fazer_backup()
+    _limpar_backups_antigos()
     df = carregar_aba(aba)
     if not df.empty and idx < len(df):
         df = df.drop(df.index[idx]).reset_index(drop=True)
@@ -1301,7 +1360,8 @@ def exportar():
 @login_required
 def backup():
     _validar_csrf()
-    nome = _fazer_backup_inteligente(forcar=True)
+    nome = fazer_backup()
+    _limpar_backups_antigos()
     flash(f"Backup salvo: {nome}", "success")
     return redirect(url_for("dashboard"))
 
@@ -1443,25 +1503,28 @@ def _gerar_sugestoes_visita(f, estoque_esperado):
         elif gado_contado > estoque_esperado:
             sug.append(f"ℹ️ {gado_contado - estoque_esperado} cabeça(s) a mais — possível animal de terceiro.")
     sal = f.get("sal_racao", "OK")
-    if sal == "Baixo":   sug.append("🧂 Sal/Ração baixo — reabastecer nos próximos 2 a 3 dias.")
-    elif sal == "Vazio": sug.append("🚨 Sal/Ração ESGOTADO — abastecer com urgência!")
+    if sal == "Meio Saco": sug.append("🧂 Sal/Ração: meio saco aberto — comprar antes da próxima visita.")
+    elif sal == "Baixo":   sug.append("🧂 Sal/Ração baixo — reabastecer nos próximos 2 a 3 dias.")
+    elif sal == "Vazio":   sug.append("🚨 Sal/Ração ESGOTADO — abastecer com urgência!")
     prot = f.get("proteinado", "OK")
-    if prot == "Baixo":   sug.append("🟡 Proteinado baixo — repor em breve.")
-    elif prot == "Vazio": sug.append("🚨 Proteinado ESGOTADO — comprar urgente!")
+    if prot == "Meio Saco": sug.append("🟡 Proteinado: meio saco aberto — comprar antes da próxima visita.")
+    elif prot == "Baixo":   sug.append("🟡 Proteinado baixo — repor em breve.")
+    elif prot == "Vazio":   sug.append("🚨 Proteinado ESGOTADO — comprar urgente!")
     mato = f.get("mato", "Limpo")
     if mato == "Precisa Capinar": sug.append("🌿 Vegetação crescida — programar roçagem.")
     elif mato == "Muito Mato":    sug.append("🌿 Mato excessivo — roçagem urgente!")
     grama = f.get("grama", "Boa")
-    if grama == "Regular": sug.append("🌱 Pastagem regular — considerar rotação ou adubação.")
-    elif grama == "Escassa": sug.append("🚨 Pastagem escassa — rotacionar IMEDIATAMENTE.")
+    if grama == "Amarelando/Secando": sug.append("🌾 Pastagem amarelando/secando — monitorar e considerar rotação antecipada.")
+    elif grama == "Regular":          sug.append("🌱 Pastagem regular — considerar rotação ou adubação.")
+    elif grama == "Escassa":          sug.append("🚨 Pastagem escassa — rotacionar IMEDIATAMENTE.")
     corrego = f.get("corrego", "Normal")
     if corrego == "Baixo": sug.append("💧 Água baixa — monitorar e preparar alternativa.")
     elif corrego == "Seco": sug.append("🚨 SEM ÁGUA — providenciar abastecimento urgente!")
     quintal = f.get("quintal", "OK")
     if quintal == "Precisa Atenção": sug.append("🏡 Quintal necessita atenção.")
     cisterna = f.get("cisterna", "OK")
-    if cisterna == "Baixo": sug.append("🪣 Cisterna baixa — programar reabastecimento.")
-    elif cisterna == "Vazia": sug.append("🚨 Cisterna VAZIA — abastecer imediatamente!")
+    if cisterna == "Baixo/Secando": sug.append("🪣 Cisterna baixo/secando — programar reabastecimento urgente.")
+    elif cisterna == "Vazia":       sug.append("🚨 Cisterna VAZIA — abastecer imediatamente!")
     choveu = f.get("choveu", "nao") == "sim"
     try:
         mm = float(str(f.get("chuva_mm", "0") or "0").replace(",", "."))
@@ -1494,8 +1557,9 @@ def visitas():
             alertas.append(("danger", f"⚠️ Na última visita, {falt} cabeça(s) estavam faltando!"))
         for campo, label in [("Sal/Ração", "Sal/Ração"), ("Proteinado", "Proteinado")]:
             v = str(ultima.get(campo, "OK") or "OK")
-            if v == "Vazio":  alertas.append(("danger",  f"🚨 {label} ESGOTADO conforme última visita!"))
-            elif v == "Baixo": alertas.append(("warning", f"⚠️ {label} está baixo — repor em breve."))
+            if v == "Vazio":         alertas.append(("danger",  f"🚨 {label} ESGOTADO conforme última visita!"))
+            elif v == "Baixo":       alertas.append(("warning", f"⚠️ {label} está baixo — repor em breve."))
+            elif v == "Meio Saco":   alertas.append(("warning", f"🟡 {label}: meio saco aberto — comprar na próxima."))
         corrego = str(ultima.get("Córrego/Água", "Normal") or "Normal")
         if corrego == "Seco":  alertas.append(("danger",  "🚨 Córrego/bebedouro SECO na última visita!"))
         elif corrego == "Baixo": alertas.append(("warning", "💧 Água no córrego estava baixa — verificar."))
@@ -1559,7 +1623,8 @@ def nova_visita():
 @login_required
 def excluir_visita(idx):
     _validar_csrf()
-    _fazer_backup_inteligente()
+    fazer_backup()
+    _limpar_backups_antigos()
     df = carregar_aba("Visitas")
     if df.empty or idx not in df.index:
         flash("Registro não encontrado.", "error")

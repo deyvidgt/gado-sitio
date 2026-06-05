@@ -1,0 +1,52 @@
+{
+  "name": "Sítio Santo Antonio — Gestão de Gado",
+  "short_name": "Gado SA",
+  "description": "Sistema de gestão de gado da família — Geane, Deyvid e Nilson",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f4ee",
+  "theme_color": "#1a3a1f",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/static/icon192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icon512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Nova Compra",
+      "short_name": "Compra",
+      "url": "/compras/nova",
+      "icons": [{ "src": "/static/icon192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Novo Gasto",
+      "short_name": "Gasto",
+      "url": "/gastos/novo",
+      "icons": [{ "src": "/static/icon192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Nova Venda",
+      "short_name": "Venda",
+      "url": "/vendas/nova",
+      "icons": [{ "src": "/static/icon192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Nova Visita",
+      "short_name": "Visita",
+      "url": "/visitas/nova",
+      "icons": [{ "src": "/static/icon192.png", "sizes": "192x192" }]
+    }
+  ]
+}

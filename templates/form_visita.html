@@ -182,6 +182,7 @@
           <label>Sal</label>
           <select name="sal_racao" class="status-sel">
             <option value="OK">✅ OK — cheio ou bom</option>
+            <option value="Meio Saco">🟡 Meio saco — abri e usei metade</option>
             <option value="Baixo">⚠️ Baixo — precisa repor</option>
             <option value="Vazio">🚨 Vazio — esgotou!</option>
           </select>
@@ -199,6 +200,7 @@
           <label>Ração</label>
           <select name="racao" class="status-sel">
             <option value="OK">✅ OK — cheio ou bom</option>
+            <option value="Meio Saco">🟡 Meio saco — abri e usei metade</option>
             <option value="Baixo">⚠️ Baixo — precisa repor</option>
             <option value="Vazio">🚨 Vazio — esgotou!</option>
           </select>
@@ -216,6 +218,7 @@
           <label>Proteinado</label>
           <select name="proteinado" class="status-sel">
             <option value="OK">✅ OK — cheio ou bom</option>
+            <option value="Meio Saco">🟡 Meio saco — abri e usei metade</option>
             <option value="Baixo">⚠️ Baixo — precisa repor</option>
             <option value="Vazio">🚨 Vazio — esgotou!</option>
           </select>
@@ -239,6 +242,7 @@
           <label>Grama / Pastagem</label>
           <select name="grama" class="status-sel">
             <option value="Boa">✅ Boa — pasto farto</option>
+            <option value="Amarelando/Secando">🟡 Amarelando/Secando — atenção</option>
             <option value="Regular">⚠️ Regular — está diminuindo</option>
             <option value="Escassa">🚨 Escassa — pouco pasto!</option>
           </select>
@@ -270,6 +274,7 @@
           <label>Cisterna</label>
           <select name="cisterna" class="status-sel">
             <option value="OK">✅ OK — cheia ou boa</option>
+            <option value="Baixo/Secando">⚠️ Baixo/Secando — reabastecer em breve</option>
             <option value="Vazia">🚨 Vazia — esgotou!</option>
           </select>
         </div>
@@ -376,7 +381,7 @@
     sel.className = "status-sel";
     if (v === "OK" || v === "Boa" || v === "Limpo" || v === "Normal") {
       sel.classList.add("status-ok");
-    } else if (v.includes("Baixo") || v.includes("Regular") || v.includes("Precisa") || v.includes("Atenção")) {
+    } else if (v.includes("Baixo") || v.includes("Regular") || v.includes("Precisa") || v.includes("Atenção") || v === "Meio Saco" || v === "Amarelando/Secando") {
       sel.classList.add("status-warn");
     } else if (v === "Vazio" || v === "Vazia" || v === "Seco" || v === "Escassa" || v === "Muito Mato") {
       sel.classList.add("status-danger");

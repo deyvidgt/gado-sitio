@@ -214,6 +214,49 @@
   </div>
 </div>
 
+
+<!-- ═══ HISTÓRICO DE PREÇOS DE ARROBA ════════════════════════════════════════ -->
+<div class="card" style="margin-bottom:24px" id="card-arroba">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+    <div>
+      <div class="card-title" style="margin-bottom:2px">📈 Histórico de Preços de Arroba</div>
+      <div style="font-size:12px;color:var(--text-3)">Calculado a partir das vendas registradas com valor de arroba</div>
+    </div>
+    <div id="arroba-tendencia" style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;display:none"></div>
+  </div>
+
+  <!-- KPIs de arroba -->
+  <div id="arroba-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:18px">
+    <div style="background:var(--surface-2);border:1px solid var(--cream-dk);border-radius:10px;padding:12px;text-align:center;border-top:3px solid var(--gold)">
+      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--gold)" id="ak-ultimo">—</div>
+      <div style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-top:3px">Última venda</div>
+    </div>
+    <div style="background:var(--surface-2);border:1px solid var(--cream-dk);border-radius:10px;padding:12px;text-align:center;border-top:3px solid var(--green-500)">
+      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green-700)" id="ak-medio">—</div>
+      <div style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-top:3px">Média geral</div>
+    </div>
+    <div style="background:var(--surface-2);border:1px solid var(--cream-dk);border-radius:10px;padding:12px;text-align:center;border-top:3px solid var(--info)">
+      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--info)" id="ak-max">—</div>
+      <div style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-top:3px">Maior preço</div>
+    </div>
+    <div style="background:var(--surface-2);border:1px solid var(--cream-dk);border-radius:10px;padding:12px;text-align:center;border-top:3px solid var(--danger)">
+      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--danger)" id="ak-min">—</div>
+      <div style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-top:3px">Menor preço</div>
+    </div>
+  </div>
+
+  <!-- Gráfico -->
+  <div style="position:relative;height:200px">
+    <canvas id="chartArroba"></canvas>
+  </div>
+  <div id="arroba-vazio" style="display:none;text-align:center;padding:32px;color:var(--text-3);font-size:13px">
+    Nenhuma venda com valor de arroba registrado ainda.<br>
+    <a href="{{ url_for('nova_venda') }}" style="color:var(--green-600)">Registrar venda com arroba →</a>
+  </div>
+  <div id="arroba-loading" style="text-align:center;padding:32px;color:var(--text-3);font-size:13px">⏳ Carregando...</div>
+</div>
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+
 <!-- Fluxo de caixa + Membros -->
 <div class="two-col" style="margin-bottom:24px">
   <div class="card">
@@ -753,6 +796,115 @@ loadUltimaVisita();
 loadCalendario();
 loadWppStatus();
 
+
+/* ══════════════════════════════════════════════════
+   HISTÓRICO DE ARROBA
+══════════════════════════════════════════════════ */
+let chartArroba = null;
+
+async function loadHistoricoArroba() {
+  try {
+    const d = await fetch("/api/historico-arroba").then(r => r.json());
+    document.getElementById("arroba-loading").style.display = "none";
+
+    if (!d.labels || d.labels.length === 0) {
+      document.getElementById("arroba-vazio").style.display = "block";
+      document.getElementById("arroba-kpis").style.display  = "none";
+      return;
+    }
+
+    // KPIs
+    document.getElementById("ak-ultimo").textContent = brl(d.ultimo) + "/@";
+    document.getElementById("ak-medio").textContent  = brl(d.medio)  + "/@";
+    document.getElementById("ak-max").textContent    = brl(d.max)    + "/@";
+    document.getElementById("ak-min").textContent    = brl(d.min)    + "/@";
+
+    // Badge de tendência
+    const pill = document.getElementById("arroba-tendencia");
+    pill.style.display = "block";
+    if (d.tendencia === "alta") {
+      pill.textContent = "📈 Tendência de alta";
+      pill.style.background = "var(--green-100)";
+      pill.style.color = "var(--green-700)";
+    } else if (d.tendencia === "baixa") {
+      pill.textContent = "📉 Tendência de queda";
+      pill.style.background = "rgba(192,57,43,.1)";
+      pill.style.color = "var(--danger)";
+    } else {
+      pill.textContent = "➡️ Preço estável";
+      pill.style.background = "var(--cream-dk)";
+      pill.style.color = "var(--text-3)";
+    }
+
+    // Gráfico
+    const isDark   = document.documentElement.getAttribute("data-theme") === "dark";
+    const gridC    = isDark ? "rgba(255,255,255,.08)" : "rgba(0,0,0,.06)";
+    const textC    = isDark ? "#b0bfae" : "#888";
+
+    if (chartArroba) chartArroba.destroy();
+    chartArroba = new Chart(document.getElementById("chartArroba"), {
+      type: "line",
+      data: {
+        labels: d.labels,
+        datasets: [
+          {
+            label: "Preço da arroba (R$/@)",
+            data: d.precos,
+            borderColor: "rgba(201,151,42,.9)",
+            backgroundColor: "rgba(201,151,42,.12)",
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointBackgroundColor: "rgba(201,151,42,1)",
+            pointHoverRadius: 7,
+            tension: 0.25,
+            fill: true,
+            order: 1,
+          },
+          {
+            label: "Média móvel",
+            data: d.medias,
+            borderColor: "rgba(61,122,52,.7)",
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: 0.4,
+            fill: false,
+            borderDash: [6, 3],
+            order: 0,
+          },
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { font: { family:"DM Sans", size:12 }, color: textC } },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toFixed(2).replace(".",",")}/@`,
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font: { family:"DM Sans", size:11 }, color: textC }, grid: { color: gridC } },
+          y: {
+            ticks: { callback: v => "R$ " + v.toLocaleString("pt-BR") + "/@", font: { size:11 }, color: textC },
+            grid: { color: gridC },
+          }
+        }
+      }
+    });
+
+  } catch(e) {
+    document.getElementById("arroba-loading").innerHTML =
+      `<span style="color:var(--danger)">❌ Erro ao carregar: ${e.message}</span>`;
+  }
+}
+
+document.addEventListener("themeChanged", () => {
+  if (chartArroba) loadHistoricoArroba();
+});
+
+
 /* ── Fluxo + Membros ── */
 async function loadCharts() {
   const [gFluxo, gMembros] = await Promise.all([
@@ -1075,6 +1227,7 @@ document.addEventListener("themeChanged", () => {
 });
 
 /* ── Init ── */
+loadHistoricoArroba();
 loadCharts();
 loadChuvas();
 </script>

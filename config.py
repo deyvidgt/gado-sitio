@@ -106,13 +106,13 @@ COLUNAS_VISITAS = [
 ]
 
 OPCOES_VISITA = {
-    "sal_racao":  ["OK", "Baixo", "Vazio"],
-    "proteinado": ["OK", "Baixo", "Vazio"],
+    "sal_racao":  ["OK", "Meio Saco", "Baixo", "Vazio"],
+    "proteinado": ["OK", "Meio Saco", "Baixo", "Vazio"],
     "mato":       ["Limpo", "Precisa Capinar", "Muito Mato"],
-    "grama":      ["Boa", "Regular", "Escassa"],
+    "grama":      ["Boa", "Amarelando/Secando", "Regular", "Escassa"],
     "corrego":    ["Normal", "Baixo", "Seco"],
     "quintal":    ["OK", "Precisa Atenção"],
-    "cisterna":   ["OK", "Baixo", "Vazia"],
+    "cisterna":   ["OK", "Baixo/Secando", "Vazia"],
 }
 
 CORES = {
