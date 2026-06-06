@@ -876,11 +876,12 @@ def api_calendario_manejo():
             eventos.append({
                 "data":    data_ev.strftime("%Y-%m-%d"),
                 "tipo":    str(row.get("Tipo", "") or ""),
-                "cabecas": int(row.get("Qtd Cabecas", 0) or row.get("Qtd Cabeças", 0) or 0),
-                "desc":    str(row.get("Descricao", "") or row.get("Descrição", "") or ""),
-                "resp":    str(row.get("Responsavel", "") or row.get("Responsável", "") or ""),
+                "cabecas": int(row.get("Qtd Cabeças", 0) or 0),
+                "desc":    str(row.get("Descrição", "") or ""),
+                "resp":    str(row.get("Responsável", "") or ""),
             })
-    return jsonify({"proximas": proximas, "eventos": eventos, "hoje": hoje.strftime("%Y-%m-%d")})
+    return jsonify({"proximas": proximas, "eventos": eventos,
+                    "hoje": hoje.strftime("%Y-%m-%d")})
 
 
 @app.route("/api/historico-arroba")
@@ -888,16 +889,19 @@ def api_calendario_manejo():
 def api_historico_arroba():
     dados = _get_dados_cache()
     df_v  = dados["Vendas"]
+    vazio = {"labels": [], "precos": [], "medias": [], "total": 0}
     if df_v.empty:
-        return jsonify({"labels": [], "precos": [], "medias": [], "total": 0})
-    mask = (df_v["Data"].notna() &
-            df_v["Valor Arroba (R$)"].notna() &
-            (pd.to_numeric(df_v["Valor Arroba (R$)"], errors="coerce").fillna(0) > 0))
+        return jsonify(vazio)
+    col_arr = "Valor Arroba (R$)"
+    if col_arr not in df_v.columns:
+        return jsonify(vazio)
+    mask = (df_v["Data"].notna() & df_v[col_arr].notna() &
+            (pd.to_numeric(df_v[col_arr], errors="coerce").fillna(0) > 0))
     df = df_v[mask].copy()
     if df.empty:
-        return jsonify({"labels": [], "precos": [], "medias": [], "total": 0})
+        return jsonify(vazio)
     df     = df.sort_values("Data")
-    precos = [round(float(v), 2) for v in df["Valor Arroba (R$)"].tolist()]
+    precos = [round(float(v), 2) for v in df[col_arr].tolist()]
     labels = df["Data"].dt.strftime("%d/%m/%Y").tolist()
     medias = []
     for i in range(len(precos)):
@@ -907,7 +911,8 @@ def api_historico_arroba():
     if metade > 0:
         m_ini = sum(precos[:metade]) / metade
         m_fim = sum(precos[metade:]) / (len(precos) - metade)
-        tendencia = "alta" if m_fim > m_ini * 1.02 else ("baixa" if m_fim < m_ini * 0.98 else "estavel")
+        tendencia = ("alta"  if m_fim > m_ini * 1.02 else
+                     "baixa" if m_fim < m_ini * 0.98 else "estavel")
     else:
         tendencia = "estavel"
     return jsonify({
@@ -927,17 +932,19 @@ def api_config_whatsapp():
     if request.method == "GET":
         cfg = usuarios.get(usuario, {}).get("whatsapp", {})
         return jsonify({
-            "telefone": cfg.get("telefone", ""),
+            "telefone":          cfg.get("telefone", ""),
             "apikey_configurada": bool(cfg.get("apikey")),
-            "alertas_ativos": cfg.get("alertas_ativos", True),
+            "alertas_ativos":    cfg.get("alertas_ativos", True),
         })
     data     = request.get_json(silent=True) or {}
     telefone = str(data.get("telefone", "")).strip()
-    apikey   = str(data.get("apikey", "")).strip()
+    apikey   = str(data.get("apikey",   "")).strip()
     alertas  = bool(data.get("alertas_ativos", True))
     if usuario not in usuarios:
         usuarios[usuario] = {}
-    usuarios[usuario]["whatsapp"] = {"telefone": telefone, "apikey": apikey, "alertas_ativos": alertas}
+    usuarios[usuario]["whatsapp"] = {
+        "telefone": telefone, "apikey": apikey, "alertas_ativos": alertas
+    }
     _salvar_usuarios(usuarios)
     return jsonify({"ok": True})
 
@@ -945,29 +952,72 @@ def api_config_whatsapp():
 @app.route("/api/enviar-lembrete-whatsapp", methods=["POST"])
 @login_required
 def api_enviar_lembrete_whatsapp():
-    import urllib.request, urllib.parse
+    """
+    Envia mensagem via CallMeBot usando 'requests' (compatível com
+    PythonAnywhere, que bloqueia urllib para domínios externos).
+    O domínio api.callmebot.com precisa estar na whitelist do PA
+    (conta free só permite domínios pré-aprovados — veja abaixo).
+    """
     data     = request.get_json(silent=True) or {}
     telefone = str(data.get("telefone", "")).strip().replace(" ", "").replace("+", "")
-    apikey   = str(data.get("apikey", "")).strip()
-    msg      = str(data.get("msg", "")).strip()
+    apikey   = str(data.get("apikey",   "")).strip()
+    msg      = str(data.get("msg",      "")).strip()
+
     if not telefone or not apikey or not msg:
-        return jsonify({"ok": False, "erro": "Campos obrigatórios: telefone, apikey, msg"})
-    url = ("https://api.callmebot.com/whatsapp.php"
-           f"?phone={urllib.parse.quote(telefone)}"
-           f"&text={urllib.parse.quote(msg)}"
-           f"&apikey={urllib.parse.quote(apikey)}")
+        return jsonify({"ok": False, "erro": "Preencha telefone e API Key antes de enviar."})
+
+    # PythonAnywhere free tier bloqueia requests externos exceto whitelist.
+    # Verificar se 'requests' está disponível e tentar envio com log detalhado.
     try:
-        with urllib.request.urlopen(url, timeout=15) as resp:
-            body = resp.read().decode("utf-8", errors="ignore")
-        ok = "message queued" in body.lower() or resp.status == 200
-        return jsonify({"ok": ok, "resposta": body[:300]})
+        import requests as req_lib
+    except ImportError:
+        return jsonify({"ok": False,
+                        "erro": "Biblioteca 'requests' não instalada. Rode: pip install requests"})
+
+    url    = "https://api.callmebot.com/whatsapp.php"
+    params = {"phone": telefone, "text": msg, "apikey": apikey}
+
+    try:
+        resp = req_lib.get(url, params=params, timeout=20)
+        body = resp.text[:500]
+
+        if resp.status_code == 200 and "message queued" in body.lower():
+            return jsonify({"ok": True, "resposta": body})
+
+        # Erros conhecidos do CallMeBot
+        if "phone number not authorized" in body.lower():
+            return jsonify({"ok": False,
+                "erro": "Número não autorizado. Você precisa enviar 'I allow callmebot to send me messages' para +34 644 60 91 44 no WhatsApp antes de usar."})
+        if "invalid api" in body.lower() or "apikey" in body.lower():
+            return jsonify({"ok": False,
+                "erro": f"API Key inválida. Verifique o número recebido via WhatsApp. Resposta: {body}"})
+
+        return jsonify({"ok": False,
+            "erro": f"CallMeBot retornou status {resp.status_code}. Resposta: {body}"})
+
+    except req_lib.exceptions.ConnectionError as e:
+        # Erro mais comum no PythonAnywhere free: domínio bloqueado
+        msg_err = str(e)
+        if "Connection refused" in msg_err or "Max retries" in msg_err or "Name or service not known" in msg_err:
+            return jsonify({"ok": False,
+                "erro": ("PythonAnywhere bloqueou a conexão com api.callmebot.com. "
+                         "No painel do PythonAnywhere vá em: Account → API Token → Whitelist "
+                         "e adicione o domínio 'api.callmebot.com'. "
+                         "Ou use uma conta paga que tem acesso irrestrito à internet.")})
+        return jsonify({"ok": False, "erro": f"Erro de conexão: {msg_err[:300]}"})
+
+    except req_lib.exceptions.Timeout:
+        return jsonify({"ok": False,
+            "erro": "Tempo limite esgotado. O servidor do CallMeBot não respondeu em 20 segundos."})
+
     except Exception as e:
-        return jsonify({"ok": False, "erro": str(e)})
+        return jsonify({"ok": False, "erro": f"Erro inesperado: {str(e)[:300]}"})
 
 
 @app.route("/sw.js")
 def service_worker():
     try:
+        from flask import make_response
         resp = make_response(send_file(os.path.join(BASE_DIR, "sw.js")))
         resp.headers["Content-Type"]           = "application/javascript"
         resp.headers["Cache-Control"]          = "no-cache, no-store, must-revalidate"
