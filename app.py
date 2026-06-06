@@ -830,24 +830,19 @@ def api_ultima_visita():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  APIs — CALENDÁRIO DE MANEJO / WHATSAPP / HISTÓRICO DE ARROBA
+#  APIs ADICIONAIS — CALENDÁRIO / WHATSAPP / ARROBA / PWA
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/api/calendario-manejo")
 @login_required
 def api_calendario_manejo():
-    """
-    Retorna próximas intervenções previstas + eventos históricos para o
-    calendário visual de manejo do dashboard.
-    """
     from config import ALERTAS_SAUDE
     dados  = _get_dados_cache()
     df_man = dados["Manejo"]
-    hoje   = _agora()
-
+    hoje   = datetime.now()
     proximas = []
     for tipo, intervalo_dias in ALERTAS_SAUDE.items():
-        ultima_data   = None
+        ultima_data = None
         dias_passados = None
         if not df_man.empty and "Tipo" in df_man.columns:
             df_t = df_man[df_man["Tipo"] == tipo]
@@ -856,7 +851,6 @@ def api_calendario_manejo():
                 if pd.notna(ultima_ts):
                     ultima_data   = ultima_ts.strftime("%d/%m/%Y")
                     dias_passados = (hoje - ultima_ts.to_pydatetime()).days
-
         if ultima_data and dias_passados is not None:
             dias_restantes = intervalo_dias - dias_passados
             data_prevista  = (hoje + timedelta(days=max(0, dias_restantes))).strftime("%Y-%m-%d")
@@ -867,17 +861,12 @@ def api_calendario_manejo():
             data_prevista  = hoje.strftime("%Y-%m-%d")
             dias_restantes = 0
             status         = "sem_registro"
-
         proximas.append({
-            "tipo":            tipo,
-            "intervalo_dias":  intervalo_dias,
-            "ultima_data":     ultima_data,
-            "dias_passados":   dias_passados,
-            "dias_restantes":  dias_restantes,
-            "data_prevista":   data_prevista,
-            "status":          status,
+            "tipo": tipo, "intervalo_dias": intervalo_dias,
+            "ultima_data": ultima_data, "dias_passados": dias_passados,
+            "dias_restantes": dias_restantes, "data_prevista": data_prevista,
+            "status": status,
         })
-
     eventos = []
     if not df_man.empty:
         for _, row in df_man.iterrows():
@@ -886,102 +875,69 @@ def api_calendario_manejo():
                 continue
             eventos.append({
                 "data":    data_ev.strftime("%Y-%m-%d"),
-                "tipo":    str(row.get("Tipo", "")    or ""),
-                "cabecas": int(row.get("Qtd Cabeças", 0) or 0),
-                "desc":    str(row.get("Descrição", "")  or ""),
-                "resp":    str(row.get("Responsável", "") or ""),
+                "tipo":    str(row.get("Tipo", "") or ""),
+                "cabecas": int(row.get("Qtd Cabecas", 0) or row.get("Qtd Cabeças", 0) or 0),
+                "desc":    str(row.get("Descricao", "") or row.get("Descrição", "") or ""),
+                "resp":    str(row.get("Responsavel", "") or row.get("Responsável", "") or ""),
             })
-
-    return jsonify({
-        "proximas": proximas,
-        "eventos":  eventos,
-        "hoje":     hoje.strftime("%Y-%m-%d"),
-    })
+    return jsonify({"proximas": proximas, "eventos": eventos, "hoje": hoje.strftime("%Y-%m-%d")})
 
 
 @app.route("/api/historico-arroba")
 @login_required
 def api_historico_arroba():
-    """
-    Histórico de preços de arroba registrados nas vendas, com média móvel
-    e indicador de tendência para o gráfico do dashboard.
-    """
     dados = _get_dados_cache()
     df_v  = dados["Vendas"]
-
     if df_v.empty:
         return jsonify({"labels": [], "precos": [], "medias": [], "total": 0})
-
-    df = df_v[
-        df_v["Data"].notna() &
-        df_v["Valor Arroba (R$)"].notna() &
-        (df_v["Valor Arroba (R$)"] > 0)
-    ].copy()
-
+    mask = (df_v["Data"].notna() &
+            df_v["Valor Arroba (R$)"].notna() &
+            (pd.to_numeric(df_v["Valor Arroba (R$)"], errors="coerce").fillna(0) > 0))
+    df = df_v[mask].copy()
     if df.empty:
         return jsonify({"labels": [], "precos": [], "medias": [], "total": 0})
-
-    df      = df.sort_values("Data")
-    precos  = [round(float(v), 2) for v in df["Valor Arroba (R$)"].tolist()]
-    labels  = df["Data"].dt.strftime("%d/%m/%Y").tolist()
-
-    # Média móvel de 3 pontos
+    df     = df.sort_values("Data")
+    precos = [round(float(v), 2) for v in df["Valor Arroba (R$)"].tolist()]
+    labels = df["Data"].dt.strftime("%d/%m/%Y").tolist()
     medias = []
     for i in range(len(precos)):
-        inicio = max(0, i - 1)
-        fim    = min(len(precos), i + 2)
-        medias.append(round(sum(precos[inicio:fim]) / (fim - inicio), 2))
-
-    # Tendência: segunda metade vs primeira metade
+        s, e = max(0, i - 1), min(len(precos), i + 2)
+        medias.append(round(sum(precos[s:e]) / (e - s), 2))
     metade = len(precos) // 2
     if metade > 0:
         m_ini = sum(precos[:metade]) / metade
         m_fim = sum(precos[metade:]) / (len(precos) - metade)
-        tendencia = ("alta"   if m_fim > m_ini * 1.02 else
-                     "baixa"  if m_fim < m_ini * 0.98 else "estavel")
+        tendencia = "alta" if m_fim > m_ini * 1.02 else ("baixa" if m_fim < m_ini * 0.98 else "estavel")
     else:
         tendencia = "estavel"
-
     return jsonify({
-        "labels":    labels,
-        "precos":    precos,
-        "medias":    medias,
-        "total":     len(precos),
-        "min":       round(min(precos), 2),
-        "max":       round(max(precos), 2),
-        "medio":     round(sum(precos) / len(precos), 2),
-        "ultimo":    precos[-1],
-        "tendencia": tendencia,
+        "labels": labels, "precos": precos, "medias": medias,
+        "total": len(precos), "min": round(min(precos), 2),
+        "max": round(max(precos), 2),
+        "medio": round(sum(precos) / len(precos), 2),
+        "ultimo": precos[-1], "tendencia": tendencia,
     })
 
 
 @app.route("/api/config-whatsapp", methods=["GET", "POST"])
 @login_required
 def api_config_whatsapp():
-    """GET → config salva (sem expor apikey). POST → salva telefone + apikey."""
     usuarios = _carregar_usuarios()
     usuario  = session["usuario"]
-
     if request.method == "GET":
         cfg = usuarios.get(usuario, {}).get("whatsapp", {})
         return jsonify({
-            "telefone":          cfg.get("telefone", ""),
+            "telefone": cfg.get("telefone", ""),
             "apikey_configurada": bool(cfg.get("apikey")),
-            "alertas_ativos":    cfg.get("alertas_ativos", True),
+            "alertas_ativos": cfg.get("alertas_ativos", True),
         })
-
     data     = request.get_json(silent=True) or {}
     telefone = str(data.get("telefone", "")).strip()
-    apikey   = str(data.get("apikey",   "")).strip()
+    apikey   = str(data.get("apikey", "")).strip()
     alertas  = bool(data.get("alertas_ativos", True))
-
     if usuario not in usuarios:
         usuarios[usuario] = {}
-    usuarios[usuario]["whatsapp"] = {
-        "telefone": telefone,
-        "apikey":   apikey,
-        "alertas_ativos": alertas,
-    }
+    usuarios[usuario]["whatsapp"] = {"telefone": telefone, "apikey": apikey, "alertas_ativos": alertas}
     _salvar_usuarios(usuarios)
     return jsonify({"ok": True})
 
@@ -989,22 +945,17 @@ def api_config_whatsapp():
 @app.route("/api/enviar-lembrete-whatsapp", methods=["POST"])
 @login_required
 def api_enviar_lembrete_whatsapp():
-    """Envia mensagem via CallMeBot (gratuito). Body: {telefone, apikey, msg}"""
     import urllib.request, urllib.parse
     data     = request.get_json(silent=True) or {}
     telefone = str(data.get("telefone", "")).strip().replace(" ", "").replace("+", "")
-    apikey   = str(data.get("apikey",   "")).strip()
-    msg      = str(data.get("msg",      "")).strip()
-
+    apikey   = str(data.get("apikey", "")).strip()
+    msg      = str(data.get("msg", "")).strip()
     if not telefone or not apikey or not msg:
         return jsonify({"ok": False, "erro": "Campos obrigatórios: telefone, apikey, msg"})
-
-    url = (
-        "https://api.callmebot.com/whatsapp.php"
-        f"?phone={urllib.parse.quote(telefone)}"
-        f"&text={urllib.parse.quote(msg)}"
-        f"&apikey={urllib.parse.quote(apikey)}"
-    )
+    url = ("https://api.callmebot.com/whatsapp.php"
+           f"?phone={urllib.parse.quote(telefone)}"
+           f"&text={urllib.parse.quote(msg)}"
+           f"&apikey={urllib.parse.quote(apikey)}")
     try:
         with urllib.request.urlopen(url, timeout=15) as resp:
             body = resp.read().decode("utf-8", errors="ignore")
@@ -1016,13 +967,11 @@ def api_enviar_lembrete_whatsapp():
 
 @app.route("/sw.js")
 def service_worker():
-    """Service worker servido da raiz para scope completo."""
-    from flask import make_response
     try:
         resp = make_response(send_file(os.path.join(BASE_DIR, "sw.js")))
-        resp.headers["Content-Type"]            = "application/javascript"
-        resp.headers["Cache-Control"]           = "no-cache, no-store, must-revalidate"
-        resp.headers["Service-Worker-Allowed"]  = "/"
+        resp.headers["Content-Type"]           = "application/javascript"
+        resp.headers["Cache-Control"]          = "no-cache, no-store, must-revalidate"
+        resp.headers["Service-Worker-Allowed"] = "/"
         return resp
     except Exception:
         return "", 404
@@ -1030,7 +979,6 @@ def service_worker():
 
 @app.route("/manifest.json")
 def manifest():
-    """Manifesto PWA."""
     try:
         return send_file(os.path.join(BASE_DIR, "manifest.json"),
                          mimetype="application/manifest+json")
