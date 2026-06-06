@@ -444,24 +444,6 @@ def _salvar_venda(f, dados, idx=None):
         reescrever_aba("Vendas", df)
 
 
-
-@app.route("/sw.js")
-def service_worker():
-    """Service worker deve ser servido da raiz para ter scope completo."""
-    from flask import send_from_directory, make_response
-    resp = make_response(send_from_directory(BASE_DIR, "sw.js"))
-    resp.headers["Content-Type"]  = "application/javascript"
-    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    resp.headers["Service-Worker-Allowed"] = "/"
-    return resp
-
-@app.route("/manifest.json")
-def manifest():
-    """Manifest PWA."""
-    from flask import send_from_directory
-    return send_from_directory(BASE_DIR, "manifest.json",
-                               mimetype="application/manifest+json")
-
 # ══════════════════════════════════════════════════════════════════════════════
 #  DASHBOARD
 # ══════════════════════════════════════════════════════════════════════════════
@@ -847,12 +829,82 @@ def api_ultima_visita():
 
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+#  APIs — CALENDÁRIO DE MANEJO / WHATSAPP / HISTÓRICO DE ARROBA
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/calendario-manejo")
+@login_required
+def api_calendario_manejo():
+    """
+    Retorna próximas intervenções previstas + eventos históricos para o
+    calendário visual de manejo do dashboard.
+    """
+    from config import ALERTAS_SAUDE
+    dados  = _get_dados_cache()
+    df_man = dados["Manejo"]
+    hoje   = _agora()
+
+    proximas = []
+    for tipo, intervalo_dias in ALERTAS_SAUDE.items():
+        ultima_data   = None
+        dias_passados = None
+        if not df_man.empty and "Tipo" in df_man.columns:
+            df_t = df_man[df_man["Tipo"] == tipo]
+            if not df_t.empty:
+                ultima_ts = df_t["Data"].dropna().max()
+                if pd.notna(ultima_ts):
+                    ultima_data   = ultima_ts.strftime("%d/%m/%Y")
+                    dias_passados = (hoje - ultima_ts.to_pydatetime()).days
+
+        if ultima_data and dias_passados is not None:
+            dias_restantes = intervalo_dias - dias_passados
+            data_prevista  = (hoje + timedelta(days=max(0, dias_restantes))).strftime("%Y-%m-%d")
+            status = ("atrasado" if dias_passados > intervalo_dias else
+                      "urgente"  if dias_restantes <= 14 else
+                      "proximo"  if dias_restantes <= 30 else "ok")
+        else:
+            data_prevista  = hoje.strftime("%Y-%m-%d")
+            dias_restantes = 0
+            status         = "sem_registro"
+
+        proximas.append({
+            "tipo":            tipo,
+            "intervalo_dias":  intervalo_dias,
+            "ultima_data":     ultima_data,
+            "dias_passados":   dias_passados,
+            "dias_restantes":  dias_restantes,
+            "data_prevista":   data_prevista,
+            "status":          status,
+        })
+
+    eventos = []
+    if not df_man.empty:
+        for _, row in df_man.iterrows():
+            data_ev = row.get("Data")
+            if pd.isna(data_ev):
+                continue
+            eventos.append({
+                "data":    data_ev.strftime("%Y-%m-%d"),
+                "tipo":    str(row.get("Tipo", "")    or ""),
+                "cabecas": int(row.get("Qtd Cabeças", 0) or 0),
+                "desc":    str(row.get("Descrição", "")  or ""),
+                "resp":    str(row.get("Responsável", "") or ""),
+            })
+
+    return jsonify({
+        "proximas": proximas,
+        "eventos":  eventos,
+        "hoje":     hoje.strftime("%Y-%m-%d"),
+    })
+
+
 @app.route("/api/historico-arroba")
 @login_required
 def api_historico_arroba():
     """
-    Retorna o histórico de preços de arroba registrados nas vendas,
-    ordenados por data. Usado no gráfico de tendência do dashboard.
+    Histórico de preços de arroba registrados nas vendas, com média móvel
+    e indicador de tendência para o gráfico do dashboard.
     """
     dados = _get_dados_cache()
     df_v  = dados["Vendas"]
@@ -860,7 +912,6 @@ def api_historico_arroba():
     if df_v.empty:
         return jsonify({"labels": [], "precos": [], "medias": [], "total": 0})
 
-    # Filtrar vendas com arroba informado (> 0)
     df = df_v[
         df_v["Data"].notna() &
         df_v["Valor Arroba (R$)"].notna() &
@@ -870,44 +921,122 @@ def api_historico_arroba():
     if df.empty:
         return jsonify({"labels": [], "precos": [], "medias": [], "total": 0})
 
-    df = df.sort_values("Data")
-    df["label"] = df["Data"].dt.strftime("%d/%m/%Y")
+    df      = df.sort_values("Data")
+    precos  = [round(float(v), 2) for v in df["Valor Arroba (R$)"].tolist()]
+    labels  = df["Data"].dt.strftime("%d/%m/%Y").tolist()
 
-    # Média móvel de 3 pontos para suavizar tendência
-    precos = df["Valor Arroba (R$)"].tolist()
+    # Média móvel de 3 pontos
     medias = []
-    for i, p in enumerate(precos):
+    for i in range(len(precos)):
         inicio = max(0, i - 1)
         fim    = min(len(precos), i + 2)
         medias.append(round(sum(precos[inicio:fim]) / (fim - inicio), 2))
 
-    # Estatísticas gerais
-    p_min   = round(float(df["Valor Arroba (R$)"].min()), 2)
-    p_max   = round(float(df["Valor Arroba (R$)"].max()), 2)
-    p_medio = round(float(df["Valor Arroba (R$)"].mean()), 2)
-    p_ult   = round(float(df["Valor Arroba (R$)"].iloc[-1]), 2)
-
-    # Tendência: comparar última metade com primeira metade
+    # Tendência: segunda metade vs primeira metade
     metade = len(precos) // 2
     if metade > 0:
-        media_inicio = sum(precos[:metade]) / metade
-        media_fim    = sum(precos[metade:]) / (len(precos) - metade)
-        tendencia = "alta" if media_fim > media_inicio * 1.02 else (
-                    "baixa" if media_fim < media_inicio * 0.98 else "estavel")
+        m_ini = sum(precos[:metade]) / metade
+        m_fim = sum(precos[metade:]) / (len(precos) - metade)
+        tendencia = ("alta"   if m_fim > m_ini * 1.02 else
+                     "baixa"  if m_fim < m_ini * 0.98 else "estavel")
     else:
         tendencia = "estavel"
 
     return jsonify({
-        "labels":    df["label"].tolist(),
-        "precos":    [round(float(v), 2) for v in precos],
+        "labels":    labels,
+        "precos":    precos,
         "medias":    medias,
         "total":     len(precos),
-        "min":       p_min,
-        "max":       p_max,
-        "medio":     p_medio,
-        "ultimo":    p_ult,
+        "min":       round(min(precos), 2),
+        "max":       round(max(precos), 2),
+        "medio":     round(sum(precos) / len(precos), 2),
+        "ultimo":    precos[-1],
         "tendencia": tendencia,
     })
+
+
+@app.route("/api/config-whatsapp", methods=["GET", "POST"])
+@login_required
+def api_config_whatsapp():
+    """GET → config salva (sem expor apikey). POST → salva telefone + apikey."""
+    usuarios = _carregar_usuarios()
+    usuario  = session["usuario"]
+
+    if request.method == "GET":
+        cfg = usuarios.get(usuario, {}).get("whatsapp", {})
+        return jsonify({
+            "telefone":          cfg.get("telefone", ""),
+            "apikey_configurada": bool(cfg.get("apikey")),
+            "alertas_ativos":    cfg.get("alertas_ativos", True),
+        })
+
+    data     = request.get_json(silent=True) or {}
+    telefone = str(data.get("telefone", "")).strip()
+    apikey   = str(data.get("apikey",   "")).strip()
+    alertas  = bool(data.get("alertas_ativos", True))
+
+    if usuario not in usuarios:
+        usuarios[usuario] = {}
+    usuarios[usuario]["whatsapp"] = {
+        "telefone": telefone,
+        "apikey":   apikey,
+        "alertas_ativos": alertas,
+    }
+    _salvar_usuarios(usuarios)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/enviar-lembrete-whatsapp", methods=["POST"])
+@login_required
+def api_enviar_lembrete_whatsapp():
+    """Envia mensagem via CallMeBot (gratuito). Body: {telefone, apikey, msg}"""
+    import urllib.request, urllib.parse
+    data     = request.get_json(silent=True) or {}
+    telefone = str(data.get("telefone", "")).strip().replace(" ", "").replace("+", "")
+    apikey   = str(data.get("apikey",   "")).strip()
+    msg      = str(data.get("msg",      "")).strip()
+
+    if not telefone or not apikey or not msg:
+        return jsonify({"ok": False, "erro": "Campos obrigatórios: telefone, apikey, msg"})
+
+    url = (
+        "https://api.callmebot.com/whatsapp.php"
+        f"?phone={urllib.parse.quote(telefone)}"
+        f"&text={urllib.parse.quote(msg)}"
+        f"&apikey={urllib.parse.quote(apikey)}"
+    )
+    try:
+        with urllib.request.urlopen(url, timeout=15) as resp:
+            body = resp.read().decode("utf-8", errors="ignore")
+        ok = "message queued" in body.lower() or resp.status == 200
+        return jsonify({"ok": ok, "resposta": body[:300]})
+    except Exception as e:
+        return jsonify({"ok": False, "erro": str(e)})
+
+
+@app.route("/sw.js")
+def service_worker():
+    """Service worker servido da raiz para scope completo."""
+    from flask import make_response
+    try:
+        resp = make_response(send_file(os.path.join(BASE_DIR, "sw.js")))
+        resp.headers["Content-Type"]            = "application/javascript"
+        resp.headers["Cache-Control"]           = "no-cache, no-store, must-revalidate"
+        resp.headers["Service-Worker-Allowed"]  = "/"
+        return resp
+    except Exception:
+        return "", 404
+
+
+@app.route("/manifest.json")
+def manifest():
+    """Manifesto PWA."""
+    try:
+        return send_file(os.path.join(BASE_DIR, "manifest.json"),
+                         mimetype="application/manifest+json")
+    except Exception:
+        return "", 404
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  COMPRAS
@@ -1503,28 +1632,25 @@ def _gerar_sugestoes_visita(f, estoque_esperado):
         elif gado_contado > estoque_esperado:
             sug.append(f"ℹ️ {gado_contado - estoque_esperado} cabeça(s) a mais — possível animal de terceiro.")
     sal = f.get("sal_racao", "OK")
-    if sal == "Meio Saco": sug.append("🧂 Sal/Ração: meio saco aberto — comprar antes da próxima visita.")
-    elif sal == "Baixo":   sug.append("🧂 Sal/Ração baixo — reabastecer nos próximos 2 a 3 dias.")
-    elif sal == "Vazio":   sug.append("🚨 Sal/Ração ESGOTADO — abastecer com urgência!")
+    if sal == "Baixo":   sug.append("🧂 Sal/Ração baixo — reabastecer nos próximos 2 a 3 dias.")
+    elif sal == "Vazio": sug.append("🚨 Sal/Ração ESGOTADO — abastecer com urgência!")
     prot = f.get("proteinado", "OK")
-    if prot == "Meio Saco": sug.append("🟡 Proteinado: meio saco aberto — comprar antes da próxima visita.")
-    elif prot == "Baixo":   sug.append("🟡 Proteinado baixo — repor em breve.")
-    elif prot == "Vazio":   sug.append("🚨 Proteinado ESGOTADO — comprar urgente!")
+    if prot == "Baixo":   sug.append("🟡 Proteinado baixo — repor em breve.")
+    elif prot == "Vazio": sug.append("🚨 Proteinado ESGOTADO — comprar urgente!")
     mato = f.get("mato", "Limpo")
     if mato == "Precisa Capinar": sug.append("🌿 Vegetação crescida — programar roçagem.")
     elif mato == "Muito Mato":    sug.append("🌿 Mato excessivo — roçagem urgente!")
     grama = f.get("grama", "Boa")
-    if grama == "Amarelando/Secando": sug.append("🌾 Pastagem amarelando/secando — monitorar e considerar rotação antecipada.")
-    elif grama == "Regular":          sug.append("🌱 Pastagem regular — considerar rotação ou adubação.")
-    elif grama == "Escassa":          sug.append("🚨 Pastagem escassa — rotacionar IMEDIATAMENTE.")
+    if grama == "Regular": sug.append("🌱 Pastagem regular — considerar rotação ou adubação.")
+    elif grama == "Escassa": sug.append("🚨 Pastagem escassa — rotacionar IMEDIATAMENTE.")
     corrego = f.get("corrego", "Normal")
     if corrego == "Baixo": sug.append("💧 Água baixa — monitorar e preparar alternativa.")
     elif corrego == "Seco": sug.append("🚨 SEM ÁGUA — providenciar abastecimento urgente!")
     quintal = f.get("quintal", "OK")
     if quintal == "Precisa Atenção": sug.append("🏡 Quintal necessita atenção.")
     cisterna = f.get("cisterna", "OK")
-    if cisterna == "Baixo/Secando": sug.append("🪣 Cisterna baixo/secando — programar reabastecimento urgente.")
-    elif cisterna == "Vazia":       sug.append("🚨 Cisterna VAZIA — abastecer imediatamente!")
+    if cisterna == "Baixo": sug.append("🪣 Cisterna baixa — programar reabastecimento.")
+    elif cisterna == "Vazia": sug.append("🚨 Cisterna VAZIA — abastecer imediatamente!")
     choveu = f.get("choveu", "nao") == "sim"
     try:
         mm = float(str(f.get("chuva_mm", "0") or "0").replace(",", "."))
@@ -1557,9 +1683,8 @@ def visitas():
             alertas.append(("danger", f"⚠️ Na última visita, {falt} cabeça(s) estavam faltando!"))
         for campo, label in [("Sal/Ração", "Sal/Ração"), ("Proteinado", "Proteinado")]:
             v = str(ultima.get(campo, "OK") or "OK")
-            if v == "Vazio":         alertas.append(("danger",  f"🚨 {label} ESGOTADO conforme última visita!"))
-            elif v == "Baixo":       alertas.append(("warning", f"⚠️ {label} está baixo — repor em breve."))
-            elif v == "Meio Saco":   alertas.append(("warning", f"🟡 {label}: meio saco aberto — comprar na próxima."))
+            if v == "Vazio":  alertas.append(("danger",  f"🚨 {label} ESGOTADO conforme última visita!"))
+            elif v == "Baixo": alertas.append(("warning", f"⚠️ {label} está baixo — repor em breve."))
         corrego = str(ultima.get("Córrego/Água", "Normal") or "Normal")
         if corrego == "Seco":  alertas.append(("danger",  "🚨 Córrego/bebedouro SECO na última visita!"))
         elif corrego == "Baixo": alertas.append(("warning", "💧 Água no córrego estava baixa — verificar."))
