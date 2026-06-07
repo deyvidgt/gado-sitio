@@ -303,6 +303,137 @@ def parse_valor(s):
     except Exception:
         return 0.0
 
+# ── Throttle de alertas WhatsApp: máximo 1 envio por dia ─────────────────────
+_ultimo_alerta_wpp: float = 0.0
+_ALERTA_INTERVALO  = 20 * 3600       # 20h entre envios automaticos
+
+def _enviar_alertas_wpp_se_necessario():
+    """
+    Verifica alertas urgentes e envia WhatsApp para membros configurados.
+    Chamada ao abrir o dashboard — throttle de 20h evita spam.
+    Roda em thread separada para nao atrasar o carregamento da pagina.
+    Nao envia nada se nao houver urgencias.
+    """
+    global _ultimo_alerta_wpp
+    agora_ts = time.time()
+    if (agora_ts - _ultimo_alerta_wpp) < _ALERTA_INTERVALO:
+        return
+
+    def _rodar():
+        global _ultimo_alerta_wpp
+        try:
+            import requests as _req
+            dados  = _get_dados_cache()
+            df_m   = dados["Manejo"]
+            df_vis = dados["Visitas"]
+            hoje   = datetime.now()
+            alertas = []
+
+            # Manejo atrasado ou urgente
+            from config import ALERTAS_SAUDE
+            for tipo, intervalo in ALERTAS_SAUDE.items():
+                if df_m.empty or "Tipo" not in df_m.columns:
+                    alertas.append(f"[!] {tipo}: sem registro!")
+                    continue
+                df_t = df_m[df_m["Tipo"] == tipo]
+                if df_t.empty:
+                    alertas.append(f"[!] {tipo}: nunca registrado!")
+                    continue
+                ultima = df_t["Data"].dropna().max()
+                if pd.isna(ultima):
+                    continue
+                dias = (hoje - ultima.to_pydatetime()).days
+                restam = intervalo - dias
+                if dias > intervalo:
+                    alertas.append(f"*ATRASADO* {tipo} ({dias}d / limite {intervalo}d)")
+                elif restam <= 14:
+                    alertas.append(f"[!] {tipo} em {restam} dia(s)")
+
+            # Ultima visita
+            if not df_vis.empty and "Data" in df_vis.columns:
+                row = df_vis.sort_values("Data", ascending=False, na_position="last").iloc[0]
+                falt = int(row.get("Gado Faltando") or 0)
+                if falt > 0:
+                    alertas.append(f"*GADO FALTANDO:* {falt} cabeca(s)!")
+                sal = str(row.get("Sal/Racao") or row.get("Sal/Ração") or "OK")
+                if sal in ("Vazio", "Baixo", "Meio Saco"):
+                    alertas.append(f"Sal/Racao: {sal}")
+                prot = str(row.get("Proteinado") or "OK")
+                if prot in ("Vazio", "Baixo", "Meio Saco"):
+                    alertas.append(f"Proteinado: {prot}")
+                agua = str(row.get("Córrego/Água") or "Normal")
+                if agua in ("Seco", "Baixo"):
+                    alertas.append(f"Agua/Corrego: {agua}")
+                grama = str(row.get("Grama/Pastagem") or "Boa")
+                if grama in ("Escassa", "Amarelando/Secando"):
+                    alertas.append(f"Pastagem: {grama}")
+                ultima_vis = df_vis["Data"].dropna().max()
+                if pd.notna(ultima_vis):
+                    dias_sem = (hoje - ultima_vis.to_pydatetime()).days
+                    if dias_sem >= 7:
+                        alertas.append(f"Sem visita ha {dias_sem} dias!")
+            else:
+                alertas.append("Nenhuma visita registrada ainda.")
+
+            if not alertas:
+                return
+
+            hoje_str = hoje.strftime("%d/%m/%Y as %H:%M")
+            msg = "Sitio Santo Antonio - Alertas " + hoje_str + "\n\n"
+            msg += "\n".join(alertas)
+            msg += "\n\nSistema de Gestao de Gado"
+
+            # Carregar configurações salvas de cada usuário
+            usuarios = _carregar_usuarios()
+
+            # Fallback: números padrão da família para quem não configurou pelo dashboard.
+            # Cada membro pode sobrescrever pelo painel de configurações do WhatsApp.
+            NUMEROS_FAMILIA = {
+                "geane":  {"telefone": "553497748166", "apikey": "3785834"},
+                "deyvid": {"telefone": "553497748166", "apikey": "3785834"},
+                "nilson": {"telefone": "553497748166", "apikey": "3785834"},
+            }
+
+            enviados_para = set()
+            for nome, info in usuarios.items():
+                cfg      = info.get("whatsapp", {})
+                telefone = cfg.get("telefone", "").strip()
+                apikey   = cfg.get("apikey",   "").strip()
+                ativo    = cfg.get("alertas_ativos", True)
+
+                # Se não configurou pelo dashboard, usar fallback da família
+                if (not telefone or not apikey) and nome in NUMEROS_FAMILIA:
+                    telefone = NUMEROS_FAMILIA[nome]["telefone"]
+                    apikey   = NUMEROS_FAMILIA[nome]["apikey"]
+
+                if not telefone or not apikey or not ativo:
+                    continue
+
+                # Evitar enviar duplicado para o mesmo número
+                chave = f"{telefone}:{apikey}"
+                if chave in enviados_para:
+                    continue
+                enviados_para.add(chave)
+
+                try:
+                    r = _req.get(
+                        "https://api.callmebot.com/whatsapp.php",
+                        params={"phone": telefone, "text": msg, "apikey": apikey},
+                        timeout=20,
+                    )
+                    ok = r.status_code == 200 and "message queued" in r.text.lower()
+                    app.logger.info(f"Alerta WPP {nome}: {'OK' if ok else r.text[:100]}")
+                except Exception as ex:
+                    app.logger.warning(f"Alerta WPP {nome} erro: {ex}")
+
+            _ultimo_alerta_wpp = time.time()
+
+        except Exception as ex:
+            app.logger.error(f"_enviar_alertas_wpp erro: {ex}")
+
+    threading.Thread(target=_rodar, daemon=True).start()
+
+
 def _limpar_backups_antigos(max_backups: int = 15):
     from db import DATA_DIR
     backup_dir = os.path.join(DATA_DIR, "backups")
@@ -474,6 +605,7 @@ def dashboard():
     recentes.sort(key=lambda x: x["_ts"], reverse=True)
     for rec in recentes:
         rec.pop("_ts", None)
+    _enviar_alertas_wpp_se_necessario()
     return render_template("dashboard.html", r=r, membros=membros_r,
                            estoque_membro=estoque_membro, recentes=recentes[:6],
                            alertas=_gerar_alertas(dados),
@@ -829,9 +961,9 @@ def api_ultima_visita():
 
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  APIs ADICIONAIS — CALENDÁRIO / WHATSAPP / ARROBA / PWA
-# ══════════════════════════════════════════════════════════════════════════════
+# ==========================================================================
+#  APIs ADICIONAIS
+# ==========================================================================
 
 @app.route("/api/calendario-manejo")
 @login_required
@@ -892,16 +1024,16 @@ def api_historico_arroba():
     vazio = {"labels": [], "precos": [], "medias": [], "total": 0}
     if df_v.empty:
         return jsonify(vazio)
-    col_arr = "Valor Arroba (R$)"
-    if col_arr not in df_v.columns:
+    col = "Valor Arroba (R$)"
+    if col not in df_v.columns:
         return jsonify(vazio)
-    mask = (df_v["Data"].notna() & df_v[col_arr].notna() &
-            (pd.to_numeric(df_v[col_arr], errors="coerce").fillna(0) > 0))
+    mask = (df_v["Data"].notna() & df_v[col].notna() &
+            (pd.to_numeric(df_v[col], errors="coerce").fillna(0) > 0))
     df = df_v[mask].copy()
     if df.empty:
         return jsonify(vazio)
     df     = df.sort_values("Data")
-    precos = [round(float(v), 2) for v in df[col_arr].tolist()]
+    precos = [round(float(v), 2) for v in df[col].tolist()]
     labels = df["Data"].dt.strftime("%d/%m/%Y").tolist()
     medias = []
     for i in range(len(precos)):
@@ -911,16 +1043,14 @@ def api_historico_arroba():
     if metade > 0:
         m_ini = sum(precos[:metade]) / metade
         m_fim = sum(precos[metade:]) / (len(precos) - metade)
-        tendencia = ("alta"  if m_fim > m_ini * 1.02 else
-                     "baixa" if m_fim < m_ini * 0.98 else "estavel")
+        tend  = "alta" if m_fim > m_ini * 1.02 else ("baixa" if m_fim < m_ini * 0.98 else "estavel")
     else:
-        tendencia = "estavel"
+        tend = "estavel"
     return jsonify({
-        "labels": labels, "precos": precos, "medias": medias,
-        "total": len(precos), "min": round(min(precos), 2),
-        "max": round(max(precos), 2),
+        "labels": labels, "precos": precos, "medias": medias, "total": len(precos),
+        "min": round(min(precos), 2), "max": round(max(precos), 2),
         "medio": round(sum(precos) / len(precos), 2),
-        "ultimo": precos[-1], "tendencia": tendencia,
+        "ultimo": precos[-1], "tendencia": tend,
     })
 
 
@@ -932,9 +1062,9 @@ def api_config_whatsapp():
     if request.method == "GET":
         cfg = usuarios.get(usuario, {}).get("whatsapp", {})
         return jsonify({
-            "telefone":           cfg.get("telefone", ""),
+            "telefone":          cfg.get("telefone", ""),
             "apikey_configurada": bool(cfg.get("apikey")),
-            "alertas_ativos":     cfg.get("alertas_ativos", True),
+            "alertas_ativos":    cfg.get("alertas_ativos", True),
         })
     data     = request.get_json(silent=True) or {}
     telefone = str(data.get("telefone", "")).strip()
@@ -952,41 +1082,30 @@ def api_config_whatsapp():
 @app.route("/api/enviar-lembrete-whatsapp", methods=["POST"])
 @login_required
 def api_enviar_lembrete_whatsapp():
-    """Envia via CallMeBot usando requests (compatível com PythonAnywhere)."""
     data     = request.get_json(silent=True) or {}
     telefone = str(data.get("telefone", "")).strip().replace(" ", "").replace("+", "")
     apikey   = str(data.get("apikey",   "")).strip()
     msg      = str(data.get("msg",      "")).strip()
-
     if not telefone or not apikey or not msg:
-        return jsonify({"ok": False, "erro": "Preencha telefone e API Key antes de enviar."})
-
+        return jsonify({"ok": False, "erro": "Preencha telefone e API Key."})
     try:
         import requests as _req
-    except ImportError:
-        return jsonify({"ok": False, "erro": "Biblioteca requests não instalada."})
-
-    url    = "https://api.callmebot.com/whatsapp.php"
-    params = {"phone": telefone, "text": msg, "apikey": apikey}
-    try:
-        resp = _req.get(url, params=params, timeout=20)
+        resp = _req.get(
+            "https://api.callmebot.com/whatsapp.php",
+            params={"phone": telefone, "text": msg, "apikey": apikey},
+            timeout=20,
+        )
         body = resp.text[:500]
         if resp.status_code == 200 and "message queued" in body.lower():
             return jsonify({"ok": True, "resposta": body})
         if "phone number not authorized" in body.lower():
-            return jsonify({"ok": False,
-                "erro": "Número não autorizado. Envie 'I allow callmebot to send me messages' para +34 644 663 262 no WhatsApp."})
-        if "invalid api" in body.lower():
-            return jsonify({"ok": False, "erro": f"API Key inválida. Resposta: {body}"})
-        return jsonify({"ok": False, "erro": f"CallMeBot status {resp.status_code}: {body}"})
-    except _req.exceptions.ConnectionError:
-        return jsonify({"ok": False,
-            "erro": ("PythonAnywhere bloqueou a conexão com api.callmebot.com. "
-                     "Vá em Account → Whitelist no painel e adicione 'api.callmebot.com'.")})
-    except _req.exceptions.Timeout:
-        return jsonify({"ok": False, "erro": "Tempo limite esgotado (20s). Tente novamente."})
+            return jsonify({"ok": False, "erro": "Numero nao autorizado no CallMeBot. Envie 'I allow callmebot to send me messages' para +34644663262 no WhatsApp."})
+        return jsonify({"ok": False, "erro": f"CallMeBot: {body}"})
     except Exception as e:
-        return jsonify({"ok": False, "erro": f"Erro: {str(e)[:300]}"})
+        erro = str(e)
+        if "Connection" in erro or "Max retries" in erro or "Name or service" in erro:
+            return jsonify({"ok": False, "erro": "PythonAnywhere bloqueou a conexao com api.callmebot.com. Va em Account > Whitelist e adicione api.callmebot.com"})
+        return jsonify({"ok": False, "erro": erro[:300]})
 
 
 @app.route("/sw.js")
