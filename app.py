@@ -932,9 +932,9 @@ def api_config_whatsapp():
     if request.method == "GET":
         cfg = usuarios.get(usuario, {}).get("whatsapp", {})
         return jsonify({
-            "telefone":          cfg.get("telefone", ""),
+            "telefone":           cfg.get("telefone", ""),
             "apikey_configurada": bool(cfg.get("apikey")),
-            "alertas_ativos":    cfg.get("alertas_ativos", True),
+            "alertas_ativos":     cfg.get("alertas_ativos", True),
         })
     data     = request.get_json(silent=True) or {}
     telefone = str(data.get("telefone", "")).strip()
@@ -952,12 +952,7 @@ def api_config_whatsapp():
 @app.route("/api/enviar-lembrete-whatsapp", methods=["POST"])
 @login_required
 def api_enviar_lembrete_whatsapp():
-    """
-    Envia mensagem via CallMeBot usando 'requests' (compatível com
-    PythonAnywhere, que bloqueia urllib para domínios externos).
-    O domínio api.callmebot.com precisa estar na whitelist do PA
-    (conta free só permite domínios pré-aprovados — veja abaixo).
-    """
+    """Envia via CallMeBot usando requests (compatível com PythonAnywhere)."""
     data     = request.get_json(silent=True) or {}
     telefone = str(data.get("telefone", "")).strip().replace(" ", "").replace("+", "")
     apikey   = str(data.get("apikey",   "")).strip()
@@ -966,52 +961,32 @@ def api_enviar_lembrete_whatsapp():
     if not telefone or not apikey or not msg:
         return jsonify({"ok": False, "erro": "Preencha telefone e API Key antes de enviar."})
 
-    # PythonAnywhere free tier bloqueia requests externos exceto whitelist.
-    # Verificar se 'requests' está disponível e tentar envio com log detalhado.
     try:
-        import requests as req_lib
+        import requests as _req
     except ImportError:
-        return jsonify({"ok": False,
-                        "erro": "Biblioteca 'requests' não instalada. Rode: pip install requests"})
+        return jsonify({"ok": False, "erro": "Biblioteca requests não instalada."})
 
     url    = "https://api.callmebot.com/whatsapp.php"
     params = {"phone": telefone, "text": msg, "apikey": apikey}
-
     try:
-        resp = req_lib.get(url, params=params, timeout=20)
+        resp = _req.get(url, params=params, timeout=20)
         body = resp.text[:500]
-
         if resp.status_code == 200 and "message queued" in body.lower():
             return jsonify({"ok": True, "resposta": body})
-
-        # Erros conhecidos do CallMeBot
         if "phone number not authorized" in body.lower():
             return jsonify({"ok": False,
-                "erro": "Número não autorizado. Você precisa enviar 'I allow callmebot to send me messages' para +34 644 60 91 44 no WhatsApp antes de usar."})
-        if "invalid api" in body.lower() or "apikey" in body.lower():
-            return jsonify({"ok": False,
-                "erro": f"API Key inválida. Verifique o número recebido via WhatsApp. Resposta: {body}"})
-
+                "erro": "Número não autorizado. Envie 'I allow callmebot to send me messages' para +34 644 663 262 no WhatsApp."})
+        if "invalid api" in body.lower():
+            return jsonify({"ok": False, "erro": f"API Key inválida. Resposta: {body}"})
+        return jsonify({"ok": False, "erro": f"CallMeBot status {resp.status_code}: {body}"})
+    except _req.exceptions.ConnectionError:
         return jsonify({"ok": False,
-            "erro": f"CallMeBot retornou status {resp.status_code}. Resposta: {body}"})
-
-    except req_lib.exceptions.ConnectionError as e:
-        # Erro mais comum no PythonAnywhere free: domínio bloqueado
-        msg_err = str(e)
-        if "Connection refused" in msg_err or "Max retries" in msg_err or "Name or service not known" in msg_err:
-            return jsonify({"ok": False,
-                "erro": ("PythonAnywhere bloqueou a conexão com api.callmebot.com. "
-                         "No painel do PythonAnywhere vá em: Account → API Token → Whitelist "
-                         "e adicione o domínio 'api.callmebot.com'. "
-                         "Ou use uma conta paga que tem acesso irrestrito à internet.")})
-        return jsonify({"ok": False, "erro": f"Erro de conexão: {msg_err[:300]}"})
-
-    except req_lib.exceptions.Timeout:
-        return jsonify({"ok": False,
-            "erro": "Tempo limite esgotado. O servidor do CallMeBot não respondeu em 20 segundos."})
-
+            "erro": ("PythonAnywhere bloqueou a conexão com api.callmebot.com. "
+                     "Vá em Account → Whitelist no painel e adicione 'api.callmebot.com'.")})
+    except _req.exceptions.Timeout:
+        return jsonify({"ok": False, "erro": "Tempo limite esgotado (20s). Tente novamente."})
     except Exception as e:
-        return jsonify({"ok": False, "erro": f"Erro inesperado: {str(e)[:300]}"})
+        return jsonify({"ok": False, "erro": f"Erro: {str(e)[:300]}"})
 
 
 @app.route("/sw.js")
