@@ -156,7 +156,10 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get("logado"):
-            return redirect(url_for("login", next=request.path))
+            # Usar redirect direto — url_for("login") falha se routes_auth
+            # ainda não foi importado no momento em que extensions é carregado
+            next_url = request.path
+            return redirect(f"/login?next={next_url}")
         return f(*args, **kwargs)
     return decorated
 
