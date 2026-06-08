@@ -156,7 +156,7 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get("logado"):
-            return redirect(url_for("auth.login", next=request.path))
+            return redirect(url_for("login", next=request.path))
         return f(*args, **kwargs)
     return decorated
 

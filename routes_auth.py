@@ -9,7 +9,7 @@ from extensions import (
     app, _agora, _validar_csrf, _gerar_csrf, login_required,
     _sha256, _hash_bcrypt, _bcrypt_disponivel, _verificar_hash,
     _carregar_usuarios, _salvar_usuarios,
-    BASE_DIR,
+    BASE_DIR, BUNDLE_DIR,
 )
 from config import MAX_TENTATIVAS_LOGIN
 import os
