@@ -14,6 +14,7 @@ from extensions import (
 from config import MAX_TENTATIVAS_LOGIN
 import os
 
+@app.route("/login", methods=["GET", "POST"])
 def login():
     if session.get("logado"):
         return redirect(url_for("dashboard"))
