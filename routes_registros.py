@@ -339,26 +339,6 @@ def novo_manejo():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  RELATÓRIOS
-# ══════════════════════════════════════════════════════════════════════════════
-
-@app.route("/relatorios")
-@login_required
-def relatorios():
-    dados = _get_dados_cache()
-    r_fin = _get_resumo_cache()
-    mbr   = calcular_todos_membros(dados["Vendas"], dados["Compras"], dados["Gastos"], dados["Manejo"])
-    gastos_tipo = calcular_gasto_por_tipo(dados["Gastos"])
-    extras      = calcular_indicadores_extras(
-        dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"], r_fin["ctcab"]
-    )
-    return render_template("relatorios.html", r=r_fin, mbr=mbr,
-                           alertas=_gerar_alertas(dados), anual=_calc_anual(dados),
-                           gastos_tipo=gastos_tipo, extras=extras,
-                           MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS)
-
-
-# ══════════════════════════════════════════════════════════════════════════════
 #  EXCLUIR
 # ══════════════════════════════════════════════════════════════════════════════
 
