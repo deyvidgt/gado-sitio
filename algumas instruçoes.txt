@@ -24,6 +24,7 @@ git push
 
 Depois no PythonAnywhere e em Bash:
 cd ~/gado && git pull
+bash ~/atualizar.sh
 
 E clicar em Reload na aba Web
 0717geane

@@ -237,6 +237,75 @@ def editar_gasto(idx):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+#  FUNÇÃO AUXILIAR DE VENDAS (Adicione esta função aqui)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _salvar_venda(form, dados, idx=None):
+    """Processa e salva os dados vindos do formulário de vendas."""
+    import pandas as pd
+    
+    data = form.get("data", _agora().strftime("%d/%m/%Y"))
+    cabecas = int(form.get("cabecas", 0) or 0)
+    valor_total = parse_valor(form.get("valor", 0))
+    valor_arroba = parse_valor(form.get("valor_arroba", 0))
+    desc = form.get("descricao", "").strip()
+    
+    # Resgata as quantidades por membro
+    q_mae = int(form.get("qtd_mae", 0) or 0)
+    q_deyvid = int(form.get("qtd_deyvid", 0) or 0)
+    q_nilson = int(form.get("qtd_nilson", 0) or 0)
+    
+    # Ajusta proporções se a soma não bater com o total de cabeças
+    soma_q = q_mae + q_deyvid + q_nilson
+    if soma_q == 0:
+        base = cabecas // 3
+        q_mae = q_deyvid = base
+        q_nilson = cabecas - base * 2
+    elif soma_q != cabecas:
+        fator = cabecas / soma_q
+        q_mae = round(q_mae * fator)
+        q_deyvid = round(q_deyvid * fator)
+        q_nilson = cabecas - q_mae - q_deyvid
+        
+    val_cab = round(valor_total / cabecas, 2) if cabecas > 0 else 0
+    
+    # Calcula os valores proporcionais a receber de cada membro
+    v_mae = round(q_mae * val_cab, 2)
+    v_deyvid = round(q_deyvid * val_cab, 2)
+    v_nilson = round(valor_total - v_mae - v_deyvid, 2) # Evita diferenças de centavos
+    
+    valores_linha = [
+        data, cabecas, valor_total, val_cab, valor_arroba,
+        q_mae, q_deyvid, q_nilson, v_mae, v_deyvid, v_nilson, desc
+    ]
+    
+    if idx is None:
+        # Nova Venda
+        salvar_linha("Vendas", valores_linha)
+    else:
+        # Editar Venda Existente
+        df = carregar_aba("Vendas")
+        colunas = [
+            "Data", "Qtd Cabeças", "Valor Total (R$)", "Valor/Cabeça (R$)",
+            "Valor Arroba (R$)", "Qtd Mae", "Qtd Deyvid", "Qtd Nilson",
+            "Valor Mae (R$)", "Valor Deyvid (R$)", "Valor Nilson (R$)", "Descrição"
+        ]
+        
+        # Converte a data para o formato aceito no DataFrame do Pandas
+        dt_objeto = pd.to_datetime(data, dayfirst=True, errors="coerce")
+        valores_linha[0] = dt_objeto
+        
+        for col, val in zip(colunas, valores_linha):
+            if col in df.columns:
+                df.at[idx, col] = val
+            else:
+                df[col] = None
+                df.at[idx, col] = val
+                
+        reescrever_aba("Vendas", df)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 #  VENDAS
 # ══════════════════════════════════════════════════════════════════════════════
 
