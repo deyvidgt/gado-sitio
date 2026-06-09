@@ -78,3 +78,33 @@ def favicon():
         return send_from_directory(static, "favicon.ico")
     return "", 204
 
+
+@app.route("/sw.js")
+def service_worker():
+    """Service Worker para PWA — servido da raiz para ter escopo correto."""
+    from flask import send_from_directory, Response
+    # Tentar static/ primeiro, depois raiz do projeto
+    for pasta in [os.path.join(BUNDLE_DIR, "static"), BASE_DIR, BUNDLE_DIR]:
+        caminho = os.path.join(pasta, "sw.js")
+        if os.path.exists(caminho):
+            resp = send_from_directory(pasta, "sw.js")
+            resp.headers["Content-Type"] = "application/javascript"
+            resp.headers["Service-Worker-Allowed"] = "/"
+            resp.headers["Cache-Control"] = "no-cache"
+            return resp
+    return "", 204
+
+
+@app.route("/manifest.json")
+def manifest():
+    """Web App Manifest para PWA."""
+    from flask import send_from_directory
+    for pasta in [os.path.join(BUNDLE_DIR, "static"), BASE_DIR, BUNDLE_DIR]:
+        caminho = os.path.join(pasta, "manifest.json")
+        if os.path.exists(caminho):
+            resp = send_from_directory(pasta, "manifest.json")
+            resp.headers["Content-Type"] = "application/manifest+json"
+            resp.headers["Cache-Control"] = "no-cache"
+            return resp
+    return "", 204
+

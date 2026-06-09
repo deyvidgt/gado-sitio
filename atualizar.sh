@@ -1,29 +1,62 @@
 #!/bin/bash
 # atualizar.sh — Sítio Santo Antonio
-# Executar no PythonAnywhere após git pull:
+# Salvar em ~/atualizar.sh (pasta home do usuário)
+# 
+# Como usar - no PythonAnywhere Bash:
 #   cd ~/gado && git pull && bash ~/atualizar.sh
-# Ou colocar em ~/atualizar.sh
+#
+# Depois clicar em Reload na aba Web
 
-PASTA_GADO=~/gado
+# Detectar pasta do projeto automaticamente
+if [ -f ~/gado/app.py ]; then
+    PASTA_GADO=~/gado
+elif [ -f ~/gado-sitio/app.py ]; then
+    PASTA_GADO=~/gado-sitio
+else
+    PASTA_GADO=$(dirname "$(readlink -f "$0")")
+fi
 
 echo "=== Atualizando Sistema de Gado ==="
+echo "📂 Pasta do projeto: $PASTA_GADO"
 
-# Criar pasta templates se não existir
+# 1) Criar pasta templates/ e copiar HTMLs
 mkdir -p "$PASTA_GADO/templates"
+cp "$PASTA_GADO"/*.html "$PASTA_GADO/templates/" 2>/dev/null && \
+    echo "✅ $(ls "$PASTA_GADO"/templates/*.html 2>/dev/null | wc -l) templates copiados" || \
+    echo "⚠️  Nenhum HTML encontrado na raiz"
 
-# Mover HTMLs da raiz para templates/
-for html in "$PASTA_GADO"/*.html; do
-    [ -f "$html" ] && cp "$html" "$PASTA_GADO/templates/"
-done
-echo "✅ Templates copiados para $PASTA_GADO/templates/"
-
-# Criar pasta static se não existir
+# 2) Criar pasta static/ se não existir  
 mkdir -p "$PASTA_GADO/static"
 
-# Garantir que sw.js e manifest.json estão acessíveis
-[ -f "$PASTA_GADO/sw.js" ]       && cp "$PASTA_GADO/sw.js"       "$PASTA_GADO/static/" 2>/dev/null || true
-[ -f "$PASTA_GADO/manifest.json" ] && cp "$PASTA_GADO/manifest.json" "$PASTA_GADO/static/" 2>/dev/null || true
+# 3) Copiar manifest.json e sw.js para static/ (necessário para PWA)
+for f in manifest.json sw.js; do
+    [ -f "$PASTA_GADO/$f" ] && cp "$PASTA_GADO/$f" "$PASTA_GADO/static/$f" && \
+        echo "✅ $f copiado para static/"
+done
 
-echo "✅ Static atualizado"
+# 4) Garantir que gado-dados/ existe (pasta de dados fora do repo)
+mkdir -p ~/gado-dados/backups
+echo "✅ ~/gado-dados/ verificado"
+
+# 5) Verificar se o Excel de dados existe
+if [ -f ~/gado-dados/gado_familia.xlsx ]; then
+    echo "✅ gado_familia.xlsx encontrado em ~/gado-dados/"
+elif [ -f "$PASTA_GADO/gado_familia.xlsx" ]; then
+    echo "⚠️  Movendo gado_familia.xlsx para ~/gado-dados/ (fora do repo)..."
+    cp "$PASTA_GADO/gado_familia.xlsx" ~/gado-dados/
+    echo "✅ Dados movidos para ~/gado-dados/gado_familia.xlsx"
+else
+    echo "ℹ️  Nenhum gado_familia.xlsx encontrado - será criado no primeiro acesso"
+fi
+
+# 6) Verificar requirements
 echo ""
-echo "Agora clique em Reload na aba Web do PythonAnywhere."
+echo "📦 Verificando dependências..."
+pip install -q flask pandas openpyxl numpy bcrypt requests 2>/dev/null && \
+    echo "✅ Dependências OK"
+
+echo ""
+echo "================================================"
+echo "✅ Atualização concluída!"
+echo "👉 Agora clique em RELOAD na aba Web do PythonAnywhere"
+echo "================================================"
