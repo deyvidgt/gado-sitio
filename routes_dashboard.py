@@ -15,7 +15,6 @@ from extensions import (
     app, _agora, login_required,
     _get_dados_cache, _get_resumo_cache,
     _carregar_usuarios, fmt_brl,
-    _ultimo_alerta_wpp, _ALERTA_INTERVALO,
     _gerar_alertas, fmt_data,
 )
 

@@ -4,28 +4,23 @@
 Rotas de Compras, Gastos, Vendas, Manejo, Excluir — Sítio Santo Antonio
 Gerado automaticamente — não editar diretamente.
 """
-from flask import render_template, request, redirect, url_for, flash, session, send_file, jsonify
-import os, tempfile
+from flask import render_template, request, redirect, url_for, flash
 import pandas as pd
-from datetime import datetime, timedelta
-from db import carregar_aba, carregar_todas, inicializar, fazer_backup
+from db import carregar_aba, carregar_todas, fazer_backup
 from calculos import (
     calcular_estoque, calcular_resumo_financeiro, calcular_todos_membros,
     calcular_fluxo_caixa, calcular_cmp_ate_data, calcular_gpcab_ate_data,
     calcular_cmp, calcular_gpcab, calcular_estoque_por_membro,
     calcular_indicadores_extras, calcular_gasto_por_tipo, calcular_evolucao_cmp,
 )
-from config import (TIPOS_GASTO, TIPOS_MANEJO, MEMBROS, NOMES_MEMBROS,
-                    EMOJIS_MEMBROS, OPCOES_VISITA)
+from config import (TIPOS_GASTO, TIPOS_MANEJO, MEMBROS, NOMES_MEMBROS, COLUNAS_VENDAS)
 from extensions import (
     app, _agora, _validar_csrf, login_required,
     _get_dados_cache, _get_resumo_cache,
     salvar_linha, reescrever_aba,
-    _fazer_backup_inteligente, _limpar_backups_antigos,
-    _carregar_usuarios, _salvar_usuarios,
-    _sha256, _hash_bcrypt, _bcrypt_disponivel, _verificar_hash,
+    _limpar_backups_antigos,
     fmt_brl, fmt_data, parse_valor,
-    _gerar_alertas, _calc_anual, BASE_DIR,
+    BASE_DIR,
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -241,67 +236,75 @@ def editar_gasto(idx):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _salvar_venda(form, dados, idx=None):
-    """Processa e salva os dados vindos do formulário de vendas."""
-    import pandas as pd
-    
-    data = form.get("data", _agora().strftime("%d/%m/%Y"))
-    cabecas = int(form.get("cabecas", 0) or 0)
-    valor_total = parse_valor(form.get("valor", 0))
+    """
+    Processa e salva venda do formulário web.
+    Calcula CMP + GPCab no momento da venda e preenche TODAS as 19 colunas,
+    igual ao CLI em registros.py.
+    """
+    data         = form.get("data", _agora().strftime("%d/%m/%Y"))
+    cabecas      = int(form.get("cabecas", 0) or 0)
+    valor_total  = parse_valor(form.get("valor", 0))
     valor_arroba = parse_valor(form.get("valor_arroba", 0))
-    desc = form.get("descricao", "").strip()
-    
-    # Resgata as quantidades por membro
-    q_mae = int(form.get("qtd_mae", 0) or 0)
+    desc         = form.get("descricao", "").strip()
+
+    q_mae    = int(form.get("qtd_mae",    0) or 0)
     q_deyvid = int(form.get("qtd_deyvid", 0) or 0)
     q_nilson = int(form.get("qtd_nilson", 0) or 0)
-    
-    # Ajusta proporções se a soma não bater com o total de cabeças
+
     soma_q = q_mae + q_deyvid + q_nilson
     if soma_q == 0:
         base = cabecas // 3
         q_mae = q_deyvid = base
         q_nilson = cabecas - base * 2
     elif soma_q != cabecas:
-        fator = cabecas / soma_q
-        q_mae = round(q_mae * fator)
+        fator    = cabecas / soma_q
+        q_mae    = round(q_mae    * fator)
         q_deyvid = round(q_deyvid * fator)
         q_nilson = cabecas - q_mae - q_deyvid
-        
-    val_cab = round(valor_total / cabecas, 2) if cabecas > 0 else 0
-    
-    # Calcula os valores proporcionais a receber de cada membro
-    v_mae = round(q_mae * val_cab, 2)
+
+    val_cab  = round(valor_total / cabecas, 2) if cabecas > 0 else 0
+    v_mae    = round(q_mae    * val_cab, 2)
     v_deyvid = round(q_deyvid * val_cab, 2)
-    v_nilson = round(valor_total - v_mae - v_deyvid, 2) # Evita diferenças de centavos
-    
-    valores_linha = [
+    v_nilson = round(valor_total - v_mae - v_deyvid, 2)
+
+    # Calcular CMP e GPCab no momento da venda
+    data_ts = pd.to_datetime(data, dayfirst=True, errors="coerce")
+    cmp_v   = calcular_cmp_ate_data(dados["Compras"], data_ts) if pd.notna(data_ts) else calcular_cmp(dados["Compras"])
+    gpcab_v = calcular_gpcab_ate_data(dados["Gastos"], data_ts, dados["Compras"], dados["Vendas"], dados["Manejo"]) if pd.notna(data_ts) else calcular_gpcab(dados["Gastos"], dados["Compras"], dados["Vendas"], dados["Manejo"])
+    ctcab_v = cmp_v + gpcab_v
+
+    def custo_m(qtd):        return round(qtd * ctcab_v, 2)
+    def result_m(val, qtd):  return round(val - custo_m(qtd), 2)
+
+    c_mae    = custo_m(q_mae)
+    c_deyvid = custo_m(q_deyvid)
+    c_nilson = custo_m(q_nilson)
+    r_mae    = result_m(v_mae,    q_mae)
+    r_deyvid = result_m(v_deyvid, q_deyvid)
+    r_nilson = result_m(v_nilson, q_nilson)
+
+    # 19 colunas alinhadas com COLUNAS_VENDAS
+    linha = [
         data, cabecas, valor_total, val_cab, valor_arroba,
-        q_mae, q_deyvid, q_nilson, v_mae, v_deyvid, v_nilson, desc
+        q_mae, q_deyvid, q_nilson,
+        v_mae, v_deyvid, v_nilson,
+        c_mae, c_deyvid, c_nilson,
+        r_mae, r_deyvid, r_nilson,
+        round(ctcab_v, 2),
+        desc,
     ]
-    
+
     if idx is None:
-        # Nova Venda
-        salvar_linha("Vendas", valores_linha)
+        salvar_linha("Vendas", linha)
     else:
-        # Editar Venda Existente
         df = carregar_aba("Vendas")
-        colunas = [
-            "Data", "Qtd Cabeças", "Valor Total (R$)", "Valor/Cabeça (R$)",
-            "Valor Arroba (R$)", "Qtd Mae", "Qtd Deyvid", "Qtd Nilson",
-            "Valor Mae (R$)", "Valor Deyvid (R$)", "Valor Nilson (R$)", "Descrição"
-        ]
-        
-        # Converte a data para o formato aceito no DataFrame do Pandas
-        dt_objeto = pd.to_datetime(data, dayfirst=True, errors="coerce")
-        valores_linha[0] = dt_objeto
-        
-        for col, val in zip(colunas, valores_linha):
+        linha[0] = data_ts  # usar Timestamp para edição no DataFrame
+        for col, val in zip(COLUNAS_VENDAS, linha):
             if col in df.columns:
                 df.at[idx, col] = val
             else:
                 df[col] = None
                 df.at[idx, col] = val
-                
         reescrever_aba("Vendas", df)
 
 

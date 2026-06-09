@@ -33,7 +33,7 @@
         </div>
         <div class="form-group">
           <label>Valor da Arroba (R$/@) — opcional</label>
-          <input type="text" name="arroba" value="{{ row['Valor Arroba (R$)'] | brl | replace('R$ ','') if row and row.get('Valor Arroba (R$)') else '' }}" placeholder="ex: 330,98">
+          <input type="text" name="valor_arroba" value="{{ row['Valor Arroba (R$)'] | brl | replace('R$ ','') if row and row.get('Valor Arroba (R$)') else '' }}" placeholder="ex: 330,98">
         </div>
         <div class="form-group full">
           <label>Descrição</label>

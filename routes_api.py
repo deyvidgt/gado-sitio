@@ -18,8 +18,8 @@ from config import MEMBROS, NOMES_MEMBROS, ALERTAS_SAUDE
 from extensions import (
     app, _agora, login_required,
     _get_dados_cache, _get_resumo_cache,
-    _safe, fmt_brl, _carregar_usuarios, _salvar_usuarios,
-    _ultimo_alerta_wpp, _ALERTA_INTERVALO, BASE_DIR,
+    _safe, fmt_brl, fmt_data, _carregar_usuarios, _salvar_usuarios,
+    BASE_DIR,
 )
 
 #  APIs
