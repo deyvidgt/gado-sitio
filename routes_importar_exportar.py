@@ -9,6 +9,7 @@ import os, tempfile
 import pandas as pd
 from datetime import datetime, timedelta
 from db import carregar_aba, carregar_todas, inicializar, fazer_backup
+from exportar import exportar_relatorio_excel
 from calculos import (
     calcular_estoque, calcular_resumo_financeiro, calcular_todos_membros,
     calcular_fluxo_caixa, calcular_cmp_ate_data, calcular_gpcab_ate_data,
