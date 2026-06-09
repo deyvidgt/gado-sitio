@@ -1,16 +1,11 @@
-# ═══════════════════════════════════════════════════════
-#  .gitignore — Sítio Santo Antonio
-#  IMPORTANTE: este arquivo deve se chamar .gitignore
-#  (com ponto no início), não "gitignore"
-# ═══════════════════════════════════════════════════════
-
 # ── Banco de dados e dados sensíveis ───────────────────
-# NUNCA versionar — contém dados reais da família
+# NUNCA versionar — os dados ficam em ~/gado-dados/ (fora do repo)
 gado_familia.xlsx
 usuarios.json
 backups/
 *.bak
 fotos/
+relatorio_gado_*.xlsx
 
 # ── Cache Python ────────────────────────────────────────
 __pycache__/
@@ -38,7 +33,3 @@ desktop.ini
 # ── Logs e temporários ──────────────────────────────────
 *.log
 *.tmp
-relatorio_gado_*.xlsx
-
-# ── Relatórios gerados (não são código) ─────────────────
-relatorio_gado_*.xlsx

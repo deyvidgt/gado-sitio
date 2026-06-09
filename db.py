@@ -2,6 +2,15 @@
 # -*- coding: utf-8 -*-
 """
 Camada de acesso a dados — leitura, escrita e backup do Excel
+
+IMPORTANTE — onde ficam os dados:
+  Os dados (gado_familia.xlsx, usuarios.json, backups/) ficam em ~/gado-dados/,
+  FORA do repositório Git. Assim o git pull nunca mais apaga seus dados.
+
+  Hierarquia de busca do DATA_DIR:
+    1. ~/gado-dados/          → pasta permanente fora do Git (produção)
+    2. Pasta do executável    → modo .exe (Windows)
+    3. Pasta do script        → desenvolvimento local
 """
 
 import os, sys
@@ -10,11 +19,40 @@ import pandas as pd
 from datetime import datetime
 from openpyxl import Workbook, load_workbook
 
-# Pasta de dados fica sempre ao lado do .exe / script, nunca no bundle temporário
-if getattr(sys, "frozen", False):
-    DATA_DIR = os.path.dirname(sys.executable)
-else:
-    DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def _resolver_data_dir() -> str:
+    """
+    Resolve onde ficam os dados, independente de como o programa foi iniciado.
+
+    Prioridade:
+      1. Variável de ambiente GADO_DATA_DIR   (configuração manual)
+      2. ~/gado-dados/                         (padrão PythonAnywhere — fora do Git)
+      3. Pasta do executável (.exe)             (Windows compilado)
+      4. Pasta do script atual                  (desenvolvimento)
+    """
+    # 1) Variável de ambiente explícita (útil para testes e outras hospedagens)
+    if os.environ.get("GADO_DATA_DIR"):
+        pasta = os.path.expanduser(os.environ["GADO_DATA_DIR"])
+        os.makedirs(pasta, exist_ok=True)
+        return pasta
+
+    # 2) ~/gado-dados/ — pasta permanente fora do repositório Git
+    #    Funciona no PythonAnywhere e em qualquer servidor Linux/Mac
+    pasta_permanente = os.path.expanduser("~/gado-dados")
+    if os.path.isdir(pasta_permanente):
+        return pasta_permanente
+
+    # 3) Modo .exe (PyInstaller/Windows)
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+
+    # 4) Fallback: pasta do próprio script (desenvolvimento local)
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+# DATA_DIR é onde ficam gado_familia.xlsx, usuarios.json e backups/
+# É DIFERENTE da pasta do código — isso protege os dados do git pull
+DATA_DIR = _resolver_data_dir()
 
 from config import (
     ARQUIVO_DADOS,
@@ -22,8 +60,15 @@ from config import (
     COLUNAS_VENDAS, COLUNAS_MANEJO, COLUNAS_VISITAS,
 )
 
-# Caminho completo do arquivo de dados (usado em todas as funções)
+# Caminho completo do arquivo de dados
 ARQUIVO_PATH = os.path.join(DATA_DIR, ARQUIVO_DADOS)
+
+# Garantir que a pasta de dados existe (cria ~/gado-dados/ se necessário)
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# Log no boot para confirmar onde estão os dados
+print(f"📂 Dados em: {DATA_DIR}", flush=True)
+print(f"📊 Arquivo:  {ARQUIVO_PATH}", flush=True)
 
 
 # ── Backup ────────────────────────────────────────────────────────────────────
@@ -41,8 +86,9 @@ def fazer_backup() -> str | None:
 # ── Inicialização ─────────────────────────────────────────────────────────────
 
 def inicializar():
-    """Cria o arquivo de dados com todas as abas se não existir.
-       Se o arquivo já existe mas não tem a aba Visitas, adiciona sem perder dados.
+    """
+    Cria o arquivo de dados em DATA_DIR se não existir.
+    Se já existe mas falta a aba Visitas, adiciona sem perder dados.
     """
     if not os.path.exists(ARQUIVO_PATH):
         wb = Workbook()
@@ -65,10 +111,10 @@ def inicializar():
 
         wb.create_sheet("Resumo")
         wb.save(ARQUIVO_PATH)
-        print(f"✅ Arquivo de dados criado: {ARQUIVO_DADOS}")
+        print(f"✅ Arquivo de dados criado: {ARQUIVO_PATH}")
         return
 
-    # Arquivo já existe — verificar se a aba Visitas precisa ser criada
+    # Arquivo já existe — verificar/migrar aba Visitas
     try:
         wb = load_workbook(ARQUIVO_PATH)
         if "Visitas" not in wb.sheetnames:
@@ -77,7 +123,6 @@ def inicializar():
             wb.save(ARQUIVO_PATH)
             print("✅ Aba 'Visitas' criada no arquivo existente.")
         else:
-            # Migração: adicionar colunas novas ao cabeçalho se ainda não existirem
             ws_vis = wb["Visitas"]
             header = [cell.value for cell in ws_vis[1]]
             novas = [c for c in COLUNAS_VISITAS if c not in header]
@@ -98,11 +143,9 @@ def carregar_aba(aba: str) -> pd.DataFrame:
     try:
         df = pd.read_excel(ARQUIVO_PATH, sheet_name=aba)
         if "Data" in df.columns:
-            # format="mixed" aceita DD/MM/YYYY e YYYY-MM-DD sem inversão de mês/dia
             df["Data"] = pd.to_datetime(
                 df["Data"], dayfirst=True, format="mixed", errors="coerce"
             )
-        # Remover linhas totalmente vazias
         df = df.dropna(how="all").reset_index(drop=True)
         return df
     except Exception:
@@ -120,17 +163,10 @@ def carregar_todas() -> dict[str, pd.DataFrame]:
 # ── Escrita ───────────────────────────────────────────────────────────────────
 
 def _preparar_valor(v):
-    """Converte tipos Python/Pandas para valores compatíveis com Excel.
-
-    Trata o caso especial de datas ISO (YYYY-MM-DD) vindas de
-    inputs HTML <input type='date'> — sem conversão elas seriam
-    salvas como string e lidas de volta com mês/dia invertidos
-    quando dayfirst=True está ativo.
-    """
+    """Converte tipos Python/Pandas para valores compatíveis com Excel."""
     if isinstance(v, pd.Timestamp):
         return v.strftime("%d/%m/%Y")
 
-    # String no formato ISO YYYY-MM-DD (formulário HTML) → converter para DD/MM/YYYY
     if isinstance(v, str) and len(v) >= 10 and v[4:5] == "-" and v[7:8] == "-":
         try:
             return datetime.strptime(v[:10], "%Y-%m-%d").strftime("%d/%m/%Y")
@@ -156,7 +192,6 @@ def reescrever_aba(aba: str, df: pd.DataFrame):
     wb = load_workbook(ARQUIVO_PATH)
     ws = wb[aba]
 
-    # Limpar linhas de dados (mantém cabeçalho na linha 1)
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
         for cell in row:
             cell.value = None

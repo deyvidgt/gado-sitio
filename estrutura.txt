@@ -1,5 +1,5 @@
 Sistema de Gestão de Gado — Sítio Santo Antonio
-Versão 3.3 | Família: Geane, Deyvid e Nilson
+Versão 3.5 | Família: Geane, Deyvid e Nilson
 ================================================
 
 programa sitio/                          ← pasta raiz do projeto
@@ -47,7 +47,7 @@ programa sitio/                          ← pasta raiz do projeto
 │   └── manifest.json                    ← manifesto PWA (instalar como app)
 │
 ├── backups/                             ← backups automáticos do Excel
-│   └── backup_YYYYMMDD_HHMMSS.xlsx      ← criado antes de cada alteração
+│   └── backup_YYYYMMDD_HHMMSS	         ← criado antes de cada alteração
 │                                           (máximo 15 arquivos, os mais antigos
 │                                            são apagados automaticamente)
 │
@@ -57,6 +57,15 @@ programa sitio/                          ← pasta raiz do projeto
 ├── build.bat                            ← script para compilar o .exe (Windows)
 ├── iniciar.bat                          ← atalho para iniciar o servidor
 ├── migrar_gastos.py                     ← utilitário de migração de dados legados
+├── alertas_whatsapp.py
+├── routes_api.py
+├── routes_auth.py
+├── routes_dashboard.py
+├── routes_importar_exportar.py
+├── routes_registros.py
+├── routes_relatorios.py
+├── routes_usuarios.py
+├── routes_visitas.py
 ├── gitignore                           ← arquivos ignorados pelo Git
 └── .gitignore                           ← arquivos ignorados pelo Git
 
