@@ -1,21 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-app.py — Sítio Santo Antonio v3.4
-==================================
-Ponto de entrada do servidor Flask.
-Toda a lógica foi dividida em módulos:
-
-  extensions.py              → app Flask, cache, CSRF, auth helpers, filtros
-  routes_dashboard.py        → dashboard principal + alertas WhatsApp
-  routes_api.py              → APIs JSON (fluxo, chuvas, cotações, WhatsApp...)
-  routes_registros.py        → CRUD compras, gastos, vendas, manejo, excluir
-  routes_importar_exportar.py→ importar Excel antigo, exportar relatório, backup
-  routes_usuarios.py         → configurações, senhas, usuários
-  routes_visitas.py          → visitas ao sítio
-  routes_relatorios.py       → página de relatórios + PDF
-
-Para editar uma funcionalidade, abra o módulo correspondente — não este arquivo.
+app.py — Sítio Santo Antonio v3.5
 """
 
 import sys, os
@@ -30,31 +16,34 @@ else:
 
 sys.path.insert(0, BUNDLE_DIR)
 
-# ── 1) Criar app e helpers compartilhados ─────────────────────────────────────
-from extensions import app  # noqa: F401 — importa e configura o app Flask
+# ── 1) App e helpers compartilhados ──────────────────────────────────────────
+from extensions import app  # noqa: F401
 
-# ── 2) Rotas de autenticação (login/logout precisam existir antes dos outros) ──
+# ── 2) Autenticação ──────────────────────────────────────────────────────────
 from routes_auth import *   # noqa: F401, F403
 
-# ── 3) Dashboard ──────────────────────────────────────────────────────────────
+# ── 3) Dashboard ─────────────────────────────────────────────────────────────
 from routes_dashboard import *  # noqa: F401, F403
 
-# ── 4) APIs JSON ──────────────────────────────────────────────────────────────
+# ── 4) APIs JSON (base) ──────────────────────────────────────────────────────
 from routes_api import *        # noqa: F401, F403
 
-# ── 5) CRUD — Compras, Gastos, Vendas, Manejo ─────────────────────────────────
+# ── 4b) APIs extras (calendário, whatsapp config) ────────────────────────────
+from routes_api_extras import * # noqa: F401, F403
+
+# ── 5) CRUD ──────────────────────────────────────────────────────────────────
 from routes_registros import *  # noqa: F401, F403
 
-# ── 6) Importar / Exportar / Backup ───────────────────────────────────────────
+# ── 6) Importar / Exportar / Backup ──────────────────────────────────────────
 from routes_importar_exportar import *  # noqa: F401, F403
 
-# ── 7) Usuários e Configurações ───────────────────────────────────────────────
+# ── 7) Usuários e Configurações ──────────────────────────────────────────────
 from routes_usuarios import *   # noqa: F401, F403
 
-# ── 8) Visitas ao Sítio ───────────────────────────────────────────────────────
+# ── 8) Visitas ao Sítio ──────────────────────────────────────────────────────
 from routes_visitas import *    # noqa: F401, F403
 
-# ── 9) Relatórios e PDF ───────────────────────────────────────────────────────
+# ── 9) Relatórios e PDF ──────────────────────────────────────────────────────
 from routes_relatorios import * # noqa: F401, F403
 
 # ── Inicialização ─────────────────────────────────────────────────────────────
@@ -83,7 +72,7 @@ if __name__ == "__main__":
 
     threading.Timer(1.2, abrir_browser).start()
 
-    print("\n🐄 Sítio Santo Antonio — Sistema de Gado v3.4")
+    print("\n🐄 Sítio Santo Antonio — Sistema de Gado v3.5")
     print(f"   Local:  http://localhost:{PORTA}")
     if url_publica:
         print(f"   Ngrok:  {url_publica}")
