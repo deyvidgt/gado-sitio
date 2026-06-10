@@ -363,7 +363,7 @@ def api_ultima_visita():
         "grama":          _str(row.get("Grama/Pastagem")),
         "corrego":        _str(row.get("Córrego/Água")),
         "choveu":         _str(row.get("Choveu")),
-        "chuva_mm":       float(row.get("Chuva mm") or 0),
+        "chuva_mm":       _safe(row.get("Chuva mm"), 0.0),
         "sugestoes":      _str(row.get("Sugestões")),
     })
 
