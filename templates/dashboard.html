@@ -761,10 +761,12 @@ document.addEventListener("themeChanged", () => {
   if (_calData) renderMiniCal(_calData);
 });
 
-/* ── Init ── */
-loadUltimaVisita();
-loadCalendario();
-loadWppStatus();
+/* ── Init (bloco 1) — aguarda DOM pronto ── */
+document.addEventListener("DOMContentLoaded", () => {
+  loadUltimaVisita();
+  loadCalendario();
+  loadWppStatus();
+});
 
 /* ── Fluxo + Membros ── */
 async function loadCharts() {
@@ -1087,8 +1089,10 @@ document.addEventListener("themeChanged", () => {
   if (chartChuvas) loadChuvas();
 });
 
-/* ── Init ── */
-loadCharts();
-loadChuvas();
+/* ── Init (bloco 2) — aguarda DOM pronto ── */
+document.addEventListener("DOMContentLoaded", () => {
+  loadCharts();
+  loadChuvas();
+});
 </script>
 {% endblock %}
