@@ -342,6 +342,7 @@
 
 {% block scripts %}
 <script>
+(function () {  /* IIFE — isola escopo, evita conflito com variáveis globais do base.html */
   const estoque = {{ estoque }};
   const inpGado = document.getElementById("inp-gado");
   const valContado  = document.getElementById("val-contado");
@@ -399,6 +400,7 @@
         this.value === "sim" ? "block" : "none";
     });
   });
+})();  /* fim IIFE */
 </script>
 {% endblock %}
 {% endblock %}

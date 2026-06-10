@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#1a3a1f">
   <title>{% block title %}Gado — Sítio Santo Antonio{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
-  <link rel="apple-touch-icon" href="/static/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icon192.png">
   <link rel="manifest" href="/manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -365,12 +365,15 @@ if ("serviceWorker" in navigator) {
 // ── Banner "instalar app" (aparece 1 vez) ────────────────────────────────────
 let _deferredInstall = null;
 window.addEventListener("beforeinstallprompt", e => {
-  e.preventDefault();
-  _deferredInstall = e;
-  // Só mostrar se nunca instalou
-  if (!localStorage.getItem("pwa-installed") && !localStorage.getItem("pwa-dismissed")) {
+  // Só prevenir o mini-infobar padrão se formos mostrar nosso banner
+  const jaInstalou   = localStorage.getItem("pwa-installed");
+  const jaDismissed  = localStorage.getItem("pwa-dismissed");
+  if (!jaInstalou && !jaDismissed) {
+    e.preventDefault();   // bloqueia o prompt automático do Chrome
+    _deferredInstall = e;
     setTimeout(() => mostrarBannerInstall(), 3000);
   }
+  // Se já instalou/dispensou: não chama preventDefault → Chrome não mostra o aviso
 });
 window.addEventListener("appinstalled", () => {
   localStorage.setItem("pwa-installed", "1");
