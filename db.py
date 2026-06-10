@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from __future__ import annotations  # compatibilidade Python 3.9+
 """
 Camada de acesso a dados — leitura, escrita e backup do Excel
 

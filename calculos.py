@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from __future__ import annotations  # compatibilidade Python 3.9+
 """
 Motor de cálculos financeiros do rebanho
 Versão 3.1 — correções de bugs e melhorias de desempenho
