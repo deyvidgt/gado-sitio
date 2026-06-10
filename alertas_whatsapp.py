@@ -45,6 +45,7 @@ except Exception as e:
     logging.error(f"Erro ao importar módulos do sistema: {e}")
     sys.exit(1)
 
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def fmt_r(v):
@@ -52,6 +53,7 @@ def fmt_r(v):
         return f"R$ {float(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     except Exception:
         return "—"
+
 
 def carregar_usuarios() -> dict:
     caminho = BASE_DIR / "usuarios.json"
@@ -61,6 +63,7 @@ def carregar_usuarios() -> dict:
         except Exception:
             pass
     return {}
+
 
 def enviar_whatsapp(telefone: str, apikey: str, msg: str) -> bool:
     """Envia mensagem via CallMeBot. Retorna True se enviou com sucesso."""
@@ -82,13 +85,144 @@ def enviar_whatsapp(telefone: str, apikey: str, msg: str) -> bool:
         logging.error(f"Erro ao enviar WhatsApp para {telefone[:6]}***: {e}")
         return False
 
-# ── Montagem dos alertas ──────────────────────────────────────────────────────
+
+def _str_campo(v, default="—"):
+    """Converte valor de célula para string legível, tratando NaN/None."""
+    import pandas as pd
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return default
+    s = str(v).strip()
+    return s if s else default
+
+
+# ── Mensagem de NOVA VISITA (disparada ao registrar) ─────────────────────────
+
+def montar_msg_nova_visita(row: dict, estoque_esperado: int) -> str:
+    """
+    Monta mensagem WhatsApp completa ao registrar uma nova visita.
+    Detalha tudo: quem foi, gado, pastagem, água, sal, sugestões.
+    """
+    import pandas as pd
+
+    def _v(campo, default="—"):
+        val = row.get(campo)
+        return _str_campo(val, default)
+
+    responsavel = _v("Responsável", "?")
+    data_vis    = row.get("Data")
+    if isinstance(data_vis, pd.Timestamp) and pd.notna(data_vis):
+        data_str = data_vis.strftime("%d/%m/%Y")
+    elif isinstance(data_vis, str) and data_vis:
+        data_str = data_vis
+    else:
+        data_str = datetime.now().strftime("%d/%m/%Y")
+
+    gado_cnt  = int(row.get("Gado Contado")  or 0)
+    gado_esp  = int(row.get("Gado Esperado") or estoque_esperado)
+    gado_falt = int(row.get("Gado Faltando") or 0)
+
+    sal      = _v("Sal/Ração",    "OK")
+    prot     = _v("Proteinado",   "OK")
+    mato     = _v("Mato/Vegetação", "Limpo")
+    grama    = _v("Grama/Pastagem", "Boa")
+    corrego  = _v("Córrego/Água", "Normal")
+    quintal  = _v("Quintal",      "OK")
+    cisterna = _v("Cisterna",     "OK")
+    choveu   = _v("Choveu",       "Não")
+    chuva_mm = float(row.get("Chuva mm") or 0)
+    obs      = _v("Observações",  "")
+    sug      = _v("Sugestões",    "")
+
+    # ── Ícones de status ──────────────────────────────────────────────────────
+    def _icone_nivel(v, ok_vals, warn_vals):
+        if v in ok_vals:  return "✅"
+        if v in warn_vals: return "⚠️"
+        return "🚨"
+
+    i_sal  = _icone_nivel(sal,     ["OK"],             ["Meio Saco", "Baixo"])
+    i_prot = _icone_nivel(prot,    ["OK"],             ["Meio Saco", "Baixo"])
+    i_gram = _icone_nivel(grama,   ["Boa"],            ["Regular", "Amarelando/Secando"])
+    i_corr = _icone_nivel(corrego, ["Normal"],         ["Baixo"])
+    i_cist = _icone_nivel(cisterna,["OK"],             ["Baixo/Secando"])
+    i_mato = _icone_nivel(mato,    ["Limpo"],          ["Precisa Capinar"])
+    i_quin = _icone_nivel(quintal, ["OK"],             [])
+
+    # ── Gado ─────────────────────────────────────────────────────────────────
+    if gado_cnt > 0:
+        if gado_falt > 0:
+            gado_info = f"🚨 FALTANDO {gado_falt} cab! (contado: {gado_cnt} / esperado: {gado_esp})"
+        elif gado_cnt > gado_esp:
+            extra = gado_cnt - gado_esp
+            gado_info = f"✅ {gado_cnt} cab (+ {extra} a mais que esperado)"
+        else:
+            gado_info = f"✅ {gado_cnt}/{gado_esp} cab — conferido"
+    else:
+        gado_info = "➖ Gado não contado"
+
+    # ── Chuva ────────────────────────────────────────────────────────────────
+    if choveu == "Sim":
+        if chuva_mm >= 50:
+            chuva_info = f"🌧️ Chuva forte: {chuva_mm:.0f}mm"
+        elif chuva_mm >= 15:
+            chuva_info = f"🌦️ Boa chuva: {chuva_mm:.0f}mm"
+        elif chuva_mm > 0:
+            chuva_info = f"🌂 Chuva leve: {chuva_mm:.0f}mm"
+        else:
+            chuva_info = "🌧️ Choveu (mm não informado)"
+    else:
+        chuva_info = "☀️ Sem chuva"
+
+    # ── Sugestões como lista (separadas por " | ") ────────────────────────────
+    sugestoes_fmt = ""
+    if sug and sug != "—":
+        itens = [s.strip() for s in sug.split("|") if s.strip()]
+        if itens:
+            sugestoes_fmt = "\n📌 *Sugestões:*\n" + "\n".join(f"  {it}" for it in itens)
+
+    # ── Observações ───────────────────────────────────────────────────────────
+    obs_fmt = f"\n📝 *Obs:* {obs}" if obs and obs != "—" else ""
+
+    # ── Montagem final ────────────────────────────────────────────────────────
+    linhas = [
+        f"🐄 *Sítio Santo Antonio*",
+        f"🏡 *Nova visita registrada!*",
+        f"",
+        f"👤 *Quem visitou:* {responsavel}",
+        f"📅 *Data:* {data_str}",
+        f"",
+        f"🐄 *Gado:* {gado_info}",
+        f"",
+        f"🌾 *Condições do sítio:*",
+        f"  {i_sal} Sal/Ração: {sal}",
+        f"  {i_prot} Proteinado: {prot}",
+        f"  {i_gram} Pastagem: {grama}",
+        f"  {i_corr} Água/Córrego: {corrego}",
+        f"  {i_cist} Cisterna: {cisterna}",
+        f"  {i_mato} Vegetação/Mato: {mato}",
+        f"  {i_quin} Quintal: {quintal}",
+        f"  {chuva_info}",
+    ]
+
+    if sugestoes_fmt:
+        linhas.append(sugestoes_fmt)
+    if obs_fmt:
+        linhas.append(obs_fmt)
+
+    linhas += [
+        f"",
+        f"_Sistema de Gestão de Gado — Sítio SA_",
+    ]
+    return "\n".join(linhas)
+
+
+# ── Montagem dos alertas diários ──────────────────────────────────────────────
 
 def montar_alertas() -> list[str]:
     """
     Verifica todas as condições e retorna lista de linhas de alerta.
     Retorna lista vazia se não há nada urgente.
     """
+    import pandas as pd
     hoje = datetime.now()
     alertas = []
 
@@ -103,9 +237,8 @@ def montar_alertas() -> list[str]:
         logging.error(f"Erro ao carregar dados: {e}")
         return [f"❌ Erro ao ler dados do sistema: {e}"]
 
-    # ── 1) Alertas de manejo (vacinação, vermifugação, pesagem) ──────────────
+    # ── 1) Alertas de manejo ─────────────────────────────────────────────────
     for tipo, intervalo_dias in ALERTAS_SAUDE.items():
-        import pandas as pd
         if df_m.empty or "Tipo" not in df_m.columns:
             alertas.append(f"📋 {tipo}: nenhum registro encontrado!")
             continue
@@ -116,7 +249,7 @@ def montar_alertas() -> list[str]:
         ultima_ts = df_t["Data"].dropna().max()
         if pd.isna(ultima_ts):
             continue
-        dias_passados = (hoje - ultima_ts.to_pydatetime()).days
+        dias_passados  = (hoje - ultima_ts.to_pydatetime()).days
         dias_restantes = intervalo_dias - dias_passados
         if dias_passados > intervalo_dias:
             alertas.append(
@@ -130,103 +263,143 @@ def montar_alertas() -> list[str]:
                 f"   Prevista para: {(hoje + timedelta(days=dias_restantes)).strftime('%d/%m/%Y')}"
             )
 
-    # ── 2) Alertas da última visita ───────────────────────────────────────────
-    import pandas as pd
+    # ── 2) Informações da última visita (detalhadas) ─────────────────────────
     if not df_vis.empty and "Data" in df_vis.columns:
-        df_vis_s = df_vis.sort_values("Data", ascending=False, na_position="last")
+        df_vis_s  = df_vis.sort_values("Data", ascending=False, na_position="last")
         ultima_vis = df_vis_s.iloc[0]
 
-        # Gado faltando
-        faltando = int(ultima_vis.get("Gado Faltando") or 0)
-        if faltando > 0:
-            data_vis = ultima_vis.get("Data")
-            data_str = data_vis.strftime("%d/%m/%Y") if pd.notna(data_vis) else "?"
-            alertas.append(
-                f"🚨 GADO FALTANDO: {faltando} cabeça(s) não localizada(s)\n"
-                f"   (última visita em {data_str})"
-            )
+        ultima_data = df_vis_s["Data"].dropna().max()
+        dias_sem_visita = (hoje - ultima_data.to_pydatetime()).days if pd.notna(ultima_data) else 999
+
+        resp_ult   = _str_campo(ultima_vis.get("Responsável"), "?")
+        data_ult   = ultima_data.strftime("%d/%m/%Y") if pd.notna(ultima_data) else "?"
+
+        # Sempre incluir resumo da última visita no alerta diário
+        gado_cnt  = int(ultima_vis.get("Gado Contado")  or 0)
+        gado_esp  = int(ultima_vis.get("Gado Esperado") or 0)
+        gado_falt = int(ultima_vis.get("Gado Faltando") or 0)
+
+        sal      = _str_campo(ultima_vis.get("Sal/Ração"),    "OK")
+        prot     = _str_campo(ultima_vis.get("Proteinado"),   "OK")
+        grama    = _str_campo(ultima_vis.get("Grama/Pastagem"), "Boa")
+        corrego  = _str_campo(ultima_vis.get("Córrego/Água"), "Normal")
+        cisterna = _str_campo(ultima_vis.get("Cisterna"),     "OK")
+        choveu   = _str_campo(ultima_vis.get("Choveu"),       "Não")
+        chuva_mm = float(ultima_vis.get("Chuva mm") or 0)
+
+        # Linha de resumo da visita
+        vis_header = (
+            f"🏡 *Última visita:* {data_ult} por {resp_ult} "
+            f"({dias_sem_visita}d atrás)"
+        )
+        alertas.append(vis_header)
+
+        # Gado
+        if gado_falt > 0:
+            alertas.append(f"  🚨 GADO FALTANDO: {gado_falt} cab! (contado {gado_cnt} / esperado {gado_esp})")
+        elif gado_cnt > 0:
+            alertas.append(f"  ✅ Gado: {gado_cnt}/{gado_esp} cab conferidos")
 
         # Sal/Ração
-        sal = str(ultima_vis.get("Sal/Ração") or "OK")
         if sal in ("Vazio", "Baixo", "Meio Saco"):
             icone = "🚨" if sal == "Vazio" else "⚠️"
-            alertas.append(f"{icone} Sal/Ração: {sal} — reabastecer!")
+            alertas.append(f"  {icone} Sal/Ração: {sal} — reabastecer!")
 
         # Proteinado
-        prot = str(ultima_vis.get("Proteinado") or "OK")
         if prot in ("Vazio", "Baixo", "Meio Saco"):
             icone = "🚨" if prot == "Vazio" else "⚠️"
-            alertas.append(f"{icone} Proteinado: {prot} — reabastecer!")
+            alertas.append(f"  {icone} Proteinado: {prot} — reabastecer!")
 
         # Córrego/Água
-        corrego = str(ultima_vis.get("Córrego/Água") or "Normal")
         if corrego in ("Seco", "Baixo"):
             icone = "🚨" if corrego == "Seco" else "💧"
-            alertas.append(f"{icone} Água/Córrego: {corrego} — verificar urgente!")
+            alertas.append(f"  {icone} Água/Córrego: {corrego} — verificar urgente!")
 
-        # Grama/Pastagem
-        grama = str(ultima_vis.get("Grama/Pastagem") or "Boa")
+        # Pastagem
         if grama in ("Escassa", "Amarelando/Secando"):
-            alertas.append(f"🌾 Pastagem: {grama} — considerar rotação de pasto.")
+            alertas.append(f"  🌾 Pastagem: {grama} — monitorar.")
 
         # Cisterna
-        cisterna = str(ultima_vis.get("Cisterna") or "OK")
         if cisterna in ("Vazia", "Baixo/Secando"):
             icone = "🚨" if cisterna == "Vazia" else "🪣"
-            alertas.append(f"{icone} Cisterna: {cisterna} — reabastecer!")
+            alertas.append(f"  {icone} Cisterna: {cisterna} — reabastecer!")
+
+        # Chuva
+        if choveu == "Sim" and chuva_mm > 0:
+            alertas.append(f"  🌧️ Chuva registrada: {chuva_mm:.0f}mm")
 
         # Dias sem visita
-        ultima_data = df_vis_s["Data"].dropna().max()
-        if pd.notna(ultima_data):
-            dias_sem_visita = (hoje - ultima_data.to_pydatetime()).days
-            if dias_sem_visita >= 7:
-                alertas.append(
-                    f"📅 Sem visita há {dias_sem_visita} dia(s)\n"
-                    f"   Última: {ultima_data.strftime('%d/%m/%Y')} — hora de visitar o sítio!"
-                )
+        if dias_sem_visita >= 7:
+            alertas.append(
+                f"📅 Sem visita há {dias_sem_visita} dia(s) — hora de ir ao sítio!"
+            )
     else:
         alertas.append("📅 Nenhuma visita registrada — registre a primeira visita ao sítio.")
 
-    # ── 3) Resumo financeiro rápido (só se houver dados) ─────────────────────
+    # ── 3) Resumo financeiro rápido ───────────────────────────────────────────
     try:
         if not df_c.empty:
             r = calcular_resumo_financeiro(df_c, df_g, df_v, df_m)
-            estoque = r["estoque"]
             resultado = r["resultado_realizado"]
-
             if resultado < 0:
                 alertas.append(
                     f"📉 Resultado realizado negativo: {fmt_r(resultado)}\n"
                     f"   Break-even do estoque: {fmt_r(r['break_even'])}/cabeça"
                 )
-            else:
-                # Info positiva — só incluir se não há outros alertas críticos
-                pass  # não encher a mensagem com info quando há urgências
     except Exception:
         pass
 
     return alertas
 
 
-def montar_mensagem(alertas: list[str]) -> str:
+def montar_mensagem_alertas(alertas: list[str]) -> str:
     hoje_str = datetime.now().strftime("%d/%m/%Y")
     linhas = [
         f"🐄 *Sítio Santo Antonio*",
-        f"📅 Alertas do dia {hoje_str}",
-        "",
+        f"📅 *Relatório diário — {hoje_str}*",
+        f"",
     ]
     for a in alertas:
         linhas.append(a)
-
     linhas += [
-        "",
-        f"_Total: {len(alertas)} alerta(s)_",
-        "_Sistema de Gestão de Gado_",
+        f"",
+        f"_Total: {len(alertas)} item(s)_",
+        f"_Sistema de Gestão de Gado_",
     ]
     return "\n".join(linhas)
 
 
-# ── Execução principal ────────────────────────────────────────────────────────
+# Alias para compatibilidade com chamadas antigas
+def montar_mensagem(alertas):
+    return montar_mensagem_alertas(alertas)
+
+
+# ── Enviar para toda a família ────────────────────────────────────────────────
+
+def enviar_para_familia(msg: str, excluir_usuario: str = "") -> int:
+    """
+    Envia msg para todos os usuários com WhatsApp configurado.
+    excluir_usuario: pular esse usuário (ex: quem acabou de registrar).
+    Retorna número de envios bem-sucedidos.
+    """
+    usuarios = carregar_usuarios()
+    enviados = 0
+    for nome, info in usuarios.items():
+        if excluir_usuario and nome == excluir_usuario:
+            continue
+        cfg      = info.get("whatsapp", {})
+        telefone = cfg.get("telefone", "").strip()
+        apikey   = cfg.get("apikey",   "").strip()
+        ativo    = cfg.get("alertas_ativos", True)
+        if not telefone or not apikey or not ativo:
+            continue
+        ok = enviar_whatsapp(telefone, apikey, msg)
+        if ok:
+            enviados += 1
+    return enviados
+
+
+# ── Execução principal (alertas diários) ─────────────────────────────────────
 
 def main():
     logging.info("=" * 50)
@@ -240,30 +413,10 @@ def main():
         return
 
     logging.info(f"{len(alertas)} alerta(s) encontrado(s)")
-    msg = montar_mensagem(alertas)
+    msg      = montar_mensagem_alertas(alertas)
+    enviados = enviar_para_familia(msg)
 
-    # Enviar para todos os usuários com WhatsApp configurado
-    usuarios = carregar_usuarios()
-    enviados = 0
-    for nome, info in usuarios.items():
-        cfg = info.get("whatsapp", {})
-        telefone = cfg.get("telefone", "").strip()
-        apikey   = cfg.get("apikey",   "").strip()
-        ativo    = cfg.get("alertas_ativos", True)
-
-        if not telefone or not apikey:
-            logging.info(f"  {nome}: WhatsApp não configurado — pulando")
-            continue
-        if not ativo:
-            logging.info(f"  {nome}: alertas pausados — pulando")
-            continue
-
-        logging.info(f"  Enviando para {nome} ({telefone[:6]}***)")
-        ok = enviar_whatsapp(telefone, apikey, msg)
-        if ok:
-            enviados += 1
-
-    logging.info(f"Concluído: {enviados}/{len(usuarios)} mensagem(s) enviada(s)")
+    logging.info(f"Concluído: {enviados} mensagem(s) enviada(s)")
     logging.info("=" * 50)
 
 

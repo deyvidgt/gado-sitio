@@ -17,7 +17,7 @@ para atualizaçoes
 cmd
 git add .
 
-git commit -m "atualizacao 3.29"
+git commit -m "atualizacao 3.39"
 
 git push
 

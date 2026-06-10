@@ -3,7 +3,7 @@
 """
 Rotas de Visitas ao Sítio — Sítio Santo Antonio
 """
-from flask import render_template, request, redirect, url_for, flash
+from flask import render_template, request, redirect, url_for, flash, session
 from db import carregar_aba, fazer_backup
 from calculos import calcular_estoque
 from config import MEMBROS, NOMES_MEMBROS
@@ -29,8 +29,7 @@ def _gerar_sugestoes_visita(f, estoque_esperado):
     sal = f.get("sal_racao", "OK")
     if sal == "Baixo":       sug.append("🧂 Sal/Ração baixo — reabastecer nos próximos 2 a 3 dias.")
     elif sal in ("Vazio", "Meio Saco"):
-        msg = "🚨 Sal/Ração ESGOTADO — abastecer com urgência!" if sal == "Vazio" else "🧂 Sal/Ração no fim — reabastecer em breve."
-        sug.append(msg)
+        sug.append("🚨 Sal/Ração ESGOTADO — abastecer com urgência!" if sal == "Vazio" else "🧂 Sal/Ração no fim — reabastecer em breve.")
 
     prot = f.get("proteinado", "OK")
     if prot == "Baixo":      sug.append("🟡 Proteinado baixo — repor em breve.")
@@ -74,6 +73,32 @@ def _gerar_sugestoes_visita(f, estoque_esperado):
     return " | ".join(sug)
 
 
+# ── Notificação WhatsApp ao registrar visita ──────────────────────────────────
+
+def _notificar_visita_whatsapp(row_dict: dict, estoque_esperado: int,
+                                usuario_logado: str):
+    """
+    Dispara notificação WhatsApp para toda a família informando que
+    uma nova visita foi registrada, com todos os detalhes.
+    Roda em background thread para não travar a resposta HTTP.
+    """
+    import threading
+
+    def _enviar():
+        try:
+            from alertas_whatsapp import montar_msg_nova_visita, enviar_para_familia
+            msg = montar_msg_nova_visita(row_dict, estoque_esperado)
+            enviados = enviar_para_familia(msg)
+            app.logger.info(
+                f"Notificação de visita enviada para {enviados} destinatário(s) "
+                f"(registrado por: {usuario_logado})"
+            )
+        except Exception as e:
+            app.logger.error(f"Erro ao notificar visita via WhatsApp: {e}")
+
+    threading.Thread(target=_enviar, daemon=True).start()
+
+
 # ── Listar visitas ────────────────────────────────────────────────────────────
 
 @app.route("/visitas")
@@ -98,7 +123,7 @@ def visitas():
             if v == "Vazio":   alertas.append(("danger",  f"🚨 {label} ESGOTADO conforme última visita!"))
             elif v == "Baixo": alertas.append(("warning", f"⚠️ {label} está baixo — repor em breve."))
         corrego = str(ultima.get("Córrego/Água", "Normal") or "Normal")
-        if corrego == "Seco":   alertas.append(("danger",  "🚨 Córrego/bebedouro SECO na última visita!"))
+        if corrego == "Seco":    alertas.append(("danger",  "🚨 Córrego/bebedouro SECO na última visita!"))
         elif corrego == "Baixo": alertas.append(("warning", "💧 Água no córrego estava baixa — verificar."))
 
     rows = []
@@ -150,7 +175,6 @@ def nova_visita():
         obs       = f.get("observacoes", "").strip()
         sugestoes = _gerar_sugestoes_visita(f, estoque)
 
-        # Campos de sacos (BUG CORRIGIDO: antes eram silenciosamente descartados)
         def _int_safe(v):
             try:
                 return int(str(v).strip()) if v and str(v).strip() else None
@@ -161,11 +185,6 @@ def nova_visita():
         sacos_racao = _int_safe(f.get("sacos_racao"))
         sacos_prot = _int_safe(f.get("sacos_prot"))
 
-        # COLUNAS_VISITAS tem 18 colunas — salvar todas na ordem correta:
-        # Data, Responsável, Gado Contado, Gado Esperado, Gado Faltando,
-        # Sal/Ração, Proteinado, Mato/Vegetação, Grama/Pastagem, Córrego/Água,
-        # Quintal, Cisterna, Choveu, Chuva mm, Observações, Sugestões,
-        # Sacos Sal/Ração, Sacos Proteinado
         salvar_linha("Visitas", [
             data, responsavel,
             gado_cnt, gado_esp, gado_falt,
@@ -176,10 +195,34 @@ def nova_visita():
             sacos_sal, sacos_prot,
         ])
 
+        # ── Notificar família via WhatsApp ────────────────────────────────────
+        row_para_wpp = {
+            "Responsável":    responsavel,
+            "Data":           data,
+            "Gado Contado":   gado_cnt,
+            "Gado Esperado":  gado_esp,
+            "Gado Faltando":  gado_falt,
+            "Sal/Ração":      sal,
+            "Proteinado":     prot,
+            "Mato/Vegetação": mato,
+            "Grama/Pastagem": grama,
+            "Córrego/Água":   corrego,
+            "Quintal":        quintal,
+            "Cisterna":       cisterna,
+            "Choveu":         choveu,
+            "Chuva mm":       chuva_mm if chuva_mm > 0 else 0,
+            "Observações":    obs,
+            "Sugestões":      sugestoes,
+        }
+        _notificar_visita_whatsapp(
+            row_para_wpp, estoque,
+            usuario_logado=session.get("usuario", "")
+        )
+
         if gado_falt > 0:
             flash(f"⚠️ Visita salva — mas {gado_falt} cabeça(s) estão faltando!", "warning")
         else:
-            flash("✅ Visita registrada com sucesso!", "success")
+            flash("✅ Visita registrada! Família notificada via WhatsApp.", "success")
         return redirect(url_for("visitas"))
 
     return render_template("form_visita.html", estoque=estoque,
