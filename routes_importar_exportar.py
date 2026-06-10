@@ -6,9 +6,10 @@ Rotas de importação de Excel antigo, exportação de relatório Excel e backup
 """
 import os
 from flask import render_template, request, redirect, url_for, flash, send_file
-from db import carregar_todas, salvar_linha, fazer_backup, safe_val, DATA_DIR
+from db import fazer_backup, safe_val, DATA_DIR
 from extensions import (
     app, _agora, _validar_csrf, login_required,
+    salvar_linha,
     _fazer_backup_inteligente, _limpar_backups_antigos,
 )
 
