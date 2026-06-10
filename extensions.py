@@ -130,6 +130,40 @@ def _inject_csrf():
     return {"csrf_token": _gerar_csrf()}
 
 
+@app.context_processor
+def _inject_sitio_config():
+    """Injeta config do sítio (nome, donos, logo) em todos os templates."""
+    import json
+    try:
+        caminho = os.path.join(BASE_DIR, "sitio_config.json")
+        # Tentar DATA_DIR (produção) primeiro
+        try:
+            from db import DATA_DIR as _DATA_DIR
+            caminho_data = os.path.join(_DATA_DIR, "sitio_config.json")
+            if os.path.exists(caminho_data):
+                caminho = caminho_data
+        except Exception:
+            pass
+        if os.path.exists(caminho):
+            with open(caminho, encoding="utf-8") as f:
+                cfg = json.load(f)
+        else:
+            cfg = {
+                "nome": "Sítio Santo Antonio",
+                "donos": "Geane · Deyvid · Nilson",
+                "logo": "🐄",
+                "logo_tipo": "emoji",
+            }
+    except Exception:
+        cfg = {
+            "nome": "Sítio Santo Antonio",
+            "donos": "Geane · Deyvid · Nilson",
+            "logo": "🐄",
+            "logo_tipo": "emoji",
+        }
+    return {"sitio_config": cfg}
+
+
 # ── Auth helpers ───────────────────────────────────────────────────────────────
 def _sha256(senha: str) -> str:
     return hashlib.sha256(senha.strip().encode()).hexdigest()

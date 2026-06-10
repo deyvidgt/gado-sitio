@@ -50,13 +50,48 @@ def _verificar_senha(usuario, senha):
     return _verificar_hash(senha, usuarios[usuario]["hash"])
 
 
+# ── Config do sítio (nome, donos, logo) ──────────────────────────────────────
+
+SITIO_CONFIG_DEFAULTS = {
+    "nome":   "Sítio Santo Antonio",
+    "donos":  "Geane · Deyvid · Nilson",
+    "logo":   "🐄",        # emoji ou URL de imagem carregada
+    "logo_tipo": "emoji",  # "emoji" | "imagem"
+}
+
+
+def _sitio_config_path():
+    return os.path.join(DATA_DIR, "sitio_config.json")
+
+
+def _carregar_sitio_config() -> dict:
+    caminho = _sitio_config_path()
+    if os.path.exists(caminho):
+        try:
+            with open(caminho, encoding="utf-8") as f:
+                cfg = json.load(f)
+                # Garantir que todos os campos existem
+                for k, v in SITIO_CONFIG_DEFAULTS.items():
+                    cfg.setdefault(k, v)
+                return cfg
+        except Exception:
+            pass
+    return dict(SITIO_CONFIG_DEFAULTS)
+
+
+def _salvar_sitio_config(cfg: dict):
+    with open(_sitio_config_path(), "w", encoding="utf-8") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+
+
 # ── Rotas ─────────────────────────────────────────────────────────────────────
 
 @app.route("/configuracoes")
 @login_required
 def configuracoes():
-    usuarios = _carregar_usuarios_local()
-    return render_template("configuracoes.html", usuarios=usuarios)
+    usuarios     = _carregar_usuarios_local()
+    sitio_config = _carregar_sitio_config()
+    return render_template("configuracoes.html", usuarios=usuarios, sitio_config=sitio_config)
 
 
 @app.route("/configuracoes/trocar-senha", methods=["POST"])
@@ -153,4 +188,52 @@ def resetar_senha():
     dados[alvo]["hash"] = _hash_bcrypt(senha) if _bcrypt_disponivel() else _sha256(senha)
     _salvar_usuarios_local(dados)
     flash(f"✅ Senha de '{alvo.capitalize()}' redefinida!", "success")
+    return redirect(url_for("configuracoes"))
+
+
+@app.route("/configuracoes/sitio", methods=["POST"])
+@login_required
+def salvar_sitio_config():
+    import re
+    from flask import send_from_directory
+    _validar_csrf()
+
+    nome  = request.form.get("sitio_nome",  "").strip()
+    donos = request.form.get("sitio_donos", "").strip()
+
+    if not nome:
+        flash("O nome do sítio não pode ser vazio.", "error")
+        return redirect(url_for("configuracoes"))
+
+    # Sanitizar: remover tags HTML
+    nome  = re.sub(r"<[^>]+>", "", nome)[:80]
+    donos = re.sub(r"<[^>]+>", "", donos)[:120]
+
+    cfg = _carregar_sitio_config()
+    cfg["nome"]  = nome
+    cfg["donos"] = donos
+
+    # Logo: emoji digitado ou imagem enviada
+    logo_emoji = request.form.get("sitio_logo_emoji", "").strip()
+    arquivo    = request.files.get("sitio_logo_imagem")
+
+    if arquivo and arquivo.filename:
+        # Salvar imagem em static/
+        import werkzeug.utils
+        ext = os.path.splitext(arquivo.filename)[1].lower()
+        if ext not in (".png", ".jpg", ".jpeg"):
+            flash("Formato inválido. Use PNG, JPG ou JPEG.", "error")
+            return redirect(url_for("configuracoes"))
+        static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+        os.makedirs(static_dir, exist_ok=True)
+        nome_arquivo = "sitio_logo" + ext
+        arquivo.save(os.path.join(static_dir, nome_arquivo))
+        cfg["logo"]      = "/static/" + nome_arquivo
+        cfg["logo_tipo"] = "imagem"
+    elif logo_emoji:
+        cfg["logo"]      = logo_emoji
+        cfg["logo_tipo"] = "emoji"
+
+    _salvar_sitio_config(cfg)
+    flash("✅ Configurações do sítio salvas!", "success")
     return redirect(url_for("configuracoes"))
