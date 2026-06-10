@@ -137,9 +137,20 @@
     <button onclick="toggleWppPanel()" class="btn btn-outline btn-sm" id="btn-wpp-toggle">⚙️ Configurar</button>
   </div>
 
-  <!-- Status rápido dos alertas -->
-  <div id="wpp-status-wrap" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+  <!-- Status + botões de ação rápida -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:12px">
     <div id="wpp-status-cfg" style="font-size:12px;color:var(--text-3)">⏳ Verificando configuração...</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="testarWppRapido()" class="btn btn-outline btn-sm" id="btn-wpp-testar-rap"
+              title="Envia uma mensagem de teste para o seu número">
+        📤 Testar meu número
+      </button>
+      <button onclick="enviarAlertasFamilia()" class="btn btn-sm" id="btn-wpp-familia"
+              style="background:var(--green-600);color:#fff;border:none"
+              title="Envia os alertas reais para todos os números cadastrados">
+        🚨 Alertar família agora
+      </button>
+    </div>
   </div>
 
   <!-- Painel de configuração (oculto por padrão) -->
@@ -154,7 +165,6 @@
       1. Adicione o número <strong>+34 644 663 262</strong> nos seus contatos como "CallMeBot"<br>
       2. Envie a mensagem: <code style="background:var(--bg-2);padding:1px 6px;border-radius:4px">I allow callmebot to send me messages</code><br>
       3. Você receberá sua API Key por WhatsApp em segundos<br>
-
       <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank"
          style="color:var(--green-600);font-weight:600">Ver instruções completas →</a>
     </div>
@@ -176,7 +186,7 @@
       </div>
     </div>
     <div style="font-size:12px;color:var(--text-3);margin-bottom:14px;padding:8px 12px;background:var(--cream);border-radius:8px">
-      💡 Os campos são preenchidos automaticamente com o que foi salvo. Se estiverem vazios, preencha e clique em <strong>Salvar configuração</strong>.
+      💡 Os campos são preenchidos automaticamente. Se estiverem vazios, preencha e clique em <strong>Salvar configuração</strong>.
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button onclick="salvarWpp()" class="btn btn-primary">💾 Salvar configuração</button>
@@ -185,6 +195,7 @@
     </div>
     <div id="wpp-feedback" style="margin-top:10px;font-size:13px"></div>
   </div>
+  <div id="wpp-feedback-rap" style="margin-top:8px;font-size:13px"></div>
 </div>
 <!-- ════════════════════════════════════════════════════════════════════════════ -->
 
@@ -418,13 +429,38 @@ function pct(v, prefix=true) {
   return (prefix && v > 0 ? "+" : "") + s + "%";
 }
 
+async function _apiFetch(url) {
+  const r = await fetch(url, {
+    credentials: "same-origin",
+    headers: { "Accept": "application/json" }
+  });
+  if (r.redirected && r.url.includes("/login")) {
+    window.location.href = "/login";
+    throw new Error("Sessão expirada.");
+  }
+  if (r.status === 401) {
+    let j = {};
+    try { j = await r.json(); } catch(_) {}
+    if (j.redirect) window.location.href = j.redirect;
+    throw new Error(j.erro || "Não autorizado.");
+  }
+  if (!r.ok) throw new Error(`Erro do servidor (HTTP ${r.status})`);
+  const ct = r.headers.get("content-type") || "";
+  if (!ct.includes("application/json")) {
+    const text = await r.text();
+    if (text.includes("/login")) { window.location.href = "/login"; throw new Error("Sessão expirada."); }
+    throw new Error("Resposta inesperada do servidor");
+  }
+  return r.json();
+}
+
 
 /* ══════════════════════════════════════════════════
    ÚLTIMA VISITA
 ══════════════════════════════════════════════════ */
 async function loadUltimaVisita() {
   try {
-    const d = await fetch("/api/ultima-visita").then(r => r.json());
+    const d = await _apiFetch("/api/ultima-visita");
     document.getElementById("vis-loading").style.display = "none";
     if (!d.ok) { document.getElementById("vis-vazio").style.display = "block"; return; }
     document.getElementById("vis-corpo").style.display = "block";
@@ -435,7 +471,7 @@ async function loadUltimaVisita() {
     // Chuva
     const pill = document.getElementById("vis-chuva-pill");
     if (d.choveu === "Sim") {
-      const mm = d.chuva_mm || 0;
+      const mm = (d.chuva_mm && isFinite(d.chuva_mm)) ? d.chuva_mm : 0;
       const cls = mm >= 50 ? "background:rgba(21,101,192,.15);color:#1565c0" :
                   mm >= 15 ? "background:rgba(41,128,185,.12);color:#1976d2" :
                              "background:rgba(100,181,246,.15);color:#0288d1";
@@ -507,7 +543,7 @@ let _calData = null;
 
 async function loadCalendario() {
   try {
-    const d = await fetch("/api/calendario-manejo").then(r => r.json());
+    const d = await _apiFetch("/api/calendario-manejo");
     _calData = d;
     document.getElementById("cal-loading").style.display = "none";
     document.getElementById("cal-corpo").style.display   = "block";
@@ -643,7 +679,7 @@ function renderProximas(proximas) {
 ══════════════════════════════════════════════════ */
 async function loadWppStatus() {
   try {
-    const d = await fetch("/api/config-whatsapp").then(r => r.json());
+    const d = await _apiFetch("/api/config-whatsapp");
     const wrap = document.getElementById("wpp-status-cfg");
     if (d.apikey_configurada && d.telefone) {
       wrap.innerHTML = `<span style="font-size:12px;background:var(--green-100);color:var(--green-700);padding:3px 10px;border-radius:20px;font-weight:500">✅ WhatsApp configurado — ${d.telefone}</span>
@@ -665,7 +701,7 @@ function toggleWppPanel() {
   if (abrindo) {
     const telEl = document.getElementById("wpp-telefone");
     const keyEl = document.getElementById("wpp-apikey");
-    // campos preenchidos automaticamente ao carregar (via loadWppStatus)
+    // campos preenchidos automaticamente via loadWppStatus()
   }
 }
 
@@ -675,10 +711,14 @@ async function salvarWpp() {
   if (!tel || !key || key === "••••••") {
     wppFeedback("⚠️ Preencha telefone e API Key.", "warn"); return;
   }
-  const r = await fetch("/api/config-whatsapp", {
-    method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ telefone: tel, apikey: key, alertas_ativos: true })
-  }).then(r => r.json());
+  let r;
+  try {
+    const resp = await fetch("/api/config-whatsapp", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ telefone: tel, apikey: key, alertas_ativos: true })
+    });
+    r = await resp.json();
+  } catch(e) { wppFeedback("❌ Erro de rede: " + e.message, "err"); return; }
   if (r.ok) { wppFeedback("✅ Configuração salva!", "ok"); loadWppStatus(); }
   else       { wppFeedback("❌ Erro ao salvar.", "err"); }
 }
@@ -708,8 +748,8 @@ async function enviarAlertas() {
 
   // Montar mensagem com alertas reais do sistema
   const [vis, cal] = await Promise.all([
-    fetch("/api/ultima-visita").then(r => r.json()).catch(()=>null),
-    fetch("/api/calendario-manejo").then(r => r.json()).catch(()=>null),
+    _apiFetch("/api/ultima-visita").catch(()=>null),
+    _apiFetch("/api/calendario-manejo").catch(()=>null),
   ]);
 
   let linhas = [`🐄 *Sítio Santo Antonio* — Alertas do sistema`, `📅 ${new Date().toLocaleDateString("pt-BR")}`,""];
@@ -754,22 +794,85 @@ function wppFeedback(msg, tipo) {
   setTimeout(() => { el.textContent = ""; }, 6000);
 }
 
+function wppFeedbackRap(msg, tipo) {
+  const el = document.getElementById("wpp-feedback-rap");
+  if (!el) return;
+  const cor = tipo==="ok" ? "var(--green-700)" : tipo==="warn" ? "#c87000" : "var(--danger)";
+  el.style.color = cor;
+  el.textContent = msg;
+  if (msg) setTimeout(() => { el.textContent = ""; }, 8000);
+}
+
+/* ── Testar número do usuário logado ── */
+async function testarWppRapido() {
+  const btn = document.getElementById("btn-wpp-testar-rap");
+  btn.disabled = true; btn.textContent = "⏳ Enviando...";
+  wppFeedbackRap("", "");
+  let cfg = {};
+  try { cfg = await _apiFetch("/api/config-whatsapp"); } catch(e) {}
+  if (!cfg.telefone || !cfg.apikey_configurada) {
+    wppFeedbackRap("⚠️ Configure seu WhatsApp primeiro (clique em ⚙️ Configurar).", "warn");
+    btn.disabled = false; btn.textContent = "📤 Testar meu número"; return;
+  }
+  const keyField = document.getElementById("wpp-apikey");
+  const key = keyField && keyField.value && keyField.value !== "••••••" ? keyField.value.trim() : "";
+  const tel = cfg.telefone;
+  if (!key) {
+    wppFeedbackRap("⚠️ Abra ⚙️ Configurar, preencha a API Key e clique em Salvar antes de testar.", "warn");
+    btn.disabled = false; btn.textContent = "📤 Testar meu número"; return;
+  }
+  const msg = `🐄 *Sítio Santo Antonio*\nTeste — ${new Date().toLocaleString("pt-BR")}\nSistema funcionando! ✅`;
+  try {
+    const r = await fetch("/api/enviar-lembrete-whatsapp", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ telefone: tel, apikey: key, msg })
+    }).then(r => r.json());
+    wppFeedbackRap(r.ok ? "✅ Mensagem enviada! Verifique seu WhatsApp." : "❌ Erro: " + (r.erro||"desconhecido"), r.ok?"ok":"err");
+  } catch(e) { wppFeedbackRap("❌ Erro de rede: " + e.message, "err"); }
+  btn.disabled = false; btn.textContent = "📤 Testar meu número";
+}
+
+/* ── Alertar todos da família via backend ── */
+async function enviarAlertasFamilia() {
+  const btn = document.getElementById("btn-wpp-familia");
+  btn.disabled = true; btn.textContent = "⏳ Enviando...";
+  wppFeedbackRap("", "");
+  try {
+    const r = await fetch("/api/enviar-alertas-familia", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","Accept":"application/json"},
+      credentials:"same-origin"
+    }).then(res => res.json());
+    wppFeedbackRap(r.ok ? `✅ ${r.msg}` : "❌ " + (r.erro||"Falha no envio."), r.ok?"ok":"err");
+  } catch(e) { wppFeedbackRap("❌ Erro de rede: " + e.message, "err"); }
+  btn.disabled = false; btn.textContent = "🚨 Alertar família agora";
+}
+
 /* ── Recarregar calendário ao trocar tema ── */
 document.addEventListener("themeChanged", () => {
   if (_calData) renderMiniCal(_calData);
 });
 
-/* ── Init ── */
-loadUltimaVisita();
-loadCalendario();
-loadWppStatus();
+/* ── Init (bloco 1) ── */
+document.addEventListener("DOMContentLoaded", () => {
+  loadUltimaVisita();
+  loadCalendario();
+  loadWppStatus();
+});
 
 /* ── Fluxo + Membros ── */
 async function loadCharts() {
-  const [gFluxo, gMembros] = await Promise.all([
-    fetch("/api/fluxo").then(r => r.json()),
-    fetch("/api/membros").then(r => r.json()),
-  ]);
+  let gFluxo, gMembros;
+  try {
+    [gFluxo, gMembros] = await Promise.all([
+      _apiFetch("/api/fluxo"),
+      _apiFetch("/api/membros"),
+    ]);
+  } catch(e) {
+    console.error("Erro ao carregar gráficos de fluxo/membros:", e);
+    return;
+  }
+  if (!gFluxo || !gMembros) return;
 
   new Chart(document.getElementById("chartFluxo"), {
     type: "bar",
@@ -816,7 +919,7 @@ async function loadChuvas() {
   document.getElementById("chuva-tabela-wrap").style.display = "none";
 
   try {
-    const d = await fetch("/api/chuvas").then(r => r.json());
+    const d = await _apiFetch("/api/chuvas");
 
     document.getElementById("chuva-loading").style.display = "none";
 
@@ -1085,8 +1188,10 @@ document.addEventListener("themeChanged", () => {
   if (chartChuvas) loadChuvas();
 });
 
-/* ── Init ── */
-loadCharts();
-loadChuvas();
+/* ── Init (bloco 2) ── */
+document.addEventListener("DOMContentLoaded", () => {
+  loadCharts();
+  loadChuvas();
+});
 </script>
 {% endblock %}
