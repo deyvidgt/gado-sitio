@@ -803,32 +803,24 @@ function wppFeedbackRap(msg, tipo) {
   if (msg) setTimeout(() => { el.textContent = ""; }, 8000);
 }
 
-/* ── Testar número do usuário logado ── */
+/* ── Testar número do usuário logado (usa API Key salva no servidor) ── */
 async function testarWppRapido() {
   const btn = document.getElementById("btn-wpp-testar-rap");
   btn.disabled = true; btn.textContent = "⏳ Enviando...";
   wppFeedbackRap("", "");
-  let cfg = {};
-  try { cfg = await _apiFetch("/api/config-whatsapp"); } catch(e) {}
-  if (!cfg.telefone || !cfg.apikey_configurada) {
-    wppFeedbackRap("⚠️ Configure seu WhatsApp primeiro (clique em ⚙️ Configurar).", "warn");
-    btn.disabled = false; btn.textContent = "📤 Testar meu número"; return;
-  }
-  const keyField = document.getElementById("wpp-apikey");
-  const key = keyField && keyField.value && keyField.value !== "••••••" ? keyField.value.trim() : "";
-  const tel = cfg.telefone;
-  if (!key) {
-    wppFeedbackRap("⚠️ Abra ⚙️ Configurar, preencha a API Key e clique em Salvar antes de testar.", "warn");
-    btn.disabled = false; btn.textContent = "📤 Testar meu número"; return;
-  }
-  const msg = `🐄 *Sítio Santo Antonio*\nTeste — ${new Date().toLocaleString("pt-BR")}\nSistema funcionando! ✅`;
   try {
-    const r = await fetch("/api/enviar-lembrete-whatsapp", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ telefone: tel, apikey: key, msg })
-    }).then(r => r.json());
-    wppFeedbackRap(r.ok ? "✅ Mensagem enviada! Verifique seu WhatsApp." : "❌ Erro: " + (r.erro||"desconhecido"), r.ok?"ok":"err");
-  } catch(e) { wppFeedbackRap("❌ Erro de rede: " + e.message, "err"); }
+    const r = await fetch("/api/enviar-teste-whatsapp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      credentials: "same-origin"
+    }).then(res => res.json());
+    wppFeedbackRap(
+      r.ok ? "✅ Mensagem enviada! Verifique seu WhatsApp." : "❌ " + (r.erro || "Falha no envio."),
+      r.ok ? "ok" : "err"
+    );
+  } catch(e) {
+    wppFeedbackRap("❌ Erro de rede: " + e.message, "err");
+  }
   btn.disabled = false; btn.textContent = "📤 Testar meu número";
 }
 

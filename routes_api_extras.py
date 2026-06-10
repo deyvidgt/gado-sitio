@@ -141,6 +141,49 @@ def api_enviar_lembrete_whatsapp():
         return jsonify({"ok": False, "erro": msg_erro})
 
 
+@app.route("/api/enviar-teste-whatsapp", methods=["POST"])
+@login_required
+def api_enviar_teste_whatsapp():
+    """
+    Envia mensagem de teste para o usuário logado usando a API Key
+    já salva no servidor — sem precisar que o frontend a conheça.
+    """
+    usuario = session.get("usuario", "")
+    cfg     = _carregar_usuarios().get(usuario, {}).get("whatsapp", {})
+    tel     = cfg.get("telefone", "").strip()
+    key     = cfg.get("apikey",   "").strip()
+    ativo   = cfg.get("alertas_ativos", True)
+
+    if not tel or not key:
+        return jsonify({
+            "ok":   False,
+            "erro": "WhatsApp não configurado. Clique em ⚙️ Configurar, preencha e salve primeiro."
+        })
+
+    from extensions import _agora
+    msg = (
+        f"🐄 *Sítio Santo Antonio*\n"
+        f"📤 Teste de notificação — {_agora().strftime('%d/%m/%Y %H:%M')}\n"
+        f"✅ Sistema funcionando! Alertas {'ativos' if ativo else 'pausados'}."
+    )
+
+    try:
+        import requests as req
+        r = req.get(
+            "https://api.callmebot.com/whatsapp.php",
+            params={"phone": tel, "text": msg, "apikey": key},
+            timeout=20,
+        )
+        ok = r.status_code == 200 and "message queued" in r.text.lower()
+        return jsonify({"ok": ok, "erro": None if ok else r.text[:200]})
+    except Exception as e:
+        msg_erro = str(e)
+        if any(k in msg_erro for k in ("ProxyError", "Max retries", "ConnectionError",
+                                        "Tunnel connection", "403", "timeout")):
+            msg_erro = "Servidor sem acesso ao CallMeBot (restrição de rede do PythonAnywhere)."
+        return jsonify({"ok": False, "erro": msg_erro})
+
+
 @app.route("/api/enviar-alertas-familia", methods=["POST"])
 @login_required
 def api_enviar_alertas_familia():
