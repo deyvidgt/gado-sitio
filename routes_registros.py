@@ -352,12 +352,12 @@ def vendas():
         d["_idx"] = int(real_idx)
         rows.append(d)
     return render_template("lista.html", titulo="Vendas 🤝", secao="vendas", aba="Vendas",
-                           colunas=["Data","Qtd Cabeças","Valor Total (R$,
-                           anos_disponiveis=_anos_de(df),
-                           total_valor=_total_valor(df), total_cabecas=_total_cab(df))","Valor/Cabeça (R$)",
+                           colunas=["Data","Qtd Cabeças","Valor Total (R$)","Valor/Cabeça (R$)",
                                     "Valor Arroba (R$)","Qtd Mae","Qtd Deyvid","Qtd Nilson",
                                     "Valor Mae (R$)","Valor Deyvid (R$)","Valor Nilson (R$)","Descrição"],
-                           rows=rows, ordem=ordem)
+                           rows=rows, ordem=ordem,
+                           anos_disponiveis=_anos_de(df),
+                           total_valor=_total_valor(df), total_cabecas=_total_cab(df))
 
 @app.route("/vendas/nova", methods=["GET", "POST"])
 @login_required
