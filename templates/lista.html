@@ -25,6 +25,72 @@
   </div>
 </div>
 
+<!-- ── Filtros ──────────────────────────────────────────────────────────── -->
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:center">
+  <input type="text" id="filtro-busca" placeholder="🔍 Buscar descrição, tipo..."
+         oninput="filtrar()"
+         style="padding:8px 12px;border:1.5px solid var(--cream-dk);border-radius:8px;
+                font-size:13px;font-family:inherit;background:var(--surface-2);
+                color:var(--text);outline:none;min-width:200px;flex:1"
+         onfocus="this.style.borderColor='#3d7a34'" onblur="this.style.borderColor='var(--cream-dk)'">
+
+  {% if secao in ['compras','gastos','vendas','manejo'] %}
+  <select id="filtro-ano" onchange="filtrar()"
+          style="padding:8px 12px;border:1.5px solid var(--cream-dk);border-radius:8px;
+                 font-size:13px;font-family:inherit;background:var(--surface-2);color:var(--text);outline:none">
+    <option value="">Todos os anos</option>
+    {% for ano in anos_disponiveis|sort(reverse=True) %}
+      <option value="{{ ano }}">{{ ano }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+
+  {% if secao == 'gastos' %}
+  <select id="filtro-tipo" onchange="filtrar()"
+          style="padding:8px 12px;border:1.5px solid var(--cream-dk);border-radius:8px;
+                 font-size:13px;font-family:inherit;background:var(--surface-2);color:var(--text);outline:none">
+    <option value="">Todos os tipos</option>
+    {% for t in tipos_disponiveis %}
+      <option value="{{ t }}">{{ t }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+
+  {% if secao == 'manejo' %}
+  <select id="filtro-tipo" onchange="filtrar()"
+          style="padding:8px 12px;border:1.5px solid var(--cream-dk);border-radius:8px;
+                 font-size:13px;font-family:inherit;background:var(--surface-2);color:var(--text);outline:none">
+    <option value="">Todos os tipos</option>
+    {% for t in tipos_disponiveis %}
+      <option value="{{ t }}">{{ t }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+
+  <span id="filtro-contagem" style="font-size:12px;color:var(--text-3);white-space:nowrap"></span>
+  <button onclick="limparFiltros()" id="btn-limpar"
+          style="display:none;padding:7px 12px;background:var(--cream-dk);border:1.5px solid #ccc;
+                 border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit">
+    ✕ Limpar
+  </button>
+</div>
+
+<!-- ── Totais ──────────────────────────────────────────────────────────────── -->
+{% if total_valor is defined and total_valor %}
+<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+  {% if total_valor %}
+  <div style="font-size:13px;color:var(--text-2)">
+    💰 Total: <strong>{{ total_valor | brl }}</strong>
+  </div>
+  {% endif %}
+  {% if total_cabecas %}
+  <div style="font-size:13px;color:var(--text-2)">
+    🐄 Cabeças: <strong>{{ total_cabecas }}</strong>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
 <div class="table-wrap">
   {% if rows %}
   <table>
@@ -83,6 +149,8 @@
             <a href="{{ url_for('editar_gasto', idx=i) }}" class="btn btn-outline btn-sm">✏️</a>
           {% elif secao == 'vendas' %}
             <a href="{{ url_for('editar_venda', idx=i) }}" class="btn btn-outline btn-sm">✏️</a>
+          {% elif secao == 'manejo' %}
+            <a href="{{ url_for('editar_manejo', idx=i) }}" class="btn btn-outline btn-sm">✏️</a>
           {% endif %}
           {% set aba_map = {'compras': 'Compras', 'gastos': 'Gastos', 'vendas': 'Vendas', 'manejo': 'Manejo'} %}
           <form method="post" action="{{ url_for('excluir', aba=aba_map[secao], idx=i) }}"
@@ -106,6 +174,60 @@
 
 {% block scripts %}
 <script>
-// Adicionar filtro enumerate ao Jinja2
+(function() {
+  function filtrar() {
+    const busca  = (document.getElementById('filtro-busca')?.value || '').toLowerCase();
+    const ano    = document.getElementById('filtro-ano')?.value  || '';
+    const tipo   = document.getElementById('filtro-tipo')?.value || '';
+    const linhas = document.querySelectorAll('tbody tr');
+    let vis = 0;
+
+    linhas.forEach(tr => {
+      const txt  = tr.textContent.toLowerCase();
+      const cols = tr.querySelectorAll('td');
+
+      // Busca no texto completo
+      const okBusca = !busca || txt.includes(busca);
+
+      // Filtro por ano (coluna Data — col[1])
+      const okAno = !ano || (cols[1] && cols[1].textContent.includes(ano));
+
+      // Filtro por tipo (col[2] para gastos/manejo)
+      const okTipo = !tipo || (cols[2] && cols[2].textContent.trim() === tipo);
+
+      const show = okBusca && okAno && okTipo;
+      tr.style.display = show ? '' : 'none';
+      if (show) vis++;
+    });
+
+    const total = linhas.length;
+    const cont  = document.getElementById('filtro-contagem');
+    if (cont) cont.textContent = (vis < total) ? `${vis} de ${total}` : `${total} registros`;
+
+    const btnL = document.getElementById('btn-limpar');
+    if (btnL) btnL.style.display = (busca || ano || tipo) ? 'inline-block' : 'none';
+  }
+
+  function limparFiltros() {
+    const el = document.getElementById('filtro-busca');
+    if (el) el.value = '';
+    const el2 = document.getElementById('filtro-ano');
+    if (el2) el2.value = '';
+    const el3 = document.getElementById('filtro-tipo');
+    if (el3) el3.value = '';
+    filtrar();
+  }
+
+  // Expor globalmente
+  window.filtrar = filtrar;
+  window.limparFiltros = limparFiltros;
+
+  // Inicializar contagem
+  document.addEventListener('DOMContentLoaded', () => {
+    const total = document.querySelectorAll('tbody tr').length;
+    const cont  = document.getElementById('filtro-contagem');
+    if (cont && total > 0) cont.textContent = `${total} registros`;
+  });
+})();
 </script>
 {% endblock %}

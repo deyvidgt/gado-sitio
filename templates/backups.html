@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Backups — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Backups 💾{% endblock %}
+
+{% block content %}
+<div class="section-head">
+  <h2>Backups do Sistema</h2>
+  <form method="post" action="{{ url_for('fazer_backup_agora') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="btn btn-primary">💾 Fazer Backup Agora</button>
+  </form>
+</div>
+
+<div style="font-size:13px;color:var(--text-3);margin-bottom:20px">
+  Backups são gerados automaticamente a cada hora quando o sistema é usado.
+  Limite: 30 arquivos (os mais antigos são removidos automaticamente).
+</div>
+
+{% if backups %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Arquivo</th>
+        <th>Data / Hora</th>
+        <th>Tamanho</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in backups %}
+      <tr>
+        <td style="color:var(--text-3);font-size:12px">{{ loop.index }}</td>
+        <td style="font-family:monospace;font-size:12px">{{ b.nome }}</td>
+        <td>{{ b.data }}</td>
+        <td style="color:var(--text-3)">{{ b.tamanho }} KB</td>
+        <td style="white-space:nowrap;display:flex;gap:6px">
+          <a href="{{ url_for('download_backup', nome=b.nome) }}"
+             class="btn btn-outline btn-sm">⬇️ Baixar</a>
+          <form method="post" action="{{ url_for('excluir_backup', nome=b.nome) }}"
+                onsubmit="return confirm('Excluir este backup?')" style="margin:0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-danger btn-sm" type="submit">🗑</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div style="background:var(--surface-2);padding:48px;text-align:center;border-radius:var(--radius);box-shadow:var(--shadow)">
+  <div style="font-size:40px;margin-bottom:12px">📭</div>
+  <p style="color:var(--text-3);font-size:15px">Nenhum backup encontrado.</p>
+  <p style="color:var(--text-3);font-size:13px;margin-top:8px">Clique em "Fazer Backup Agora" para criar o primeiro.</p>
+</div>
+{% endif %}
+{% endblock %}

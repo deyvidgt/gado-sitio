@@ -161,3 +161,133 @@ def backup():
     if referrer:
         return redirect(referrer)
     return redirect(url_for("dashboard"))
+
+
+# ── Listar e baixar backups ───────────────────────────────────────────────────
+
+@app.route("/backups")
+@login_required
+def listar_backups():
+    """Lista backups disponíveis com download e permite forçar novo backup."""
+    backup_dir = os.path.join(DATA_DIR, "backups")
+    backups = []
+    if os.path.exists(backup_dir):
+        for nome in sorted(os.listdir(backup_dir), reverse=True):
+            if nome.endswith(".xlsx") and nome.startswith("backup_"):
+                caminho = os.path.join(backup_dir, nome)
+                stat    = os.stat(caminho)
+                backups.append({
+                    "nome":    nome,
+                    "tamanho": round(stat.st_size / 1024, 1),  # KB
+                    "data":    _agora().__class__.fromtimestamp(stat.st_mtime).strftime("%d/%m/%Y %H:%M"),
+                })
+    return render_template("backups.html", backups=backups)
+
+
+@app.route("/backups/download/<nome>")
+@login_required
+def download_backup(nome):
+    """Faz download de um backup específico."""
+    import re
+    # Segurança: só aceitar nomes no formato backup_YYYYMMDD_HHMMSS.xlsx
+    if not re.match(r'^backup_\d{8}_\d{6}\.xlsx$', nome):
+        flash("Nome de backup inválido.", "error")
+        return redirect(url_for("listar_backups"))
+    backup_dir = os.path.join(DATA_DIR, "backups")
+    caminho = os.path.join(backup_dir, nome)
+    if not os.path.exists(caminho):
+        flash("Backup não encontrado.", "error")
+        return redirect(url_for("listar_backups"))
+    return send_file(caminho, as_attachment=True, download_name=nome,
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@app.route("/backups/fazer", methods=["POST"])
+@login_required
+def fazer_backup_agora():
+    """Força um backup imediato."""
+    _validar_csrf()
+    nome = _fazer_backup_inteligente(forcar=True)
+    _limpar_backups_antigos()
+    if nome:
+        flash(f"✅ Backup criado: {os.path.basename(nome)}", "success")
+    else:
+        flash("Backup já realizado recentemente (menos de 1 hora).", "info")
+    return redirect(url_for("listar_backups"))
+
+
+@app.route("/backups/excluir/<nome>", methods=["POST"])
+@login_required
+def excluir_backup(nome):
+    """Exclui um backup específico."""
+    import re
+    _validar_csrf()
+    if not re.match(r'^backup_\d{8}_\d{6}\.xlsx$', nome):
+        flash("Nome de backup inválido.", "error")
+        return redirect(url_for("listar_backups"))
+    backup_dir = os.path.join(DATA_DIR, "backups")
+    caminho = os.path.join(backup_dir, nome)
+    if os.path.exists(caminho):
+        os.remove(caminho)
+        flash(f"Backup '{nome}' excluído.", "warning")
+    return redirect(url_for("listar_backups"))
+
+
+# ── Log de erros do servidor ──────────────────────────────────────────────────
+
+@app.route("/admin/logs")
+@login_required
+def admin_logs():
+    """Mostra últimas linhas dos logs — apenas para o usuário deyvid."""
+    from flask import session as _sess
+    if _sess.get("usuario") != "deyvid":
+        flash("Acesso restrito.", "error")
+        return redirect(url_for("dashboard"))
+
+    logs = {}
+    # Caminhos possíveis dos logs
+    candidatos = {
+        "WhatsApp":    [os.path.join(DATA_DIR, "backups", "alertas_whatsapp.log"),
+                        os.path.join(os.path.dirname(DATA_DIR), "gado", "backups", "alertas_whatsapp.log")],
+        "Servidor":    ["/var/log/gado_error.log",
+                        os.path.join(DATA_DIR, "server.log")],
+    }
+
+    for titulo, caminhos in candidatos.items():
+        for caminho in caminhos:
+            if os.path.exists(caminho):
+                try:
+                    with open(caminho, encoding="utf-8", errors="replace") as fh:
+                        linhas = fh.readlines()
+                    logs[titulo] = {
+                        "caminho": caminho,
+                        "linhas":  linhas[-200:],   # últimas 200 linhas
+                        "total":   len(linhas),
+                    }
+                except Exception as e:
+                    logs[titulo] = {"caminho": caminho, "linhas": [f"Erro ao ler: {e}"], "total": 0}
+                break
+
+    return render_template("admin_logs.html", logs=logs)
+
+
+@app.route("/admin/logs/limpar/<titulo>", methods=["POST"])
+@login_required
+def limpar_log(titulo):
+    """Limpa um arquivo de log."""
+    from flask import session as _sess
+    _validar_csrf()
+    if _sess.get("usuario") != "deyvid":
+        flash("Acesso restrito.", "error")
+        return redirect(url_for("dashboard"))
+
+    mapa = {
+        "WhatsApp": [os.path.join(DATA_DIR, "backups", "alertas_whatsapp.log")],
+        "Servidor": [os.path.join(DATA_DIR, "server.log")],
+    }
+    for caminho in mapa.get(titulo, []):
+        if os.path.exists(caminho):
+            open(caminho, "w").close()
+            flash(f"Log '{titulo}' limpo.", "success")
+            break
+    return redirect(url_for("admin_logs"))

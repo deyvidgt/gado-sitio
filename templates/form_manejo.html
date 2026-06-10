@@ -1,49 +1,51 @@
 {% extends "base.html" %}
-{% block title %}Novo Manejo — Sítio Santo Antonio{% endblock %}
-{% block page_title %}Novo Manejo 🩺{% endblock %}
+{% block title %}{{ 'Editar' if modo == 'editar' else 'Novo' }} Manejo — Sítio Santo Antonio{% endblock %}
+{% block page_title %}{{ 'Editar' if modo == 'editar' else 'Novo' }} Manejo 🩺{% endblock %}
 
 {% block content %}
 <div style="max-width:680px">
   <div class="form-card">
     <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--green-700);margin-bottom:24px">
-      Registro de Manejo
+      {{ 'Editar Manejo' if modo == 'editar' else 'Registro de Manejo' }}
     </h2>
-    <form method="post">
+    <form method="post" action="{{ url_for('editar_manejo', idx=idx) if modo == 'editar' else '' }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="form-grid">
         <div class="form-group">
           <label>Data</label>
-          <input type="date" name="data" value="{{ hoje }}" required>
+          <input type="date" name="data"
+                 value="{{ row.data_input if modo == 'editar' and row else hoje }}" required>
         </div>
         <div class="form-group">
           <label>Tipo de Manejo</label>
           <select name="tipo" required>
             <option value="">Selecione...</option>
             {% for t in TIPOS %}
-              <option value="{{ t }}">{{ t }}</option>
+              <option value="{{ t }}" {{ 'selected' if modo == 'editar' and row and row.get('Tipo') == t }}>{{ t }}</option>
             {% endfor %}
           </select>
         </div>
         <div class="form-group">
           <label>Qtd de Cabeças</label>
-          <input type="number" name="cabecas" min="0" value="{{ estoque }}" required>
+          <input type="number" name="cabecas" min="0"
+                 value="{{ row.get('Qtd Cabeças', estoque) if modo == 'editar' and row else estoque }}" required>
         </div>
         <div class="form-group">
           <label>Responsável</label>
           <select name="responsavel" required>
             <option value="">Selecione...</option>
             {% for m in MEMBROS %}
-              <option value="{{ m }}">{{ NOMES[m] }}</option>
+              <option value="{{ m }}" {{ 'selected' if modo == 'editar' and row and row.get('Responsável') == m }}>{{ NOMES[m] }}</option>
             {% endfor %}
           </select>
         </div>
         <div class="form-group full">
           <label>Descrição / Observações</label>
-          <textarea name="descricao" rows="3" placeholder="Detalhes do manejo..."></textarea>
+          <textarea name="descricao" rows="3" placeholder="Detalhes do manejo...">{{ row.get('Descrição','') if modo == 'editar' and row else '' }}</textarea>
         </div>
       </div>
       <div style="margin-top:28px;display:flex;gap:12px">
-        <button type="submit" class="btn btn-primary">✅ Salvar Manejo</button>
+        <button type="submit" class="btn btn-primary">{{ '💾 Salvar Alterações' if modo == 'editar' else '✅ Salvar Manejo' }}</button>
         <a href="{{ url_for('manejo') }}" class="btn btn-outline">Cancelar</a>
       </div>
     </form>

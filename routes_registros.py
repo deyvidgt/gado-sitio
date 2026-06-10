@@ -23,6 +23,26 @@ from extensions import (
     BASE_DIR,
 )
 
+def _anos_de(df):
+    if df.empty or "Data" not in df.columns:
+        return []
+    return sorted(df["Data"].dropna().dt.year.astype(int).unique().tolist(), reverse=True)
+
+def _tipos_de(df, coluna="Tipo"):
+    if df.empty or coluna not in df.columns:
+        return []
+    return sorted(df[coluna].dropna().unique().tolist())
+
+def _total_valor(df):
+    if df.empty or "Valor Total (R$)" not in df.columns:
+        return 0.0
+    return float(df["Valor Total (R$)"].sum())
+
+def _total_cab(df):
+    if df.empty or "Qtd Cabeças" not in df.columns:
+        return 0
+    return int(df["Qtd Cabeças"].sum())
+
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/compras")
@@ -42,7 +62,9 @@ def compras():
     return render_template("lista.html", titulo="Compras 🛒", secao="compras", aba="Compras",
                            colunas=["Data","Qtd Cabeças","Valor Total (R$)","Valor/Cabeça (R$)",
                                     "Qtd Mae","Qtd Deyvid","Qtd Nilson","Descrição","Registrado Por"],
-                           rows=rows, ordem=ordem)
+                           rows=rows, ordem=ordem,
+                           anos_disponiveis=_anos_de(df),
+                           total_valor=_total_valor(df), total_cabecas=_total_cab(df))
 
 @app.route("/compras/nova", methods=["GET", "POST"])
 @login_required
@@ -159,7 +181,10 @@ def gastos():
     return render_template("lista.html", titulo="Gastos 💸", secao="gastos", aba="Gastos",
                            colunas=["Data","Tipo","Descrição","Valor Total (R$)",
                                     "Qtd Cabeças","Valor/Cabeça (R$)","Registrado Por"],
-                           rows=rows, ordem=ordem)
+                           rows=rows, ordem=ordem,
+                           anos_disponiveis=_anos_de(df),
+                           tipos_disponiveis=_tipos_de(df),
+                           total_valor=_total_valor(df), total_cabecas=_total_cab(df))
 
 @app.route("/gastos/novo", methods=["GET", "POST"])
 @login_required
@@ -327,7 +352,9 @@ def vendas():
         d["_idx"] = int(real_idx)
         rows.append(d)
     return render_template("lista.html", titulo="Vendas 🤝", secao="vendas", aba="Vendas",
-                           colunas=["Data","Qtd Cabeças","Valor Total (R$)","Valor/Cabeça (R$)",
+                           colunas=["Data","Qtd Cabeças","Valor Total (R$,
+                           anos_disponiveis=_anos_de(df),
+                           total_valor=_total_valor(df), total_cabecas=_total_cab(df))","Valor/Cabeça (R$)",
                                     "Valor Arroba (R$)","Qtd Mae","Qtd Deyvid","Qtd Nilson",
                                     "Valor Mae (R$)","Valor Deyvid (R$)","Valor Nilson (R$)","Descrição"],
                            rows=rows, ordem=ordem)
@@ -391,7 +418,9 @@ def manejo():
         rows.append(d)
     return render_template("lista.html", titulo="Manejo 🩺", secao="manejo", aba="Manejo",
                            colunas=["Data","Tipo","Qtd Cabeças","Descrição","Responsável"],
-                           rows=rows)
+                           rows=rows,
+                           anos_disponiveis=_anos_de(df),
+                           tipos_disponiveis=_tipos_de(df))
 
 @app.route("/manejo/novo", methods=["GET", "POST"])
 @login_required
@@ -406,6 +435,43 @@ def novo_manejo():
         flash(f"Manejo registrado! ({f.get('tipo')})", "success")
         return redirect(url_for("manejo"))
     return render_template("form_manejo.html", estoque=estoque, TIPOS=TIPOS_MANEJO,
+                           MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
+                           hoje=_agora().strftime("%Y-%m-%d"))
+
+
+@app.route("/manejo/editar/<int:idx>", methods=["GET", "POST"])
+@login_required
+def editar_manejo(idx):
+    dados   = _get_dados_cache()
+    df      = carregar_aba("Manejo")
+    estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
+    if df.empty or idx >= len(df):
+        flash("Registro não encontrado.", "error")
+        return redirect(url_for("manejo"))
+    if request.method == "POST":
+        _validar_csrf()
+        f = request.form
+        fazer_backup()
+        _limpar_backups_antigos()
+        updates = {
+            "Data":        pd.to_datetime(f.get("data",""), dayfirst=True, errors="coerce"),
+            "Tipo":        f.get("tipo",""),
+            "Qtd Cabeças": int(f.get("cabecas", 0) or 0),
+            "Descrição":   f.get("descricao","").strip(),
+            "Responsável": f.get("responsavel",""),
+        }
+        for col, val in updates.items():
+            if col in df.columns:
+                df.at[idx, col] = val
+            else:
+                df[col] = None; df.at[idx, col] = val
+        reescrever_aba("Manejo", df)
+        flash("Manejo atualizado!", "success")
+        return redirect(url_for("manejo"))
+    row = df.iloc[idx].to_dict()
+    row["data_input"] = df.iloc[idx]["Data"].strftime("%Y-%m-%d") if pd.notna(df.iloc[idx].get("Data")) else ""
+    return render_template("form_manejo.html", modo="editar", row=row, idx=idx,
+                           estoque=estoque, TIPOS=TIPOS_MANEJO,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            hoje=_agora().strftime("%Y-%m-%d"))
 

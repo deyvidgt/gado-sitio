@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Logs do Servidor — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Logs do Servidor 🧪{% endblock %}
+
+{% block content %}
+<div style="font-size:13px;color:var(--text-3);margin-bottom:20px">
+  Área restrita — últimas 200 linhas de cada log. Útil para diagnosticar erros sem acessar o PythonAnywhere.
+</div>
+
+{% if not logs %}
+<div style="background:var(--surface-2);padding:48px;text-align:center;border-radius:var(--radius)">
+  <div style="font-size:40px;margin-bottom:12px">📭</div>
+  <p style="color:var(--text-3)">Nenhum arquivo de log encontrado.</p>
+</div>
+{% endif %}
+
+{% for titulo, info in logs.items() %}
+<div class="card" style="margin-bottom:24px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+    <div>
+      <div class="card-title" style="margin-bottom:2px">📋 Log: {{ titulo }}</div>
+      <div style="font-size:11px;color:var(--text-3);font-family:monospace">{{ info.caminho }}</div>
+      <div style="font-size:11px;color:var(--text-3)">{{ info.total }} linhas no total — exibindo as últimas {{ info.linhas|length }}</div>
+    </div>
+    <form method="post" action="{{ url_for('limpar_log', titulo=titulo) }}"
+          onsubmit="return confirm('Limpar o log {{ titulo }}?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="btn btn-outline btn-sm">🗑 Limpar log</button>
+    </form>
+  </div>
+
+  <div style="background:var(--green-900,#0d1f10);border-radius:8px;padding:16px;
+              font-family:monospace;font-size:11.5px;line-height:1.7;
+              max-height:400px;overflow-y:auto;color:#b0cfb0">
+    {% if info.linhas %}
+      {% for linha in info.linhas %}
+        <div style="{% if 'ERROR' in linha or 'Erro' in linha %}color:#f48fb1{% elif 'WARNING' in linha or 'warning' in linha %}color:#ffe082{% elif 'OK' in linha or 'enviado' in linha %}color:#a5d6a7{% endif %}">{{ linha | e }}</div>
+      {% endfor %}
+    {% else %}
+      <span style="color:#666">Log vazio.</span>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // Rolar para o final de cada log automaticamente
+  document.querySelectorAll('[style*="overflow-y:auto"]').forEach(el => {
+    el.scrollTop = el.scrollHeight;
+  });
+});
+</script>
+{% endblock %}

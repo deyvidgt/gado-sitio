@@ -130,37 +130,48 @@ def _inject_csrf():
     return {"csrf_token": _gerar_csrf()}
 
 
-@app.context_processor
-def _inject_sitio_config():
-    """Injeta config do sítio (nome, donos, logo) em todos os templates."""
+# ── Config do sítio com cache ──────────────────────────────────────────────────
+_SITIO_CFG_DEFAULT = {
+    "nome": "Sítio Santo Antonio",
+    "donos": "Geane · Deyvid · Nilson",
+    "logo": "🐄",
+    "logo_tipo": "emoji",
+}
+
+def _cache_invalidar_chave(chave):
+    with _cache_lock:
+        _cache.pop(chave, None)
+
+def invalidar_cache_sitio():
+    _cache_invalidar_chave("sitio_config")
+
+def _ler_sitio_config_disco() -> dict:
     import json
     try:
-        caminho = os.path.join(BASE_DIR, "sitio_config.json")
-        # Tentar DATA_DIR (produção) primeiro
-        try:
-            from db import DATA_DIR as _DATA_DIR
-            caminho_data = os.path.join(_DATA_DIR, "sitio_config.json")
-            if os.path.exists(caminho_data):
-                caminho = caminho_data
-        except Exception:
-            pass
-        if os.path.exists(caminho):
-            with open(caminho, encoding="utf-8") as f:
-                cfg = json.load(f)
-        else:
-            cfg = {
-                "nome": "Sítio Santo Antonio",
-                "donos": "Geane · Deyvid · Nilson",
-                "logo": "🐄",
-                "logo_tipo": "emoji",
-            }
+        from db import DATA_DIR as _DD
+        candidatos = [os.path.join(_DD, "sitio_config.json"),
+                      os.path.join(BASE_DIR, "sitio_config.json")]
     except Exception:
-        cfg = {
-            "nome": "Sítio Santo Antonio",
-            "donos": "Geane · Deyvid · Nilson",
-            "logo": "🐄",
-            "logo_tipo": "emoji",
-        }
+        candidatos = [os.path.join(BASE_DIR, "sitio_config.json")]
+    for p in candidatos:
+        if os.path.exists(p):
+            try:
+                with open(p, encoding="utf-8") as fh:
+                    cfg = json.load(fh)
+                    for k, v in _SITIO_CFG_DEFAULT.items():
+                        cfg.setdefault(k, v)
+                    return cfg
+            except Exception:
+                pass
+    return dict(_SITIO_CFG_DEFAULT)
+
+@app.context_processor
+def _inject_sitio_config():
+    """Injeta sitio_config em todos os templates — leitura cacheada."""
+    cfg = _cache_get("sitio_config")
+    if cfg is None:
+        cfg = _ler_sitio_config_disco()
+        _cache_set("sitio_config", cfg)
     return {"sitio_config": cfg}
 
 
