@@ -137,9 +137,20 @@
     <button onclick="toggleWppPanel()" class="btn btn-outline btn-sm" id="btn-wpp-toggle">⚙️ Configurar</button>
   </div>
 
-  <!-- Status rápido dos alertas -->
-  <div id="wpp-status-wrap" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+  <!-- Status + botões de ação rápida -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:12px">
     <div id="wpp-status-cfg" style="font-size:12px;color:var(--text-3)">⏳ Verificando configuração...</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="testarWppRapido()" class="btn btn-outline btn-sm" id="btn-wpp-testar-rap"
+              title="Envia uma mensagem de teste para o seu número">
+        📤 Testar meu número
+      </button>
+      <button onclick="enviarAlertasFamilia()" class="btn btn-sm" id="btn-wpp-familia"
+              style="background:var(--green-600);color:#fff;border:none"
+              title="Envia os alertas reais para todos os números cadastrados">
+        🚨 Alertar família agora
+      </button>
+    </div>
   </div>
 
   <!-- Painel de configuração (oculto por padrão) -->
@@ -186,6 +197,8 @@
     </div>
     <div id="wpp-feedback" style="margin-top:10px;font-size:13px"></div>
   </div>
+  <!-- Feedback dos botões rápidos (fora do painel) -->
+  <div id="wpp-feedback-rap" style="margin-top:8px;font-size:13px"></div>
 </div>
 <!-- ════════════════════════════════════════════════════════════════════════════ -->
 
@@ -756,17 +769,93 @@ function wppFeedback(msg, tipo) {
   setTimeout(() => { el.textContent = ""; }, 6000);
 }
 
+function wppFeedbackRap(msg, tipo) {
+  const el = document.getElementById("wpp-feedback-rap");
+  const cor = tipo==="ok" ? "var(--green-700)" : tipo==="warn" ? "#c87000" : "var(--danger)";
+  el.style.color = cor;
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ""; }, 8000);
+}
+
+/* Teste rápido — usa o número do usuário logado (já salvo) */
+async function testarWppRapido() {
+  const btn = document.getElementById("btn-wpp-testar-rap");
+  btn.disabled = true;
+  btn.textContent = "⏳ Enviando...";
+  wppFeedbackRap("", "");
+
+  // Buscar config salva do usuário
+  let cfg = {};
+  try { cfg = await _apiFetch("/api/config-whatsapp"); } catch(e) {}
+
+  if (!cfg.telefone || !cfg.apikey_configurada) {
+    wppFeedbackRap("⚠️ Configure seu WhatsApp primeiro (clique em ⚙️ Configurar).", "warn");
+    btn.disabled = false; btn.textContent = "📤 Testar meu número";
+    return;
+  }
+
+  // Precisamos da apikey real — o endpoint de config só diz se está configurada
+  // Usar o campo do painel se estiver preenchido, senão pedir para salvar
+  const keyField = document.getElementById("wpp-apikey");
+  const telField = document.getElementById("wpp-telefone");
+  const key = keyField && keyField.value && keyField.value !== "••••••" ? keyField.value.trim() : "";
+  const tel = telField && telField.value ? telField.value.trim().replace(/\D/g,"") : cfg.telefone;
+
+  if (!key) {
+    wppFeedbackRap("⚠️ Abra ⚙️ Configurar, preencha a API Key e clique em Salvar antes de testar.", "warn");
+    btn.disabled = false; btn.textContent = "📤 Testar meu número";
+    return;
+  }
+
+  const msg = `🐄 *Sítio Santo Antonio*\nTeste de notificação — ${new Date().toLocaleString("pt-BR")}\nSistema funcionando! ✅`;
+  try {
+    const r = await fetch("/api/enviar-lembrete-whatsapp", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ telefone: tel, apikey: key, msg })
+    }).then(r => r.json());
+    wppFeedbackRap(r.ok ? "✅ Mensagem enviada! Verifique seu WhatsApp." : "❌ Erro: " + (r.erro||"desconhecido"), r.ok ? "ok" : "err");
+  } catch(e) {
+    wppFeedbackRap("❌ Erro de rede: " + e.message, "err");
+  }
+  btn.disabled = false; btn.textContent = "📤 Testar meu número";
+}
+
+/* Alertar família — chama o backend que envia para todos os números cadastrados */
+async function enviarAlertasFamilia() {
+  const btn = document.getElementById("btn-wpp-familia");
+  btn.disabled = true;
+  btn.textContent = "⏳ Enviando...";
+  wppFeedbackRap("", "");
+
+  try {
+    const r = await fetch("/api/enviar-alertas-familia", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      credentials: "same-origin",
+    }).then(res => res.json());
+
+    if (r.ok) {
+      wppFeedbackRap(`✅ ${r.msg}`, "ok");
+    } else {
+      wppFeedbackRap("❌ " + (r.erro || "Falha no envio."), "err");
+    }
+  } catch(e) {
+    wppFeedbackRap("❌ Erro de rede: " + e.message, "err");
+  }
+
+  btn.disabled = false;
+  btn.textContent = "🚨 Alertar família agora";
+}
+
 /* ── Recarregar calendário ao trocar tema ── */
 document.addEventListener("themeChanged", () => {
   if (_calData) renderMiniCal(_calData);
 });
 
-/* ── Init (bloco 1) — aguarda DOM pronto ── */
-document.addEventListener("DOMContentLoaded", () => {
-  loadUltimaVisita();
-  loadCalendario();
-  loadWppStatus();
-});
+/* ── Init ── */
+loadUltimaVisita();
+loadCalendario();
+loadWppStatus();
 
 /* ── Fluxo + Membros ── */
 async function loadCharts() {
@@ -1089,10 +1178,8 @@ document.addEventListener("themeChanged", () => {
   if (chartChuvas) loadChuvas();
 });
 
-/* ── Init (bloco 2) — aguarda DOM pronto ── */
-document.addEventListener("DOMContentLoaded", () => {
-  loadCharts();
-  loadChuvas();
-});
+/* ── Init ── */
+loadCharts();
+loadChuvas();
 </script>
 {% endblock %}

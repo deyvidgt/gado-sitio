@@ -139,3 +139,49 @@ def api_enviar_lembrete_whatsapp():
             msg_erro = ("Servidor sem acesso ao CallMeBot (restrição de rede). "
                         "Tente novamente ou use o alertas_whatsapp.py localmente.")
         return jsonify({"ok": False, "erro": msg_erro})
+
+
+@app.route("/api/enviar-alertas-familia", methods=["POST"])
+@login_required
+def api_enviar_alertas_familia():
+    """
+    Monta os alertas reais do sistema (manejo, visita, financeiro)
+    e envia para TODOS os usuários com WhatsApp configurado.
+    Roda em background thread para não travar a resposta.
+    """
+    import threading
+
+    def _disparar():
+        try:
+            from alertas_whatsapp import montar_alertas, montar_mensagem_alertas, enviar_para_familia
+            alertas  = montar_alertas()
+            msg      = montar_mensagem_alertas(alertas)
+            enviados = enviar_para_familia(msg)
+            app.logger.info(f"Alertas manuais enviados para {enviados} destinatário(s)")
+            return enviados
+        except Exception as e:
+            app.logger.error(f"Erro ao enviar alertas família: {e}")
+            return 0
+
+    # Executa em thread para responder imediatamente ao browser
+    resultado = {"enviados": 0, "erro": None}
+    ev = threading.Event()
+
+    def _run():
+        try:
+            resultado["enviados"] = _disparar()
+        except Exception as e:
+            resultado["erro"] = str(e)
+        finally:
+            ev.set()
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    ev.wait(timeout=30)   # aguarda até 30s para dar feedback real
+
+    if resultado["erro"]:
+        return jsonify({"ok": False, "erro": resultado["erro"]})
+    if resultado["enviados"] == 0:
+        return jsonify({"ok": False, "erro": "Nenhum WhatsApp configurado ou nenhum usuário com alertas ativos."})
+    return jsonify({"ok": True, "enviados": resultado["enviados"],
+                    "msg": f"Alertas enviados para {resultado['enviados']} destinatário(s)!"})
