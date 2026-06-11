@@ -343,9 +343,17 @@ def _calc_anual(dados):
         })
     return result
 
+def _usuarios_path() -> str:
+    """Retorna o caminho correto do usuarios.json, sempre em DATA_DIR."""
+    try:
+        from db import DATA_DIR as _DD
+        return os.path.join(_DD, "usuarios.json")
+    except Exception:
+        return os.path.join(BASE_DIR, "usuarios.json")
+
 def _carregar_usuarios():
     import json
-    caminho = os.path.join(BASE_DIR, "usuarios.json")
+    caminho = _usuarios_path()
     from config import USUARIOS
     if os.path.exists(caminho):
         try:
@@ -360,6 +368,6 @@ def _carregar_usuarios():
 
 def _salvar_usuarios(dados):
     import json
-    caminho = os.path.join(BASE_DIR, "usuarios.json")
+    caminho = _usuarios_path()
     with open(caminho, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=2)
