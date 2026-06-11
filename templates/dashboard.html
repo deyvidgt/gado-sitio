@@ -345,6 +345,7 @@
   .mc-day.tem-evento:hover { background:var(--green-200); }
   [data-theme="dark"] .mc-day.tem-evento { background:rgba(144,201,127,.2);color:var(--green-300); }
   .mc-day.outro-mes { color:var(--text-3);opacity:.4; }
+  .mc-day.passado   { color:var(--text-3);opacity:.5; }
   .mc-dot { position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--green-600); }
   .prox-item { display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--cream-dk); }
   .prox-item:last-child { border-bottom:none; }
@@ -577,10 +578,13 @@ function renderMiniCal(d) {
   for (let i = 0; i < primeiroDia; i++) html += `<div class="mc-day outro-mes"></div>`;
 
   for (let dia = 1; dia <= ultimoDia; dia++) {
-    const isHoje  = isHojeMes && dia === hojeRef.getDate();
-    const evsDia  = eventosDoMes[dia] || [];
-    const prevDia = previstasMes[dia] || [];
-    const temEv   = evsDia.length > 0 || prevDia.length > 0;
+    const isHoje    = isHojeMes && dia === hojeRef.getDate();
+    const dataEste  = new Date(ano, mes, dia);
+    const hojeZero  = new Date(hojeRef.getFullYear(), hojeRef.getMonth(), hojeRef.getDate());
+    const isPast    = !isHoje && dataEste < hojeZero;
+    const evsDia    = eventosDoMes[dia] || [];
+    const prevDia   = previstasMes[dia] || [];
+    const temEv     = evsDia.length > 0 || prevDia.length > 0;
 
     // Cor do ponto: prioridade manejo > visita > compra/venda > gasto
     let dotColor = "var(--green-600)";
@@ -604,8 +608,13 @@ function renderMiniCal(d) {
       }
     }
 
-    const classes = ["mc-day", isHoje ? "hoje" : "", temEv && !isHoje ? "tem-evento" : ""].filter(Boolean).join(" ");
-    const cursor  = temEv || isHoje ? "pointer" : "default";
+    const classes = [
+      "mc-day",
+      isHoje  ? "hoje"    : "",
+      isPast  ? "passado" : "",
+      temEv && !isHoje ? "tem-evento" : "",
+    ].filter(Boolean).join(" ");
+    const cursor = temEv || isHoje ? "pointer" : "default";
     html += `<div class="${classes}" style="cursor:${cursor};position:relative" onclick="mostrarTooltipCal(event,${dia},${mes+1},${ano})">${dia}${dots}</div>`;
   }
   html += `</div>`;
@@ -695,26 +704,62 @@ document.addEventListener("click", () => {
 
 function renderProximas(proximas) {
   const wrap = document.getElementById("cal-proximas");
-  const cls = s => ({ok:"pi-ok",proximo:"pi-proximo",urgente:"pi-urgente",atrasado:"pi-atrasado",sem_registro:"pi-sem_reg"}[s]||"pi-sem_reg");
-  const dcls= s => ({ok:"pd-ok",proximo:"pd-proximo",urgente:"pd-urgente",atrasado:"pd-atrasado",sem_registro:"pd-sem_reg"}[s]||"pd-sem_reg");
+  const cls  = s => ({ok:"pi-ok",proximo:"pi-proximo",urgente:"pi-urgente",atrasado:"pi-atrasado",sem_registro:"pi-sem_reg"}[s]||"pi-sem_reg");
+  const dcls = s => ({ok:"pd-ok",proximo:"pd-proximo",urgente:"pd-urgente",atrasado:"pd-atrasado",sem_registro:"pd-sem_reg"}[s]||"pd-sem_reg");
 
   wrap.innerHTML = proximas.map(p => {
     const emoji = TIPO_EMOJI[p.tipo] || "📋";
-    const diasTxt = p.status === "sem_registro" ? "—" :
-                    p.status === "atrasado" ? `${Math.abs(p.dias_restantes)}d atrasado` :
-                    p.dias_restantes === 0  ? "Hoje!" : `em ${p.dias_restantes}d`;
-    const ultimaTxt = p.ultima_data
-      ? `<div style="font-size:11px;color:var(--text-3)">Última: ${p.ultima_data}</div>`
-      : `<div style="font-size:11px;color:var(--text-3)">Sem registro</div>`;
+
+    // Dias passados desde a última
+    const diasPassados = (p.dias_restantes !== null && p.intervalo_dias)
+      ? p.intervalo_dias - p.dias_restantes
+      : null;
+
+    // Linha de status (badge direito)
+    let badge = "";
+    if (p.status === "sem_registro") {
+      badge = `<span class="prox-dias pd-sem_reg">—</span>`;
+    } else if (p.status === "atrasado") {
+      badge = `<span class="prox-dias pd-atrasado">⚠️ ${Math.abs(p.dias_restantes)}d atrasado</span>`;
+    } else if (p.dias_restantes === 0) {
+      badge = `<span class="prox-dias pd-urgente">Hoje!</span>`;
+    } else {
+      badge = `<span class="prox-dias ${dcls(p.status)}">próx. em ${p.dias_restantes}d</span>`;
+    }
+
+    // Sub-linha: passados + data da próxima
+    let sub = "";
+    if (p.status === "sem_registro") {
+      sub = `<div style="font-size:11px;color:var(--text-3)">Sem registro</div>`;
+    } else {
+      const passadosTxt = diasPassados !== null && diasPassados >= 0
+        ? `<span style="color:var(--text-3)">há ${diasPassados}d</span>`
+        : "";
+      const proximaTxt  = p.data_prevista
+        ? `<span style="color:var(--text-3)"> · próxima: ${_isoParaBr(p.data_prevista)}</span>`
+        : "";
+      sub = `<div style="font-size:11px;margin-top:1px">
+        <span style="color:var(--text-3)">Última: ${p.ultima_data}</span>
+        ${passadosTxt ? ` <span style="color:var(--text-3);opacity:.5">·</span> ${passadosTxt}` : ""}
+        ${proximaTxt}
+      </div>`;
+    }
+
     return `<div class="prox-item">
       <div class="prox-icon ${cls(p.status)}">${emoji}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:500;color:var(--text)">${p.tipo}</div>
-        ${ultimaTxt}
+        ${sub}
       </div>
-      <span class="prox-dias ${dcls(p.status)}">${diasTxt}</span>
+      ${badge}
     </div>`;
   }).join("");
+}
+
+function _isoParaBr(iso) {
+  if (!iso) return "—";
+  const [a, m, d] = iso.split("-");
+  return `${d}/${m}/${a}`;
 }
 
 /* ══════════════════════════════════════════════════
