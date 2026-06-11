@@ -226,6 +226,77 @@
 </div>
 
 
+<!-- ── WhatsApp / CallMeBot ──────────────────────────────────────────────────── -->
+<div class="card" style="margin-top:24px" id="wpp">
+  <div class="card-title">📱 WhatsApp — Lembretes e Alertas</div>
+  <p style="font-size:13px;color:var(--text-3);margin-bottom:16px">
+    Configure seu número para receber alertas de vacinação, sal, gado faltando e mais.
+    Cada usuário tem a própria configuração.
+  </p>
+
+  <!-- Instruções -->
+  <div style="background:var(--cream);border-radius:10px;padding:14px 16px;font-size:12.5px;color:var(--text-2);margin-bottom:20px;line-height:1.9;border-left:3px solid var(--green-600)">
+    <strong>📋 Como ativar (1 vez por número):</strong><br>
+    1. Salve o <strong>número do bot CallMeBot</strong> que você recebeu nos seus contatos (ex: <em>+34 644 663 262</em>)<br>
+    2. Envie pelo WhatsApp: <code style="background:var(--bg-2);padding:2px 7px;border-radius:5px;font-size:12px">I allow callmebot to send me messages</code><br>
+    3. Em segundos você recebe sua <strong>API Key</strong> — anote e coloque abaixo<br>
+    4. ⚠️ <strong>Cada usuário que adicionar o bot receberá um número diferente.</strong>
+    Salve o número exato que você adicionou no campo "Número do Bot" abaixo.<br>
+    <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank"
+       style="color:var(--green-600);font-weight:600">Ver instruções completas →</a>
+  </div>
+
+  <!-- Status atual -->
+  <div id="cfg-wpp-status" style="margin-bottom:16px;font-size:13px;color:var(--text-3)">⏳ Verificando...</div>
+
+  <!-- Formulário -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
+    <div>
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px">
+        Seu Telefone (com país+DDD)
+      </label>
+      <input type="text" id="cfg-wpp-telefone" placeholder="5534999990000"
+             inputmode="numeric"
+             style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
+             onfocus="this.style.borderColor='#3d7a34'" onblur="this.style.borderColor='#ddd'">
+      <div style="font-size:11px;color:var(--text-3);margin-top:3px">Ex: 5534912345678</div>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px">
+        Número do Bot (recebido ao ativar)
+      </label>
+      <input type="text" id="cfg-wpp-bot" placeholder="+34644663262"
+             style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
+             onfocus="this.style.borderColor='#3d7a34'" onblur="this.style.borderColor='#ddd'">
+      <div style="font-size:11px;color:var(--text-3);margin-top:3px">O número que você adicionou nos contatos</div>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px">
+        API Key (recebida via WhatsApp)
+      </label>
+      <input type="text" id="cfg-wpp-apikey" placeholder="1234567"
+             style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
+             onfocus="this.style.borderColor='#3d7a34'" onblur="this.style.borderColor='#ddd'">
+      <div style="font-size:11px;color:var(--text-3);margin-top:3px">Número recebido do bot por WhatsApp</div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-2)">
+      <input type="checkbox" id="cfg-wpp-ativo" checked
+             style="width:16px;height:16px;accent-color:var(--green-600)">
+      Alertas ativos
+    </label>
+    <span style="font-size:12px;color:var(--text-3)">— desmarque para pausar sem apagar a configuração</span>
+  </div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button onclick="salvarCfgWpp()" class="btn btn-primary">💾 Salvar configuração</button>
+    <button onclick="testarCfgWpp()" class="btn btn-outline" id="btn-cfg-wpp-testar">📤 Testar agora</button>
+  </div>
+  <div id="cfg-wpp-feedback" style="margin-top:12px;font-size:13px"></div>
+</div>
+
 <!-- ── Identidade do Sítio ───────────────────────────────────────────────────── -->
 <div class="card" style="margin-top:24px">
   <div class="card-title">🏡 Identidade do Sítio</div>
@@ -349,6 +420,96 @@
 
 {% block scripts %}
 <script>
+// ── WhatsApp — Configurações ──────────────────────────────────────────────────
+async function carregarCfgWpp() {
+  try {
+    const d = await fetch("/api/config-whatsapp").then(r => r.json());
+    const wrap = document.getElementById("cfg-wpp-status");
+    if (d.apikey_configurada && d.telefone) {
+      wrap.innerHTML = `<span style="background:var(--green-100);color:var(--green-700);padding:3px 10px;border-radius:20px;font-weight:500">✅ WhatsApp configurado — ${d.telefone}</span>`;
+      document.getElementById("cfg-wpp-telefone").value = d.telefone;
+      document.getElementById("cfg-wpp-bot").value      = d.bot_number || "";
+      document.getElementById("cfg-wpp-apikey").value   = "••••••";  // não expomos a key
+      document.getElementById("cfg-wpp-ativo").checked  = d.alertas_ativos;
+    } else {
+      wrap.innerHTML = `<span style="color:var(--text-3)">⚙️ Não configurado. Preencha os campos abaixo e salve.</span>`;
+    }
+  } catch(e) {
+    document.getElementById("cfg-wpp-status").textContent = "⚠️ Erro ao carregar configuração.";
+  }
+}
+
+function cfgWppFeedback(msg, tipo) {
+  const el  = document.getElementById("cfg-wpp-feedback");
+  const cor = tipo==="ok" ? "var(--green-700)" : tipo==="warn" ? "#c87000" : "var(--danger)";
+  el.style.color  = cor;
+  el.textContent  = msg;
+  if (msg) setTimeout(() => { el.textContent = ""; }, 7000);
+}
+
+async function salvarCfgWpp() {
+  const tel  = document.getElementById("cfg-wpp-telefone").value.trim().replace(/\D/g,"");
+  const bot  = document.getElementById("cfg-wpp-bot").value.trim().replace(/\s/g,"");
+  const key  = document.getElementById("cfg-wpp-apikey").value.trim();
+  const ativ = document.getElementById("cfg-wpp-ativo").checked;
+
+  if (!tel) { cfgWppFeedback("⚠️ Preencha seu número de telefone.", "warn"); return; }
+  if (!bot) { cfgWppFeedback("⚠️ Preencha o número do bot CallMeBot.", "warn"); return; }
+
+  // Validação básica: número do bot CallMeBot sempre começa com +34
+  if (!bot.startsWith("+34")) {
+    cfgWppFeedback(
+      "⚠️ O número do bot parece incorreto — números do CallMeBot sempre começam com +34 (ex: +34644663262). " +
+      "Verifique qual número você adicionou nos contatos.",
+      "warn"
+    );
+    return;
+  }
+
+  if (!key || key === "••••••") { cfgWppFeedback("⚠️ Preencha a API Key recebida via WhatsApp.", "warn"); return; }
+
+  let r;
+  try {
+    const resp = await fetch("/api/config-whatsapp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ telefone: tel, bot_number: bot, apikey: key, alertas_ativos: ativ })
+    });
+    r = await resp.json();
+  } catch(e) { cfgWppFeedback("❌ Erro de rede: " + e.message, "err"); return; }
+
+  if (r.ok) { cfgWppFeedback("✅ Configuração salva com sucesso!", "ok"); carregarCfgWpp(); }
+  else       { cfgWppFeedback("❌ Erro ao salvar: " + (r.erro||"desconhecido"), "err"); }
+}
+
+async function testarCfgWpp() {
+  const btn = document.getElementById("btn-cfg-wpp-testar");
+  btn.disabled = true; btn.textContent = "⏳ Enviando...";
+  cfgWppFeedback("", "");
+  try {
+    const r = await fetch("/api/enviar-teste-whatsapp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      credentials: "same-origin"
+    }).then(res => res.json());
+    cfgWppFeedback(
+      r.ok ? "✅ Mensagem enviada! Verifique seu WhatsApp." : "❌ " + (r.erro || "Falha no envio."),
+      r.ok ? "ok" : "err"
+    );
+  } catch(e) {
+    cfgWppFeedback("❌ Erro de rede: " + e.message, "err");
+  }
+  btn.disabled = false; btn.textContent = "📤 Testar agora";
+}
+
+// Carregar status ao abrir a página (ou se URL tiver #wpp, rolar até lá)
+document.addEventListener("DOMContentLoaded", () => {
+  carregarCfgWpp();
+  if (window.location.hash === "#wpp") {
+    setTimeout(() => document.getElementById("wpp")?.scrollIntoView({ behavior: "smooth" }), 200);
+  }
+});
+
 // ── CapsLock universal ────────────────────────────────────────────────────────
 function checkCaps(e, warnId) {
   if (!e.getModifierState) return;

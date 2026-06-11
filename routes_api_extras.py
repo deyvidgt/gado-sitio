@@ -88,13 +88,15 @@ def api_config_whatsapp():
         return jsonify({
             "ok":                True,
             "telefone":          cfg.get("telefone", ""),
+            "bot_number":        cfg.get("bot_number", "+34644663262"),
             "apikey_configurada": bool(cfg.get("apikey", "").strip()),
             "alertas_ativos":    cfg.get("alertas_ativos", True),
         })
 
     data = request.get_json(silent=True) or {}
-    tel  = str(data.get("telefone", "")).strip().replace(" ", "").replace("-", "")
-    key  = str(data.get("apikey",   "")).strip()
+    tel      = str(data.get("telefone",   "")).strip().replace(" ", "").replace("-", "")
+    key      = str(data.get("apikey",     "")).strip()
+    bot_num  = str(data.get("bot_number", "")).strip().replace(" ", "")
     if not tel or not key:
         return jsonify({"ok": False, "erro": "Telefone e API Key obrigatórios."})
 
@@ -105,10 +107,66 @@ def api_config_whatsapp():
     usuarios[usuario]["whatsapp"] = {
         "telefone":      tel,
         "apikey":        key,
+        "bot_number":    bot_num or "+34644663262",  # fallback padrão
         "alertas_ativos": bool(data.get("alertas_ativos", True)),
     }
     _salvar_usuarios(usuarios)
     return jsonify({"ok": True, "msg": "Configuração salva!"})
+
+
+def _enviar_callmebot(tel: str, key: str, msg: str) -> dict:
+    """
+    Utilitário central de envio via CallMeBot.
+    Retorna {"ok": bool, "erro": str|None} com mensagens de erro claras.
+    """
+    try:
+        import requests as req
+        r = req.get(
+            "https://api.callmebot.com/whatsapp.php",
+            params={"phone": tel, "text": msg, "apikey": key},
+            timeout=20,
+        )
+        texto = r.text.lower()
+        ok = r.status_code == 200 and "message queued" in texto
+
+        if not ok:
+            # Detectar erros específicos do CallMeBot
+            if "phone number not correct" in texto or "incorrect phone" in texto:
+                erro = (
+                    "Número de telefone inválido ou não autorizado. "
+                    "Verifique se você enviou 'I allow callmebot to send me messages' "
+                    "para o número do bot e se o telefone está correto."
+                )
+            elif "apikey" in texto or "api key" in texto or "not found" in texto:
+                erro = (
+                    "API Key inválida ou expirada. "
+                    "O número do bot CallMeBot pode ter mudado — "
+                    "verifique em callmebot.com e atualize o número do bot em ⚙️ Configurações → WhatsApp."
+                )
+            elif r.status_code == 403:
+                erro = (
+                    "Acesso negado pelo CallMeBot (erro 403). "
+                    "Possível mudança no número do bot — "
+                    "confira o número atual em callmebot.com e atualize em ⚙️ Configurações → WhatsApp."
+                )
+            else:
+                erro = f"CallMeBot retornou erro: {r.text[:200]}"
+            return {"ok": False, "erro": erro}
+
+        return {"ok": True, "erro": None}
+
+    except Exception as e:
+        msg_e = str(e)
+        if any(k in msg_e for k in ("ProxyError", "Max retries", "ConnectionError",
+                                     "Tunnel connection", "timeout")):
+            return {
+                "ok": False,
+                "erro": (
+                    "Servidor sem acesso ao CallMeBot (restrição de rede do PythonAnywhere). "
+                    "O envio funciona normalmente pelo celular ou pelo script alertas_whatsapp.py local."
+                ),
+            }
+        return {"ok": False, "erro": f"Erro inesperado: {msg_e}"}
 
 
 @app.route("/api/enviar-lembrete-whatsapp", methods=["POST"])
@@ -122,23 +180,7 @@ def api_enviar_lembrete_whatsapp():
     if not tel or not key or not msg:
         return jsonify({"ok": False, "erro": "telefone, apikey e msg são obrigatórios."})
 
-    try:
-        import requests as req
-        r = req.get(
-            "https://api.callmebot.com/whatsapp.php",
-            params={"phone": tel, "text": msg, "apikey": key},
-            timeout=20,
-        )
-        ok = r.status_code == 200 and "message queued" in r.text.lower()
-        return jsonify({"ok": ok, "erro": None if ok else r.text[:200]})
-    except Exception as e:
-        msg_erro = str(e)
-        # Detectar falha de proxy/rede no PythonAnywhere
-        if any(k in msg_erro for k in ("ProxyError", "Max retries", "ConnectionError",
-                                        "Tunnel connection", "403", "timeout")):
-            msg_erro = ("Servidor sem acesso ao CallMeBot (restrição de rede). "
-                        "Tente novamente ou use o alertas_whatsapp.py localmente.")
-        return jsonify({"ok": False, "erro": msg_erro})
+    return jsonify(_enviar_callmebot(tel, key, msg))
 
 
 @app.route("/api/enviar-teste-whatsapp", methods=["POST"])
@@ -150,14 +192,14 @@ def api_enviar_teste_whatsapp():
     """
     usuario = session.get("usuario", "")
     cfg     = _carregar_usuarios().get(usuario, {}).get("whatsapp", {})
-    tel     = cfg.get("telefone", "").strip()
-    key     = cfg.get("apikey",   "").strip()
+    tel     = cfg.get("telefone",   "").strip()
+    key     = cfg.get("apikey",     "").strip()
     ativo   = cfg.get("alertas_ativos", True)
 
     if not tel or not key:
         return jsonify({
             "ok":   False,
-            "erro": "WhatsApp não configurado. Clique em ⚙️ Configurar, preencha e salve primeiro."
+            "erro": "WhatsApp não configurado. Vá em ⚙️ Configurações → WhatsApp e salve primeiro."
         })
 
     from extensions import _agora
@@ -166,22 +208,7 @@ def api_enviar_teste_whatsapp():
         f"📤 Teste de notificação — {_agora().strftime('%d/%m/%Y %H:%M')}\n"
         f"✅ Sistema funcionando! Alertas {'ativos' if ativo else 'pausados'}."
     )
-
-    try:
-        import requests as req
-        r = req.get(
-            "https://api.callmebot.com/whatsapp.php",
-            params={"phone": tel, "text": msg, "apikey": key},
-            timeout=20,
-        )
-        ok = r.status_code == 200 and "message queued" in r.text.lower()
-        return jsonify({"ok": ok, "erro": None if ok else r.text[:200]})
-    except Exception as e:
-        msg_erro = str(e)
-        if any(k in msg_erro for k in ("ProxyError", "Max retries", "ConnectionError",
-                                        "Tunnel connection", "403", "timeout")):
-            msg_erro = "Servidor sem acesso ao CallMeBot (restrição de rede do PythonAnywhere)."
-        return jsonify({"ok": False, "erro": msg_erro})
+    return jsonify(_enviar_callmebot(tel, key, msg))
 
 
 @app.route("/api/enviar-alertas-familia", methods=["POST"])

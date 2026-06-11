@@ -127,73 +127,24 @@
 
 </div>
 
-<!-- ═══ PAINEL WHATSAPP ═══════════════════════════════════════════════════════ -->
+<!-- ═══ ATALHO WHATSAPP ═══════════════════════════════════════════════════════ -->
 <div class="card" style="margin-bottom:24px" id="card-whatsapp">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
-    <div>
-      <div class="card-title" style="margin-bottom:2px">📱 Lembretes via WhatsApp</div>
-      <div style="font-size:12px;color:var(--text-3)">Receba alertas de vacinação, sal, gado faltando e resultado diretamente no WhatsApp</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:26px">📱</span>
+      <div>
+        <div style="font-weight:600;font-size:14px;color:var(--text)">Lembretes via WhatsApp</div>
+        <div id="wpp-status-cfg" style="font-size:12px;color:var(--text-3);margin-top:2px">⏳ Verificando...</div>
+      </div>
     </div>
-    <button onclick="toggleWppPanel()" class="btn btn-outline btn-sm" id="btn-wpp-toggle">⚙️ Configurar</button>
-  </div>
-
-  <!-- Status + botões de ação rápida -->
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:12px">
-    <div id="wpp-status-cfg" style="font-size:12px;color:var(--text-3)">⏳ Verificando configuração...</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <a href="/configuracoes#wpp" class="btn btn-outline btn-sm">⚙️ Configurar</a>
       <button onclick="testarWppRapido()" class="btn btn-outline btn-sm" id="btn-wpp-testar-rap"
-              title="Envia uma mensagem de teste para o seu número">
-        📤 Testar meu número
-      </button>
+              title="Envia mensagem de teste para o seu número">📤 Testar</button>
       <button onclick="enviarAlertasFamilia()" class="btn btn-sm" id="btn-wpp-familia"
               style="background:var(--green-600);color:#fff;border:none"
-              title="Envia os alertas reais para todos os números cadastrados">
-        🚨 Alertar família agora
-      </button>
+              title="Envia alertas para todos os números cadastrados">🚨 Alertar família</button>
     </div>
-  </div>
-
-  <!-- Painel de configuração (oculto por padrão) -->
-  <div id="wpp-panel" style="display:none;margin-top:18px;border-top:1px solid var(--cream-dk);padding-top:18px">
-    <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:10px">
-      🔧 Configuração do seu WhatsApp
-    </div>
-
-    <!-- Instruções -->
-    <div style="background:var(--cream);border-radius:8px;padding:12px 14px;font-size:12.5px;color:var(--text-2);margin-bottom:14px;line-height:1.7">
-      <strong>Como ativar (1 vez só):</strong><br>
-      1. Adicione o número <strong>+34 644 663 262</strong> nos seus contatos como "CallMeBot"<br>
-      2. Envie a mensagem: <code style="background:var(--bg-2);padding:1px 6px;border-radius:4px">I allow callmebot to send me messages</code><br>
-      3. Você receberá sua API Key por WhatsApp em segundos<br>
-      <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank"
-         style="color:var(--green-600);font-weight:600">Ver instruções completas →</a>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-      <div>
-        <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px">
-          Telefone (com DDD e código país)
-        </label>
-        <input type="text" id="wpp-telefone" placeholder="5534999990000"
-               style="width:100%;padding:9px 12px;border:1.5px solid var(--cream-dk);border-radius:8px;font-size:14px;font-family:inherit;background:var(--surface-2);color:var(--text)">
-      </div>
-      <div>
-        <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px">
-          API Key (recebida via WhatsApp)
-        </label>
-        <input type="text" id="wpp-apikey" placeholder="1234567"
-               style="width:100%;padding:9px 12px;border:1.5px solid var(--cream-dk);border-radius:8px;font-size:14px;font-family:inherit;background:var(--surface-2);color:var(--text)">
-      </div>
-    </div>
-    <div style="font-size:12px;color:var(--text-3);margin-bottom:14px;padding:8px 12px;background:var(--cream);border-radius:8px">
-      💡 Os campos são preenchidos automaticamente. Se estiverem vazios, preencha e clique em <strong>Salvar configuração</strong>.
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button onclick="salvarWpp()" class="btn btn-primary">💾 Salvar configuração</button>
-      <button onclick="testarWpp()" class="btn btn-outline" id="btn-wpp-testar">📤 Enviar mensagem de teste</button>
-      <button onclick="enviarAlertas()" class="btn btn-outline" id="btn-wpp-alertas">🚨 Enviar alertas agora</button>
-    </div>
-    <div id="wpp-feedback" style="margin-top:10px;font-size:13px"></div>
   </div>
   <div id="wpp-feedback-rap" style="margin-top:8px;font-size:13px"></div>
 </div>
@@ -682,116 +633,12 @@ async function loadWppStatus() {
     const d = await _apiFetch("/api/config-whatsapp");
     const wrap = document.getElementById("wpp-status-cfg");
     if (d.apikey_configurada && d.telefone) {
-      wrap.innerHTML = `<span style="font-size:12px;background:var(--green-100);color:var(--green-700);padding:3px 10px;border-radius:20px;font-weight:500">✅ WhatsApp configurado — ${d.telefone}</span>
+      wrap.innerHTML = `<span style="font-size:12px;background:var(--green-100);color:var(--green-700);padding:2px 8px;border-radius:20px;font-weight:500">✅ Configurado — ${d.telefone}</span>
         <span style="font-size:12px;color:var(--text-3);margin-left:4px">Alertas ${d.alertas_ativos ? "ativos" : "pausados"}</span>`;
-      // Pré-preencher campos
-      document.getElementById("wpp-telefone").value = d.telefone;
-      document.getElementById("wpp-apikey").value   = d.apikey_configurada ? "••••••" : "";
     } else {
-      wrap.innerHTML = `<span style="font-size:12px;background:var(--cream-dk);color:var(--text-3);padding:3px 10px;border-radius:20px">⚙️ WhatsApp não configurado</span>`;
+      wrap.innerHTML = `<span style="font-size:12px;color:var(--text-3)">⚙️ Não configurado — <a href="/configuracoes#wpp" style="color:var(--green-600)">configurar aqui</a></span>`;
     }
   } catch(e) {}
-}
-
-function toggleWppPanel() {
-  const p = document.getElementById("wpp-panel");
-  const abrindo = p.style.display === "none";
-  p.style.display = abrindo ? "block" : "none";
-  // Pré-preencher com dados conhecidos se campos estiverem vazios
-  if (abrindo) {
-    const telEl = document.getElementById("wpp-telefone");
-    const keyEl = document.getElementById("wpp-apikey");
-    // campos preenchidos automaticamente via loadWppStatus()
-  }
-}
-
-async function salvarWpp() {
-  const tel = document.getElementById("wpp-telefone").value.trim().replace(/\D/g,"");
-  const key = document.getElementById("wpp-apikey").value.trim();
-  if (!tel || !key || key === "••••••") {
-    wppFeedback("⚠️ Preencha telefone e API Key.", "warn"); return;
-  }
-  let r;
-  try {
-    const resp = await fetch("/api/config-whatsapp", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ telefone: tel, apikey: key, alertas_ativos: true })
-    });
-    r = await resp.json();
-  } catch(e) { wppFeedback("❌ Erro de rede: " + e.message, "err"); return; }
-  if (r.ok) { wppFeedback("✅ Configuração salva!", "ok"); loadWppStatus(); }
-  else       { wppFeedback("❌ Erro ao salvar.", "err"); }
-}
-
-async function testarWpp() {
-  const tel = document.getElementById("wpp-telefone").value.trim().replace(/\D/g,"");
-  const key = document.getElementById("wpp-apikey").value.trim();
-  if (!tel || !key || key==="••••••") { wppFeedback("⚠️ Salve a configuração antes de testar.","warn"); return; }
-  const btn = document.getElementById("btn-wpp-testar");
-  btn.disabled = true; btn.textContent = "⏳ Enviando...";
-  const msg = `🐄 Sítio Santo Antonio\nTeste de notificação — ${new Date().toLocaleString("pt-BR")}\nSistema funcionando! ✅`;
-  const r = await fetch("/api/enviar-lembrete-whatsapp", {
-    method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ telefone: tel, apikey: key, msg })
-  }).then(r => r.json());
-  btn.disabled = false; btn.textContent = "📤 Enviar mensagem de teste";
-  if (r.ok) wppFeedback("✅ Mensagem enviada! Verifique seu WhatsApp.", "ok");
-  else       wppFeedback("❌ Erro: " + (r.erro||"desconhecido"), "err");
-}
-
-async function enviarAlertas() {
-  const tel = document.getElementById("wpp-telefone").value.trim().replace(/\D/g,"");
-  const key = document.getElementById("wpp-apikey").value.trim();
-  if (!tel || !key || key==="••••••") { wppFeedback("⚠️ Salve a configuração primeiro.","warn"); return; }
-  const btn = document.getElementById("btn-wpp-alertas");
-  btn.disabled = true; btn.textContent = "⏳ Montando alertas...";
-
-  // Montar mensagem com alertas reais do sistema
-  const [vis, cal] = await Promise.all([
-    _apiFetch("/api/ultima-visita").catch(()=>null),
-    _apiFetch("/api/calendario-manejo").catch(()=>null),
-  ]);
-
-  let linhas = [`🐄 *Sítio Santo Antonio* — Alertas do sistema`, `📅 ${new Date().toLocaleDateString("pt-BR")}`,""];
-
-  if (vis && vis.ok) {
-    linhas.push(`📋 *Última visita:* ${vis.data} (${vis.responsavel||"?"})`);
-    if (vis.gado_faltando > 0) linhas.push(`⚠️ ${vis.gado_faltando} cabeça(s) FALTANDO!`);
-    if (vis.sal && !["OK"].includes(vis.sal)) linhas.push(`🧂 Sal/Ração: *${vis.sal}*`);
-    if (vis.proteinado && !["OK"].includes(vis.proteinado)) linhas.push(`🟡 Proteinado: *${vis.proteinado}*`);
-    if (vis.corrego && !["Normal"].includes(vis.corrego)) linhas.push(`💧 Água: *${vis.corrego}*`);
-  }
-
-  if (cal && cal.proximas) {
-    const urgentes = cal.proximas.filter(p => ["atrasado","urgente","sem_registro"].includes(p.status));
-    if (urgentes.length) {
-      linhas.push("","📅 *Manejos pendentes:*");
-      urgentes.forEach(p => {
-        const txt = p.status==="atrasado" ? `ATRASADO ${Math.abs(p.dias_restantes)}d` :
-                    p.status==="urgente"  ? `em ${p.dias_restantes}d` : "sem registro";
-        linhas.push(`  • ${p.tipo}: ${txt}`);
-      });
-    }
-  }
-
-  linhas.push("","_Sistema de Gestão de Gado_ 🐄");
-  const msg = linhas.join("\n");
-
-  const r = await fetch("/api/enviar-lembrete-whatsapp", {
-    method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ telefone: tel, apikey: key, msg })
-  }).then(r => r.json());
-  btn.disabled = false; btn.textContent = "🚨 Enviar alertas agora";
-  if (r.ok) wppFeedback("✅ Alertas enviados para o WhatsApp!", "ok");
-  else       wppFeedback("❌ " + (r.erro||"Falha no envio"), "err");
-}
-
-function wppFeedback(msg, tipo) {
-  const el = document.getElementById("wpp-feedback");
-  const cor = tipo==="ok" ? "var(--green-700)" : tipo==="warn" ? "#c87000" : "var(--danger)";
-  el.style.color = cor;
-  el.textContent = msg;
-  setTimeout(() => { el.textContent = ""; }, 6000);
 }
 
 function wppFeedbackRap(msg, tipo) {
@@ -821,7 +668,7 @@ async function testarWppRapido() {
   } catch(e) {
     wppFeedbackRap("❌ Erro de rede: " + e.message, "err");
   }
-  btn.disabled = false; btn.textContent = "📤 Testar meu número";
+  btn.disabled = false; btn.textContent = "📤 Testar";
 }
 
 /* ── Alertar todos da família via backend ── */
@@ -837,7 +684,7 @@ async function enviarAlertasFamilia() {
     }).then(res => res.json());
     wppFeedbackRap(r.ok ? `✅ ${r.msg}` : "❌ " + (r.erro||"Falha no envio."), r.ok?"ok":"err");
   } catch(e) { wppFeedbackRap("❌ Erro de rede: " + e.message, "err"); }
-  btn.disabled = false; btn.textContent = "🚨 Alertar família agora";
+  btn.disabled = false; btn.textContent = "🚨 Alertar família";
 }
 
 /* ── Recarregar calendário ao trocar tema ── */
