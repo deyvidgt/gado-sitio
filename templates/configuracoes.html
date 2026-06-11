@@ -118,6 +118,7 @@
           {% if u != session.get('usuario') %}
           <form method="post" action="{{ url_for('excluir_usuario') }}" style="margin:0"
                 onsubmit="return confirm('Excluir o usuário {{ u.capitalize() }}?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="usuario" value="{{ u }}">
             <button type="submit"
                     style="padding:5px 10px;background:#fff0f0;border:1.5px solid #ffcdd2;border-radius:7px;font-size:12px;cursor:pointer;color:#c62828;font-family:inherit">
