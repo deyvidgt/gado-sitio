@@ -97,17 +97,24 @@ def api_config_whatsapp():
     tel      = str(data.get("telefone",   "")).strip().replace(" ", "").replace("-", "")
     key      = str(data.get("apikey",     "")).strip()
     bot_num  = str(data.get("bot_number", "")).strip().replace(" ", "")
-    if not tel or not key:
-        return jsonify({"ok": False, "erro": "Telefone e API Key obrigatórios."})
+    if not tel:
+        return jsonify({"ok": False, "erro": "Telefone obrigatório."})
 
     usuarios = _carregar_usuarios()
     if usuario not in usuarios:
         return jsonify({"ok": False, "erro": "Usuário não encontrado."})
 
+    cfg_atual = usuarios[usuario].get("whatsapp", {})
+
+    # Se a key não foi enviada, manter a que já está salva
+    key_salva = key if key else cfg_atual.get("apikey", "")
+    if not key_salva:
+        return jsonify({"ok": False, "erro": "API Key obrigatória na primeira configuração."})
+
     usuarios[usuario]["whatsapp"] = {
         "telefone":      tel,
-        "apikey":        key,
-        "bot_number":    bot_num or "+34644663262",  # fallback padrão
+        "apikey":        key_salva,
+        "bot_number":    bot_num or cfg_atual.get("bot_number", "+34644663262"),
         "alertas_ativos": bool(data.get("alertas_ativos", True)),
     }
     _salvar_usuarios(usuarios)

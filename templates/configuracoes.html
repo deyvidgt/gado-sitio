@@ -246,52 +246,92 @@
        style="color:var(--green-600);font-weight:600">Ver instruções completas →</a>
   </div>
 
-  <!-- Status atual -->
-  <div id="cfg-wpp-status" style="margin-bottom:16px;font-size:13px;color:var(--text-3)">⏳ Verificando...</div>
-
-  <!-- Formulário -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
-    <div>
-      <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px">
-        Seu Telefone (com país+DDD)
-      </label>
-      <input type="text" id="cfg-wpp-telefone" placeholder="5534999990000"
-             inputmode="numeric"
-             style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
-             onfocus="this.style.borderColor='#3d7a34'" onblur="this.style.borderColor='#ddd'">
-      <div style="font-size:11px;color:var(--text-3);margin-top:3px">Ex: 5534912345678</div>
+  <!-- Dados cadastrados (visível quando configurado) -->
+  <div id="cfg-wpp-cadastrado" style="display:none;background:var(--cream);border-radius:10px;padding:14px 16px;margin-bottom:18px">
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-3);letter-spacing:.5px;margin-bottom:10px">
+      📋 Configuração atual
     </div>
-    <div>
-      <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px">
-        Número do Bot (recebido ao ativar)
-      </label>
-      <input type="text" id="cfg-wpp-bot" placeholder="+34644663262"
-             style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
-             onfocus="this.style.borderColor='#3d7a34'" onblur="this.style.borderColor='#ddd'">
-      <div style="font-size:11px;color:var(--text-3);margin-top:3px">O número que você adicionou nos contatos</div>
-    </div>
-    <div>
-      <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px">
-        API Key (recebida via WhatsApp)
-      </label>
-      <input type="text" id="cfg-wpp-apikey" placeholder="1234567"
-             style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
-             onfocus="this.style.borderColor='#3d7a34'" onblur="this.style.borderColor='#ddd'">
-      <div style="font-size:11px;color:var(--text-3);margin-top:3px">Número recebido do bot por WhatsApp</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+      <div>
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:2px">Seu telefone</div>
+        <div id="cfg-wpp-show-tel" style="font-size:14px;font-weight:600;color:var(--text);font-family:monospace">—</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:2px">Número do bot</div>
+        <div id="cfg-wpp-show-bot" style="font-size:14px;font-weight:600;color:var(--text);font-family:monospace">—</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:2px">API Key</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);font-family:monospace">••••••</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:2px">Alertas</div>
+        <div id="cfg-wpp-show-ativo" style="font-size:13px;font-weight:600">—</div>
+      </div>
     </div>
   </div>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-2)">
-      <input type="checkbox" id="cfg-wpp-ativo" checked
-             style="width:16px;height:16px;accent-color:var(--green-600)">
-      Alertas ativos
-    </label>
-    <span style="font-size:12px;color:var(--text-3)">— desmarque para pausar sem apagar a configuração</span>
+  <!-- Não configurado -->
+  <div id="cfg-wpp-vazio" style="display:none;background:#fff8e1;border:1.5px solid #f9a825;border-radius:9px;padding:10px 14px;font-size:13px;color:#7a5100;margin-bottom:18px">
+    ⚙️ Nenhuma configuração salva. Preencha os campos abaixo.
   </div>
 
-  <div style="display:flex;gap:10px;flex-wrap:wrap">
-    <button onclick="salvarCfgWpp()" class="btn btn-primary">💾 Salvar configuração</button>
+  <!-- Formulário (colapsável) -->
+  <div style="margin-bottom:12px">
+    <button onclick="toggleCfgWppForm()" id="btn-cfg-wpp-toggle"
+            style="font-size:13px;background:none;border:1.5px solid var(--cream-dk);border-radius:8px;padding:7px 14px;cursor:pointer;color:var(--text-2);font-family:inherit">
+      ✏️ Editar configuração
+    </button>
+  </div>
+
+  <div id="cfg-wpp-form" style="display:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
+      <div>
+        <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px">
+          Seu Telefone (com país+DDD)
+        </label>
+        <input type="text" id="cfg-wpp-telefone" placeholder="5534999990000"
+               inputmode="numeric"
+               style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
+               onfocus="this.style.borderColor='#3d7a34'" onblur="this.style.borderColor='#ddd'">
+        <div style="font-size:11px;color:var(--text-3);margin-top:3px">Ex: 5534912345678</div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px">
+          Número do Bot CallMeBot
+        </label>
+        <input type="text" id="cfg-wpp-bot" placeholder="+34644663262"
+               style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
+               onfocus="this.style.borderColor='#3d7a34'" onblur="this.style.borderColor='#ddd'">
+        <div style="font-size:11px;color:var(--text-3);margin-top:3px">O número que você adicionou nos contatos (começa com +34)</div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px">
+          API Key (recebida via WhatsApp)
+        </label>
+        <input type="text" id="cfg-wpp-apikey" placeholder="1234567"
+               style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
+               onfocus="this.style.borderColor='#3d7a34'" onblur="this.style.borderColor='#ddd'">
+        <div style="font-size:11px;color:var(--text-3);margin-top:3px">Deixe em branco para manter a atual</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-2)">
+        <input type="checkbox" id="cfg-wpp-ativo" checked
+               style="width:16px;height:16px;accent-color:var(--green-600)">
+        Alertas ativos
+      </label>
+      <span style="font-size:12px;color:var(--text-3)">— desmarque para pausar sem apagar a configuração</span>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button onclick="salvarCfgWpp()" class="btn btn-primary">💾 Salvar</button>
+      <button onclick="toggleCfgWppForm()" class="btn btn-outline">Cancelar</button>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--cream-dk)">
     <button onclick="testarCfgWpp()" class="btn btn-outline" id="btn-cfg-wpp-testar">📤 Testar agora</button>
   </div>
   <div id="cfg-wpp-feedback" style="margin-top:12px;font-size:13px"></div>
@@ -424,19 +464,43 @@
 async function carregarCfgWpp() {
   try {
     const d = await fetch("/api/config-whatsapp").then(r => r.json());
-    const wrap = document.getElementById("cfg-wpp-status");
+
+    const elCadastrado = document.getElementById("cfg-wpp-cadastrado");
+    const elVazio      = document.getElementById("cfg-wpp-vazio");
+
     if (d.apikey_configurada && d.telefone) {
-      wrap.innerHTML = `<span style="background:var(--green-100);color:var(--green-700);padding:3px 10px;border-radius:20px;font-weight:500">✅ WhatsApp configurado — ${d.telefone}</span>`;
+      // Mostrar dados cadastrados
+      elCadastrado.style.display = "block";
+      elVazio.style.display      = "none";
+      document.getElementById("cfg-wpp-show-tel").textContent  = d.telefone;
+      document.getElementById("cfg-wpp-show-bot").textContent  = d.bot_number || "—";
+      document.getElementById("cfg-wpp-show-ativo").innerHTML  = d.alertas_ativos
+        ? `<span style="color:var(--green-700)">✅ Ativos</span>`
+        : `<span style="color:#c87000">⏸️ Pausados</span>`;
+      // Pré-preencher form (sem a key)
       document.getElementById("cfg-wpp-telefone").value = d.telefone;
       document.getElementById("cfg-wpp-bot").value      = d.bot_number || "";
-      document.getElementById("cfg-wpp-apikey").value   = "••••••";  // não expomos a key
+      document.getElementById("cfg-wpp-apikey").value   = "";
       document.getElementById("cfg-wpp-ativo").checked  = d.alertas_ativos;
     } else {
-      wrap.innerHTML = `<span style="color:var(--text-3)">⚙️ Não configurado. Preencha os campos abaixo e salve.</span>`;
+      elCadastrado.style.display = "none";
+      elVazio.style.display      = "block";
+      // Abrir form automaticamente se não configurado
+      document.getElementById("cfg-wpp-form").style.display = "block";
+      document.getElementById("btn-cfg-wpp-toggle").style.display = "none";
     }
   } catch(e) {
-    document.getElementById("cfg-wpp-status").textContent = "⚠️ Erro ao carregar configuração.";
+    document.getElementById("cfg-wpp-vazio").style.display = "block";
+    document.getElementById("cfg-wpp-vazio").textContent = "⚠️ Erro ao carregar configuração.";
   }
+}
+
+function toggleCfgWppForm() {
+  const form = document.getElementById("cfg-wpp-form");
+  const btn  = document.getElementById("btn-cfg-wpp-toggle");
+  const aberto = form.style.display !== "none";
+  form.style.display = aberto ? "none" : "block";
+  btn.textContent = aberto ? "✏️ Editar configuração" : "✕ Fechar";
 }
 
 function cfgWppFeedback(msg, tipo) {
@@ -456,7 +520,7 @@ async function salvarCfgWpp() {
   if (!tel) { cfgWppFeedback("⚠️ Preencha seu número de telefone.", "warn"); return; }
   if (!bot) { cfgWppFeedback("⚠️ Preencha o número do bot CallMeBot.", "warn"); return; }
 
-  // Validação básica: número do bot CallMeBot sempre começa com +34
+  // Validação: número do bot CallMeBot sempre começa com +34
   if (!bot.startsWith("+34")) {
     cfgWppFeedback(
       "⚠️ O número do bot parece incorreto — números do CallMeBot sempre começam com +34 (ex: +34644663262). " +
@@ -466,20 +530,29 @@ async function salvarCfgWpp() {
     return;
   }
 
-  if (!key || key === "••••••") { cfgWppFeedback("⚠️ Preencha a API Key recebida via WhatsApp.", "warn"); return; }
+  // key pode ser vazia = manter a que já está salva no servidor
+  const body = { telefone: tel, bot_number: bot, alertas_ativos: ativ };
+  if (key) body.apikey = key;
 
   let r;
   try {
     const resp = await fetch("/api/config-whatsapp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ telefone: tel, bot_number: bot, apikey: key, alertas_ativos: ativ })
+      body: JSON.stringify(body)
     });
     r = await resp.json();
   } catch(e) { cfgWppFeedback("❌ Erro de rede: " + e.message, "err"); return; }
 
-  if (r.ok) { cfgWppFeedback("✅ Configuração salva com sucesso!", "ok"); carregarCfgWpp(); }
-  else       { cfgWppFeedback("❌ Erro ao salvar: " + (r.erro||"desconhecido"), "err"); }
+  if (r.ok) {
+    cfgWppFeedback("✅ Configuração salva!", "ok");
+    // Fechar form e recarregar dados exibidos
+    document.getElementById("cfg-wpp-form").style.display = "none";
+    document.getElementById("btn-cfg-wpp-toggle").textContent = "✏️ Editar configuração";
+    carregarCfgWpp();
+  } else {
+    cfgWppFeedback("❌ Erro ao salvar: " + (r.erro||"desconhecido"), "err");
+  }
 }
 
 async function testarCfgWpp() {
