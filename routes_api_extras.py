@@ -28,21 +28,106 @@ def _br(ts):
 @login_required
 def api_calendario_manejo():
     hoje = _agora()
-    df_man = carregar_aba("Manejo")
+    corte = pd.Timestamp(hoje - timedelta(days=365))
     eventos = []
+
+    # ── Manejo ──────────────────────────────────────────────────────────────
+    df_man = carregar_aba("Manejo")
     if not df_man.empty and "Data" in df_man.columns:
-        corte = pd.Timestamp(hoje - timedelta(days=180))
-        mask = df_man["Data"].notna() & (df_man["Data"] >= corte)
-        for _, row in df_man[mask].iterrows():
+        for _, row in df_man[df_man["Data"].notna() & (df_man["Data"] >= corte)].iterrows():
             d = _iso(row.get("Data"))
             if d:
                 eventos.append({
                     "data":    d,
+                    "categoria": "manejo",
                     "tipo":    str(row.get("Tipo", "") or ""),
                     "cabecas": int(row.get("Qtd Cabeças", 0) or 0),
                     "desc":    str(row.get("Descrição", "") or ""),
+                    "resumo":  str(row.get("Tipo", "") or "Manejo"),
                 })
 
+    # ── Visitas ──────────────────────────────────────────────────────────────
+    df_vis = carregar_aba("Visitas")
+    if not df_vis.empty and "Data" in df_vis.columns:
+        for _, row in df_vis[df_vis["Data"].notna() & (df_vis["Data"] >= corte)].iterrows():
+            d = _iso(row.get("Data"))
+            if d:
+                resp = str(row.get("Responsável", "") or "")
+                cont = int(row.get("Contagem", 0) or 0)
+                chuva = str(row.get("Chuva", "") or "")
+                grama = str(row.get("Grama", "") or "")
+                eventos.append({
+                    "data":      d,
+                    "categoria": "visita",
+                    "tipo":      "Visita",
+                    "resumo":    f"Visita — {resp}" if resp else "Visita",
+                    "cabecas":   cont,
+                    "desc":      f"Gado: {cont} cab. | Chuva: {chuva} | Pasto: {grama}".strip(" |"),
+                    "responsavel": resp,
+                    "chuva":     chuva,
+                    "grama":     grama,
+                })
+
+    # ── Compras ──────────────────────────────────────────────────────────────
+    df_comp = carregar_aba("Compras")
+    if not df_comp.empty and "Data" in df_comp.columns:
+        for _, row in df_comp[df_comp["Data"].notna() & (df_comp["Data"] >= corte)].iterrows():
+            d = _iso(row.get("Data"))
+            if d:
+                qtd  = int(row.get("Qtd", 0) or 0)
+                val  = float(row.get("Valor Total", 0) or 0)
+                memb = str(row.get("Membro", "") or "")
+                eventos.append({
+                    "data":      d,
+                    "categoria": "compra",
+                    "tipo":      "Compra",
+                    "resumo":    f"Compra — {qtd} cab.",
+                    "cabecas":   qtd,
+                    "desc":      f"{qtd} cabeças | R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                    "valor":     round(val, 2),
+                    "membro":    memb,
+                })
+
+    # ── Vendas ───────────────────────────────────────────────────────────────
+    df_vend = carregar_aba("Vendas")
+    if not df_vend.empty and "Data" in df_vend.columns:
+        for _, row in df_vend[df_vend["Data"].notna() & (df_vend["Data"] >= corte)].iterrows():
+            d = _iso(row.get("Data"))
+            if d:
+                qtd  = int(row.get("Qtd", 0) or 0)
+                val  = float(row.get("Valor Total", 0) or 0)
+                memb = str(row.get("Membro", "") or "")
+                eventos.append({
+                    "data":      d,
+                    "categoria": "venda",
+                    "tipo":      "Venda",
+                    "resumo":    f"Venda — {qtd} cab.",
+                    "cabecas":   qtd,
+                    "desc":      f"{qtd} cabeças | R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                    "valor":     round(val, 2),
+                    "membro":    memb,
+                })
+
+    # ── Gastos ───────────────────────────────────────────────────────────────
+    df_gast = carregar_aba("Gastos")
+    if not df_gast.empty and "Data" in df_gast.columns:
+        for _, row in df_gast[df_gast["Data"].notna() & (df_gast["Data"] >= corte)].iterrows():
+            d = _iso(row.get("Data"))
+            if d:
+                val  = float(row.get("Valor", 0) or 0)
+                desc = str(row.get("Descrição", "") or "")
+                cat  = str(row.get("Categoria", "") or "")
+                eventos.append({
+                    "data":      d,
+                    "categoria": "gasto",
+                    "tipo":      "Gasto",
+                    "resumo":    f"Gasto — {cat or desc[:20]}",
+                    "cabecas":   0,
+                    "desc":      f"{desc} | R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                    "valor":     round(val, 2),
+                })
+
+    # ── Próximas intervenções de saúde ──────────────────────────────────────
     proximas = []
     for tipo, intervalo in ALERTAS_SAUDE.items():
         status    = "sem_registro"
@@ -98,7 +183,6 @@ def api_config_whatsapp_todos():
 
 
 
-@app.route("/api/config-whatsapp", methods=["GET", "POST"])
 @login_required
 def api_config_whatsapp():
     usuario = session.get("usuario", "")
