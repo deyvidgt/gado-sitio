@@ -472,7 +472,7 @@
 // ── WhatsApp — Configurações ──────────────────────────────────────────────────
 async function carregarTodosWpp() {
   try {
-    const d = await fetch("/api/config-whatsapp-todos").then(r => r.json());
+    const d = await fetch("/api/config-whatsapp-todos", {credentials:"same-origin"}).then(r => r.json());
     const el = document.getElementById("cfg-wpp-todos-lista");
     if (!d.ok || !d.usuarios.length) { el.textContent = "Nenhum usuário encontrado."; return; }
 
@@ -514,7 +514,7 @@ async function carregarTodosWpp() {
 
 async function carregarCfgWpp() {
   try {
-    const d = await fetch("/api/config-whatsapp").then(r => r.json());
+    const d = await fetch("/api/config-whatsapp", {credentials:"same-origin"}).then(r => r.json());
 
     const elCadastrado = document.getElementById("cfg-wpp-cadastrado");
     const elVazio      = document.getElementById("cfg-wpp-vazio");
@@ -590,6 +590,7 @@ async function salvarCfgWpp() {
     const resp = await fetch("/api/config-whatsapp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
       body: JSON.stringify(body)
     });
     r = await resp.json();
