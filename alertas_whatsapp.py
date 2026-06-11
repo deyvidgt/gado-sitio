@@ -56,12 +56,21 @@ def fmt_r(v):
 
 
 def carregar_usuarios() -> dict:
-    caminho = BASE_DIR / "usuarios.json"
-    if caminho.exists():
-        try:
-            return json.loads(caminho.read_text(encoding="utf-8"))
-        except Exception:
-            pass
+    """
+    Carrega usuarios.json do DATA_DIR (~/gado-dados/), que é onde o sistema
+    salva as configurações de WhatsApp. Fallback para BASE_DIR em dev local.
+    """
+    from db import DATA_DIR
+    candidatos = [
+        Path(DATA_DIR) / "usuarios.json",   # produção: ~/gado-dados/
+        BASE_DIR / "usuarios.json",         # desenvolvimento local
+    ]
+    for caminho in candidatos:
+        if caminho.exists():
+            try:
+                return json.loads(caminho.read_text(encoding="utf-8"))
+            except Exception:
+                pass
     return {}
 
 
