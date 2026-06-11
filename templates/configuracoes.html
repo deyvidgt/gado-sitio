@@ -246,6 +246,14 @@
        style="color:var(--green-600);font-weight:600">Ver instruções completas →</a>
   </div>
 
+  <!-- Visão geral de todos os usuários -->
+  <div id="cfg-wpp-todos" style="margin-bottom:20px">
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-3);letter-spacing:.5px;margin-bottom:10px">
+      👥 Status de todos os usuários
+    </div>
+    <div id="cfg-wpp-todos-lista" style="font-size:13px;color:var(--text-3)">⏳ Carregando...</div>
+  </div>
+
   <!-- Dados cadastrados (visível quando configurado) -->
   <div id="cfg-wpp-cadastrado" style="display:none;background:var(--cream);border-radius:10px;padding:14px 16px;margin-bottom:18px">
     <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-3);letter-spacing:.5px;margin-bottom:10px">
@@ -461,6 +469,48 @@
 {% block scripts %}
 <script>
 // ── WhatsApp — Configurações ──────────────────────────────────────────────────
+async function carregarTodosWpp() {
+  try {
+    const d = await fetch("/api/config-whatsapp-todos").then(r => r.json());
+    const el = document.getElementById("cfg-wpp-todos-lista");
+    if (!d.ok || !d.usuarios.length) { el.textContent = "Nenhum usuário encontrado."; return; }
+
+    const rows = d.usuarios.map(u => {
+      const status = u.configurado
+        ? (u.alertas_ativos
+            ? `<span style="color:var(--green-700);font-weight:600">✅ Configurado</span>`
+            : `<span style="color:#c87000;font-weight:600">⏸️ Pausado</span>`)
+        : `<span style="color:var(--text-3)">— Não configurado</span>`;
+      const tel = u.telefone
+        ? `<span style="font-family:monospace">${u.telefone}</span>`
+        : `<span style="color:var(--text-3)">—</span>`;
+      const bot = u.bot_number
+        ? `<span style="font-family:monospace">${u.bot_number}</span>`
+        : `<span style="color:var(--text-3)">—</span>`;
+      return `<tr>
+        <td style="padding:8px 12px;font-weight:600;color:var(--text)">${u.usuario.charAt(0).toUpperCase()+u.usuario.slice(1)}</td>
+        <td style="padding:8px 12px">${tel}</td>
+        <td style="padding:8px 12px">${bot}</td>
+        <td style="padding:8px 12px">${status}</td>
+      </tr>`;
+    }).join("");
+
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:var(--cream-dk)">
+          <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-3);letter-spacing:.4px">Usuário</th>
+          <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-3);letter-spacing:.4px">Telefone</th>
+          <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-3);letter-spacing:.4px">Nº do Bot</th>
+          <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-3);letter-spacing:.4px">Status</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  } catch(e) {
+    document.getElementById("cfg-wpp-todos-lista").textContent = "⚠️ Erro ao carregar.";
+  }
+}
+
 async function carregarCfgWpp() {
   try {
     const d = await fetch("/api/config-whatsapp").then(r => r.json());
@@ -546,10 +596,10 @@ async function salvarCfgWpp() {
 
   if (r.ok) {
     cfgWppFeedback("✅ Configuração salva!", "ok");
-    // Fechar form e recarregar dados exibidos
     document.getElementById("cfg-wpp-form").style.display = "none";
     document.getElementById("btn-cfg-wpp-toggle").textContent = "✏️ Editar configuração";
     carregarCfgWpp();
+    carregarTodosWpp();
   } else {
     cfgWppFeedback("❌ Erro ao salvar: " + (r.erro||"desconhecido"), "err");
   }
@@ -577,6 +627,7 @@ async function testarCfgWpp() {
 
 // Carregar status ao abrir a página (ou se URL tiver #wpp, rolar até lá)
 document.addEventListener("DOMContentLoaded", () => {
+  carregarTodosWpp();
   carregarCfgWpp();
   if (window.location.hash === "#wpp") {
     setTimeout(() => document.getElementById("wpp")?.scrollIntoView({ behavior: "smooth" }), 200);

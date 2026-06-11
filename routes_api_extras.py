@@ -79,7 +79,25 @@ def api_calendario_manejo():
     })
 
 
-@app.route("/api/config-whatsapp", methods=["GET", "POST"])
+@app.route("/api/config-whatsapp-todos")
+@login_required
+def api_config_whatsapp_todos():
+    """Retorna a config de WhatsApp de todos os usuários (sem expor as keys)."""
+    todos = _carregar_usuarios()
+    resultado = []
+    for u, info in todos.items():
+        wpp = info.get("whatsapp", {})
+        resultado.append({
+            "usuario":    u,
+            "telefone":   wpp.get("telefone", ""),
+            "bot_number": wpp.get("bot_number", ""),
+            "configurado": bool(wpp.get("apikey", "").strip() and wpp.get("telefone", "").strip()),
+            "alertas_ativos": wpp.get("alertas_ativos", True),
+        })
+    return jsonify({"ok": True, "usuarios": resultado})
+
+
+
 @login_required
 def api_config_whatsapp():
     usuario = session.get("usuario", "")
