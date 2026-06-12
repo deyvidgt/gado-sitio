@@ -5,10 +5,26 @@
   },
   "deyvid": {
     "hash": "$2b$12$GBrvut70F1v1ASPYxU0xReJlFllBwhIM8O/8FHwRQbrd2aeyiuGlO",
-    "criado": "16/05/2026"
+    "criado": "16/05/2026",
+    "whatsapp": {
+      "telefone": "553497748166",
+      "apikey": "3785834",
+      "bot_number": "+34644663262",
+      "alertas_ativos": true
+    }
   },
   "nilson": {
     "hash": "490235b01db7dfb8844ff53d572f905ad3cdfeed4c2e866d335c4ee48aeeaecf",
     "criado": "16/05/2026"
+  },
+  "nd": {
+    "hash": "$2b$12$7Xmo.wmnOs0TqLJ4SGReEO93pNyrN17g5Ht4WpCShlWOHIoVNGwi.",
+    "criado": "11/06/2026",
+    "whatsapp": {
+      "telefone": "553499972671",
+      "apikey": "1267361",
+      "bot_number": "+34644646089",
+      "alertas_ativos": true
+    }
   }
 }

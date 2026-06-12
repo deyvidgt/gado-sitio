@@ -698,11 +698,23 @@ function mostrarTooltipCal(e, dia, mes, ano) {
       const emoji = cat === "manejo" ? (TIPO_EMOJI[ev.tipo] || "📋") : catEmoji[cat];
       const titulo = cat === "manejo" ? ev.tipo : catTitulo[cat];
       let info = ev.desc || "";
-      if (cat === "visita" && ev.responsavel) info = `Resp: ${ev.responsavel}` + (ev.desc ? ` | ${ev.desc}` : "");
-      if ((cat === "compra" || cat === "venda") && ev.cabecas) info = `${ev.cabecas} cab. — ${info}`;
-      html += `<div style="margin-bottom:5px;padding:4px 0">
+      if (cat === "visita") {
+        const partes = [];
+        if (ev.responsavel)               partes.push(`👤 ${ev.responsavel}`);
+        if (ev.cabecas)                   partes.push(`🐄 ${ev.cabecas} cab.`);
+        if (ev.grama)                     partes.push(`🌿 Pasto: ${ev.grama}`);
+        if (ev.chuva)                     partes.push(`🌧️ Chuva: ${ev.chuva}`);
+        if (ev.obs && ev.obs !== "nan")   partes.push(`📝 ${ev.obs}`);
+        info = partes.join(" · ");
+      } else if (cat === "compra" || cat === "venda") {
+        info = ev.desc || "";
+        if (ev.cabecas) info = `🐄 ${ev.cabecas} cab. — ` + info;
+      } else {
+        info = ev.desc || "";
+      }
+      html += `<div style="margin-bottom:6px;padding:5px 0;border-bottom:1px solid var(--cream-dk)">
         <div style="font-size:12px;font-weight:600;color:var(--text)">${emoji} ${titulo}</div>
-        ${info ? `<div style="font-size:11px;color:var(--text-3);margin-top:1px">${info}</div>` : ""}
+        ${info ? `<div style="font-size:11px;color:var(--text-3);margin-top:2px;line-height:1.5">${info}</div>` : ""}
       </div>`;
     });
   });
@@ -714,20 +726,29 @@ function mostrarTooltipCal(e, dia, mes, ano) {
 
   tip.innerHTML = html;
 
-  // Posicionamento inteligente (não sair da tela)
+  // Posicionamento: mobile centraliza na tela, desktop segue o cursor
   tip.style.display = "block";
   tip.classList.add("show");
-  const rect = tip.getBoundingClientRect();
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  let left = e.clientX + 12;
-  let top  = e.clientY - 10;
-  if (left + rect.width  > vw - 8) left = e.clientX - rect.width - 12;
-  if (top  + rect.height > vh - 8) top  = e.clientY - rect.height + 10;
-  tip.style.left = left + "px";
-  tip.style.top  = top  + "px";
+  if (vw < 600) {
+    tip.style.left      = "50%";
+    tip.style.top       = "30%";
+    tip.style.transform = "translateX(-50%)";
+    tip.style.maxWidth  = (vw - 32) + "px";
+  } else {
+    tip.style.transform = "";
+    tip.style.maxWidth  = "260px";
+    const rect = tip.getBoundingClientRect();
+    let left = e.clientX + 12;
+    let top  = e.clientY - 10;
+    if (left + rect.width  > vw - 8) left = e.clientX - rect.width - 12;
+    if (top  + rect.height > vh - 8) top  = e.clientY - rect.height + 10;
+    tip.style.left = left + "px";
+    tip.style.top  = top  + "px";
+  }
 
-  setTimeout(() => tip.classList.remove("show"), 5000);
+  setTimeout(() => tip.classList.remove("show"), 6000);
 }
 document.addEventListener("click", () => {
   const tip = document.getElementById("cal-tooltip");

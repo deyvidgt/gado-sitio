@@ -52,20 +52,34 @@ def api_calendario_manejo():
         for _, row in df_vis[df_vis["Data"].notna() & (df_vis["Data"] >= corte)].iterrows():
             d = _iso(row.get("Data"))
             if d:
-                resp = str(row.get("Responsável", "") or "")
-                cont = int(row.get("Contagem", 0) or 0)
-                chuva = str(row.get("Chuva", "") or "")
-                grama = str(row.get("Grama", "") or "")
+                resp  = str(row.get("Responsável", "") or "")
+                cont  = int(row.get("Gado Contado", 0) or 0)
+                esper = int(row.get("Gado Esperado", 0) or 0)
+                chuva = str(row.get("Chuva mm", "") or "")
+                choveu= str(row.get("Choveu", "") or "")
+                grama = str(row.get("Grama/Pastagem", "") or "")
+                agua  = str(row.get("Córrego/Água", "") or "")
+                sal   = str(row.get("Sal/Ração", "") or "")
+                obs   = str(row.get("Observações", "") or "")
+                # Montar descrição resumida
+                chuva_txt = f"{chuva}mm" if chuva and chuva not in ("nan","") else ("Sim" if choveu=="Sim" else "Não")
+                partes = []
+                if cont:    partes.append(f"{cont}/{esper} cab.")
+                if grama:   partes.append(f"Pasto: {grama}")
+                if agua:    partes.append(f"Água: {agua}")
+                if sal:     partes.append(f"Sal: {sal}")
+                if chuva_txt: partes.append(f"Chuva: {chuva_txt}")
                 eventos.append({
-                    "data":      d,
-                    "categoria": "visita",
-                    "tipo":      "Visita",
-                    "resumo":    f"Visita — {resp}" if resp else "Visita",
-                    "cabecas":   cont,
-                    "desc":      f"Gado: {cont} cab. | Chuva: {chuva} | Pasto: {grama}".strip(" |"),
+                    "data":        d,
+                    "categoria":   "visita",
+                    "tipo":        "Visita",
+                    "resumo":      f"Visita — {resp}" if resp else "Visita",
+                    "cabecas":     cont,
+                    "desc":        " | ".join(partes),
                     "responsavel": resp,
-                    "chuva":     chuva,
-                    "grama":     grama,
+                    "chuva":       chuva_txt,
+                    "grama":       grama,
+                    "obs":         obs,
                 })
 
     # ── Compras ──────────────────────────────────────────────────────────────
