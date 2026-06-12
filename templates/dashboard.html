@@ -161,22 +161,54 @@
               style="background:var(--green-600);color:#fff;border:none">🔄 Buscar Ambas</button>
     </div>
   </div>
-  <div id="cotacao-breakeven" style="display:none;background:var(--cream-dk);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px">
-    <strong>📌 Break-even:</strong> <span id="val-breakeven">—</span>/cabeça &nbsp;|&nbsp;
-    <strong>CTCab:</strong> <span id="val-ctcab">—</span>/cabeça
+
+  <!-- Break-even sempre visível, vem do servidor via Jinja -->
+  <div style="background:var(--cream-dk);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px">
+    <strong>📌 Break-even:</strong> {{ r.break_even | brl }}/cabeça &nbsp;|&nbsp;
+    <strong>CTCab:</strong> {{ r.ctcab | brl }}/cabeça
+    <span style="font-size:11px;color:var(--text-3);margin-left:6px">— preço mínimo p/ não ter prejuízo</span>
   </div>
-  <div class="two-col" style="gap:16px">
+
+  <!-- Resultados do scraping (Scot + IMEA) quando disponíveis -->
+  <div class="two-col" style="gap:16px;margin-bottom:14px">
     <div>
       <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📊 Scot — Novilha Triângulo MG</div>
-      <div id="cotacao-scot-wrap"><p style="font-size:13px;color:var(--text-3)">Clique em "Buscar Ambas" para carregar.</p></div>
+      <div id="cotacao-scot-wrap">
+        <p style="font-size:13px;color:var(--text-3)">Clique em "Buscar Ambas" para carregar.<br>
+        <a href="https://www.scotconsultoria.com.br/cotacoes/novilha/" target="_blank"
+           style="color:var(--green-600);font-weight:600">📊 Ver cotação no site da Scot →</a></p>
+      </div>
     </div>
     <div>
       <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📋 IMEA — Reposição Nelore Sudeste</div>
-      <div id="cotacao-imea-wrap"><p style="font-size:13px;color:var(--text-3)">Clique em "Buscar Ambas" para carregar.</p></div>
+      <div id="cotacao-imea-wrap">
+        <p style="font-size:13px;color:var(--text-3)">Clique em "Buscar Ambas" para carregar.<br>
+        <a href="https://www.imea.com.br/imea-site/indicador-boi" target="_blank"
+           style="color:var(--green-600);font-weight:600">📋 Ver cotação no site do IMEA →</a></p>
+      </div>
     </div>
   </div>
-  <div id="cotacao-footer" style="display:none;margin-top:12px;font-size:11px;color:var(--text-3);border-top:1px solid var(--cream-dk);padding-top:10px">
+  <div id="cotacao-footer" style="display:none;margin-bottom:14px;font-size:11px;color:var(--text-3);border-top:1px solid var(--cream-dk);padding-top:10px">
     <span id="cotacao-atualizado"></span> · Preços para referência.
+  </div>
+
+  <!-- Widget Notícias Agrícolas — carrega direto no browser, sem passar pelo servidor -->
+  <div style="border-top:1px solid var(--cream-dk);padding-top:14px">
+    <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+      🐄 Indicador da Novilha — atualização diária (Datagro / Notícias Agrícolas)
+    </div>
+    <div style="max-width:100%;overflow-x:auto">
+      <div id="widget-na-loading" style="font-size:13px;color:var(--text-3);padding:6px 0">⏳ Carregando cotações...</div>
+      <script type="text/javascript"
+        src="https://www.noticiasagricolas.com.br/widgets/cotacoes?id=301&fonte=Arial%2C%20Helvetica%2C%20sans-serif&tamanho=10pt&largura=100%25&cortexto=333333&corcabecalho=B2C3C6&corlinha=DCE7E9&imagem=true&output=js"
+        onload="document.getElementById('widget-na-loading').style.display='none'"
+        onerror="document.getElementById('widget-na-loading').textContent='⚠️ Widget indisponível.'">
+      </script>
+    </div>
+  </div>
+
+  <div style="margin-top:10px;font-size:11px;color:var(--text-3)">
+    Widget: <a href="https://www.noticiasagricolas.com.br" target="_blank" rel="noopener" style="color:var(--green-600)">Notícias Agrícolas</a> · Para referência — preços podem variar.
   </div>
 </div>
 
@@ -1042,7 +1074,6 @@ async function buscarCotacaoScot() {
     let d;
     try { d = await resp.json(); }
     catch {
-      // Servidor retornou HTML (proxy, erro 500)
       wrap.innerHTML = `<div style="font-size:13px;color:var(--text-2)">
         ⚠️ Cotação indisponível — servidor sem acesso à internet neste momento.<br>
         <a href="https://www.scotconsultoria.com.br/cotacoes/novilha/" target="_blank"
@@ -1088,7 +1119,6 @@ async function buscarCotacaoImea() {
     let d;
     try { d = await resp.json(); }
     catch {
-      // Servidor retornou HTML em vez de JSON (proxy 403, erro 500, etc.)
       wrap.innerHTML = `<div style="font-size:13px;color:var(--text-2)">
         ⚠️ Cotação indisponível — servidor sem acesso à internet neste momento.<br>
         <a href="https://www.imea.com.br/imea-site/indicador-boi" target="_blank"
@@ -1096,11 +1126,6 @@ async function buscarCotacaoImea() {
           📋 Ver cotação no site do IMEA →</a></div>`;
       btn.disabled = false; btn.textContent = "🔄 IMEA (Sudeste)";
       return;
-    }
-    if (d.break_even > 0 || d.ctcab > 0) {
-      document.getElementById("val-breakeven").textContent = brl(d.break_even);
-      document.getElementById("val-ctcab").textContent     = brl(d.ctcab);
-      document.getElementById("cotacao-breakeven").style.display = "block";
     }
     if (d.ok && d.cotacoes && d.cotacoes.length > 0) {
       let html = '';
