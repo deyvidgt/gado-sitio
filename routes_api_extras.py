@@ -88,18 +88,20 @@ def api_calendario_manejo():
         for _, row in df_comp[df_comp["Data"].notna() & (df_comp["Data"] >= corte)].iterrows():
             d = _iso(row.get("Data"))
             if d:
-                qtd  = int(row.get("Qtd", 0) or 0)
-                val  = float(row.get("Valor Total", 0) or 0)
-                memb = str(row.get("Membro", "") or "")
+                qtd  = int(row.get("Qtd Cabeças", 0) or 0)
+                val  = float(row.get("Valor Total (R$)", 0) or 0)
+                vpcab= float(row.get("Valor/Cabeça (R$)", 0) or 0)
+                desc = str(row.get("Descrição", "") or "")
+                desc = "" if desc == "nan" else desc
+                val_fmt = f"R$ {val:,.2f}".replace(",","X").replace(".",",").replace("X",".")
                 eventos.append({
                     "data":      d,
                     "categoria": "compra",
                     "tipo":      "Compra",
                     "resumo":    f"Compra — {qtd} cab.",
                     "cabecas":   qtd,
-                    "desc":      f"{qtd} cabeças | R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                    "desc":      f"{qtd} cab. · {val_fmt}" + (f" · {desc}" if desc else ""),
                     "valor":     round(val, 2),
-                    "membro":    memb,
                 })
 
     # ── Vendas ───────────────────────────────────────────────────────────────
@@ -108,18 +110,21 @@ def api_calendario_manejo():
         for _, row in df_vend[df_vend["Data"].notna() & (df_vend["Data"] >= corte)].iterrows():
             d = _iso(row.get("Data"))
             if d:
-                qtd  = int(row.get("Qtd", 0) or 0)
-                val  = float(row.get("Valor Total", 0) or 0)
-                memb = str(row.get("Membro", "") or "")
+                qtd  = int(row.get("Qtd Cabeças", 0) or 0)
+                val  = float(row.get("Valor Total (R$)", 0) or 0)
+                arr  = float(row.get("Valor Arroba (R$)", 0) or 0)
+                desc = str(row.get("Descrição", "") or "")
+                desc = "" if desc == "nan" else desc
+                val_fmt = f"R$ {val:,.2f}".replace(",","X").replace(".",",").replace("X",".")
+                arr_txt = f" · @R$ {arr:,.2f}".replace(",","X").replace(".",",").replace("X",".") if arr else ""
                 eventos.append({
                     "data":      d,
                     "categoria": "venda",
                     "tipo":      "Venda",
                     "resumo":    f"Venda — {qtd} cab.",
                     "cabecas":   qtd,
-                    "desc":      f"{qtd} cabeças | R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                    "desc":      f"{qtd} cab. · {val_fmt}{arr_txt}" + (f" · {desc}" if desc else ""),
                     "valor":     round(val, 2),
-                    "membro":    memb,
                 })
 
     # ── Gastos ───────────────────────────────────────────────────────────────
@@ -128,16 +133,23 @@ def api_calendario_manejo():
         for _, row in df_gast[df_gast["Data"].notna() & (df_gast["Data"] >= corte)].iterrows():
             d = _iso(row.get("Data"))
             if d:
-                val  = float(row.get("Valor", 0) or 0)
+                val  = float(row.get("Valor Total (R$)", 0) or 0)
                 desc = str(row.get("Descrição", "") or "")
-                cat  = str(row.get("Categoria", "") or "")
+                desc = "" if desc in ("nan", "None") else desc
+                tipo = str(row.get("Tipo", "") or "")
+                tipo = "" if tipo in ("nan", "None") else tipo
+                if not desc and not tipo and val == 0:
+                    continue  # pular linha vazia
+                val_fmt = f"R$ {val:,.2f}".replace(",","X").replace(".",",").replace("X",".")
+                label = tipo or desc or "Gasto"
+                resumo = f"{label[:25]}" if label else "Gasto"
                 eventos.append({
                     "data":      d,
                     "categoria": "gasto",
                     "tipo":      "Gasto",
-                    "resumo":    f"Gasto — {cat or desc[:20]}",
+                    "resumo":    resumo,
                     "cabecas":   0,
-                    "desc":      f"{desc} | R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                    "desc":      f"{tipo}" + (f" · {desc}" if desc and desc != tipo else "") + f" · {val_fmt}",
                     "valor":     round(val, 2),
                 })
 
