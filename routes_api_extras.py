@@ -209,7 +209,7 @@ def api_config_whatsapp_todos():
 
 
 
-@app.route("/api/whatsapp/config", methods=["GET", "POST"])
+@app.route("/api/config-whatsapp", methods=["GET", "POST"])
 @login_required
 def api_config_whatsapp():
     usuario = session.get("usuario", "")
