@@ -97,6 +97,69 @@
   {% endfor %}
 </div><!-- /three-col -->
 
+<!-- ═══ ESTIMATIVA DO REBANHO + INDICADORES DE GESTÃO ═══════════════════════ -->
+<div class="two-col" style="margin-bottom:24px">
+
+  <!-- Valor estimado do rebanho -->
+  <div class="card">
+    <div class="card-title">💰 Valor Estimado do Rebanho</div>
+    {% if rebanho_est %}
+      <p style="font-size:12px;color:var(--text-3);margin-bottom:14px">
+        {{ r.estoque }} cab. × {{ rebanho_est.peso_medio|int }}kg × {{ rebanho_est.rendimento|int }}% rend. · @ R$ {{ rebanho_est.preco_arroba|int }}
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <div class="kv-key">Por cabeça (~{{ '%.1f'|format(rebanho_est.arrobas_cab) }}@)</div>
+          <div style="font-size:18px;font-weight:700;color:var(--green-700)">{{ rebanho_est.valor_cab|brl }}</div>
+        </div>
+        <div>
+          <div class="kv-key">Valor total</div>
+          <div style="font-size:18px;font-weight:700;color:var(--green-700)">{{ rebanho_est.valor_total|brl }}</div>
+        </div>
+        <div>
+          <div class="kv-key">Capital investido</div>
+          <div style="font-size:15px;font-weight:600">{{ rebanho_est.capital_imob|brl }}</div>
+        </div>
+        <div>
+          <div class="kv-key">Lucro potencial</div>
+          <div style="font-size:15px;font-weight:600" class="{{ 'pos' if rebanho_est.lucro_pot >= 0 else 'neg' }}">
+            {{ rebanho_est.lucro_pot|brl }} ({{ rebanho_est.margem_pot|round(1) }}%)
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <p style="font-size:13px;color:var(--text-3)">
+        Defina o <strong>peso médio</strong> e o <strong>rendimento</strong> em
+        <a href="{{ url_for('configuracoes') }}" style="color:var(--green-600)">⚙️ Configurações</a>
+        para ver a estimativa de valor do rebanho.
+      </p>
+    {% endif %}
+  </div>
+
+  <!-- Indicadores de gestão -->
+  <div class="card">
+    <div class="card-title">📐 Indicadores de Gestão</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div>
+        <div class="kv-key">Custo por cabeça/dia</div>
+        <div style="font-size:17px;font-weight:700">{{ indicadores.custo_dia_cab|brl }}</div>
+      </div>
+      <div>
+        <div class="kv-key">Arrobas mín. p/ cobrir custo</div>
+        <div style="font-size:17px;font-weight:700">{{ '%.1f'|format(indicadores.arrobas_min_cab) }} @</div>
+      </div>
+      <div>
+        <div class="kv-key">Tempo médio no rebanho</div>
+        <div style="font-size:17px;font-weight:700">{{ indicadores.tmp_dias }} dias</div>
+      </div>
+      <div>
+        <div class="kv-key">Gastos sobre compras</div>
+        <div style="font-size:17px;font-weight:700">{{ indicadores.pct_gasto_sobre_compra|round(1) }}%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ ÚLTIMA VISITA + CALENDÁRIO DE MANEJO ════════════════════════════════ -->
 <div class="two-col" style="margin-bottom:24px">
 

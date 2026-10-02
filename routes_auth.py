@@ -12,7 +12,11 @@ from extensions import (
     BASE_DIR, BUNDLE_DIR,
 )
 from config import MAX_TENTATIVAS_LOGIN
+from datetime import datetime, timedelta
 import os
+
+# Minutos de bloqueio após exceder as tentativas (desbloqueio automático).
+BLOQUEIO_MINUTOS = 15
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -28,11 +32,21 @@ def login():
         senha   = request.form.get("senha",   "").strip()
         usuario_digitado = usuario
 
+        # Desbloqueio automático: se já passou o tempo de bloqueio, zera tentativas.
+        bloqueio_ate = session.get("bloqueio_ate")
+        if bloqueio_ate:
+            try:
+                if _agora() >= datetime.fromisoformat(bloqueio_ate):
+                    session["tentativas_login"] = 0
+                    session.pop("bloqueio_ate", None)
+            except Exception:
+                session.pop("bloqueio_ate", None)
+
         tentativas = session.get("tentativas_login", 0)
         usuarios_db = _carregar_usuarios()
 
         if tentativas >= MAX_TENTATIVAS_LOGIN:
-            erro = "Muitas tentativas. Feche e abra o programa para desbloquear."
+            erro = f"Muitas tentativas. Aguarde {BLOQUEIO_MINUTOS} minutos e tente novamente."
         elif usuario in usuarios_db and _verificar_hash(senha, usuarios_db[usuario]["hash"]):
             # ✅ Login OK — migrar SHA-256 → bcrypt se possível
             if _bcrypt_disponivel():
@@ -51,7 +65,8 @@ def login():
             session["tentativas_login"] = tentativas + 1
             restantes = MAX_TENTATIVAS_LOGIN - session["tentativas_login"]
             if restantes <= 0:
-                erro = "Acesso bloqueado. Feche e abra o programa para tentar novamente."
+                session["bloqueio_ate"] = (_agora() + timedelta(minutes=BLOQUEIO_MINUTOS)).isoformat()
+                erro = f"Acesso bloqueado por {BLOQUEIO_MINUTOS} minutos após muitas tentativas."
             elif usuario and usuario not in usuarios_db:
                 erro = f"Usuário '{usuario}' não encontrado."
             else:

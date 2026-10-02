@@ -695,11 +695,6 @@ def calcular_todos_membros(df_vend, df_comp, df_gast,
 def calcular_resumo_financeiro(df_comp, df_gast, df_vend, df_man) -> dict:
     estoque = calcular_estoque(df_comp, df_vend, df_man)
 
-    # Indicadores com GPCab corrigido (passa contexto completo)
-    cmp   = calcular_cmp(df_comp)
-    gpcab = calcular_gpcab(df_gast, df_comp, df_vend, df_man)
-    ctcab = cmp + gpcab
-
     total_comp  = float(df_comp["Valor Total (R$)"].sum()) if not df_comp.empty else 0.0
     total_gast  = float(df_gast["Valor Total (R$)"].sum()) if not df_gast.empty else 0.0
     total_vend  = float(df_vend["Valor Total (R$)"].sum()) if not df_vend.empty else 0.0
@@ -714,6 +709,14 @@ def calcular_resumo_financeiro(df_comp, df_gast, df_vend, df_man) -> dict:
     custo_vendidos = sim["custo_vendidos"]
     perdas         = sim["perdas"]        # custo das cabeças mortas/perdidas
     cab_mortes     = int(round(sim["cab_mortes"]))
+
+    # CTCab (v4.0): custo médio MÓVEL por cabeça do rebanho ATUAL (compra + gastos
+    # do que está no pasto hoje). Bate com capital/estoque e com o break-even.
+    # Antes usava GPCab acumulado desde o início do período, o que inflava o CTCab
+    # (ex.: mostrava ~R$4.531/cab quando o custo real era ~R$3.111/cab).
+    cmp   = sim["avg_compra_final"]
+    gpcab = sim["avg_gasto_final"]
+    ctcab = cmp + gpcab
 
     # Capital ainda imobilizado no rebanho (a preço de custo).
     #

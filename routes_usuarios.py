@@ -6,7 +6,7 @@ Rotas de Usuários e Configurações — Sítio Santo Antonio
 import os
 import json
 import pandas as pd
-from flask import render_template, request, redirect, url_for, flash, session
+from flask import render_template, request, redirect, url_for, flash, session, send_file
 from db import DATA_DIR
 from config import USUARIOS
 from extensions import (
@@ -57,6 +57,8 @@ SITIO_CONFIG_DEFAULTS = {
     "donos":  "Geane · Deyvid · Nilson",
     "logo":   "🐄",        # emoji ou URL de imagem carregada
     "logo_tipo": "emoji",  # "emoji" | "imagem"
+    "peso_medio": 0,       # kg peso vivo médio por cabeça (0 = não configurado)
+    "rendimento": 52,      # % de rendimento de carcaça (padrão boi gordo Nelore)
 }
 
 
@@ -235,5 +237,51 @@ def salvar_sitio_config():
         cfg["logo_tipo"] = "emoji"
 
     _salvar_sitio_config(cfg)
+    _invalidar_cache_sitio()
     flash("✅ Configurações do sítio salvas!", "success")
     return redirect(url_for("configuracoes"))
+
+
+def _invalidar_cache_sitio():
+    """Limpa o cache de sitio_config para as mudanças aparecerem na hora."""
+    try:
+        from extensions import _cache_invalidar_chave
+        _cache_invalidar_chave("sitio_config")
+    except Exception:
+        pass
+
+
+@app.route("/configuracoes/rebanho", methods=["POST"])
+@login_required
+def salvar_rebanho_config():
+    """Salva peso médio e rendimento usados na estimativa de valor do rebanho."""
+    _validar_csrf()
+
+    def _num(v, default):
+        try:
+            return float(str(v).strip().replace(",", "."))
+        except Exception:
+            return default
+
+    peso = max(0.0, min(_num(request.form.get("peso_medio"), 0.0), 2000.0))
+    rend = max(1.0, min(_num(request.form.get("rendimento"), 52.0), 100.0))
+
+    cfg = _carregar_sitio_config()
+    cfg["peso_medio"] = round(peso, 1)
+    cfg["rendimento"] = round(rend, 1)
+    _salvar_sitio_config(cfg)
+    _invalidar_cache_sitio()
+    flash("✅ Dados do rebanho salvos! A estimativa aparece no painel.", "success")
+    return redirect(url_for("configuracoes"))
+
+
+@app.route("/configuracoes/baixar-dados")
+@login_required
+def baixar_dados():
+    """Baixa uma cópia do arquivo de dados atual (gado_familia.xlsx)."""
+    from db import ARQUIVO_PATH
+    if not os.path.exists(ARQUIVO_PATH):
+        flash("Arquivo de dados não encontrado.", "error")
+        return redirect(url_for("configuracoes"))
+    nome = f"gado_familia_{_agora().strftime('%Y%m%d_%H%M')}.xlsx"
+    return send_file(ARQUIVO_PATH, as_attachment=True, download_name=nome)

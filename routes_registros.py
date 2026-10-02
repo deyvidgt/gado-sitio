@@ -8,11 +8,7 @@ from flask import render_template, request, redirect, url_for, flash
 import pandas as pd
 from db import carregar_aba, carregar_todas, fazer_backup
 from calculos import (
-    calcular_estoque, calcular_resumo_financeiro, calcular_todos_membros,
-    calcular_fluxo_caixa, calcular_cmp_ate_data, calcular_gpcab_ate_data,
-    calcular_cmp, calcular_gpcab, calcular_estoque_por_membro,
-    custo_medio_movel_venda,
-    calcular_indicadores_extras, calcular_gasto_por_tipo, calcular_evolucao_cmp,
+    calcular_estoque, calcular_cmp, calcular_gpcab, custo_medio_movel_venda,
 )
 from config import (TIPOS_GASTO, TIPOS_MANEJO, MEMBROS, NOMES_MEMBROS, COLUNAS_VENDAS)
 from extensions import (
