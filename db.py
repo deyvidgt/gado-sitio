@@ -61,6 +61,15 @@ from config import (
     COLUNAS_VENDAS, COLUNAS_MANEJO, COLUNAS_VISITAS,
 )
 
+# Mapa aba → colunas esperadas, usado para migrar colunas novas sem perder dados.
+_SCHEMA_ABAS = {
+    "Compras": COLUNAS_COMPRAS,
+    "Gastos":  COLUNAS_GASTOS,
+    "Vendas":  COLUNAS_VENDAS,
+    "Manejo":  COLUNAS_MANEJO,
+    "Visitas": COLUNAS_VISITAS,
+}
+
 # Caminho completo do arquivo de dados
 ARQUIVO_PATH = os.path.join(DATA_DIR, ARQUIVO_DADOS)
 
@@ -115,26 +124,32 @@ def inicializar():
         print(f"✅ Arquivo de dados criado: {ARQUIVO_PATH}")
         return
 
-    # Arquivo já existe — verificar/migrar aba Visitas
+    # Arquivo já existe — migrar abas/colunas que faltam SEM apagar dados.
+    # Colunas novas são sempre acrescentadas no FINAL; linhas antigas ficam
+    # apenas com os campos novos vazios. Nenhum dado existente é alterado.
     try:
         wb = load_workbook(ARQUIVO_PATH)
-        if "Visitas" not in wb.sheetnames:
-            ws_vis = wb.create_sheet("Visitas")
-            ws_vis.append(COLUNAS_VISITAS)
-            wb.save(ARQUIVO_PATH)
-            print("✅ Aba 'Visitas' criada no arquivo existente.")
-        else:
-            ws_vis = wb["Visitas"]
-            header = [cell.value for cell in ws_vis[1]]
-            novas = [c for c in COLUNAS_VISITAS if c not in header]
+        alterado = False
+        for aba, colunas in _SCHEMA_ABAS.items():
+            if aba not in wb.sheetnames:
+                ws = wb.create_sheet(aba)
+                ws.append(colunas)
+                alterado = True
+                print(f"✅ Aba '{aba}' criada no arquivo existente.")
+                continue
+            ws = wb[aba]
+            header = [cell.value for cell in ws[1]]
+            novas = [c for c in colunas if c not in header]
             if novas:
                 for col_nome in novas:
-                    ws_vis.cell(row=1, column=len(header) + 1, value=col_nome)
+                    ws.cell(row=1, column=len(header) + 1, value=col_nome)
                     header.append(col_nome)
-                wb.save(ARQUIVO_PATH)
-                print(f"✅ Novas colunas adicionadas em 'Visitas': {novas}")
+                alterado = True
+                print(f"✅ Novas colunas adicionadas em '{aba}': {novas}")
+        if alterado:
+            wb.save(ARQUIVO_PATH)
     except Exception as e:
-        print(f"⚠️  Não foi possível verificar aba Visitas: {e}")
+        print(f"⚠️  Não foi possível migrar as abas: {e}")
 
 
 # ── Leitura ───────────────────────────────────────────────────────────────────

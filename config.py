@@ -7,9 +7,20 @@ v3.3
 """
 
 import os
+import sys
+
+# ── Encoding do console ─────────────────────────────────────────────────────────
+# No Windows o console usa cp1252 e quebra (UnicodeEncodeError) ao imprimir emojis
+# usados nos logs de boot (📂 📊 ✅ 🐄 …). Força UTF-8 na saída padrão.
+# BUG CORRIGIDO v3.6: o app podia crashar no boot em terminal Windows.
+for _stream in ("stdout", "stderr"):
+    try:
+        getattr(sys, _stream).reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 ARQUIVO_DADOS = "gado_familia.xlsx"
-VERSAO = "3.3"
+VERSAO = "4.0"
 NOME_SITIO = "Sítio Santo Antonio"
 FAMILIA = "Geane, Deyvid e Nilson"
 
@@ -93,6 +104,8 @@ COLUNAS_VENDAS = [
 ]
 COLUNAS_MANEJO = [
     "Data", "Tipo", "Qtd Cabeças", "Descrição", "Responsável",
+    # NOVO v3.6: em caso de Morte/Perda, de qual membro foi a perda.
+    "Perda De",
 ]
 COLUNAS_VISITAS = [
     "Data", "Responsável",
@@ -103,6 +116,9 @@ COLUNAS_VISITAS = [
     "Choveu", "Chuva mm",
     "Observações", "Sugestões",
     "Sacos Sal/Ração", "Sacos Proteinado",
+    # NOVO v3.6: reservatórios de água (status + litros restantes).
+    "Caixa d'Água", "Caixa d'Água Litros",
+    "Conteiner", "Conteiner Litros",
 ]
 
 OPCOES_VISITA = {
@@ -113,6 +129,8 @@ OPCOES_VISITA = {
     "corrego":    ["Normal", "Baixo", "Seco"],
     "quintal":    ["OK", "Precisa Atenção"],
     "cisterna":   ["OK", "Baixo/Secando", "Vazia"],
+    "caixa_agua": ["Cheia", "Meia", "Baixa", "Vazia"],
+    "conteiner":  ["Cheio", "Meio", "Baixo", "Vazio"],
 }
 
 CORES = {

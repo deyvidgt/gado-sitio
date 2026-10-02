@@ -67,6 +67,17 @@
   </select>
   {% endif %}
 
+  {% if secao in ['gastos','manejo'] and pessoas_disponiveis %}
+  <select id="filtro-pessoa" onchange="filtrar()"
+          style="padding:8px 12px;border:1.5px solid var(--cream-dk);border-radius:8px;
+                 font-size:13px;font-family:inherit;background:var(--surface-2);color:var(--text);outline:none">
+    <option value="">{{ 'Qualquer responsável' if secao == 'manejo' else 'Quem registrou' }}</option>
+    {% for p in pessoas_disponiveis %}
+      <option value="{{ p }}">{{ p }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+
   <span id="filtro-contagem" style="font-size:12px;color:var(--text-3);white-space:nowrap"></span>
   <button onclick="limparFiltros()" id="btn-limpar"
           style="display:none;padding:7px 12px;background:var(--cream-dk);border:1.5px solid #ccc;
@@ -109,7 +120,10 @@
               </a>
             </th>
           {% else %}
-            <th>{{ col }}</th>
+            <th class="sortable" onclick="ordenarTabela(this)"
+                style="cursor:pointer;user-select:none;white-space:nowrap">
+              {{ col }} <span class="sort-arrow" style="opacity:.5;font-size:11px"></span>
+            </th>
           {% endif %}
         {% endfor %}
         <th>Ações</th>
@@ -120,7 +134,8 @@
         {# _idx é o índice REAL do DataFrame (passado pelo app.py) — garante que
            excluir/editar atuem no registro correto mesmo com tabela ordenada #}
         {% set i = row._idx if row._idx is defined else loop.index0 %}
-      <tr>
+        {% set pessoa = (row.get('Registrado Por','') if secao == 'gastos' else (row.get('Responsável','') if secao == 'manejo' else '')) %}
+      <tr data-pessoa="{{ (pessoa or '')|string }}">
         <td style="color:var(--text-3);font-size:12px">{{ loop.index }}</td>
         {% for col in colunas %}
           <td>
@@ -179,6 +194,7 @@
     const busca  = (document.getElementById('filtro-busca')?.value || '').toLowerCase();
     const ano    = document.getElementById('filtro-ano')?.value  || '';
     const tipo   = document.getElementById('filtro-tipo')?.value || '';
+    const pessoa = document.getElementById('filtro-pessoa')?.value || '';
     const linhas = document.querySelectorAll('tbody tr');
     let vis = 0;
 
@@ -195,7 +211,10 @@
       // Filtro por tipo (col[2] para gastos/manejo)
       const okTipo = !tipo || (cols[2] && cols[2].textContent.trim() === tipo);
 
-      const show = okBusca && okAno && okTipo;
+      // Filtro por pessoa (responsável / registrado por — via data-pessoa)
+      const okPessoa = !pessoa || (tr.dataset.pessoa || '') === pessoa;
+
+      const show = okBusca && okAno && okTipo && okPessoa;
       tr.style.display = show ? '' : 'none';
       if (show) vis++;
     });
@@ -205,22 +224,62 @@
     if (cont) cont.textContent = (vis < total) ? `${vis} de ${total}` : `${total} registros`;
 
     const btnL = document.getElementById('btn-limpar');
-    if (btnL) btnL.style.display = (busca || ano || tipo) ? 'inline-block' : 'none';
+    if (btnL) btnL.style.display = (busca || ano || tipo || pessoa) ? 'inline-block' : 'none';
   }
 
   function limparFiltros() {
-    const el = document.getElementById('filtro-busca');
-    if (el) el.value = '';
-    const el2 = document.getElementById('filtro-ano');
-    if (el2) el2.value = '';
-    const el3 = document.getElementById('filtro-tipo');
-    if (el3) el3.value = '';
+    ['filtro-busca','filtro-ano','filtro-tipo','filtro-pessoa'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
     filtrar();
+  }
+
+  // ── Ordenação por clique no cabeçalho ───────────────────────────────────
+  function _chaveOrdem(txt) {
+    txt = (txt || '').trim();
+    // Data dd/mm/aaaa → número aaaammdd
+    const m = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (m) return { num: Number(m[3] + m[2] + m[1]) };
+    // Moeda / número (formato BR: 1.234,56)
+    const limpo = txt.replace(/[^0-9,.-]/g, '');
+    if (limpo && /\d/.test(limpo)) {
+      const n = parseFloat(limpo.replace(/\./g, '').replace(',', '.'));
+      if (!isNaN(n)) return { num: n };
+    }
+    return { str: txt.toLowerCase() };
+  }
+
+  function ordenarTabela(th) {
+    const table = th.closest('table');
+    const tbody = table.querySelector('tbody');
+    const idx   = th.cellIndex;
+    const dir   = th.dataset.dir === 'asc' ? 'desc' : 'asc';
+
+    table.querySelectorAll('th').forEach(h => {
+      h.dataset.dir = (h === th) ? dir : '';
+      const arrow = h.querySelector('.sort-arrow');
+      if (arrow) arrow.textContent = (h === th) ? (dir === 'asc' ? '▲' : '▼') : '';
+    });
+
+    const linhas = Array.from(tbody.querySelectorAll('tr'));
+    linhas.sort((a, b) => {
+      const ka = _chaveOrdem(a.cells[idx]?.textContent);
+      const kb = _chaveOrdem(b.cells[idx]?.textContent);
+      let cmp;
+      if ('num' in ka && 'num' in kb)      cmp = ka.num - kb.num;
+      else if ('num' in ka)                cmp = -1;   // números antes de texto
+      else if ('num' in kb)                cmp = 1;
+      else cmp = (ka.str || '').localeCompare(kb.str || '', 'pt', { numeric: true, sensitivity: 'base' });
+      return dir === 'asc' ? cmp : -cmp;
+    });
+    linhas.forEach(tr => tbody.appendChild(tr));
   }
 
   // Expor globalmente
   window.filtrar = filtrar;
   window.limparFiltros = limparFiltros;
+  window.ordenarTabela = ordenarTabela;
 
   // Inicializar contagem
   document.addEventListener('DOMContentLoaded', () => {

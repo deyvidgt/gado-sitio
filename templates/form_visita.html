@@ -286,6 +286,42 @@
             <option value="Precisa Atenção">⚠️ Precisa atenção</option>
           </select>
         </div>
+
+        <!-- Caixa d'Água -->
+        <div class="status-item">
+          <label>Caixa d'Água</label>
+          <select name="caixa_agua" class="status-sel">
+            <option value="Cheia">✅ Cheia</option>
+            <option value="Meia">🟡 Meia</option>
+            <option value="Baixa">⚠️ Baixa</option>
+            <option value="Vazia">🚨 Vazia</option>
+          </select>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;font-weight:500;color:var(--text-2);white-space:nowrap">Litros:</span>
+            <input type="number" name="caixa_agua_litros" min="0" max="999999" step="1" placeholder="—"
+                   style="width:90px;padding:5px 8px;border:1.5px solid var(--cream-dk);
+                          border-radius:7px;font-size:14px;font-weight:600;text-align:center;
+                          font-family:'DM Sans',sans-serif;background:var(--cream)">
+          </div>
+        </div>
+
+        <!-- Conteiner -->
+        <div class="status-item">
+          <label>Conteiner</label>
+          <select name="conteiner" class="status-sel">
+            <option value="Cheio">✅ Cheio</option>
+            <option value="Meio">🟡 Meio</option>
+            <option value="Baixo">⚠️ Baixo</option>
+            <option value="Vazio">🚨 Vazio</option>
+          </select>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;font-weight:500;color:var(--text-2);white-space:nowrap">Litros:</span>
+            <input type="number" name="conteiner_litros" min="0" max="999999" step="1" placeholder="—"
+                   style="width:90px;padding:5px 8px;border:1.5px solid var(--cream-dk);
+                          border-radius:7px;font-size:14px;font-weight:600;text-align:center;
+                          font-family:'DM Sans',sans-serif;background:var(--cream)">
+          </div>
+        </div>
       </div>
     </div>
 
@@ -381,9 +417,9 @@
   function colorirSelect(sel) {
     const v = sel.value;
     sel.className = "status-sel";
-    if (v === "OK" || v === "Boa" || v === "Limpo" || v === "Normal") {
+    if (v === "OK" || v === "Boa" || v === "Limpo" || v === "Normal" || v === "Cheia" || v === "Cheio") {
       sel.classList.add("status-ok");
-    } else if (v.includes("Baixo") || v.includes("Regular") || v.includes("Precisa") || v.includes("Atenção") || v === "Meio Saco" || v === "Amarelando/Secando") {
+    } else if (v.includes("Baixo") || v === "Baixa" || v.includes("Regular") || v.includes("Precisa") || v.includes("Atenção") || v === "Meio Saco" || v === "Meia" || v === "Meio" || v === "Amarelando/Secando") {
       sel.classList.add("status-warn");
     } else if (v === "Vazio" || v === "Vazia" || v === "Seco" || v === "Escassa" || v === "Muito Mato") {
       sel.classList.add("status-danger");

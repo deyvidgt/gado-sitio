@@ -123,6 +123,7 @@ def relatorio_pdf():
         ["Custo Total",                   brl(r["total_custo"])],
         ["Receita (Vendas)",              brl(r["total_vend"])],
         ["Capital Imobilizado",           brl(r["capital_imobilizado"])],
+        [f"Perdas (mortes — {r.get('cab_mortes', 0)} cab.)", brl(r.get("perdas", 0))],
         ["Resultado Realizado",           brl(r["resultado_realizado"])],
         ["ROI Realizado",                 pct(r["roi_realizado"])],
         ["Resultado Total (+Estoque)",    brl(r["resultado_total"])],

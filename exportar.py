@@ -99,6 +99,7 @@ def exportar_relatorio_excel() -> str:
         ("CUSTO TOTAL",                 r_fin["total_custo"],         "money_bold"),
         ("Total vendas (receita)",      r_fin["total_vend"],          "money"),
         ("Capital imobilizado (estoque)", r_fin["capital_imobilizado"], "money"),
+        (f"Perdas (mortes — {r_fin.get('cab_mortes', 0)} cab.)", r_fin.get("perdas", 0), "money"),
         ("", "", None),
         ("📈 RESULTADOS", None, CORES["verde_medio"]),
         ("Resultado realizado",         r_fin["resultado_realizado"], "result"),

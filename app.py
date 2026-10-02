@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-app.py — Sítio Santo Antonio v3.5
+app.py — Sítio Santo Antonio v4.0
 """
 
 import sys, os
@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
     threading.Timer(1.2, abrir_browser).start()
 
-    print("\n🐄 Sítio Santo Antonio — Sistema de Gado v3.5")
+    print("\n🐄 Sítio Santo Antonio — Sistema de Gado v4.0")
     print(f"   Local:  http://localhost:{PORTA}")
     if url_publica:
         print(f"   Ngrok:  {url_publica}")

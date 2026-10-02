@@ -242,6 +242,167 @@ def _query_gpcab_timeline(datas: np.ndarray, gpcab_cumsum: np.ndarray,
     return float(gpcab_cumsum[idx]) if idx >= 0 else 0.0
 
 
+# ── Média Móvel Perpétua (custo real por cabeça) ─────────────────────────────
+
+def _simular_media_movel(df_comp: pd.DataFrame,
+                         df_gast: pd.DataFrame,
+                         df_vend: pd.DataFrame,
+                         df_man:  pd.DataFrame | None = None) -> dict:
+    """
+    Simula o rebanho ao longo do tempo pela MÉDIA MÓVEL PERPÉTUA e devolve o
+    custo real por cabeça no momento de cada venda.
+
+    Como funciona (exemplo):
+      • Compro 10 bezerras a R$1.000  → média = R$1.000/cab
+      • Gasto R$2.000 de vacina       → diluído nas 10 → média = R$1.200/cab
+      • Vendo 7 a R$1.500 cada        → cada uma "custou" R$1.200
+                                        (custo das vendidas = 7×1.200 = R$8.400;
+                                         lucro = 10.500 − 8.400 = R$2.100).
+                                        A venda NÃO altera a média; sobram 3 a R$1.200.
+      • Compro mais 9 a R$1.300       → mistura as 3 antigas com as 9 novas
+                                        (nova média de compra = R$1.225/cab).
+
+    Regras:
+      • Compra: entra no "pool de compra"; aumenta o nº de cabeças.
+      • Gasto:  entra no "pool de gasto"; é diluído SÓ pelo rebanho vigente
+                (nunca por gado comprado depois).
+      • Venda:  sai pela média do momento (compra + gasto) e reduz os pools
+                proporcionalmente — sem mudar a média.
+      • Nascimento: + cabeças a custo zero (baixa a média).
+      • Morte/Perda: − cabeças e remove o custo delas (pela média do momento) como
+        PERDA separada — não infla os sobreviventes. Se houver "Perda De", a perda
+        é atribuída ao dono; senão é dividida em terços.
+
+    Dois pools separados (compra e gasto) preservam, para cada venda, a divisão
+    entre custo de compra e custo de gastos — usada no resultado por membro.
+
+    Retorna dict com:
+      custo_vendidos          — COGS total (compra + gasto)
+      custo_vendidos_compra   — parte de compra do COGS
+      custo_vendidos_gasto    — parte de gasto do COGS
+      perdas                  — custo das cabeças mortas/perdidas (perda separada)
+      perdas_compra/_gasto    — divisão da perda entre compra e gasto
+      cab_mortes              — nº de cabeças mortas/perdidas consideradas
+      perdas_por_membro       — {membro: custo perdido} (usa "Perda De"; senão terços)
+      capital                 — valor dos pools restantes (estoque a custo)
+      avg_compra_final / avg_gasto_final / units_final
+      avg_por_venda           — {índice df_vend: (avg_compra, avg_gasto)}
+
+    Conservação: custo_vendidos + perdas + capital == total gasto (compras + gastos).
+    """
+    SENTINELA = pd.Timestamp.max
+
+    def _data(x):
+        return x if pd.notna(x) else SENTINELA
+
+    eventos = []  # (data, prioridade, tipo, qtd, valor, vidx, perda_de)
+
+    if not df_comp.empty:
+        for _, r in df_comp.iterrows():
+            eventos.append((_data(r.get("Data")), 0, "compra",
+                            float(r.get("Qtd Cabeças", 0) or 0),
+                            float(r.get("Valor Total (R$)", 0) or 0), None, None))
+
+    if not df_gast.empty:
+        for _, r in df_gast.iterrows():
+            eventos.append((_data(r.get("Data")), 1, "gasto",
+                            0.0, float(r.get("Valor Total (R$)", 0) or 0), None, None))
+
+    if df_man is not None and not df_man.empty and "Tipo" in df_man.columns:
+        for _, r in df_man.iterrows():
+            tipo = r.get("Tipo")
+            qtd  = float(r.get("Qtd Cabeças", 0) or 0)
+            if qtd <= 0:
+                continue
+            if tipo == "Nascimento":
+                eventos.append((_data(r.get("Data")), 2, "nasc",  qtd, 0.0, None, None))
+            elif tipo == "Morte/Perda":
+                perda_de = str(r.get("Perda De", "") or "").strip() or None
+                eventos.append((_data(r.get("Data")), 4, "morte", qtd, 0.0, None, perda_de))
+
+    if not df_vend.empty:
+        for vidx, r in df_vend.iterrows():
+            eventos.append((_data(r.get("Data")), 3, "venda",
+                            float(r.get("Qtd Cabeças", 0) or 0), 0.0, vidx, None))
+
+    # Ordena por data e, dentro da mesma data, pela prioridade (entradas antes de saídas)
+    eventos.sort(key=lambda e: (e[0], e[1]))
+
+    units = 0.0
+    pool_c = 0.0   # pool de compra
+    pool_g = 0.0   # pool de gasto
+    cogs_c = 0.0
+    cogs_g = 0.0
+    perda_c = 0.0  # perdas por morte — parte de compra
+    perda_g = 0.0  # perdas por morte — parte de gasto
+    cab_mortes = 0.0
+    perdas_por_membro = {m: 0.0 for m in MEMBROS}
+    avg_por_venda: dict = {}
+
+    def _ratear_perda_tercos(valor_perda: float):
+        n = len(MEMBROS)
+        if n == 0:
+            return
+        base = valor_perda / n
+        for m in MEMBROS:
+            perdas_por_membro[m] += base
+
+    for data, _prio, tipo, qtd, valor, vidx, perda_de in eventos:
+        if tipo == "compra":
+            pool_c += valor
+            units  += qtd
+        elif tipo == "gasto":
+            pool_g += valor
+        elif tipo == "nasc":
+            units  += qtd
+        elif tipo == "morte":
+            # v4.0: a morte é uma PERDA separada — remove as cabeças E o custo
+            # delas (pela média do momento), sem inflar os sobreviventes.
+            avg_c = pool_c / units if units > 0 else 0.0
+            avg_g = pool_g / units if units > 0 else 0.0
+            removido = min(qtd, units) if units > 0 else 0.0
+            pc = avg_c * removido
+            pg = avg_g * removido
+            pool_c -= pc
+            pool_g -= pg
+            units  -= removido
+            perda_c += pc
+            perda_g += pg
+            cab_mortes += removido
+            if perda_de in perdas_por_membro:
+                perdas_por_membro[perda_de] += pc + pg
+            else:
+                _ratear_perda_tercos(pc + pg)
+        elif tipo == "venda":
+            avg_c = pool_c / units if units > 0 else 0.0
+            avg_g = pool_g / units if units > 0 else 0.0
+            avg_por_venda[vidx] = (avg_c, avg_g)
+            removido = min(qtd, units) if units > 0 else 0.0
+            cc = avg_c * removido
+            cg = avg_g * removido
+            pool_c -= cc
+            pool_g -= cg
+            units  -= removido
+            cogs_c += cc
+            cogs_g += cg
+
+    return {
+        "custo_vendidos":        cogs_c + cogs_g,
+        "custo_vendidos_compra": cogs_c,
+        "custo_vendidos_gasto":  cogs_g,
+        "perdas":                perda_c + perda_g,
+        "perdas_compra":         perda_c,
+        "perdas_gasto":          perda_g,
+        "cab_mortes":            cab_mortes,
+        "perdas_por_membro":     perdas_por_membro,
+        "capital":               max(0.0, pool_c + pool_g),
+        "avg_compra_final":      pool_c / units if units > 0 else 0.0,
+        "avg_gasto_final":       pool_g / units if units > 0 else 0.0,
+        "units_final":           units,
+        "avg_por_venda":         avg_por_venda,
+    }
+
+
 # ── GPCab — Gasto acumulado por cabeça ───────────────────────────────────────
 
 def calcular_gpcab(df_gast: pd.DataFrame,
@@ -333,36 +494,63 @@ def _calcular_custo_historico_vendas(df_vend: pd.DataFrame, df_comp: pd.DataFram
                                       df_gast: pd.DataFrame,
                                       df_man:  pd.DataFrame | None = None) -> float:
     """
-    Custo total das cabeças vendidas, usando o CMP e GPCab válidos
-    no MOMENTO de cada venda (não o valor atual global).
+    Custo total das cabeças vendidas (COGS), pela MÉDIA MÓVEL PERPÉTUA.
 
-    MELHORIA v3.1: timelines pré-computadas → O(n log n) em vez de O(n²).
-    Antes, para cada venda recomputava toda a série de GPCab desde o início.
-    Agora, cada consulta é uma busca binária O(log n).
+    v4.0: cada venda sai pela média de custo (compra + gastos) vigente naquele
+    momento — gastos só pesam no rebanho que estava vivo, e gado comprado depois
+    nunca é cobrado por despesas anteriores. Isso garante a conservação contábil
+    (custo_vendidos + capital == total gasto) sem "custo fantasma".
     """
     if df_vend.empty or df_comp.empty:
         return 0.0
+    sim = _simular_media_movel(df_comp, df_gast, df_vend, df_man)
+    return sim["custo_vendidos"]
 
-    _df_man = df_man if (df_man is not None and not df_man.empty) else pd.DataFrame()
 
-    # Pré-computar timelines uma única vez
-    cmp_datas, cmp_vals   = _build_cmp_timeline(df_comp)
-    gpcab_datas, gpcab_cs = _build_gpcab_timeline(df_gast, df_comp, df_vend, _df_man)
+def custo_medio_movel_venda(df_comp: pd.DataFrame, df_gast: pd.DataFrame,
+                            df_vend: pd.DataFrame | None, df_man: pd.DataFrame | None,
+                            data_venda, qtd_venda,
+                            idx=None) -> tuple[float, float]:
+    """
+    Custo médio móvel por cabeça (compra, gasto) de UMA venda, posicionada pela sua
+    data na linha do tempo — exatamente o que o motor usaria no dashboard.
 
-    total = 0.0
-    for _, venda in df_vend.iterrows():
-        qtd = int(venda.get("Qtd Cabeças", 0) or 0)
-        if qtd <= 0:
-            continue
-        data_v = venda.get("Data")
-        if pd.isna(data_v):
-            cmp_v   = calcular_cmp(df_comp)
-            gpcab_v = float(gpcab_cs[-1]) if len(gpcab_cs) > 0 else 0.0
-        else:
-            cmp_v   = _query_cmp_timeline(cmp_datas, cmp_vals, data_v)
-            gpcab_v = _query_gpcab_timeline(gpcab_datas, gpcab_cs, data_v)
-        total += qtd * (cmp_v + gpcab_v)
-    return total
+    Usado ao registrar/editar uma venda para gravar o snapshot (Custo/Resultado por
+    membro) coerente com a média móvel. Vendas não mudam a média no instante, mas
+    alteram a base das compras seguintes — por isso a venda precisa entrar na simulação.
+
+    idx: índice da venda em df_vend (modo edição). Se None/ausente, trata como venda nova.
+    Retorna (avg_compra, avg_gasto).
+    """
+    if not isinstance(data_venda, pd.Timestamp):
+        data_venda = pd.to_datetime(data_venda, dayfirst=True, errors="coerce")
+
+    if df_vend is None or df_vend.empty:
+        work = pd.DataFrame(columns=["Data", "Qtd Cabeças"])
+    else:
+        work = df_vend.copy()
+        if "Data" not in work.columns:
+            work["Data"] = pd.NaT
+        if "Qtd Cabeças" not in work.columns:
+            work["Qtd Cabeças"] = 0
+
+    if idx is not None and idx in work.index:
+        key = idx
+        work.at[idx, "Data"]        = data_venda
+        work.at[idx, "Qtd Cabeças"] = qtd_venda
+    else:
+        key = "__nova_venda__"
+        linha = {c: None for c in work.columns}
+        linha["Data"]        = data_venda
+        linha["Qtd Cabeças"] = qtd_venda
+        work.loc[key] = linha
+
+    sim = _simular_media_movel(
+        df_comp if df_comp is not None else pd.DataFrame(),
+        df_gast if df_gast is not None else pd.DataFrame(),
+        work, df_man,
+    )
+    return sim["avg_por_venda"].get(key, (0.0, 0.0))
 
 
 # ── Resultado por membro ──────────────────────────────────────────────────────
@@ -370,20 +558,32 @@ def _calcular_custo_historico_vendas(df_vend: pd.DataFrame, df_comp: pd.DataFram
 def calcular_resultado_membro(membro: str, df_vend: pd.DataFrame,
                                df_comp: pd.DataFrame, df_gast: pd.DataFrame,
                                df_man: pd.DataFrame | None = None,
-                               *, _cmp_datas=None, _cmp_vals=None,
-                               _gpcab_datas=None, _gpcab_cs=None) -> dict:
+                               *, _avg_por_venda=None, _perda_membro=None) -> dict:
     """
-    Resultado líquido de um membro usando CMP e GPCab históricos.
+    Resultado líquido de um membro pela MÉDIA MÓVEL PERPÉTUA (v4.0).
 
-    Parâmetros opcionais (_cmp_datas, _cmp_vals, _gpcab_datas, _gpcab_cs):
-        Timelines pré-computadas. Use calcular_todos_membros() para calcular todos
-        os membros de uma vez — ele constrói as timelines uma única vez e repassa.
-        Se não fornecidos, as timelines são construídas internamente (modo standalone).
+    Para cada venda, o custo por cabeça (compra e gastos) é a média de custo
+    vigente naquele momento — a mesma usada no custo global das vendas, garantindo
+    que a soma dos custos dos membros bata com o custo total das vendas.
 
-    MELHORIA v3.1: timelines pré-computadas → O(n log n) em vez de O(n²).
+    "perdas" é o custo das cabeças mortas/perdidas atribuídas a este membro (campo
+    "Perda De"; sem dono, rateado em terços). "resultado_liquido" = resultado − perdas.
+
+    Parâmetros opcionais (_avg_por_venda, _perda_membro):
+        Pré-computados por calcular_todos_membros() (uma simulação para todos).
+        Sem eles, a simulação é feita internamente (modo standalone).
     """
     col_qtd = f"Qtd {membro}"
     col_val = f"Valor {membro} (R$)"
+
+    # Simulação (avg por venda + perdas por membro). Reusa a pré-computada se dada.
+    if _avg_por_venda is not None and _perda_membro is not None:
+        avg_por_venda = _avg_por_venda
+        perda_membro  = _perda_membro
+    else:
+        _sim          = _simular_media_movel(df_comp, df_gast, df_vend, df_man)
+        avg_por_venda = _sim["avg_por_venda"]
+        perda_membro  = _sim["perdas_por_membro"].get(membro, 0.0)
 
     resultado = {
         "membro":            membro,
@@ -393,6 +593,8 @@ def calcular_resultado_membro(membro: str, df_vend: pd.DataFrame,
         "custo_gastos":      0.0,
         "custo_total":       0.0,
         "resultado":         0.0,
+        "perdas":            round(perda_membro, 2),
+        "resultado_liquido": round(-perda_membro, 2),
         "margem_pct":        0.0,
         "ticket_medio":      0.0,
         "custo_medio_cab":   0.0,
@@ -402,36 +604,14 @@ def calcular_resultado_membro(membro: str, df_vend: pd.DataFrame,
     if df_vend.empty or col_qtd not in df_vend.columns:
         return resultado
 
-    _df_man = df_man if (df_man is not None and not df_man.empty) else pd.DataFrame()
-
-    # Usa timelines pré-computadas se fornecidas (via calcular_todos_membros),
-    # caso contrário constrói internamente (chamada standalone).
-    if _cmp_datas is not None and _cmp_vals is not None:
-        cmp_datas, cmp_vals = _cmp_datas, _cmp_vals
-    else:
-        cmp_datas, cmp_vals = _build_cmp_timeline(df_comp)
-
-    if _gpcab_datas is not None and _gpcab_cs is not None:
-        gpcab_datas, gpcab_cs = _gpcab_datas, _gpcab_cs
-    else:
-        gpcab_datas, gpcab_cs = _build_gpcab_timeline(df_gast, df_comp, df_vend, _df_man)
-
-    cmp_global   = calcular_cmp(df_comp)
-    gpcab_global = float(gpcab_cs[-1]) if len(gpcab_cs) > 0 else 0.0
-
-    for _, venda in df_vend.iterrows():
+    for vidx, venda in df_vend.iterrows():
         qtd_m = int(venda.get(col_qtd, 0) or 0)
         val_m = float(venda.get(col_val, 0) or 0)
         if qtd_m <= 0:
             continue
 
         data_v = venda.get("Data")
-        if pd.isna(data_v):
-            cmp_v   = cmp_global
-            gpcab_v = gpcab_global
-        else:
-            cmp_v   = _query_cmp_timeline(cmp_datas, cmp_vals, data_v)
-            gpcab_v = _query_gpcab_timeline(gpcab_datas, gpcab_cs, data_v)
+        cmp_v, gpcab_v = avg_por_venda.get(vidx, (0.0, 0.0))
 
         custo_comp_m  = qtd_m * cmp_v
         custo_gast_m  = qtd_m * gpcab_v
@@ -459,6 +639,8 @@ def calcular_resultado_membro(membro: str, df_vend: pd.DataFrame,
 
     resultado["custo_total"]     = resultado["custo_compra"] + resultado["custo_gastos"]
     resultado["resultado"]       = resultado["receita"] - resultado["custo_total"]
+    # Resultado líquido = resultado das vendas − perdas por morte deste membro
+    resultado["resultado_liquido"] = round(resultado["resultado"] - perda_membro, 2)
     resultado["margem_pct"]      = (resultado["resultado"] / resultado["receita"] * 100
                                     if resultado["receita"] > 0 else 0.0)
     resultado["ticket_medio"]    = (resultado["receita"] / resultado["cabecas"]
@@ -473,22 +655,19 @@ def calcular_todos_membros(df_vend, df_comp, df_gast,
     """
     Calcula resultado para todos os membros.
 
-    MELHORIA: as timelines de CMP e GPCab são construídas uma única vez
-    e passadas para cada membro, evitando 3× o custo de reconstrução.
-    Anteriormente cada chamada a calcular_resultado_membro reconstruía
-    as timelines do zero — O(3n) em vez de O(n).
+    A simulação de média móvel (custo por venda + perdas por membro) é feita
+    UMA única vez e repassada a cada membro, garantindo que a soma dos custos
+    dos membros feche com o custo global das vendas.
     """
-    _df_man = df_man if (df_man is not None and not df_man.empty) else pd.DataFrame()
-
-    # Pré-computar timelines uma única vez para todos os membros
-    cmp_datas, cmp_vals     = _build_cmp_timeline(df_comp)
-    gpcab_datas, gpcab_cs   = _build_gpcab_timeline(df_gast, df_comp, df_vend, _df_man)
+    sim = _simular_media_movel(df_comp, df_gast, df_vend, df_man)
+    avg_por_venda     = sim["avg_por_venda"]
+    perdas_por_membro = sim["perdas_por_membro"]
 
     return {
         m: calcular_resultado_membro(
             m, df_vend, df_comp, df_gast, df_man,
-            _cmp_datas=cmp_datas, _cmp_vals=cmp_vals,
-            _gpcab_datas=gpcab_datas, _gpcab_cs=gpcab_cs,
+            _avg_por_venda=avg_por_venda,
+            _perda_membro=perdas_por_membro.get(m, 0.0),
         )
         for m in MEMBROS
     }
@@ -512,18 +691,27 @@ def calcular_resumo_financeiro(df_comp, df_gast, df_vend, df_man) -> dict:
     cab_comp = int(df_comp["Qtd Cabeças"].sum()) if not df_comp.empty else 0
     cab_vend = int(df_vend["Qtd Cabeças"].sum()) if not df_vend.empty else 0
 
-    # Custo das cabeças vendidas usando CMP+GPCab no MOMENTO de cada venda
-    # (mais preciso que cab_vend × ctcab_atual)
-    custo_vendidos = _calcular_custo_historico_vendas(df_vend, df_comp, df_gast, df_man)
+    # Motor de média móvel perpétua (v4.0): custo das vendas (COGS) e perdas por
+    # morte no MOMENTO de cada evento. Uma única simulação alimenta tudo.
+    sim            = _simular_media_movel(df_comp, df_gast, df_vend, df_man)
+    custo_vendidos = sim["custo_vendidos"]
+    perdas         = sim["perdas"]        # custo das cabeças mortas/perdidas
+    cab_mortes     = int(round(sim["cab_mortes"]))
 
-    # Capital ainda imobilizado no rebanho (a preço de custo atual)
-    capital_imobilizado = estoque * ctcab
+    # Capital ainda imobilizado no rebanho (a preço de custo).
+    #
+    # Identidade contábil (v4.0): todo real gasto ou (a) virou custo das cabeças
+    # vendidas, ou (b) virou perda por morte, ou (c) ainda está parado no rebanho.
+    # O capital é o RESÍDUO e a conservação é garantida:
+    #     custo_vendidos + perdas + capital_imobilizado == total_custo
+    # (Isso também eliminou o "custo fantasma" de +R$99 mil do modelo antigo.)
+    capital_imobilizado = max(0.0, total_custo - custo_vendidos - perdas)
 
     # Resultado realizado = receita − custo das cabeças vendidas
     resultado_realizado = total_vend - custo_vendidos
 
-    # Resultado total = realizado + valor de mercado do estoque − investimento não vendido
-    # = total_vend + capital_imobilizado − total_custo
+    # Resultado total = realizado nas vendas − perdas por morte (estoque a custo,
+    # sem preço de mercado; o ganho potencial é estimado em estimar_rebanho_*).
     resultado_total = total_vend + capital_imobilizado - total_custo
 
     roi_realizado = (resultado_realizado / custo_vendidos * 100
@@ -557,6 +745,9 @@ def calcular_resumo_financeiro(df_comp, df_gast, df_vend, df_man) -> dict:
         "total_vend":           total_vend,
         "capital_imobilizado":  capital_imobilizado,
         "custo_vendidos":       custo_vendidos,
+        # Perdas por morte (perda separada — v4.0)
+        "perdas":               perdas,
+        "cab_mortes":           cab_mortes,
         # Resultados
         "resultado_realizado":  resultado_realizado,
         "resultado_total":      resultado_total,
@@ -682,24 +873,34 @@ def calcular_estoque_por_membro(df_comp: pd.DataFrame, df_vend: pd.DataFrame,
                 resultado["Nilson"] -= base + resto
             # se total == 0, ignora
 
-    # Manejo: mortes e nascimentos tratados SEPARADAMENTE
+    # Manejo: mortes e nascimentos tratados SEPARADAMENTE, linha a linha.
     if not df_man.empty and "Tipo" in df_man.columns:
-        mortes      = int(df_man[df_man["Tipo"] == "Morte/Perda"]["Qtd Cabeças"].sum())
-        nascimentos = int(df_man[df_man["Tipo"] == "Nascimento"]["Qtd Cabeças"].sum())
+        def _ratear_tercos(qtd: int, sinal: int):
+            """Distribui qtd em terços (resto p/ Nilson), somando (sinal=+1)
+            ou subtraindo (sinal=-1)."""
+            base  = qtd // 3
+            resto = qtd - base * 3
+            resultado["Mae"]    += sinal * base
+            resultado["Deyvid"] += sinal * base
+            resultado["Nilson"] += sinal * (base + resto)
 
-        # Distribuir mortes em terços
-        base_m  = mortes // 3
-        resto_m = mortes - base_m * 3
-        resultado["Mae"]    -= base_m
-        resultado["Deyvid"] -= base_m
-        resultado["Nilson"] -= base_m + resto_m
+        for _, row in df_man.iterrows():
+            tipo = row.get("Tipo")
+            qtd  = int(row.get("Qtd Cabeças", 0) or 0)
+            if qtd <= 0:
+                continue
 
-        # Distribuir nascimentos em terços
-        base_n  = nascimentos // 3
-        resto_n = nascimentos - base_n * 3
-        resultado["Mae"]    += base_n
-        resultado["Deyvid"] += base_n
-        resultado["Nilson"] += base_n + resto_n
+            if tipo == "Morte/Perda":
+                # NOVO v3.6: se o registro diz de quem foi a perda, debita só
+                # desse membro; senão divide a perda em terços (comportamento antigo).
+                perda_de = str(row.get("Perda De", "") or "").strip()
+                if perda_de in resultado:
+                    resultado[perda_de] -= qtd
+                else:
+                    _ratear_tercos(qtd, -1)
+
+            elif tipo == "Nascimento":
+                _ratear_tercos(qtd, +1)
 
     # Garantir que nenhum membro fique com estoque negativo
     for m in resultado:

@@ -11,6 +11,7 @@ from calculos import (
     calcular_estoque, calcular_resumo_financeiro, calcular_todos_membros,
     calcular_fluxo_caixa, calcular_cmp_ate_data, calcular_gpcab_ate_data,
     calcular_cmp, calcular_gpcab, calcular_estoque_por_membro,
+    custo_medio_movel_venda,
     calcular_indicadores_extras, calcular_gasto_por_tipo, calcular_evolucao_cmp,
 )
 from config import (TIPOS_GASTO, TIPOS_MANEJO, MEMBROS, NOMES_MEMBROS, COLUNAS_VENDAS)
@@ -42,6 +43,20 @@ def _total_cab(df):
     if df.empty or "Qtd Cabeças" not in df.columns:
         return 0
     return int(df["Qtd Cabeças"].sum())
+
+def _pessoas_de(df, *colunas):
+    """Lista de pessoas distintas presentes em qualquer das colunas dadas
+    (ex.: 'Responsável', 'Registrado Por') — para o filtro das listagens."""
+    if df.empty:
+        return []
+    nomes = set()
+    for col in colunas:
+        if col in df.columns:
+            for v in df[col].dropna().tolist():
+                s = str(v).strip()
+                if s and s.lower() != "nan":
+                    nomes.add(s)
+    return sorted(nomes)
 
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -184,6 +199,7 @@ def gastos():
                            rows=rows, ordem=ordem,
                            anos_disponiveis=_anos_de(df),
                            tipos_disponiveis=_tipos_de(df),
+                           pessoas_disponiveis=_pessoas_de(df, "Registrado Por"),
                            total_valor=_total_valor(df), total_cabecas=_total_cab(df))
 
 @app.route("/gastos/novo", methods=["GET", "POST"])
@@ -292,10 +308,14 @@ def _salvar_venda(form, dados, idx=None):
     v_deyvid = round(q_deyvid * val_cab, 2)
     v_nilson = round(valor_total - v_mae - v_deyvid, 2)
 
-    # Calcular CMP e GPCab no momento da venda
+    # Custo por cabeça no momento da venda — MÉDIA MÓVEL (v4.0), coerente com o
+    # que o dashboard/relatórios recomputam. A venda entra na simulação posicionada
+    # pela sua data; o idx (modo edição) evita duplicá-la.
     data_ts = pd.to_datetime(data, dayfirst=True, errors="coerce")
-    cmp_v   = calcular_cmp_ate_data(dados["Compras"], data_ts) if pd.notna(data_ts) else calcular_cmp(dados["Compras"])
-    gpcab_v = calcular_gpcab_ate_data(dados["Gastos"], data_ts, dados["Compras"], dados["Vendas"], dados["Manejo"]) if pd.notna(data_ts) else calcular_gpcab(dados["Gastos"], dados["Compras"], dados["Vendas"], dados["Manejo"])
+    cmp_v, gpcab_v = custo_medio_movel_venda(
+        dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"],
+        data_ts, cabecas, idx=idx,
+    )
     ctcab_v = cmp_v + gpcab_v
 
     def custo_m(qtd):        return round(qtd * ctcab_v, 2)
@@ -417,10 +437,11 @@ def manejo():
         d["_idx"] = int(real_idx)
         rows.append(d)
     return render_template("lista.html", titulo="Manejo 🩺", secao="manejo", aba="Manejo",
-                           colunas=["Data","Tipo","Qtd Cabeças","Descrição","Responsável"],
+                           colunas=["Data","Tipo","Qtd Cabeças","Descrição","Responsável","Perda De"],
                            rows=rows,
                            anos_disponiveis=_anos_de(df),
-                           tipos_disponiveis=_tipos_de(df))
+                           tipos_disponiveis=_tipos_de(df),
+                           pessoas_disponiveis=_pessoas_de(df, "Responsável", "Perda De"))
 
 @app.route("/manejo/novo", methods=["GET", "POST"])
 @login_required
@@ -430,8 +451,11 @@ def novo_manejo():
     if request.method == "POST":
         _validar_csrf()
         f = request.form
+        # "Perda De" só faz sentido quando o manejo é Morte/Perda
+        perda_de = f.get("perda_de", "") if f.get("tipo") == "Morte/Perda" else ""
         salvar_linha("Manejo", [f.get("data"), f.get("tipo"), int(f.get("cabecas", 0) or 0),
-                                f.get("descricao", "").strip(), f.get("responsavel", "")])
+                                f.get("descricao", "").strip(), f.get("responsavel", ""),
+                                perda_de])
         flash(f"Manejo registrado! ({f.get('tipo')})", "success")
         return redirect(url_for("manejo"))
     return render_template("form_manejo.html", estoque=estoque, TIPOS=TIPOS_MANEJO,
@@ -459,6 +483,7 @@ def editar_manejo(idx):
             "Qtd Cabeças": int(f.get("cabecas", 0) or 0),
             "Descrição":   f.get("descricao","").strip(),
             "Responsável": f.get("responsavel",""),
+            "Perda De":    f.get("perda_de", "") if f.get("tipo") == "Morte/Perda" else "",
         }
         for col, val in updates.items():
             if col in df.columns:

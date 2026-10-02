@@ -33,3 +33,6 @@ desktop.ini
 # ── Logs e temporários ──────────────────────────────────
 *.log
 *.tmp
+
+# ── Notas locais (não versionar) ────────────────────────
+algumas instruçoes.txt

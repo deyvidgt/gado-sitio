@@ -37,7 +37,7 @@ app = Flask(
     static_folder=os.path.join(BUNDLE_DIR, "static"),
 )
 
-from config import SECRET_KEY, SESSAO_MINUTOS, CACHE_RESUMO_TTL
+from config import SECRET_KEY, SESSAO_MINUTOS, CACHE_RESUMO_TTL, VERSAO
 app.secret_key = SECRET_KEY
 app.jinja_env.globals["enumerate"] = enumerate
 
@@ -172,7 +172,7 @@ def _inject_sitio_config():
     if cfg is None:
         cfg = _ler_sitio_config_disco()
         _cache_set("sitio_config", cfg)
-    return {"sitio_config": cfg}
+    return {"sitio_config": cfg, "VERSAO": VERSAO}
 
 
 # ── Auth helpers ───────────────────────────────────────────────────────────────

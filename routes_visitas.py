@@ -52,9 +52,9 @@ def _gerar_sugestoes_visita(f, estoque_esperado):
     quintal = f.get("quintal", "OK")
     if quintal == "Precisa Atenção": sug.append("🏡 Quintal necessita atenção.")
 
-    cisterna = f.get("cisterna", "OK")
-    if cisterna in ("Baixo/Secando",): sug.append("🪣 Cisterna baixa — programar reabastecimento.")
-    elif cisterna == "Vazia": sug.append("🚨 Cisterna VAZIA — abastecer imediatamente!")
+    # Cisterna, caixa d'água e conteiner: apenas registrados (status + litros).
+    # Por preferência da família, o sistema NÃO gera sugestão de reabastecimento
+    # para esses reservatórios.
 
     choveu = f.get("choveu", "nao") == "sim"
     try:
@@ -165,7 +165,19 @@ def nova_visita():
         corrego  = f.get("corrego",    "Normal")
         quintal  = f.get("quintal",    "OK")
         cisterna = f.get("cisterna",   "OK")
+        caixa_agua = f.get("caixa_agua", "Cheia")
+        conteiner  = f.get("conteiner",  "Cheio")
         choveu   = "Sim" if f.get("choveu") == "sim" else "Não"
+
+        def _litros_safe(v):
+            try:
+                s = str(v).strip().replace(",", ".")
+                return round(float(s), 1) if s else None
+            except Exception:
+                return None
+
+        caixa_agua_litros = _litros_safe(f.get("caixa_agua_litros"))
+        conteiner_litros  = _litros_safe(f.get("conteiner_litros"))
 
         try:
             chuva_mm = float(str(f.get("chuva_mm", "0") or "0").replace(",", "."))
@@ -193,6 +205,8 @@ def nova_visita():
             choveu, chuva_mm if chuva_mm > 0 else None,
             obs, sugestoes,
             sacos_sal, sacos_prot,
+            caixa_agua, caixa_agua_litros,
+            conteiner, conteiner_litros,
         ])
 
         # ── Notificar família via WhatsApp ────────────────────────────────────

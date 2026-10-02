@@ -39,6 +39,18 @@
             {% endfor %}
           </select>
         </div>
+        <div class="form-group" id="grupo-perda" style="display:none">
+          <label>De quem foi a perda?</label>
+          <select name="perda_de" id="sel-perda">
+            <option value="">— Não informado (dividir entre todos) —</option>
+            {% for m in MEMBROS %}
+              <option value="{{ m }}" {{ 'selected' if modo == 'editar' and row and row.get('Perda De') == m }}>{{ NOMES[m] }}</option>
+            {% endfor %}
+          </select>
+          <small style="color:var(--text-3);font-size:11px">
+            A cabeça perdida é debitada do estoque desse dono. Em branco, a perda é dividida entre os três.
+          </small>
+        </div>
         <div class="form-group full">
           <label>Descrição / Observações</label>
           <textarea name="descricao" rows="3" placeholder="Detalhes do manejo...">{{ row.get('Descrição','') if modo == 'editar' and row else '' }}</textarea>
@@ -51,4 +63,17 @@
     </form>
   </div>
 </div>
+
+{% block scripts %}
+<script>
+(function () {
+  const selTipo  = document.querySelector("select[name='tipo']");
+  const grpPerda = document.getElementById("grupo-perda");
+  function toggle() {
+    grpPerda.style.display = (selTipo && selTipo.value === "Morte/Perda") ? "" : "none";
+  }
+  if (selTipo) { selTipo.addEventListener("change", toggle); toggle(); }
+})();
+</script>
+{% endblock %}
 {% endblock %}

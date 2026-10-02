@@ -56,6 +56,14 @@
     <div class="metric-val">{{ r.capital_imobilizado | brl }}</div>
     <div class="metric-sub">{{ r.estoque }} cab. × {{ r.ctcab | brl }}</div>
   </div>
+  {% if r.perdas and r.perdas > 0 %}
+  <div class="metric red">
+    <div class="metric-icon">💀</div>
+    <div class="metric-label">Perdas (mortes)</div>
+    <div class="metric-val neg">{{ r.perdas | brl }}</div>
+    <div class="metric-sub">{{ r.cab_mortes }} cabeça(s) perdida(s)</div>
+  </div>
+  {% endif %}
 </div>
 
 <!-- Estoque por Membro -->
@@ -75,6 +83,16 @@
       <span class="kv-key">Resultado realizado</span>
       <span class="{{ 'pos' if mr.resultado >= 0 else 'neg' }}">{{ mr.resultado | brl }}</span>
     </div>
+    {% if mr.perdas and mr.perdas > 0 %}
+    <div class="kv">
+      <span class="kv-key">Perdas (mortes)</span>
+      <span class="neg">− {{ mr.perdas | brl }}</span>
+    </div>
+    <div class="kv">
+      <span class="kv-key">Resultado líquido</span>
+      <span class="{{ 'pos' if mr.resultado_liquido >= 0 else 'neg' }}">{{ mr.resultado_liquido | brl }}</span>
+    </div>
+    {% endif %}
   </div>
   {% endfor %}
 </div><!-- /three-col -->
