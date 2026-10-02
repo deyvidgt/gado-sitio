@@ -125,8 +125,15 @@ def inicializar():
         return
 
     # Arquivo já existe — migrar abas/colunas que faltam SEM apagar dados.
-    # Colunas novas são sempre acrescentadas no FINAL; linhas antigas ficam
-    # apenas com os campos novos vazios. Nenhum dado existente é alterado.
+    # Colunas novas são sempre acrescentadas no FINAL (nunca reordenadas); as
+    # linhas antigas ficam só com os campos novos vazios. Nenhum dado é alterado.
+    #
+    # IMPORTANTE (correção): se uma versão anterior gravou um valor numa coluna
+    # SEM cabeçalho (ex.: "Perda De" salvo antes de a coluna existir), a linha de
+    # cabeçalho fica com uma célula vazia naquela posição. Por isso nomeamos o
+    # cabeçalho POR POSIÇÃO conforme o esquema — assim o valor órfão (ex.: "Mae"
+    # na coluna 6) passa a ser lido corretamente como "Perda De", em vez de
+    # colocarmos o nome numa coluna à frente e deixar o dado órfão.
     try:
         wb = load_workbook(ARQUIVO_PATH)
         alterado = False
@@ -137,15 +144,33 @@ def inicializar():
                 alterado = True
                 print(f"✅ Aba '{aba}' criada no arquivo existente.")
                 continue
+
             ws = wb[aba]
             header = [cell.value for cell in ws[1]]
-            novas = [c for c in colunas if c not in header]
+            novas = []
+
+            # 1) Preenche POSICIONALMENTE os nomes do esquema onde o cabeçalho
+            #    está vazio (inclui células órfãs criadas por gravações antigas).
+            for i, nome in enumerate(colunas):
+                atual = header[i] if i < len(header) else None
+                if atual is None or str(atual).strip() == "":
+                    ws.cell(row=1, column=i + 1, value=nome)
+                    novas.append(nome)
+                    alterado = True
+
+            # 2) Defensivo: garante que todo nome do esquema exista no cabeçalho
+            #    (acrescenta no fim os que ainda faltarem).
+            header2 = [cell.value for cell in ws[1]]
+            for nome in colunas:
+                if nome not in header2:
+                    ws.cell(row=1, column=len(header2) + 1, value=nome)
+                    header2.append(nome)
+                    novas.append(nome)
+                    alterado = True
+
             if novas:
-                for col_nome in novas:
-                    ws.cell(row=1, column=len(header) + 1, value=col_nome)
-                    header.append(col_nome)
-                alterado = True
-                print(f"✅ Novas colunas adicionadas em '{aba}': {novas}")
+                print(f"✅ Colunas garantidas em '{aba}': {novas}")
+
         if alterado:
             wb.save(ARQUIVO_PATH)
     except Exception as e:
