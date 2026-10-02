@@ -46,11 +46,19 @@ from routes_visitas import *    # noqa: F401, F403
 # ── 9) Relatórios e PDF ──────────────────────────────────────────────────────
 from routes_relatorios import * # noqa: F401, F403
 
-# ── Inicialização ─────────────────────────────────────────────────────────────
-if __name__ == "__main__":
+# ── Migração/criação do arquivo de dados ──────────────────────────────────────
+# IMPORTANTE: roda em QUALQUER forma de entrada (wsgi/PythonAnywhere, .exe e dev).
+# Antes só rodava em `python app.py`, então no servidor as colunas novas (ex.: "Perda De",
+# caixa d'água, Ração) nunca eram criadas — os valores iam para colunas sem cabeçalho.
+try:
     from db import inicializar
     inicializar()
+except Exception as _e:
+    # Nunca derrubar o site por causa da migração; apenas registra.
+    print(f"⚠️  Falha ao inicializar/migrar o banco: {_e}", flush=True)
 
+# ── Inicialização (execução local direta) ─────────────────────────────────────
+if __name__ == "__main__":
     import webbrowser, threading
     PORTA = 5000
     NGROK_TOKEN = os.environ.get("NGROK_TOKEN", "")
