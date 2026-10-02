@@ -119,6 +119,8 @@ COLUNAS_VISITAS = [
     # NOVO v3.6: reservatórios de água (status + litros restantes).
     "Caixa d'Água", "Caixa d'Água Litros",
     "Conteiner", "Conteiner Litros",
+    # NOVO v4.0: Ração separada do Sal (a coluna "Sal/Ração" guarda o Sal).
+    "Ração", "Sacos Ração",
 ]
 
 OPCOES_VISITA = {

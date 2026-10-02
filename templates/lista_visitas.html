@@ -77,6 +77,7 @@
     {% for row in rows %}
       {% set faltando = row.get("Gado Faltando", 0)|int %}
       {% set sal      = row.get("Sal/Ração",      "OK")     or "OK" %}
+      {% set racao    = row.get("Ração",           "OK")     or "OK" %}
       {% set prot     = row.get("Proteinado",      "OK")     or "OK" %}
       {% set grama    = row.get("Grama/Pastagem",  "Boa")    or "Boa" %}
       {% set corrego  = row.get("Córrego/Água",    "Normal") or "Normal" %}
@@ -85,9 +86,9 @@
       {% set choveu   = row.get("Choveu",           "Não")    or "Não" %}
       {% set mm       = (row.get("Chuva mm", 0) or 0) | float %}
 
-      {% if faltando > 0 or sal == "Vazio" or prot == "Vazio" or corrego == "Seco" or cisterna == "Vazia" or grama == "Escassa" %}
+      {% if faltando > 0 or sal == "Vazio" or racao == "Vazio" or prot == "Vazio" or corrego == "Seco" or cisterna == "Vazia" or grama == "Escassa" %}
         {% set card_cls = "has-alert" %}
-      {% elif sal == "Baixo" or prot == "Baixo" or grama == "Regular" or mato != "Limpo" or corrego == "Baixo" %}
+      {% elif sal == "Baixo" or racao == "Baixo" or prot == "Baixo" or grama == "Regular" or mato != "Limpo" or corrego == "Baixo" %}
         {% set card_cls = "has-warn" %}
       {% else %}
         {% set card_cls = "" %}
@@ -147,6 +148,11 @@
           {% if sal == "OK" %}<span class="badge badge-ok">🧂 Sal OK</span>
           {% elif sal == "Baixo" %}<span class="badge badge-warn">🧂 Sal Baixo</span>
           {% else %}<span class="badge badge-danger">🧂 Sal VAZIO</span>{% endif %}
+
+          {% if racao == "OK" %}<span class="badge badge-ok">🌾 Ração OK</span>
+          {% elif racao == "Baixo" %}<span class="badge badge-warn">🌾 Ração Baixa</span>
+          {% elif racao == "Meio Saco" %}<span class="badge badge-warn">🌾 Ração Meio Saco</span>
+          {% else %}<span class="badge badge-danger">🌾 Ração VAZIA</span>{% endif %}
 
           {% if prot == "OK" %}<span class="badge badge-ok">🟢 Proteinado OK</span>
           {% elif prot == "Baixo" %}<span class="badge badge-warn">🟡 Proteinado Baixo</span>

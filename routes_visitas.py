@@ -27,9 +27,14 @@ def _gerar_sugestoes_visita(f, estoque_esperado):
             sug.append(f"ℹ️ {gado_contado - estoque_esperado} cabeça(s) a mais — possível animal de terceiro.")
 
     sal = f.get("sal_racao", "OK")
-    if sal == "Baixo":       sug.append("🧂 Sal/Ração baixo — reabastecer nos próximos 2 a 3 dias.")
+    if sal == "Baixo":       sug.append("🧂 Sal baixo — reabastecer nos próximos 2 a 3 dias.")
     elif sal in ("Vazio", "Meio Saco"):
-        sug.append("🚨 Sal/Ração ESGOTADO — abastecer com urgência!" if sal == "Vazio" else "🧂 Sal/Ração no fim — reabastecer em breve.")
+        sug.append("🚨 Sal ESGOTADO — abastecer com urgência!" if sal == "Vazio" else "🧂 Sal no fim — reabastecer em breve.")
+
+    racao = f.get("racao", "OK")
+    if racao == "Baixo":     sug.append("🌾 Ração baixa — reabastecer nos próximos 2 a 3 dias.")
+    elif racao in ("Vazio", "Meio Saco"):
+        sug.append("🚨 Ração ESGOTADA — abastecer com urgência!" if racao == "Vazio" else "🌾 Ração no fim — reabastecer em breve.")
 
     prot = f.get("proteinado", "OK")
     if prot == "Baixo":      sug.append("🟡 Proteinado baixo — repor em breve.")
@@ -159,6 +164,7 @@ def nova_visita():
         gado_falt   = max(0, gado_esp - gado_cnt) if gado_cnt > 0 else 0
 
         sal      = f.get("sal_racao",  "OK")
+        racao    = f.get("racao",      "OK")
         prot     = f.get("proteinado", "OK")
         mato     = f.get("mato",       "Limpo")
         grama    = f.get("grama",      "Boa")
@@ -207,6 +213,7 @@ def nova_visita():
             sacos_sal, sacos_prot,
             caixa_agua, caixa_agua_litros,
             conteiner, conteiner_litros,
+            racao, sacos_racao,
         ])
 
         # ── Notificar família via WhatsApp ────────────────────────────────────
@@ -217,6 +224,7 @@ def nova_visita():
             "Gado Esperado":  gado_esp,
             "Gado Faltando":  gado_falt,
             "Sal/Ração":      sal,
+            "Ração":          racao,
             "Proteinado":     prot,
             "Mato/Vegetação": mato,
             "Grama/Pastagem": grama,
