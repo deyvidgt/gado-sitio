@@ -95,6 +95,60 @@ def fazer_backup() -> str | None:
 
 # ── Inicialização ─────────────────────────────────────────────────────────────
 
+def _garantir_colunas(ws, colunas) -> bool:
+    """
+    Garante que o cabeçalho (1ª linha) de `ws` contenha as `colunas` do esquema,
+    na ordem, SEM apagar dados. Retorna True se alterou algo.
+
+    Passos:
+      1) Preenche POR POSIÇÃO os cabeçalhos vazios conforme o esquema. Assim, um
+         valor gravado numa coluna órfã (ex.: "Perda De" salvo antes de a coluna
+         existir → "Mae" na col6 sem cabeçalho) passa a ser lido corretamente.
+      2) Remove colunas DUPLICADAS: mantém a 1ª; se a duplicata tiver dado e a 1ª
+         estiver vazia, move o dado antes de apagar.
+      3) Acrescenta no fim qualquer coluna do esquema que ainda falte.
+    """
+    mudou = False
+
+    # 1) Preenche posicionalmente cabeçalhos vazios/órfãos
+    header = [c.value for c in ws[1]]
+    for i, nome in enumerate(colunas):
+        atual = header[i] if i < len(header) else None
+        if atual is None or str(atual).strip() == "":
+            ws.cell(row=1, column=i + 1, value=nome)
+            mudou = True
+
+    # 2) Remove duplicatas de cabeçalho (mantendo dados)
+    header = [c.value for c in ws[1]]
+    vistos, apagar = {}, []
+    for idx, name in enumerate(header, start=1):
+        if name is None or str(name).strip() == "":
+            continue
+        chave = str(name).strip()
+        if chave in vistos:
+            primeiro = vistos[chave]
+            for r in range(2, ws.max_row + 1):
+                v = ws.cell(row=r, column=idx).value
+                if v not in (None, "") and ws.cell(row=r, column=primeiro).value in (None, ""):
+                    ws.cell(row=r, column=primeiro, value=v)
+            apagar.append(idx)
+        else:
+            vistos[chave] = idx
+    for idx in sorted(apagar, reverse=True):
+        ws.delete_cols(idx)
+        mudou = True
+
+    # 3) Acrescenta no fim o que ainda faltar
+    header = [c.value for c in ws[1]]
+    for nome in colunas:
+        if nome not in header:
+            ws.cell(row=1, column=len(header) + 1, value=nome)
+            header.append(nome)
+            mudou = True
+
+    return mudou
+
+
 def inicializar():
     """
     Cria o arquivo de dados em DATA_DIR se não existir.
@@ -125,15 +179,6 @@ def inicializar():
         return
 
     # Arquivo já existe — migrar abas/colunas que faltam SEM apagar dados.
-    # Colunas novas são sempre acrescentadas no FINAL (nunca reordenadas); as
-    # linhas antigas ficam só com os campos novos vazios. Nenhum dado é alterado.
-    #
-    # IMPORTANTE (correção): se uma versão anterior gravou um valor numa coluna
-    # SEM cabeçalho (ex.: "Perda De" salvo antes de a coluna existir), a linha de
-    # cabeçalho fica com uma célula vazia naquela posição. Por isso nomeamos o
-    # cabeçalho POR POSIÇÃO conforme o esquema — assim o valor órfão (ex.: "Mae"
-    # na coluna 6) passa a ser lido corretamente como "Perda De", em vez de
-    # colocarmos o nome numa coluna à frente e deixar o dado órfão.
     try:
         wb = load_workbook(ARQUIVO_PATH)
         alterado = False
@@ -144,33 +189,9 @@ def inicializar():
                 alterado = True
                 print(f"✅ Aba '{aba}' criada no arquivo existente.")
                 continue
-
-            ws = wb[aba]
-            header = [cell.value for cell in ws[1]]
-            novas = []
-
-            # 1) Preenche POSICIONALMENTE os nomes do esquema onde o cabeçalho
-            #    está vazio (inclui células órfãs criadas por gravações antigas).
-            for i, nome in enumerate(colunas):
-                atual = header[i] if i < len(header) else None
-                if atual is None or str(atual).strip() == "":
-                    ws.cell(row=1, column=i + 1, value=nome)
-                    novas.append(nome)
-                    alterado = True
-
-            # 2) Defensivo: garante que todo nome do esquema exista no cabeçalho
-            #    (acrescenta no fim os que ainda faltarem).
-            header2 = [cell.value for cell in ws[1]]
-            for nome in colunas:
-                if nome not in header2:
-                    ws.cell(row=1, column=len(header2) + 1, value=nome)
-                    header2.append(nome)
-                    novas.append(nome)
-                    alterado = True
-
-            if novas:
-                print(f"✅ Colunas garantidas em '{aba}': {novas}")
-
+            if _garantir_colunas(wb[aba], colunas):
+                alterado = True
+                print(f"✅ Colunas garantidas em '{aba}'.")
         if alterado:
             wb.save(ARQUIVO_PATH)
     except Exception as e:
@@ -221,9 +242,16 @@ def _preparar_valor(v):
 
 
 def salvar_linha(aba: str, linha: list):
-    """Adiciona uma linha ao final de uma aba."""
+    """Adiciona uma linha ao final de uma aba.
+
+    Auto-corrige o cabeçalho antes de gravar: garante que as colunas do esquema
+    existam (e na posição certa), para o valor nunca cair numa coluna sem nome —
+    não depende da migração do boot ter rodado.
+    """
     wb = load_workbook(ARQUIVO_PATH)
     ws = wb[aba]
+    if aba in _SCHEMA_ABAS:
+        _garantir_colunas(ws, _SCHEMA_ABAS[aba])
     ws.append([_preparar_valor(v) for v in linha])
     wb.save(ARQUIVO_PATH)
 
