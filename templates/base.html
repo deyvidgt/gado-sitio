@@ -256,9 +256,6 @@
     <a href="{{ url_for('importar') }}"      class="nav-link {% if request.endpoint=='importar'      %}active{% endif %}"><span class="ico">⬆️</span> Importar Excel</a>
     <a href="{{ url_for('exportar') }}"      class="nav-link"><span class="ico">⬇️</span> Exportar Excel</a>
     <a href="{{ url_for('listar_backups') }}" class="nav-link {% if request.endpoint in ['listar_backups','fazer_backup_agora','download_backup','excluir_backup'] %}active{% endif %}"><span class="ico">💾</span> Backups</a>
-    {% if session.get("usuario") == "deyvid" %}
-    <a href="{{ url_for('admin_logs') }}" class="nav-link {% if request.endpoint == 'admin_logs' %}active{% endif %}"><span class="ico">🧪</span> Logs</a>
-    {% endif %}
     <a href="{{ url_for('configuracoes') }}" class="nav-link {% if request.endpoint in ['configuracoes','trocar_senha','adicionar_usuario','excluir_usuario','resetar_senha'] %}active{% endif %}"><span class="ico">⚙️</span> Configurações</a>
   </nav>
 
