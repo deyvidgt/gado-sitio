@@ -58,7 +58,24 @@ import bisect
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from config import MEMBROS
+from config import MEMBROS, NOMES_MEMBROS
+
+
+def _normalizar_membro(valor) -> str | None:
+    """
+    Converte um texto de "Perda De"/dono para a CHAVE interna do membro.
+    Aceita tanto a chave ("Mae") quanto o nome de exibição ("Geane"),
+    sem diferenciar maiúsculas/minúsculas. Retorna None se não reconhecer.
+    """
+    if valor is None:
+        return None
+    s = str(valor).strip().lower()
+    if not s:
+        return None
+    for m in MEMBROS:
+        if s == m.lower() or s == str(NOMES_MEMBROS.get(m, m)).strip().lower():
+            return m
+    return None
 
 # Preço de referência da arroba para cálculos de break-even e arrobas mínimas.
 # Atualize conforme cotação do mercado local (Triângulo/MG, Scot/IMEA).
@@ -317,7 +334,7 @@ def _simular_media_movel(df_comp: pd.DataFrame,
             if tipo == "Nascimento":
                 eventos.append((_data(r.get("Data")), 2, "nasc",  qtd, 0.0, None, None))
             elif tipo == "Morte/Perda":
-                perda_de = str(r.get("Perda De", "") or "").strip() or None
+                perda_de = _normalizar_membro(r.get("Perda De"))
                 eventos.append((_data(r.get("Data")), 4, "morte", qtd, 0.0, None, perda_de))
 
     if not df_vend.empty:
@@ -893,7 +910,8 @@ def calcular_estoque_por_membro(df_comp: pd.DataFrame, df_vend: pd.DataFrame,
             if tipo == "Morte/Perda":
                 # NOVO v3.6: se o registro diz de quem foi a perda, debita só
                 # desse membro; senão divide a perda em terços (comportamento antigo).
-                perda_de = str(row.get("Perda De", "") or "").strip()
+                # Aceita "Mae" ou "Geane" (chave ou nome de exibição).
+                perda_de = _normalizar_membro(row.get("Perda De"))
                 if perda_de in resultado:
                     resultado[perda_de] -= qtd
                 else:
