@@ -7,8 +7,7 @@ APIs extras: calendário de manejo, configuração e envio WhatsApp.
 import pandas as pd
 from datetime import timedelta
 from flask import request, jsonify, session
-from db import carregar_aba
-from config import ALERTAS_SAUDE
+from db import carregar_aba, get_alertas_saude
 from extensions import app, _agora, login_required, _carregar_usuarios, _salvar_usuarios
 
 
@@ -155,7 +154,7 @@ def api_calendario_manejo():
 
     # ── Próximas intervenções de saúde ──────────────────────────────────────
     proximas = []
-    for tipo, intervalo in ALERTAS_SAUDE.items():
+    for tipo, intervalo in get_alertas_saude().items():
         status    = "sem_registro"
         ultima_br = None
         dias_rest = None

@@ -91,9 +91,12 @@ def _salvar_sitio_config(cfg: dict):
 @app.route("/configuracoes")
 @login_required
 def configuracoes():
+    from db import get_alertas_saude
     usuarios     = _carregar_usuarios_local()
     sitio_config = _carregar_sitio_config()
-    return render_template("configuracoes.html", usuarios=usuarios, sitio_config=sitio_config)
+    alertas_saude = get_alertas_saude()
+    return render_template("configuracoes.html", usuarios=usuarios,
+                           sitio_config=sitio_config, alertas_saude=alertas_saude)
 
 
 @app.route("/configuracoes/trocar-senha", methods=["POST"])
@@ -272,6 +275,29 @@ def salvar_rebanho_config():
     _salvar_sitio_config(cfg)
     _invalidar_cache_sitio()
     flash("✅ Dados do rebanho salvos! A estimativa aparece no painel.", "success")
+    return redirect(url_for("configuracoes"))
+
+
+@app.route("/configuracoes/alertas-saude", methods=["POST"])
+@login_required
+def salvar_alertas_saude():
+    """Salva os intervalos (dias) dos alertas de saúde — ajustáveis por região."""
+    _validar_csrf()
+    from config import ALERTAS_SAUDE
+    novos = {}
+    for tipo, padrao in ALERTAS_SAUDE.items():
+        raw = request.form.get(tipo, "")
+        try:
+            v = int(float(str(raw).strip().replace(",", ".")))
+        except Exception:
+            v = padrao
+        novos[tipo] = max(1, min(v, 3650))   # 1 dia a 10 anos
+
+    cfg = _carregar_sitio_config()
+    cfg["alertas_saude"] = novos
+    _salvar_sitio_config(cfg)
+    _invalidar_cache_sitio()
+    flash("✅ Intervalos de saúde atualizados!", "success")
     return redirect(url_for("configuracoes"))
 
 

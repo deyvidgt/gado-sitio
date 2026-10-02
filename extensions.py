@@ -295,11 +295,11 @@ _ultimo_alerta_wpp: float = 0.0
 _ALERTA_INTERVALO = 20 * 3600
 
 def _gerar_alertas(dados):
-    from config import ALERTAS_SAUDE
+    from db import get_alertas_saude
     alertas = []
     hoje = _agora()
     df_man = dados["Manejo"]
-    for tipo, dias in ALERTAS_SAUDE.items():
+    for tipo, dias in get_alertas_saude().items():
         df_t = df_man[df_man["Tipo"] == tipo] if not df_man.empty else pd.DataFrame()
         if df_t.empty:
             alertas.append({"nivel": "warning", "msg": f"Nenhum registro de {tipo}."})

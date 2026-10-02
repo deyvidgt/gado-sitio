@@ -72,10 +72,15 @@ TIPOS_MANEJO = [
     "Outro",
 ]
 
+# Intervalos (em dias) dos alertas de saúde — PADRÕES DE REFERÊNCIA p/ gado de
+# corte no Triângulo Mineiro (cerrado/MG). São apenas ponto de partida e podem
+# ser ajustados a qualquer momento em ⚙️ Configurações → Alertas de Saúde
+# (a função db.get_alertas_saude() aplica os ajustes salvos por cima destes).
+# Ajuste conforme seu veterinário e o calendário oficial do IMA-MG.
 ALERTAS_SAUDE = {
-    "Vacinação":              180,   # dias entre vacinações
-    "Vermifugação":           120,   # dias entre vermifugações
-    "Pesagem":                90,    # dias entre pesagens
+    "Vacinação":              180,   # ~semestral (clostridioses/carbúnculo etc.)
+    "Vermifugação":           120,   # ~a cada 4 meses (reforçar na seca)
+    "Pesagem":                90,    # trimestral (acompanhar ganho de peso)
     "Tratamento Veterinário": 365,   # revisão anual
 }
 

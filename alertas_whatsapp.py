@@ -38,9 +38,8 @@ sys.path.insert(0, str(BASE_DIR))
 
 # ── Imports do sistema ────────────────────────────────────────────────────────
 try:
-    from db import carregar_aba, carregar_todas
+    from db import carregar_aba, carregar_todas, get_alertas_saude
     from calculos import calcular_estoque, calcular_resumo_financeiro
-    from config import ALERTAS_SAUDE
 except Exception as e:
     logging.error(f"Erro ao importar módulos do sistema: {e}")
     sys.exit(1)
@@ -247,7 +246,7 @@ def montar_alertas() -> list[str]:
         return [f"❌ Erro ao ler dados do sistema: {e}"]
 
     # ── 1) Alertas de manejo ─────────────────────────────────────────────────
-    for tipo, intervalo_dias in ALERTAS_SAUDE.items():
+    for tipo, intervalo_dias in get_alertas_saude().items():
         if df_m.empty or "Tipo" not in df_m.columns:
             alertas.append(f"📋 {tipo}: nenhum registro encontrado!")
             continue

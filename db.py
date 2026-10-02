@@ -15,6 +15,7 @@ IMPORTANTE — onde ficam os dados:
 """
 
 import os, sys
+import json
 import shutil
 import pandas as pd
 from datetime import datetime
@@ -94,6 +95,32 @@ def fazer_backup() -> str | None:
 
 
 # ── Inicialização ─────────────────────────────────────────────────────────────
+
+def get_alertas_saude() -> dict:
+    """
+    Intervalos (em dias) dos alertas de saúde EFETIVOS: começa dos padrões em
+    config.ALERTAS_SAUDE e aplica os ajustes salvos pelo usuário em
+    sitio_config.json (chave "alertas_saude"). Mantém os mesmos tipos; só os dias
+    podem mudar. Fonte única usada pelo calendário, alertas e WhatsApp.
+    """
+    from config import ALERTAS_SAUDE as _DEFAULT
+    base = dict(_DEFAULT)
+    try:
+        cfg_path = os.path.join(DATA_DIR, "sitio_config.json")
+        if os.path.exists(cfg_path):
+            with open(cfg_path, encoding="utf-8") as f:
+                salvos = (json.load(f) or {}).get("alertas_saude", {}) or {}
+            for tipo in base:
+                try:
+                    v = int(salvos[tipo])
+                    if v > 0:
+                        base[tipo] = v
+                except (KeyError, TypeError, ValueError):
+                    pass
+    except Exception:
+        pass
+    return base
+
 
 def _garantir_colunas(ws, colunas) -> bool:
     """
