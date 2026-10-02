@@ -112,11 +112,11 @@
             {% endif %}
             {% if choveu == "Sim" %}
               {% if mm >= 50 %}
-                <span class="chuva-pill chuva-heavy">🌧️ {{ mm | int }}mm — forte</span>
+                <span class="chuva-pill chuva-heavy">🌧️ {{ '%g' | format(mm) }}mm — forte</span>
               {% elif mm >= 15 %}
-                <span class="chuva-pill chuva-med">🌦️ {{ mm | int }}mm — boa chuva</span>
+                <span class="chuva-pill chuva-med">🌦️ {{ '%g' | format(mm) }}mm — boa chuva</span>
               {% elif mm > 0 %}
-                <span class="chuva-pill chuva-light">🌂 {{ mm | int }}mm — leve</span>
+                <span class="chuva-pill chuva-light">🌂 {{ '%g' | format(mm) }}mm — leve</span>
               {% else %}
                 <span class="chuva-pill chuva-med">🌧️ Choveu</span>
               {% endif %}

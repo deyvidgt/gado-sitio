@@ -171,11 +171,11 @@ def montar_msg_nova_visita(row: dict, estoque_esperado: int) -> str:
     # ── Chuva ────────────────────────────────────────────────────────────────
     if choveu == "Sim":
         if chuva_mm >= 50:
-            chuva_info = f"🌧️ Chuva forte: {chuva_mm:.0f}mm"
+            chuva_info = f"🌧️ Chuva forte: {chuva_mm:g}mm"
         elif chuva_mm >= 15:
-            chuva_info = f"🌦️ Boa chuva: {chuva_mm:.0f}mm"
+            chuva_info = f"🌦️ Boa chuva: {chuva_mm:g}mm"
         elif chuva_mm > 0:
-            chuva_info = f"🌂 Chuva leve: {chuva_mm:.0f}mm"
+            chuva_info = f"🌂 Chuva leve: {chuva_mm:g}mm"
         else:
             chuva_info = "🌧️ Choveu (mm não informado)"
     else:
@@ -335,7 +335,7 @@ def montar_alertas() -> list[str]:
 
         # Chuva
         if choveu == "Sim" and chuva_mm > 0:
-            alertas.append(f"  🌧️ Chuva registrada: {chuva_mm:.0f}mm")
+            alertas.append(f"  🌧️ Chuva registrada: {chuva_mm:g}mm")
 
         # Dias sem visita
         if dias_sem_visita >= 7:

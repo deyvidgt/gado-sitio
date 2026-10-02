@@ -67,9 +67,9 @@ def _gerar_sugestoes_visita(f, estoque_esperado):
     except Exception:
         mm = 0.0
 
-    if choveu and mm >= 50:   sug.append(f"🌧️ Chuva forte ({mm:.0f}mm) — verificar erosão e cercas.")
-    elif choveu and mm >= 15: sug.append(f"🌦️ Boa chuva ({mm:.0f}mm) — pastagem deve se recuperar.")
-    elif choveu and mm > 0:   sug.append(f"🌂 Chuva leve ({mm:.0f}mm).")
+    if choveu and mm >= 50:   sug.append(f"🌧️ Chuva forte ({mm:g}mm) — verificar erosão e cercas.")
+    elif choveu and mm >= 15: sug.append(f"🌦️ Boa chuva ({mm:g}mm) — pastagem deve se recuperar.")
+    elif choveu and mm > 0:   sug.append(f"🌂 Chuva leve ({mm:g}mm).")
     elif choveu:              sug.append("🌧️ Chuva registrada — anotar os mm na próxima vez.")
     else:                     sug.append("☀️ Sem chuva — acompanhar estiagem.")
 
