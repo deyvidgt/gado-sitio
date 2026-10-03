@@ -213,6 +213,47 @@
       .topbar-date { display:none; }
     }
     @media (max-width: 480px) { .metrics { grid-template-columns:1fr; } .topbar-title { font-size:16px; } }
+
+    /* ── Modo escuro: estilos escritos direto no HTML das páginas ─────────────
+       Várias telas usam cores fixas inline (verde-escuro, cinza #444, caixas de
+       aviso claras). No tema escuro isso some no fundo; aqui ajustamos todas de
+       uma vez sem mexer no modo claro. */
+    [data-theme="dark"] [style*="color:var(--green-700)"],
+    [data-theme="dark"] [style*="color: var(--green-700)"],
+    [data-theme="dark"] [style*="color:var(--green-800)"] { color: var(--green-300) !important; }
+    [data-theme="dark"] [style*="color:#444"] { color: var(--text-2) !important; }
+    /* caixas de aviso amarelas/laranja (Caps Lock, WhatsApp, avisos) */
+    [data-theme="dark"] [style*="background:#fff8e1"],
+    [data-theme="dark"] [style*="background:#fff3e2"] {
+      background: rgba(244,168,74,.14) !important; color: #f4c27a !important;
+    }
+    [data-theme="dark"] [style*="color:#6b4a00"],
+    [data-theme="dark"] [style*="color:#7a5100"],
+    [data-theme="dark"] [style*="color:#8a5a00"] { color: #f4c27a !important; }
+    /* botões claros da lista de usuários (Resetar / Excluir) */
+    [data-theme="dark"] [style*="background:var(--cream-dk);border:1.5px solid #ccc"] {
+      color: var(--text) !important; border-color: var(--bg-2) !important; background: var(--surface-2) !important;
+    }
+    [data-theme="dark"] [style*="background:#fff0f0"] {
+      background: rgba(229,115,115,.15) !important; border-color: rgba(229,115,115,.4) !important; color: #ef9a9a !important;
+    }
+    /* Caixas mostradas/ocultadas por script: ao mexer em el.style o navegador
+       reescreve o atributo (ex.: "background: rgb(255, 248, 225)") e o seletor
+       [style*=...] acima deixa de bater — por isso vão pelo id. */
+    [data-theme="dark"] #cfg-wpp-vazio,
+    [data-theme="dark"] #caps-nova, [data-theme="dark"] #caps-conf,
+    [data-theme="dark"] #caps-novo, [data-theme="dark"] #caps-reset {
+      background: rgba(244,168,74,.14) !important; color: #f4c27a !important;
+    }
+    /* nome do sítio no menu: --green-100 vira quase transparente no tema escuro */
+    [data-theme="dark"] .sidebar-brand h1 { color: #dff0d8; }
+    /* cabeçalho de tabela com cinza fraco sobre o verde-escuro */
+    [data-theme="dark"] th[style*="color:var(--text-3)"] { color: var(--text-2) !important; }
+    /* botão dourado: texto branco tinha contraste baixo; no escuro usa texto escuro */
+    [data-theme="dark"] .btn-gold { color: #1c1400; }
+    [data-theme="dark"] [style*="background:#f5f5f5"] {
+      background: var(--surface-2) !important; border-color: var(--bg-2) !important; color: var(--text-3) !important;
+    }
   </style>
   {% block head %}{% endblock %}
 </head>

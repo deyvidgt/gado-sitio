@@ -57,6 +57,17 @@
   .status-item select.status-ok     { border-color: var(--green-500); background-color: #f0f8eb; }
   .status-item select.status-warn   { border-color: var(--warn); background-color: #fef3e2; }
   .status-item select.status-danger { border-color: var(--danger); background-color: #fde8e8; }
+  /* Modo escuro: os fundos pastel acima deixavam o texto claro do tema ilegível.
+     Usa um tom translúcido da mesma cor sobre o fundo escuro. */
+  [data-theme="dark"] .vis-section h3 { color: var(--green-300); }
+  [data-theme="dark"] .gado-display .val { color: var(--green-300); }
+  [data-theme="dark"] #faltando-box { background: rgba(229,115,115,.12); border-color: rgba(229,115,115,.4); }
+  [data-theme="dark"] #faltando-box .val { color: #ef9a9a; }
+  [data-theme="dark"] .toggle-chuva input[type=radio]:checked + span { color: var(--green-300); }
+  [data-theme="dark"] .status-item select.status-ok     { background-color: rgba(144,201,127,.16); }
+  [data-theme="dark"] .status-item select.status-warn   { background-color: rgba(244,168,74,.16); }
+  [data-theme="dark"] .status-item select.status-danger { background-color: rgba(229,115,115,.18); }
+  [data-theme="dark"] .status-item select option { background: var(--surface); color: var(--text); }
   .gado-box {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;

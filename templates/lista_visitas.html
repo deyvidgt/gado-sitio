@@ -38,6 +38,9 @@
   .chuva-none  { background:var(--cream-dk); color:var(--text-3); }
   [data-theme="dark"] .chuva-heavy,.chuva-med { background:rgba(93,179,232,.2); color:#5db3e8; }
   [data-theme="dark"] .chuva-light { background:rgba(93,179,232,.1); color:#80cbc4; }
+  [data-theme="dark"] .badge-ok     { color:var(--green-300); }
+  [data-theme="dark"] .badge-warn   { background:rgba(244,168,74,.16); color:#f4c27a; }
+  [data-theme="dark"] .badge-danger { background:rgba(229,115,115,.18); color:#ef9a9a; }
 </style>
 {% endblock %}
 
@@ -189,7 +192,8 @@
         {% endif %}
 
         {% set obs = row.get("Observações", "") %}
-        {% if obs %}<div class="vis-obs">📝 {{ obs }}</div>{% endif %}
+        {# célula vazia vem do Excel como NaN (que é "verdadeiro" no Jinja e aparecia como "nan") #}
+        {% if obs and obs == obs and obs|string|trim not in ("", "nan") %}<div class="vis-obs">📝 {{ obs }}</div>{% endif %}
       </div>
     {% endfor %}
   {% endif %}

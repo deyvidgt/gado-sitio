@@ -2,6 +2,22 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
+## [4.1.1] — 2026-10-03
+
+### Corrigido — modo escuro
+- **Nova Visita**: caixas de status (sal, ração, pasto, água…) tinham fundo pastel fixo
+  com o texto claro do tema — ilegível. Agora usam tons translúcidos da mesma cor.
+- Revisão de todas as telas com verificador automático de contraste (17 telas, 0 problemas):
+  títulos verde-escuro escritos direto no HTML (formulários, relatórios, importar,
+  configurações), labels cinza `#444`, caixas de aviso amarelas, botões Resetar/Excluir,
+  selos de status do painel e da lista de visitas, widget de cotação da Novilha,
+  nome do sítio no menu, botão dourado "Baixar Excel".
+- Ajustes centralizados no `base.html` (só valem com o tema escuro; o modo claro foi
+  comparado antes/depois e ficou idêntico).
+
+### Corrigido
+- Lista de visitas mostrava "📝 nan" quando a visita não tinha observação.
+
 ## [4.1] — 2026-10-03
 
 ### Novo

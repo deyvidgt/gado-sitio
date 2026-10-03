@@ -143,3 +143,8 @@ def test_form_manejo_sugere_produtos_do_mercado(cliente):
     html = cliente.get("/manejo/novo").get_data(as_text=True)
     for nome in ("Raivacel Multi", "Bovilis Poli-Star T", "Dectomax (doramectina)"):
         assert nome in html
+
+
+def test_lista_de_visitas_nao_mostra_nan(cliente):
+    html = cliente.get("/visitas").get_data(as_text=True)
+    assert "📝 nan" not in html

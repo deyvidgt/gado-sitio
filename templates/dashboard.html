@@ -278,7 +278,7 @@
     <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
       🐄 Indicador da Novilha — atualização diária (Datagro / Notícias Agrícolas)
     </div>
-    <div style="max-width:100%;overflow-x:auto">
+    <div class="widget-na" style="max-width:100%;overflow-x:auto">
       <div id="widget-na-loading" style="font-size:13px;color:var(--text-3);padding:6px 0">⏳ Carregando cotações...</div>
       <script type="text/javascript"
         src="https://www.noticiasagricolas.com.br/widgets/cotacoes?id=301&fonte=Arial%2C%20Helvetica%2C%20sans-serif&tamanho=10pt&largura=100%25&cortexto=333333&corcabecalho=B2C3C6&corlinha=DCE7E9&imagem=true&output=js"
@@ -487,6 +487,17 @@
   .pd-urgente { background:#fff9c4;color:#7a5100; }
   .pd-atrasado{ background:#fde8e8;color:var(--danger); }
   .pd-sem_reg { background:var(--cream-dk);color:var(--text-3); }
+  /* modo escuro: os selos usavam fundo pastel/texto escuro (ofuscavam ou sumiam) */
+  [data-theme="dark"] .vb-ok, [data-theme="dark"] .pd-ok { color:var(--green-300); }
+  [data-theme="dark"] .vb-warn, [data-theme="dark"] .pd-urgente { background:rgba(244,168,74,.16); color:#f4c27a; }
+  [data-theme="dark"] .vb-danger, [data-theme="dark"] .pd-atrasado { background:rgba(229,115,115,.18); color:#ef9a9a; }
+  [data-theme="dark"] .pd-proximo { background:rgba(93,179,232,.18); color:#90caf9; }
+  [data-theme="dark"] .pi-proximo { background:rgba(93,179,232,.14); }
+  [data-theme="dark"] .pi-urgente { background:rgba(244,168,74,.14); }
+  [data-theme="dark"] .pi-atrasado { background:rgba(229,115,115,.14); }
+  /* widget externo (Notícias Agrícolas) vem com texto #333 fixo */
+  [data-theme="dark"] .widget-na, [data-theme="dark"] .widget-na * { color:var(--text) !important; background-color:transparent !important; }
+  [data-theme="dark"] .widget-na th { color:var(--text-2) !important; }
 
   /* ── Tooltip calendário ── */
   .cal-tooltip { display:none;position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--cream-dk);border-radius:12px;padding:12px 16px;box-shadow:0 8px 28px rgba(0,0,0,.18);font-size:12.5px;max-width:240px;pointer-events:none;transition:opacity .15s; }
