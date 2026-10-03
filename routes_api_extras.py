@@ -8,6 +8,7 @@ import pandas as pd
 from datetime import timedelta
 from flask import request, jsonify, session
 from db import carregar_aba, get_alertas_saude
+from saude import ultima_data, brucelose_proxima
 from extensions import app, _agora, login_required, _carregar_usuarios, _salvar_usuarios
 
 
@@ -21,6 +22,11 @@ def _br(ts):
     if isinstance(ts, pd.Timestamp) and pd.notna(ts):
         return ts.strftime("%d/%m/%Y")
     return "—"
+
+
+def _txt(v) -> str:
+    """Texto de célula sem 'nan'/None."""
+    return "" if v is None or (isinstance(v, float) and pd.isna(v)) else str(v).strip()
 
 
 @app.route("/api/calendario-manejo")
@@ -41,7 +47,8 @@ def api_calendario_manejo():
                     "categoria": "manejo",
                     "tipo":    str(row.get("Tipo", "") or ""),
                     "cabecas": int(row.get("Qtd Cabeças", 0) or 0),
-                    "desc":    str(row.get("Descrição", "") or ""),
+                    "desc":    " · ".join(x for x in (
+                                   _txt(row.get("Produto")), _txt(row.get("Descrição"))) if x),
                     "resumo":  str(row.get("Tipo", "") or "Manejo"),
                 })
 
@@ -159,20 +166,17 @@ def api_calendario_manejo():
         ultima_br = None
         dias_rest = None
         prevista  = None
-        if not df_man.empty and "Tipo" in df_man.columns:
-            df_t = df_man[df_man["Tipo"] == tipo]
-            if not df_t.empty:
-                ult = df_t["Data"].dropna().max()
-                if pd.notna(ult):
-                    ultima_br = _br(ult)
-                    prox = ult + timedelta(days=intervalo)
-                    prevista  = _iso(prox)
-                    dias_rest = (prox.to_pydatetime() - hoje).days
-                    status = (
-                        "atrasado" if dias_rest < 0 else
-                        "urgente"  if dias_rest <= 7 else
-                        "proximo"  if dias_rest <= 21 else "ok"
-                    )
+        ult = ultima_data(df_man, tipo)
+        if ult is not None:
+            ultima_br = _br(ult)
+            prox = ult + timedelta(days=intervalo)
+            prevista  = _iso(prox)
+            dias_rest = (prox.to_pydatetime() - hoje).days
+            status = (
+                "atrasado" if dias_rest < 0 else
+                "urgente"  if dias_rest <= 7 else
+                "proximo"  if dias_rest <= 21 else "ok"
+            )
         proximas.append({
             "tipo":           tipo,
             "intervalo_dias": intervalo,
@@ -181,6 +185,8 @@ def api_calendario_manejo():
             "dias_restantes": dias_rest,
             "status":         status,
         })
+
+    proximas.append(brucelose_proxima(df_man, hoje))
 
     return jsonify({
         "hoje":    hoje.strftime("%Y-%m-%d"),

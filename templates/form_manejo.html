@@ -51,6 +51,26 @@
             A cabeça perdida é debitada do estoque desse dono. Em branco, a perda é dividida entre os três.
           </small>
         </div>
+        <div class="form-group" id="grupo-nasc" style="display:none">
+          <label>De quem é o bezerro?</label>
+          <select name="nascimento_de" id="sel-nasc">
+            <option value="">— Não informado (dividir entre todos) —</option>
+            {% for m in MEMBROS %}
+              <option value="{{ m }}" {{ 'selected' if modo == 'editar' and row and row.get('Nascimento De') == m }}>{{ NOMES[m] }}</option>
+            {% endfor %}
+          </select>
+          <small style="color:var(--text-3);font-size:11px">
+            A cabeça nascida entra no estoque desse dono. Em branco, é dividida entre os três.
+          </small>
+        </div>
+        <div class="form-group full" id="grupo-produto" style="display:none">
+          <label>Qual remédio/produto foi usado?</label>
+          <input type="text" name="produto" id="inp-produto" list="lista-produtos" maxlength="120"
+                 autocomplete="off" placeholder="Ex.: nome comercial da vacina ou vermífugo"
+                 value="{{ row.get('Produto','') if modo == 'editar' and row else '' }}">
+          <datalist id="lista-produtos"></datalist>
+          <small id="dica-produto" style="color:var(--text-3);font-size:11px"></small>
+        </div>
         <div class="form-group full">
           <label>Descrição / Observações</label>
           <textarea name="descricao" rows="3" placeholder="Detalhes do manejo...">{{ row.get('Descrição','') if modo == 'editar' and row else '' }}</textarea>
@@ -69,10 +89,53 @@
 (function () {
   const selTipo  = document.querySelector("select[name='tipo']");
   const grpPerda = document.getElementById("grupo-perda");
+  const grpNasc  = document.getElementById("grupo-nasc");
+  // Em registro novo a quantidade vem com o rebanho todo (bom p/ vacina); em
+  // nascimento/morte isso induziria a registrar 28 bezerros — sugere 1.
+  const inpQtd  = document.querySelector("input[name='cabecas']");
+  const ESTOQUE = "{{ estoque }}";
+  const NOVO    = {{ 'false' if modo == 'editar' else 'true' }};
   function toggle() {
-    grpPerda.style.display = (selTipo && selTipo.value === "Morte/Perda") ? "" : "none";
+    const tipo = selTipo ? selTipo.value : "";
+    grpPerda.style.display = tipo === "Morte/Perda" ? "" : "none";
+    grpNasc.style.display  = tipo === "Nascimento"  ? "" : "none";
+    if (NOVO && inpQtd) {
+      const individual = tipo === "Nascimento" || tipo === "Morte/Perda";
+      if (individual && inpQtd.value === ESTOQUE) inpQtd.value = "1";
+      else if (!individual && inpQtd.value === "1") inpQtd.value = ESTOQUE;
+    }
   }
   if (selTipo) { selTipo.addEventListener("change", toggle); toggle(); }
+
+  // Remédio/produto: só para vacinas e vermifugação. Obrigatório ao registrar
+  // um manejo novo; ao editar registro antigo pode ficar em branco.
+  const COM_PRODUTO = {{ TIPOS_COM_PRODUTO | tojson }};
+  const USADOS      = {{ produtos_usados | tojson }};
+  const SUGERIDOS   = {{ produtos_sugeridos | tojson }};
+  const EDITANDO    = {{ 'true' if modo == 'editar' else 'false' }};
+  const DICAS = {
+    "Vermifugação": "Estratégia 5-7-9: maio benzimidazol · julho levamisol · setembro endectocida (ex.: ivermectina).",
+    "Vacina Brucelose": "B19 ou RB51 — aplicada por veterinário cadastrado no IMA.",
+    "Vacina Clostridioses": "Polivalentes costumam incluir botulismo — vale anotar qual.",
+  };
+  const grpProd = document.getElementById("grupo-produto");
+  const inpProd = document.getElementById("inp-produto");
+  const lista   = document.getElementById("lista-produtos");
+  const dica    = document.getElementById("dica-produto");
+  function toggleProduto() {
+    const tipo = selTipo ? selTipo.value : "";
+    const mostra = COM_PRODUTO.includes(tipo);
+    grpProd.style.display = mostra ? "" : "none";
+    inpProd.required = mostra && !EDITANDO;
+    lista.innerHTML = "";
+    (SUGERIDOS[tipo] || []).forEach(p => {
+      const o = document.createElement("option"); o.value = p; lista.appendChild(o);
+    });
+    const usados = (USADOS[tipo] || []).length
+      ? "Já usados: " + USADOS[tipo].slice(0, 3).join(", ") + ". " : "";
+    dica.textContent = usados + (DICAS[tipo] || "");
+  }
+  if (selTipo) { selTipo.addEventListener("change", toggleProduto); toggleProduto(); }
 })();
 </script>
 {% endblock %}

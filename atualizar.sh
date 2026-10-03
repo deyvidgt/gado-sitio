@@ -55,6 +55,25 @@ echo "📦 Verificando dependências..."
 pip install -q flask pandas openpyxl numpy bcrypt requests 2>/dev/null && \
     echo "✅ Dependências OK"
 
+# 7) Testes automáticos — rodam numa CÓPIA temporária dos dados (nunca no arquivo real)
+echo ""
+echo "🧪 Rodando os testes..."
+pip install -q pytest 2>/dev/null
+if (cd "$PASTA_GADO" && python3 -m pytest -q 2>&1 | tail -3); then
+    if (cd "$PASTA_GADO" && python3 -m pytest -q >/dev/null 2>&1); then
+        echo "✅ Todos os testes passaram"
+    else
+        echo "❌ ATENÇÃO: algum teste falhou — NÃO dê Reload; veja a saída acima"
+    fi
+fi
+
+# 8) Tarefas agendadas (Dashboard → Tasks) que devem existir:
+echo ""
+echo "📅 Confira em Tasks do PythonAnywhere (uma vez só):"
+echo "   python3 $PASTA_GADO/backup_automatico.py   (diário 03:00)"
+echo "   python3 $PASTA_GADO/alertas_whatsapp.py    (diário 07:00)"
+echo "   python3 $PASTA_GADO/resumo_mensal.py       (diário 08:00 — só envia no dia 1º)"
+
 echo ""
 echo "================================================"
 echo "✅ Atualização concluída!"

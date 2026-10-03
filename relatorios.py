@@ -374,13 +374,12 @@ def verificar_alertas():
     hoje = datetime.now()
 
     # Alertas de saúde
-    for tipo, dias in ALERTAS_SAUDE.items():
-        df_t = df_man[df_man["Tipo"] == tipo].copy() if not df_man.empty else pd.DataFrame()
-        if df_t.empty:
+    from db import get_alertas_saude
+    for tipo, dias in get_alertas_saude().items():
+        from saude import ultima_data
+        ultima = ultima_data(df_man, tipo)
+        if ultima is None:
             alertas.append(f"⚠️  Nenhum registro de {tipo} encontrado!")
-            continue
-        ultima = pd.to_datetime(df_t["Data"], dayfirst=True, errors="coerce").max()
-        if pd.isna(ultima):
             continue
         dias_passados = (hoje - ultima.to_pydatetime()).days
         if dias_passados > dias:

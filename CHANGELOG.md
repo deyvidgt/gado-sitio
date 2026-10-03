@@ -2,6 +2,43 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
+## [4.1] — 2026-10-03
+
+### Novo
+- **Gráfico "Evolução do Rebanho"** no painel: cabeças no fim de cada mês, entradas
+  (compras + nascimentos), saídas (vendas + mortes) e custo médio/cab pela média móvel
+  (`calculos.calcular_evolucao_rebanho`, `/api/rebanho`).
+- **Resumo mensal no WhatsApp** (`resumo_mensal.py`): no dia 1º, o mês anterior para a
+  família — movimento do mês, rebanho, custo médio e resultado por dono.
+- **Calendário sanitário por vacina** (`saude.py`), referência Triângulo Mineiro (IMA-MG,
+  Embrapa): tipos "Vacina Raiva" (obrigatória, anual), "Vacina Clostridioses" (anual),
+  "Vacina Brucelose" (campanha: vacinar até 30/06 e 31/12, declarar até 10/07 e 10/01) e
+  lembretes da vermifugação estratégica 5-7-9. Registros antigos de "Vacinação" contam
+  para raiva e clostridioses. Quadro de referência de vacinas reescrito com fontes.
+- **Manejo — remédio/produto**: vacinas e vermifugação pedem o produto usado (coluna
+  nova "Produto"), com sugestões do que já foi usado.
+- **Exemplos de produtos** (pesquisa out/2026) no quadro de vacinas e como sugestões no
+  campo "remédio/produto": raiva, clostridioses/botulismo, IBR/BVD/lepto, vermífugos do
+  5-7-9 (ex.: Solution 3,5%, Dectomax, Ivomec Gold) e suplemento ADE (A, D3, E).
+- **Manejo — "De quem é o bezerro?"** (coluna nova "Nascimento De"): o inverso de
+  "Perda De"; a cabeça entra no estoque do dono, ou em terços se em branco.
+- **Testes automáticos** (`tests/`, `python -m pytest`) rodando numa cópia dos dados,
+  incluindo as 3 invariantes contábeis. `atualizar.sh` roda os testes no servidor.
+
+### Corrigido
+- **Backup diário** (`backup_automatico.py`) procurava a planilha na pasta do código, não
+  em `~/gado-dados/` — no servidor abortava ou copiava um arquivo velho.
+- **Limpeza dos backups do site** olhava a pasta errada; backups acumulavam sem limite.
+- **Exportação Excel**: aba Manejo saía com colunas sem título (Perda De e as novas).
+- Log do `alertas_whatsapp.py` criava `backups/` dentro da pasta do código.
+- Prazo de vermifugação salvo com o padrão antigo (120 dias) passa ao novo (240 dias).
+- Formulário de manejo sugere 1 cabeça em Nascimento/Morte (antes vinha o rebanho todo).
+- Cotação IMEA: faltava `import sys` ao tentar instalar o navegador automaticamente.
+
+### Outros
+- `requirements.txt` trava a próxima versão MAIOR de cada biblioteca.
+- Cache do app no celular (PWA) renovado (`gado-v3`) para carregar as telas novas.
+
 ## [4.0] — 2026-10-02
 
 ### Cálculos — Média Móvel Perpétua (mudança principal)

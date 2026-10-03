@@ -846,7 +846,8 @@ def calcular_estoque_por_membro(df_comp: pd.DataFrame, df_vend: pd.DataFrame,
              BUG CORRIGIDO v3.1: vendas importadas com Qtd Mae/Deyvid/Nilson = 0
              (soma zero) agora caem no fallback de terços, evitando sobresaldo
              fantasma de estoque para todos os membros.
-    Manejo:  mortes e nascimentos tratados separadamente por terços.
+    Manejo:  mortes ("Perda De") e nascimentos ("Nascimento De") vão para o dono
+             informado; sem dono, são divididos em terços.
     """
     resultado = {m: 0 for m in ["Mae", "Deyvid", "Nilson"]}
 
@@ -921,7 +922,13 @@ def calcular_estoque_por_membro(df_comp: pd.DataFrame, df_vend: pd.DataFrame,
                     _ratear_tercos(qtd, -1)
 
             elif tipo == "Nascimento":
-                _ratear_tercos(qtd, +1)
+                # NOVO v4.1 (inverso da Morte/Perda): se o registro diz de quem é o
+                # bezerro, credita só a esse membro; senão divide em terços.
+                nasc_de = _normalizar_membro(row.get("Nascimento De"))
+                if nasc_de in resultado:
+                    resultado[nasc_de] += qtd
+                else:
+                    _ratear_tercos(qtd, +1)
 
     # Garantir que nenhum membro fique com estoque negativo
     for m in resultado:
@@ -1099,3 +1106,65 @@ def calcular_evolucao_cmp(df_comp: pd.DataFrame) -> list[dict]:
         }
         for _, row in df.iterrows()
     ]
+
+
+# ── Evolução do rebanho mês a mês ─────────────────────────────────────────────
+
+def _ate(df: pd.DataFrame, corte: pd.Timestamp) -> pd.DataFrame:
+    """Linhas com data até o corte (inclusive). Linhas sem data ficam de fora."""
+    if df is None or df.empty or "Data" not in df.columns:
+        return df
+    return df[df["Data"].notna() & (df["Data"] <= corte)]
+
+
+def calcular_evolucao_rebanho(df_comp: pd.DataFrame, df_gast: pd.DataFrame,
+                              df_vend: pd.DataFrame, df_man: pd.DataFrame,
+                              hoje: pd.Timestamp | None = None) -> list[dict]:
+    """
+    Rebanho mês a mês, do primeiro registro até o mês atual:
+      entradas  — cabeças compradas + nascidas no mês
+      saidas    — cabeças vendidas + mortas/perdidas no mês
+      cabecas   — rebanho no fim do mês
+      custo_cab — custo médio por cabeça (compra + gastos) no fim do mês
+
+    "cabecas" e "custo_cab" vêm da própria _simular_media_movel rodada com os
+    dados até o fim de cada mês — mesma fonte da verdade do dashboard, então o
+    último mês bate com o CTCab e o estoque mostrados no painel.
+    """
+    def _datas(df):
+        if df is None or df.empty or "Data" not in df.columns:
+            return []
+        return list(df["Data"].dropna())
+
+    todas = _datas(df_comp) + _datas(df_gast) + _datas(df_vend) + _datas(df_man)
+    if not todas:
+        return []
+
+    hoje = hoje or pd.Timestamp.now()
+    meses = pd.period_range(min(todas).to_period("M"),
+                            max(max(todas), hoje).to_period("M"), freq="M")
+
+    def _qtd_no_mes(df, mes, tipo=None):
+        if df is None or df.empty or "Data" not in df.columns:
+            return 0
+        m = df["Data"].notna() & (df["Data"].dt.to_period("M") == mes)
+        if tipo is not None:
+            if "Tipo" not in df.columns:
+                return 0
+            m &= df["Tipo"] == tipo
+        return int(pd.to_numeric(df.loc[m, "Qtd Cabeças"], errors="coerce").fillna(0).sum())
+
+    vazio_man = df_man if df_man is not None else pd.DataFrame()
+    resultado = []
+    for mes in meses:
+        corte = mes.to_timestamp(how="end")
+        sim = _simular_media_movel(_ate(df_comp, corte), _ate(df_gast, corte),
+                                   _ate(df_vend, corte), _ate(vazio_man, corte))
+        resultado.append({
+            "label":     mes.strftime("%m/%Y"),
+            "entradas":  _qtd_no_mes(df_comp, mes) + _qtd_no_mes(vazio_man, mes, "Nascimento"),
+            "saidas":    _qtd_no_mes(df_vend, mes) + _qtd_no_mes(vazio_man, mes, "Morte/Perda"),
+            "cabecas":   int(round(sim["units_final"])),
+            "custo_cab": round(sim["avg_compra_final"] + sim["avg_gasto_final"], 2),
+        })
+    return resultado

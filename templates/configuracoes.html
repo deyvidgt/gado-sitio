@@ -347,7 +347,7 @@
 </div>
 
 <!-- ── Alertas de Saúde (intervalos) ─────────────────────────────────────────── -->
-{% set _emoji_saude = {"Vacinação":"💉","Vermifugação":"🧪","Pesagem":"⚖️","Tratamento Veterinário":"🩺"} %}
+{% set _emoji_saude = {"Vacinação":"💉","Vacina Raiva":"💉","Vacina Clostridioses":"💉","Vermifugação":"🧪","Pesagem":"⚖️","Tratamento Veterinário":"🩺"} %}
 <div class="card" style="margin-top:24px">
   <div class="card-title">🩺 Alertas de Saúde — Intervalos</div>
   <p style="font-size:13px;color:var(--text-3);margin-bottom:16px">
@@ -386,29 +386,70 @@
         Confirme o protocolo e as datas com seu veterinário e o calendário oficial do IMA-MG.
       </div>
 
-      <p style="margin-bottom:6px"><strong>Obrigatórias (exigência legal em MG)</strong></p>
+      <p style="margin-bottom:6px"><strong>Obrigatórias em MG (IMA)</strong></p>
       <ul style="margin:0 0 12px 18px">
-        <li><strong>Brucelose (B19)</strong> — só fêmeas de <strong>3 a 8 meses</strong>, dose única.
-            Em MG há 2 etapas/ano (até 30/jun e 31/dez) com declaração ao IMA.</li>
-        <li><strong>Febre Aftosa</strong> — ⚠️ MG entrou na zona <strong>livre sem vacinação</strong> (desde 2023);
-            pode não ser mais exigida. <strong>Confirme o status atual no IMA-MG.</strong></li>
+        <li><strong>Raiva</strong> — obrigatória em <strong>todo o estado</strong>, a partir de 3 meses.
+            1ª vez: <strong>2 doses com 30 dias</strong> de intervalo; depois <strong>1 dose por ano</strong>.
+            Declare a vacinação ao IMA. <em>Registre como “Vacina Raiva”.</em><br><span style="font-size:12px;color:var(--text-3)">Ex.: Raivacel Multi, Rai-Vac K, Rai-Vet.</span></li>
+        <li><strong>Brucelose</strong> — só <strong>fêmeas de 3 a 8 meses</strong>, dose única (B19 ou RB51),
+            aplicada por veterinário cadastrado no IMA. Duas etapas por ano:
+            <strong>vacinar até 30/06 e declarar até 10/07</strong>;
+            <strong>vacinar até 31/12 e declarar até 10/01</strong>.
+            <em>Registre como “Vacina Brucelose” — o painel avisa nos prazos.</em><br><span style="font-size:12px;color:var(--text-3)">Ex.: anote no produto se foi <strong>B19</strong> ou <strong>RB51</strong> — quem escolhe e fornece é o veterinário. A RB51 é a opção para fêmeas acima de 8 meses que nunca tomaram a B19.</span></li>
+        <li><strong>Febre aftosa</strong> — <strong>não vacinar</strong>: MG é zona livre de aftosa
+            <strong>sem vacinação</strong> (MAPA 2024; reconhecimento internacional da OMSA em 2025).</li>
       </ul>
 
-      <p style="margin-bottom:6px"><strong>Recomendadas (corte, cerrado)</strong></p>
+      <p style="margin-bottom:6px"><strong>Recomendadas (gado de corte, cerrado)</strong></p>
       <ul style="margin:0 0 12px 18px">
-        <li><strong>Clostridioses</strong> (carbúnculo/"manqueira", gangrena, enterotoxemia) —
-            a partir de 3–4 meses, reforço em 30 dias, revacinação anual/semestral.</li>
-        <li><strong>Botulismo</strong> — importante no cerrado (solo pobre em fósforo);
-            geralmente junto das clostridioses (polivalente), reforço anual.</li>
-        <li><strong>Raiva</strong> — anual em áreas de risco (morcego hematófago); comum no Triângulo.</li>
-        <li><strong>Leptospirose / IBR / BVD</strong> — reprodução; ~60 dias antes da monta em matrizes.</li>
+        <li><strong>Clostridioses</strong> (carbúnculo sintomático/“manqueira”, gangrena, enterotoxemia) —
+            1ª dose aos ~4 meses, <strong>reforço em 30 dias</strong>, depois <strong>anual</strong>.
+            <em>Registre como “Vacina Clostridioses”.</em><br><span style="font-size:12px;color:var(--text-3)">Ex.: Bovilis Poli-Star T, Sintoxan Polivalente / Sintoxan 9TH, Covexin 9.</span></li>
+        <li><strong>Botulismo</strong> — importante no cerrado (solo pobre em fósforo; animais roendo osso).
+            Muitas vacinas polivalentes já incluem; senão, 2 doses com 4–6 semanas e reforço anual.<br><span style="font-size:12px;color:var(--text-3)">Ex.: a Bovilis Poli-Star T e a linha Sintoxan cobrem botulismo tipos C e D junto com as clostridioses — confira na bula.</span></li>
+        <li><strong>Leptospirose / IBR / BVD</strong> — para matrizes; ~60 dias antes da estação de monta.<br><span style="font-size:12px;color:var(--text-3)">Ex.: Poliguard, CattleMaster 4+L5. <em>Registre como “Vacinação” e anote o produto.</em></span></li>
       </ul>
 
-      <p style="margin-bottom:4px;font-size:12px;color:var(--text-3)"><strong>Fontes:</strong></p>
+      <p style="margin-bottom:6px"><strong>Vermifugação estratégica 5-7-9 (Embrapa)</strong></p>
+      <ul style="margin:0 0 12px 18px">
+        <li>Da desmama até ~24 meses, nos meses de <strong>maio</strong> (benzimidazol),
+            <strong>julho</strong> (levamisol) e <strong>setembro</strong> (endectocida, ex.: ivermectina).
+            A seca concentra os vermes no animal, então o tratamento rende mais.
+            O painel lembra nesses meses.</li>
+        <li><strong>Maio — benzimidazol</strong> (largo espectro, pega também tênias):<br><span style="font-size:12px;color:var(--text-3)">Ex.: Valbazen (albendazol, oral), ricobendazol injetável.</span></li>
+        <li><strong>Julho — levamisol</strong> (imidazotiazol, mais econômico):<br><span style="font-size:12px;color:var(--text-3)">Ex.: vários fabricantes vendem como “levamisol”; confira o princípio ativo na bula.</span></li>
+        <li><strong>Setembro — endectocida</strong> (vermes + carrapato, berne, piolho):<br><span style="font-size:12px;color:var(--text-3)">Ex.: Ivomec Gold 3,15%, Dectomax (doramectina), Solution 3,5% (ivermectina + abamectina), Evol.</span></li>
+        <li>Alternar o princípio ativo entre as doses (como acima) ajuda a evitar resistência dos vermes.</li>
+      </ul>
+
+      <p style="margin-bottom:6px"><strong>Suplemento vitamínico — ADE (vitaminas A, D3 e E)</strong></p>
+      <ul style="margin:0 0 12px 18px">
+        <li>Injetável, usado em bezerros, vacas gestantes/em lactação e na seca (pasto seco tem pouca
+            vitamina A). Não é vacina nem vermífugo: <em>registre como “Tratamento Veterinário” e anote o produto na descrição.</em>
+            Dose e intervalo variam com a idade — siga a bula.<br><span style="font-size:12px;color:var(--text-3)">Ex.: ADE Vallée, Vit ADE (Calbos), Monovin A (só vitamina A).</span></li>
+      </ul>
+
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:12px">
+        ℹ️ Os nomes comerciais são <strong>exemplos encontrados no mercado</strong> (out/2026), não recomendação
+        de marca. Eles também aparecem como sugestão no campo “remédio/produto” do formulário de manejo.
+      </div>
+
+      <p style="margin-bottom:4px;font-size:12px;color:var(--text-3)"><strong>Fontes (consultadas em out/2026):</strong></p>
       <ul style="margin:0 0 0 18px;font-size:12px">
-        <li><a href="https://www.agenciaminas.mg.gov.br/noticia/prorrogada-a-primeira-etapa-de-vacinacao-contra-brucelose-em-minas-gerais" target="_blank" rel="noopener" style="color:var(--green-600)">IMA/Agência Minas — brucelose MG</a></li>
-        <li><a href="https://old.cnpgc.embrapa.br/publicacoes/doc/doc72/anexo.html" target="_blank" rel="noopener" style="color:var(--green-600)">Embrapa Gado de Corte — calendário sanitário</a></li>
-        <li><a href="https://www.neopecuaria.com.br/blog/calendario-sanitario-do-gado-o-guia-completo-para-o-ano-todo" target="_blank" rel="noopener" style="color:var(--green-600)">Calendário sanitário 2026</a></li>
+        <li><a href="https://www.ima.mg.gov.br/noticias/2496-ima-reforca-importancia-da-vacinacao-contra-a-raiva" target="_blank" rel="noopener" style="color:var(--green-600)">IMA — vacinação contra a raiva</a></li>
+        <li><a href="https://www.ima.mg.gov.br/defesa-animal/programas-sanitarios/raiva-dos-herbivoros/1606-legislacao/1653-legislacao-raiva" target="_blank" rel="noopener" style="color:var(--green-600)">IMA — legislação da raiva dos herbívoros</a></li>
+        <li><a href="https://www.uberlandiahoje.com.br/2026/06/22/primeira-etapa-de-vacinacao-contra-a-brucelose-esta-na-reta-final-em-minas/" target="_blank" rel="noopener" style="color:var(--green-600)">Brucelose MG 2026 — etapas e prazos</a></li>
+        <li><a href="https://www.agenciaminas.mg.gov.br/noticia/minas-gerais-e-reconhecida-internacionalmente-como-livre-de-febre-aftosa-sem-vacinacao" target="_blank" rel="noopener" style="color:var(--green-600)">Agência Minas — MG livre de aftosa sem vacinação</a></li>
+        <li><a href="https://ppgcivet.ufms.br/files/2023/11/Nota-te%CC%81cnica-11-2023-CALENDARIOS-SANITARIOS-PARA-BOVINOS-DE-CORTE.pdf" target="_blank" rel="noopener" style="color:var(--green-600)">UFMS — calendários sanitários para bovinos de corte</a></li>
+        <li><a href="https://www.embrapa.br/en/busca-de-noticias/-/noticia/17986329/maio-e-mes-de-controle-da-verminose-em-gado-de-corte-no-cerrado" target="_blank" rel="noopener" style="color:var(--green-600)">Embrapa — verminose no cerrado (5-7-9)</a></li>
+        <li><a href="https://www.idaron.ro.gov.br/index.php/2023/11/27/qual-vacina-contra-brucelose-devo-utilizar-b-19-ou-rb-51/" target="_blank" rel="noopener" style="color:var(--green-600)">Idaron — B19 ou RB51?</a></li>
+        <li><a href="https://www.msd-saude-animal.com.br/produto/raivacel-multi/" target="_blank" rel="noopener" style="color:var(--green-600)">Raivacel Multi</a> ·
+            <a href="https://www.msd-saude-animal.com.br/produto/bovilis-poli-star-t/" target="_blank" rel="noopener" style="color:var(--green-600)">Bovilis Poli-Star T</a> ·
+            <a href="https://www.msd-saude-animal.com.br/produto/poliguard/" target="_blank" rel="noopener" style="color:var(--green-600)">Poliguard</a> ·
+            <a href="https://www.zoetis.com.br/especies/bovinos/cattlemaster-4+l5.aspx" target="_blank" rel="noopener" style="color:var(--green-600)">CattleMaster 4+L5</a></li>
+        <li><a href="https://www.msd-saude-animal.com.br/produto/solution-35/" target="_blank" rel="noopener" style="color:var(--green-600)">Solution 3,5%</a> ·
+            <a href="https://girodoboi.canalrural.com.br/pecuaria/vermifugo-para-o-gado-saiba-quais-sao-os-principais-tipos/" target="_blank" rel="noopener" style="color:var(--green-600)">Giro do Boi — tipos de vermífugo</a> ·
+            <a href="https://www.msd-saude-animal.com.br/produto/ade-vallee/" target="_blank" rel="noopener" style="color:var(--green-600)">ADE Vallée</a></li>
       </ul>
     </div>
   </details>

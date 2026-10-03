@@ -305,6 +305,19 @@
   </div>
 </div>
 
+<!-- Evolução do rebanho -->
+<div class="card" style="margin-bottom:24px">
+  <div class="card-title">🐄 Evolução do Rebanho</div>
+  <div style="font-size:12px;color:var(--text-3);margin:-4px 0 12px">
+    Cabeças no fim de cada mês, quantas entraram (compras + nascimentos) e saíram
+    (vendas + mortes), e o custo médio por cabeça (compra + gastos) pela média móvel.
+  </div>
+  <div id="rebanho-vazio" style="display:none;font-size:13px;color:var(--text-3)">
+    Ainda não há registros para montar o gráfico.
+  </div>
+  <div style="position:relative;height:280px"><canvas id="chartRebanho"></canvas></div>
+</div>
+
 <!-- ═══ CARD DE CHUVAS MENSAIS ══════════════════════════════════════════════ -->
 <div class="card" style="margin-bottom:24px">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px">
@@ -595,7 +608,8 @@ async function loadUltimaVisita() {
    CALENDÁRIO DE MANEJO
 ══════════════════════════════════════════════════ */
 const TIPO_EMOJI = {
-  "Vacinação": "💉", "Vermifugação": "🧪", "Pesagem": "⚖️",
+  "Vacinação": "💉", "Vacina Raiva": "💉", "Vacina Clostridioses": "💉",
+  "Vacina Brucelose": "🐄", "Vermifugação": "🧪", "Pesagem": "⚖️",
   "Morte/Perda": "💀", "Nascimento": "🐣", "Tratamento Veterinário": "🩺",
   "Movimentação de Pasto": "🌿", "Outro": "📋",
 };
@@ -1018,6 +1032,77 @@ async function loadCharts() {
   });
 }
 
+/* ── Evolução do rebanho ── */
+let chartRebanho = null;
+
+async function loadRebanho() {
+  let d;
+  try {
+    d = await _apiFetch("/api/rebanho");
+  } catch(e) {
+    console.error("Erro ao carregar evolução do rebanho:", e);
+    return;
+  }
+  if (!d) return;
+  if (!d.labels || d.labels.length === 0) {
+    document.getElementById("rebanho-vazio").style.display = "block";
+    return;
+  }
+
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const gridColor = isDark ? "rgba(255,255,255,.08)" : "rgba(0,0,0,.06)";
+  const textColor = isDark ? "#b0bfae" : "#888";
+  const brl = v => "R$ " + Number(v).toLocaleString("pt-BR", {maximumFractionDigits: 0});
+
+  if (chartRebanho) chartRebanho.destroy();
+  chartRebanho = new Chart(document.getElementById("chartRebanho"), {
+    type: "bar",
+    data: {
+      labels: d.labels,
+      datasets: [
+        { label: "Cabeças no fim do mês", data: d.cabecas, type: "line", yAxisID: "y",
+          borderColor: "rgba(61,122,52,.95)", backgroundColor: "rgba(61,122,52,.12)",
+          borderWidth: 2.5, pointRadius: 3, tension: 0.25, fill: true, order: 0 },
+        { label: "Entraram", data: d.entradas, yAxisID: "y",
+          backgroundColor: "rgba(41,128,185,.65)", borderRadius: 4, order: 2 },
+        { label: "Saíram", data: d.saidas, yAxisID: "y",
+          backgroundColor: "rgba(192,57,43,.60)", borderRadius: 4, order: 2 },
+        { label: "Custo médio/cab", data: d.custo_cab, type: "line", yAxisID: "y1",
+          borderColor: "rgba(201,151,42,.95)", borderDash: [6, 4], borderWidth: 2,
+          pointRadius: 2, tension: 0.25, fill: false, order: 1 },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { labels: { font: { family:"DM Sans", size:12 }, color: textColor } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.dataset.yAxisID === "y1"
+              ? ` Custo médio: ${brl(ctx.parsed.y)}/cab`
+              : ` ${ctx.dataset.label}: ${ctx.parsed.y} cab`
+          }
+        }
+      },
+      scales: {
+        x:  { ticks: { color: textColor }, grid: { color: gridColor } },
+        y:  { beginAtZero: true, position: "left",
+              title: { display: true, text: "cabeças", color: textColor },
+              ticks: { color: textColor, precision: 0 }, grid: { color: gridColor } },
+        y1: { beginAtZero: true, position: "right",
+              title: { display: true, text: "R$/cab", color: textColor },
+              ticks: { color: textColor, callback: brl }, grid: { drawOnChartArea: false } },
+      }
+    }
+  });
+}
+
+document.addEventListener("themeChanged", () => {
+  if (chartRebanho) loadRebanho();
+});
+
 /* ══════════════════════════════════════════════════
    CHUVAS MENSAIS
 ══════════════════════════════════════════════════ */
@@ -1294,6 +1379,7 @@ document.addEventListener("themeChanged", () => {
 /* ── Init (bloco 2) ── */
 document.addEventListener("DOMContentLoaded", () => {
   loadCharts();
+  loadRebanho();
   loadChuvas();
 });
 </script>

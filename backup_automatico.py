@@ -4,7 +4,11 @@
 backup_automatico.py — Sítio Santo Antonio
 ==========================================
 Faz backup diário do gado_familia.xlsx e usuarios.json
-para a pasta backups/ com timestamp.
+para a pasta backups/ DA PASTA DE DADOS (~/gado-dados/backups/), com timestamp.
+
+Os backups da planilha usam o mesmo nome dos backups do site
+(backup_AAAAMMDD_HHMMSS.xlsx), então aparecem na página "Backups" e podem
+ser baixados por lá — é o jeito fácil de guardar uma cópia fora do servidor.
 
 Configure no PythonAnywhere em:
   Dashboard → Tasks → Add a new scheduled task
@@ -20,20 +24,31 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+import sys
+
 # ── Configuração ──────────────────────────────────────────────────────────────
-BASE_DIR    = Path(__file__).parent
-BACKUP_DIR  = BASE_DIR / "backups"
+# Os dados NÃO ficam na pasta do código: usa a mesma resolução do site
+# (GADO_DATA_DIR → ~/gado-dados/ → ...). Antes usava a pasta do script e, em
+# produção, copiava um arquivo velho (ou nenhum) em vez do ~/gado-dados/.
+sys.path.insert(0, str(Path(__file__).parent))
+from db import _resolver_data_dir  # noqa: E402
+
+DATA_DIR    = Path(_resolver_data_dir())
+BACKUP_DIR  = DATA_DIR / "backups"
 MAX_BACKUPS = 30   # quantos backups manter
 
+XLSX         = DATA_DIR / "gado_familia.xlsx"
+USUARIOS     = DATA_DIR / "usuarios.json"
+# arquivo → prefixo do backup ("backup_" é o mesmo padrão da página Backups)
 ARQUIVOS_BACKUP = [
-    BASE_DIR / "gado_familia.xlsx",
-    BASE_DIR / "usuarios.json",
+    (XLSX,     "backup_"),
+    (USUARIOS, "usuarios_"),
 ]
 
-LOG_FILE = BASE_DIR / "backups" / "backup.log"
+LOG_FILE = BACKUP_DIR / "backup.log"
 
 # ── Logging ───────────────────────────────────────────────────────────────────
-BACKUP_DIR.mkdir(exist_ok=True)
+BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(
     filename=str(LOG_FILE),
     level=logging.INFO,
@@ -46,11 +61,11 @@ def fazer_backup():
     copiados  = []
     erros     = []
 
-    for arquivo in ARQUIVOS_BACKUP:
+    for arquivo, prefixo in ARQUIVOS_BACKUP:
         if not arquivo.exists():
             logging.warning(f"Arquivo não encontrado: {arquivo}")
             continue
-        nome_backup = BACKUP_DIR / f"{arquivo.stem}_{agora}{arquivo.suffix}"
+        nome_backup = BACKUP_DIR / f"{prefixo}{agora}{arquivo.suffix}"
         try:
             shutil.copy2(arquivo, nome_backup)
             tam = nome_backup.stat().st_size / 1024
@@ -65,10 +80,9 @@ def fazer_backup():
 def limpar_backups_antigos():
     """Mantém apenas os MAX_BACKUPS arquivos mais recentes de cada tipo."""
     removidos = 0
-    for prefixo in ["gado_familia_", "usuarios_"]:
+    for padrao in ["backup_*.xlsx", "usuarios_*.json"]:
         arquivos = sorted(
-            BACKUP_DIR.glob(f"{prefixo}*.xlsx") if prefixo == "gado_familia_"
-            else BACKUP_DIR.glob(f"{prefixo}*.json"),
+            BACKUP_DIR.glob(padrao),
             key=lambda p: p.stat().st_mtime,
             reverse=True,
         )
@@ -83,7 +97,7 @@ def limpar_backups_antigos():
 
 def verificar_integridade():
     """Verifica se o gado_familia.xlsx está íntegro (não vazio e abrível)."""
-    xlsx = BASE_DIR / "gado_familia.xlsx"
+    xlsx = XLSX
     if not xlsx.exists():
         logging.error("CRÍTICO: gado_familia.xlsx não encontrado!")
         return False
@@ -104,9 +118,10 @@ def verificar_integridade():
 
 if __name__ == "__main__":
     logging.info("=" * 60)
-    logging.info("Iniciando backup automático")
+    logging.info(f"Iniciando backup automático — dados em {DATA_DIR}")
 
     ok = verificar_integridade()
+    erros = []
     if not ok:
         logging.error("Backup abortado — arquivo com problema.")
     else:
@@ -119,3 +134,5 @@ if __name__ == "__main__":
         )
 
     logging.info("=" * 60)
+    # Código de saída ≠ 0 faz a falha aparecer no log da Task do PythonAnywhere
+    sys.exit(0 if ok and not erros else 1)

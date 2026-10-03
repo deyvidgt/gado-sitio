@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════
-//  sw.js — Sítio Santo Antonio v3.6
+//  sw.js — Sítio Santo Antonio v4.1
 //  Estratégia:
 //  • Assets estáticos (CSS, JS, fontes) → cache-first
 //  • Páginas HTML                       → network-first
@@ -7,7 +7,7 @@
 //    (evita o bug "body is locked" e garante dados sempre frescos)
 // ═══════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = "gado-v2";
+const CACHE_VERSION = "gado-v3";   // v4.1: troca de versão limpa o cache antigo dos celulares
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_PAGES   = `${CACHE_VERSION}-pages`;
 

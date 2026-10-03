@@ -48,6 +48,10 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 | `routes_*.py` | Rotas por área (registros, visitas, relatórios, api, usuários, auth…) |
 | `relatorios.py` / `exportar.py` | Geração de relatórios e exportação |
 | `alertas_whatsapp.py` | Notificações via CallMeBot |
+| `saude.py` | Calendário sanitário (Triângulo Mineiro): vacina por tipo, campanha de brucelose, vermifugação 5-7-9 — fonte única p/ painel, calendário e WhatsApp |
+| `backup_automatico.py` | Backup diário (Task do PythonAnywhere) |
+| `resumo_mensal.py` | Resumo do mês no WhatsApp no dia 1º (Task diária; `--teste` só mostra) |
+| `tests/` | Testes automáticos (pytest) |
 | `templates/` | Jinja2 (base.html + páginas); `static/` assets e PWA (`sw.js`, `manifest.json`) |
 
 ## Conceitos de cálculo (`calculos.py`)
@@ -64,6 +68,9 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 - **Mortes/Perdas são perda separada (v4.0):** o custo da cabeça morta sai do rebanho
   como `perdas` (não infla os sobreviventes). Com "Perda De", a perda vai para o dono;
   senão é rateada em terços. `resultado_total` já desconta as perdas.
+- **Nascimentos (v4.1):** entram a custo zero no rebanho (baixam a média). Com
+  "Nascimento De", a cabeça vai para o estoque desse dono; senão é rateada em terços —
+  o inverso de "Perda De". Não afeta valores, só o estoque por membro.
 - **Invariantes (teste sempre que mexer em finanças):**
   1. `custo_vendidos + perdas + capital_imobilizado == total_custo` (nada aparece do nada);
   2. soma dos `custo_total` dos membros == `custo_vendidos` global;
@@ -81,6 +88,24 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 - Ao mexer em finanças, **rode um smoke test** com `gado_familia.xlsx` real (numa cópia)
   e confira a invariante contábil antes de concluir.
 
-## Pendências conhecidas / melhorias sugeridas
+## Testes
 
-- Form de Visitas tem campo `racao`/`sacos_racao` que a rota **não** salva (só sal e proteinado).
+```bash
+pip install pytest
+python -m pytest          # ~5 s; roda numa CÓPIA temporária dos dados
+```
+
+- `tests/conftest.py` copia `gado_familia.xlsx` (de `~/gado-dados/` ou da pasta do
+  projeto) para uma pasta temporária e aponta `GADO_DATA_DIR` para ela — o arquivo
+  real nunca é tocado.
+- `test_calculos.py`: as 3 invariantes contábeis em cenários montados e nos dados reais.
+- `test_paginas.py`: abre todas as páginas GET (nenhuma pode dar 500) e grava uma compra
+  pelo formulário conferindo a ordem das colunas.
+- `test_backup.py`: backup diário e limpeza usam a pasta de dados, não a do código.
+- **Rode antes de todo `git push`.** Mexeu em finanças → os testes de invariante têm que passar.
+
+## Backup
+
+- `backup_automatico.py` (Task diária no PythonAnywhere) grava em `~/gado-dados/backups/`
+  como `backup_AAAAMMDD_HHMMSS.xlsx` — aparecem na página **Backups** do site para download.
+- Site e script compartilham a mesma pasta e a mesma rotação (30 arquivos).

@@ -20,7 +20,7 @@ for _stream in ("stdout", "stderr"):
         pass
 
 ARQUIVO_DADOS = "gado_familia.xlsx"
-VERSAO = "4.0"
+VERSAO = "4.1"
 NOME_SITIO = "Sítio Santo Antonio"
 FAMILIA = "Geane, Deyvid e Nilson"
 
@@ -62,7 +62,10 @@ TIPOS_GASTO = [
 ]
 
 TIPOS_MANEJO = [
-    "Vacinação",
+    "Vacina Raiva",
+    "Vacina Clostridioses",   # inclui botulismo quando a vacina é polivalente
+    "Vacina Brucelose",       # fêmeas de 3 a 8 meses (campanha IMA)
+    "Vacinação",              # outras vacinas (registros antigos também usam este)
     "Vermifugação",
     "Pesagem",
     "Morte/Perda",
@@ -73,13 +76,14 @@ TIPOS_MANEJO = [
 ]
 
 # Intervalos (em dias) dos alertas de saúde — PADRÕES DE REFERÊNCIA p/ gado de
-# corte no Triângulo Mineiro (cerrado/MG). São apenas ponto de partida e podem
-# ser ajustados a qualquer momento em ⚙️ Configurações → Alertas de Saúde
-# (a função db.get_alertas_saude() aplica os ajustes salvos por cima destes).
-# Ajuste conforme seu veterinário e o calendário oficial do IMA-MG.
+# corte no Triângulo Mineiro (cerrado/MG), conforme IMA-MG e Embrapa (ver saude.py).
+# Podem ser ajustados em ⚙️ Configurações → Alertas de Saúde (db.get_alertas_saude()
+# aplica os ajustes salvos por cima destes). Confirme com seu veterinário.
+# Brucelose não entra aqui: segue as etapas da campanha (saude.lembretes_sazonais).
 ALERTAS_SAUDE = {
-    "Vacinação":              180,   # ~semestral (clostridioses/carbúnculo etc.)
-    "Vermifugação":           120,   # ~a cada 4 meses (reforçar na seca)
+    "Vacina Raiva":           365,   # obrigatória em MG; anual (1ª vez: 2 doses c/ 30 dias)
+    "Vacina Clostridioses":   365,   # anual (1ª vez: 4 meses + reforço em 30 dias)
+    "Vermifugação":           240,   # 5-7-9 (mai/jul/set); de set a mai são ~8 meses
     "Pesagem":                90,    # trimestral (acompanhar ganho de peso)
     "Tratamento Veterinário": 365,   # revisão anual
 }
@@ -111,6 +115,16 @@ COLUNAS_MANEJO = [
     "Data", "Tipo", "Qtd Cabeças", "Descrição", "Responsável",
     # NOVO v3.6: em caso de Morte/Perda, de qual membro foi a perda.
     "Perda De",
+    # NOVO v4.1: remédio/produto usado em vacinas e vermifugação.
+    "Produto",
+    # NOVO v4.1: em caso de Nascimento, de qual membro é o bezerro (o inverso de "Perda De").
+    "Nascimento De",
+]
+
+# Tipos de manejo em que o formulário pergunta qual remédio/produto foi usado.
+TIPOS_COM_PRODUTO = [
+    "Vacina Raiva", "Vacina Clostridioses", "Vacina Brucelose",
+    "Vacinação", "Vermifugação",
 ]
 COLUNAS_VISITAS = [
     "Data", "Responsável",

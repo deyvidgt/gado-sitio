@@ -260,7 +260,9 @@ def parse_valor(s):
         return 0.0
 
 def _limpar_backups_antigos(max_backups: int = 30):
-    backup_dir = os.path.join(BASE_DIR, "backups")
+    # Os backups ficam na pasta de DADOS (db.fazer_backup), não na do código.
+    from db import DATA_DIR
+    backup_dir = os.path.join(DATA_DIR, "backups")
     if not os.path.exists(backup_dir):
         return
     arquivos = sorted(
@@ -299,18 +301,17 @@ def _gerar_alertas(dados):
     alertas = []
     hoje = _agora()
     df_man = dados["Manejo"]
+    from saude import ultima_data, lembretes_sazonais
     for tipo, dias in get_alertas_saude().items():
-        df_t = df_man[df_man["Tipo"] == tipo] if not df_man.empty else pd.DataFrame()
-        if df_t.empty:
+        ultima = ultima_data(df_man, tipo)
+        if ultima is None:
             alertas.append({"nivel": "warning", "msg": f"Nenhum registro de {tipo}."})
-            continue
-        ultima = df_t["Data"].dropna().max()
-        if pd.isna(ultima):
             continue
         d = (hoje - ultima.to_pydatetime()).days
         if d > dias:
             alertas.append({"nivel": "danger",
                              "msg": f"{tipo} atrasada! Última: {ultima.strftime('%d/%m/%Y')} ({d} dias)"})
+    alertas.extend(lembretes_sazonais(df_man, hoje))
     from calculos import calcular_resumo_financeiro
     r_fin = _get_resumo_cache()
     if r_fin["resultado_realizado"] < 0:

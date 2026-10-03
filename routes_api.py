@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from db import carregar_aba
 from calculos import (
     calcular_fluxo_caixa, calcular_todos_membros,
-    calcular_resumo_financeiro,
+    calcular_resumo_financeiro, calcular_evolucao_rebanho,
 )
 from config import MEMBROS, NOMES_MEMBROS, ALERTAS_SAUDE
 from extensions import (
@@ -46,6 +46,22 @@ def api_membros():
                     "receitas":   [round(mbr[m]["receita"],    2) for m in MEMBROS],
                     "custos":     [round(mbr[m]["custo_total"], 2) for m in MEMBROS],
                     "resultados": [round(mbr[m]["resultado"],  2) for m in MEMBROS]})
+
+
+@app.route("/api/rebanho")
+@login_required
+def api_rebanho():
+    """Evolução mensal do rebanho: entradas, saídas, cabeças e custo médio/cab."""
+    dados = _get_dados_cache()
+    meses = calcular_evolucao_rebanho(dados["Compras"], dados["Gastos"],
+                                      dados["Vendas"], dados["Manejo"])
+    return jsonify({
+        "labels":    [m["label"] for m in meses],
+        "entradas":  [m["entradas"] for m in meses],
+        "saidas":    [m["saidas"] for m in meses],
+        "cabecas":   [m["cabecas"] for m in meses],
+        "custo_cab": [m["custo_cab"] for m in meses],
+    })
 
 
 # ── API: Chuvas mensais ───────────────────────────────────────────────────────
@@ -232,7 +248,7 @@ def api_cotacao_imea():
 
 def _fetch_imea_inline():
     """Playwright inline (sem módulo separado)."""
-    import subprocess
+    import subprocess, sys
     from playwright.sync_api import sync_playwright, TimeoutError as PwTimeout
     log = []
     URL = "https://www.imea.com.br/imea-site/indicador-boi"

@@ -37,6 +37,7 @@ a = Analysis(
         'requests',
         'matplotlib',
         'matplotlib.backends.backend_agg',
+        'saude',
     ],
     hookspath=[],
     hooksconfig={},

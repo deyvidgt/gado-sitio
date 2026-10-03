@@ -96,6 +96,10 @@ def fazer_backup() -> str | None:
 
 # ── Inicialização ─────────────────────────────────────────────────────────────
 
+# Padrões da v4.0 que mudaram na v4.1 (calendário 5-7-9 da Embrapa).
+_PADROES_ANTIGOS = {"Vermifugação": 120}
+
+
 def get_alertas_saude() -> dict:
     """
     Intervalos (em dias) dos alertas de saúde EFETIVOS: começa dos padrões em
@@ -113,6 +117,10 @@ def get_alertas_saude() -> dict:
             for tipo in base:
                 try:
                     v = int(salvos[tipo])
+                    # v4.1: o formulário salva TODOS os campos, então um valor igual ao
+                    # padrão antigo quase sempre é "não mexi". Usa o padrão novo.
+                    if _PADROES_ANTIGOS.get(tipo) == v:
+                        continue
                     if v > 0:
                         base[tipo] = v
                 except (KeyError, TypeError, ValueError):

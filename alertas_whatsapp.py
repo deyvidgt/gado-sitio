@@ -24,8 +24,11 @@ from pathlib import Path
 
 # ── Configuração ──────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent
-LOG_FILE = BASE_DIR / "backups" / "alertas_whatsapp.log"
-Path(LOG_FILE).parent.mkdir(exist_ok=True)
+sys.path.insert(0, str(BASE_DIR))
+# Log junto dos dados (~/gado-dados/backups/), não na pasta do código.
+from db import _resolver_data_dir  # noqa: E402
+LOG_FILE = Path(_resolver_data_dir()) / "backups" / "alertas_whatsapp.log"
+Path(LOG_FILE).parent.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
     filename=str(LOG_FILE),
@@ -246,16 +249,11 @@ def montar_alertas() -> list[str]:
         return [f"❌ Erro ao ler dados do sistema: {e}"]
 
     # ── 1) Alertas de manejo ─────────────────────────────────────────────────
+    from saude import ultima_data, lembretes_sazonais
     for tipo, intervalo_dias in get_alertas_saude().items():
-        if df_m.empty or "Tipo" not in df_m.columns:
-            alertas.append(f"📋 {tipo}: nenhum registro encontrado!")
-            continue
-        df_t = df_m[df_m["Tipo"] == tipo]
-        if df_t.empty:
+        ultima_ts = ultima_data(df_m, tipo)
+        if ultima_ts is None:
             alertas.append(f"📋 {tipo}: nenhum registro ainda — programe a primeira!")
-            continue
-        ultima_ts = df_t["Data"].dropna().max()
-        if pd.isna(ultima_ts):
             continue
         dias_passados  = (hoje - ultima_ts.to_pydatetime()).days
         dias_restantes = intervalo_dias - dias_passados
@@ -270,6 +268,12 @@ def montar_alertas() -> list[str]:
                 f"⏰ {tipo} em {dias_restantes} dia(s)\n"
                 f"   Prevista para: {(hoje + timedelta(days=dias_restantes)).strftime('%d/%m/%Y')}"
             )
+
+    # Lembretes de calendário (brucelose, vermifugação 5-7-9): só nos dias 1, 15
+    # e 25 — senão a mesma mensagem chegaria todo dia durante 2 meses.
+    if hoje.day in (1, 15, 25) or (hoje.month in (1, 7) and hoje.day in (5, 9)):
+        for lemb in lembretes_sazonais(df_m, hoje):
+            alertas.append(f"🗓️ {lemb['msg']}")
 
     # ── 2) Informações da última visita (detalhadas) ─────────────────────────
     if not df_vis.empty and "Data" in df_vis.columns:

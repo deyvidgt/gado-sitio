@@ -7,7 +7,10 @@ programa sitio/                          ← pasta raiz do projeto
 ├── app.py                               ← servidor web Flask (ponto de entrada)
 │                                           rotas, autenticação, CSRF, cache, PDF
 ├── config.py                            ← constantes: membros, colunas, tipos, cores
-├── backup_automatico.py
+├── backup_automatico.py                 ← backup diário (Task) → ~/gado-dados/backups/
+├── resumo_mensal.py                     ← resumo do mês no WhatsApp (Task; envia no dia 1º)
+├── saude.py                             ← calendário sanitário: vacinas, brucelose, 5-7-9
+├── tests/                               ← testes automáticos (python -m pytest)
 ├── db.py                                ← acesso ao Excel (ler, salvar, backup)
 ├── calculos.py                          ← motor de cálculos financeiros
 │                                           CMP, GPCab, CTCab, break-even, etc.
@@ -46,10 +49,8 @@ programa sitio/                          ← pasta raiz do projeto
 │   ├── icon512.png                      ← ícone PWA 512×512
 │   └── manifest.json                    ← manifesto PWA (instalar como app)
 │
-├── backups/                             ← backups automáticos do Excel
-│   └── backup_YYYYMMDD_HHMMSS	         ← criado antes de cada alteração
-│                                           (máximo 15 arquivos, os mais antigos
-│                                            são apagados automaticamente)
+├── (dados ficam FORA do código, em ~/gado-dados/: gado_familia.xlsx,
+│    usuarios.json, sitio_config.json e backups/ — máx. 30 backups)
 │
 ├── __pycache__/
 ├── requirements.txt                     ← dependências Python (pip install -r)

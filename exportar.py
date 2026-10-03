@@ -231,8 +231,11 @@ def exportar_relatorio_excel() -> str:
                "CMP no momento (R$)", "Descrição"],
               [3, 4, 5, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], CORES["azul_escuro"])
 
+    # Cabeçalho = colunas reais da aba (Perda De, Produto, Nascimento De…); antes eram
+    # só 5 títulos fixos e as colunas novas saíam no Excel sem título.
+    from config import COLUNAS_MANEJO
     aba_dados("🩺 Manejo", df_m,
-              ["Data", "Tipo", "Qtd Cabeças", "Descrição", "Responsável"],
+              list(df_m.columns) if not df_m.empty else COLUNAS_MANEJO,
               [], CORES["roxo"])
 
     # ── Aba Fluxo de Caixa ───────────────────────────────────────────────────

@@ -10,7 +10,8 @@ from db import carregar_aba, carregar_todas, fazer_backup
 from calculos import (
     calcular_estoque, calcular_cmp, calcular_gpcab, custo_medio_movel_venda,
 )
-from config import (TIPOS_GASTO, TIPOS_MANEJO, MEMBROS, NOMES_MEMBROS, COLUNAS_VENDAS)
+from config import (TIPOS_GASTO, TIPOS_MANEJO, MEMBROS, NOMES_MEMBROS, COLUNAS_VENDAS,
+                    TIPOS_COM_PRODUTO)
 from extensions import (
     app, _agora, _validar_csrf, login_required,
     _get_dados_cache, _get_resumo_cache,
@@ -433,11 +434,35 @@ def manejo():
         d["_idx"] = int(real_idx)
         rows.append(d)
     return render_template("lista.html", titulo="Manejo 🩺", secao="manejo", aba="Manejo",
-                           colunas=["Data","Tipo","Qtd Cabeças","Descrição","Responsável","Perda De"],
+                           colunas=["Data","Tipo","Qtd Cabeças","Produto","Descrição","Responsável","Perda De","Nascimento De"],
                            rows=rows,
                            anos_disponiveis=_anos_de(df),
                            tipos_disponiveis=_tipos_de(df),
-                           pessoas_disponiveis=_pessoas_de(df, "Responsável", "Perda De"))
+                           pessoas_disponiveis=_pessoas_de(df, "Responsável", "Perda De", "Nascimento De"))
+
+def _produtos_sugeridos(usados: dict) -> dict:
+    """Já usados (mais recentes primeiro) + exemplos do mercado que ainda não estão na lista."""
+    from saude import SUGESTOES_PRODUTO
+    return {t: usados.get(t, []) + [p for p in SUGESTOES_PRODUTO.get(t, []) if p not in usados.get(t, [])]
+            for t in TIPOS_COM_PRODUTO}
+
+
+def _produtos_usados(df_man: pd.DataFrame) -> dict:
+    """{tipo: [produtos já usados, do mais recente ao mais antigo]} — sugestões do formulário."""
+    out = {t: [] for t in TIPOS_COM_PRODUTO}
+    if df_man.empty or "Produto" not in df_man.columns:
+        return out
+    df = df_man[df_man["Tipo"].isin(TIPOS_COM_PRODUTO) & df_man["Produto"].notna()]
+    for _, r in df.sort_values("Data", ascending=False, na_position="last").iterrows():
+        prod = str(r["Produto"]).strip()
+        if prod and prod not in out[r["Tipo"]]:
+            out[r["Tipo"]].append(prod)
+    return out
+
+
+def _produto_do_form(f) -> str:
+    return f.get("produto", "").strip() if f.get("tipo") in TIPOS_COM_PRODUTO else ""
+
 
 @app.route("/manejo/novo", methods=["GET", "POST"])
 @login_required
@@ -449,13 +474,21 @@ def novo_manejo():
         f = request.form
         # "Perda De" só faz sentido quando o manejo é Morte/Perda
         perda_de = f.get("perda_de", "") if f.get("tipo") == "Morte/Perda" else ""
+        nasc_de  = f.get("nascimento_de", "") if f.get("tipo") == "Nascimento" else ""
+        produto = _produto_do_form(f)
+        if f.get("tipo") in TIPOS_COM_PRODUTO and not produto:
+            flash("Informe qual remédio/produto foi usado.", "error")
+            return redirect(url_for("novo_manejo"))
         salvar_linha("Manejo", [f.get("data"), f.get("tipo"), int(f.get("cabecas", 0) or 0),
                                 f.get("descricao", "").strip(), f.get("responsavel", ""),
-                                perda_de])
+                                perda_de, produto, nasc_de])
         flash(f"Manejo registrado! ({f.get('tipo')})", "success")
         return redirect(url_for("manejo"))
     return render_template("form_manejo.html", estoque=estoque, TIPOS=TIPOS_MANEJO,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
+                           TIPOS_COM_PRODUTO=TIPOS_COM_PRODUTO,
+                           produtos_usados=_produtos_usados(dados["Manejo"]),
+                           produtos_sugeridos=_produtos_sugeridos(_produtos_usados(dados["Manejo"])),
                            hoje=_agora().strftime("%Y-%m-%d"))
 
 
@@ -480,6 +513,8 @@ def editar_manejo(idx):
             "Descrição":   f.get("descricao","").strip(),
             "Responsável": f.get("responsavel",""),
             "Perda De":    f.get("perda_de", "") if f.get("tipo") == "Morte/Perda" else "",
+            "Produto":     _produto_do_form(f),
+            "Nascimento De": f.get("nascimento_de", "") if f.get("tipo") == "Nascimento" else "",
         }
         for col, val in updates.items():
             if col in df.columns:
@@ -491,9 +526,14 @@ def editar_manejo(idx):
         return redirect(url_for("manejo"))
     row = df.iloc[idx].to_dict()
     row["data_input"] = df.iloc[idx]["Data"].strftime("%Y-%m-%d") if pd.notna(df.iloc[idx].get("Data")) else ""
+    if pd.isna(row.get("Produto")):
+        row["Produto"] = ""
     return render_template("form_manejo.html", modo="editar", row=row, idx=idx,
                            estoque=estoque, TIPOS=TIPOS_MANEJO,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
+                           TIPOS_COM_PRODUTO=TIPOS_COM_PRODUTO,
+                           produtos_usados=_produtos_usados(df),
+                           produtos_sugeridos=_produtos_sugeridos(_produtos_usados(df)),
                            hoje=_agora().strftime("%Y-%m-%d"))
 
 
