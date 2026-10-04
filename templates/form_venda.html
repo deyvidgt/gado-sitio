@@ -84,7 +84,7 @@ const membros = ["mae", "deyvid", "nilson"];
 
 function calc() {
   const tot   = parseInt(document.getElementById("tot-cab").value) || 0;
-  const valor = parseFloat((document.getElementById("val-in").value || "").replace(",",".")) || 0;
+  const valor = parseValorBR(document.getElementById("val-in").value);
   document.getElementById("tot-val").textContent = tot;
 
   let soma = 0;

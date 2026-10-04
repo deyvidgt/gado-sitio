@@ -9,7 +9,7 @@ from datetime import timedelta
 from flask import request, jsonify, session
 from db import carregar_aba, get_alertas_saude
 from saude import ultima_data, brucelose_proxima
-from extensions import app, _agora, login_required, _carregar_usuarios, _salvar_usuarios
+from extensions import app, _agora, login_required, _safe, _carregar_usuarios, _salvar_usuarios
 
 
 def _iso(ts):
@@ -46,7 +46,7 @@ def api_calendario_manejo():
                     "data":    d,
                     "categoria": "manejo",
                     "tipo":    str(row.get("Tipo", "") or ""),
-                    "cabecas": int(row.get("Qtd Cabeças", 0) or 0),
+                    "cabecas": int(_safe(row.get("Qtd Cabeças"))),
                     "desc":    " · ".join(x for x in (
                                    _txt(row.get("Produto")), _txt(row.get("Descrição"))) if x),
                     "resumo":  str(row.get("Tipo", "") or "Manejo"),
@@ -59,8 +59,8 @@ def api_calendario_manejo():
             d = _iso(row.get("Data"))
             if d:
                 resp  = str(row.get("Responsável", "") or "")
-                cont  = int(row.get("Gado Contado", 0) or 0)
-                esper = int(row.get("Gado Esperado", 0) or 0)
+                cont  = int(_safe(row.get("Gado Contado")))
+                esper = int(_safe(row.get("Gado Esperado")))
                 chuva = str(row.get("Chuva mm", "") or "")
                 choveu= str(row.get("Choveu", "") or "")
                 grama = str(row.get("Grama/Pastagem", "") or "")
@@ -94,9 +94,9 @@ def api_calendario_manejo():
         for _, row in df_comp[df_comp["Data"].notna() & (df_comp["Data"] >= corte)].iterrows():
             d = _iso(row.get("Data"))
             if d:
-                qtd  = int(row.get("Qtd Cabeças", 0) or 0)
-                val  = float(row.get("Valor Total (R$)", 0) or 0)
-                vpcab= float(row.get("Valor/Cabeça (R$)", 0) or 0)
+                qtd  = int(_safe(row.get("Qtd Cabeças")))
+                val  = _safe(row.get("Valor Total (R$)"))
+                vpcab= _safe(row.get("Valor/Cabeça (R$)"))
                 desc = str(row.get("Descrição", "") or "")
                 desc = "" if desc == "nan" else desc
                 val_fmt = f"R$ {val:,.2f}".replace(",","X").replace(".",",").replace("X",".")
@@ -116,9 +116,9 @@ def api_calendario_manejo():
         for _, row in df_vend[df_vend["Data"].notna() & (df_vend["Data"] >= corte)].iterrows():
             d = _iso(row.get("Data"))
             if d:
-                qtd  = int(row.get("Qtd Cabeças", 0) or 0)
-                val  = float(row.get("Valor Total (R$)", 0) or 0)
-                arr  = float(row.get("Valor Arroba (R$)", 0) or 0)
+                qtd  = int(_safe(row.get("Qtd Cabeças")))
+                val  = _safe(row.get("Valor Total (R$)"))
+                arr  = _safe(row.get("Valor Arroba (R$)"))
                 desc = str(row.get("Descrição", "") or "")
                 desc = "" if desc == "nan" else desc
                 val_fmt = f"R$ {val:,.2f}".replace(",","X").replace(".",",").replace("X",".")
@@ -139,7 +139,7 @@ def api_calendario_manejo():
         for _, row in df_gast[df_gast["Data"].notna() & (df_gast["Data"] >= corte)].iterrows():
             d = _iso(row.get("Data"))
             if d:
-                val  = float(row.get("Valor Total (R$)", 0) or 0)
+                val  = _safe(row.get("Valor Total (R$)"))
                 desc = str(row.get("Descrição", "") or "")
                 desc = "" if desc in ("nan", "None") else desc
                 tipo = str(row.get("Tipo", "") or "")

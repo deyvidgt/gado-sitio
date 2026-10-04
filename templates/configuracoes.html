@@ -642,10 +642,10 @@ async function carregarTodosWpp() {
             : `<span style="color:#c87000;font-weight:600">⏸️ Pausado</span>`)
         : `<span style="color:var(--text-3)">— Não configurado</span>`;
       const tel = u.telefone
-        ? `<span style="font-family:monospace">${u.telefone}</span>`
+        ? `<span style="font-family:monospace">${esc(u.telefone)}</span>`
         : `<span style="color:var(--text-3)">—</span>`;
       const bot = u.bot_number
-        ? `<span style="font-family:monospace">${u.bot_number}</span>`
+        ? `<span style="font-family:monospace">${esc(u.bot_number)}</span>`
         : `<span style="color:var(--text-3)">—</span>`;
       return `<tr>
         <td style="padding:8px 12px;font-weight:600;color:var(--text)">${u.usuario.charAt(0).toUpperCase()+u.usuario.slice(1)}</td>

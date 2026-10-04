@@ -256,3 +256,52 @@ def test_alerta_diario_whatsapp_aguenta_visita_com_campo_vazio(monkeypatch):
     monkeypatch.setattr(aw, "carregar_todas", com_vazio)
     assert aw.montar_mensagem_alertas(aw.montar_alertas())
     assert aw.montar_msg_nova_visita({"Gado Contado": float("nan")}, 10)
+
+
+def test_calendario_e_ultima_visita_aguentam_celula_vazia(cliente, monkeypatch):
+    """int(NaN) derrubava o calendário inteiro ('Erro ao carregar calendário')."""
+    import routes_api_extras
+    import routes_api
+    original = db.carregar_aba
+
+    def com_vazio(aba):
+        df = original(aba)
+        if aba == "Visitas" and not df.empty:
+            df.loc[df["Data"].idxmax(), ["Gado Contado", "Gado Esperado", "Gado Faltando"]] = float("nan")
+        if aba == "Compras" and not df.empty:
+            df.loc[df["Data"].idxmax(), "Qtd Cabeças"] = float("nan")
+        return df
+
+    monkeypatch.setattr(routes_api_extras, "carregar_aba", com_vazio)
+    monkeypatch.setattr(routes_api, "carregar_aba", com_vazio)
+    assert cliente.get("/api/calendario-manejo").status_code == 200
+    assert cliente.get("/api/ultima-visita").status_code == 200
+
+
+def test_listas_mostram_cabecas_como_inteiro(cliente):
+    import re
+    for rota in ("/compras", "/vendas", "/manejo"):
+        html = cliente.get(rota).get_data(as_text=True)
+        assert not re.search(r"<td>\s*\d+\.0\s*</td>", html), rota
+
+
+def test_lista_tem_dados_para_total_filtrado(cliente):
+    html = cliente.get("/gastos").get_data(as_text=True)
+    assert 'id="total-valor"' in html and "data-valor=" in html
+
+
+def test_redefinir_senha_tira_bloqueio(cliente, login_teste, monkeypatch):
+    import routes_usuarios
+    from config import MAX_TENTATIVAS_LOGIN
+    usuarios = {"teste": {"hash": "x"}, "deyvid": {"hash": "y"}}
+    monkeypatch.setattr(routes_usuarios, "_carregar_usuarios_local", lambda: usuarios)
+    monkeypatch.setattr(routes_usuarios, "_salvar_usuarios_local", lambda d: None)
+    for _ in range(MAX_TENTATIVAS_LOGIN):
+        login_teste._registrar_falha("teste")
+    assert login_teste._estado_login("teste")["bloqueio_ate"]
+    with cliente.session_transaction() as s:
+        s["csrf_token"] = "tok"
+    r = cliente.post("/configuracoes/resetar-senha",
+                     data={"csrf_token": "tok", "usuario": "teste", "senha_nova": "nova123"})
+    assert r.status_code == 302
+    assert not login_teste._estado_login("teste")["bloqueio_ate"]

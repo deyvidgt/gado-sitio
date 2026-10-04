@@ -89,9 +89,9 @@ def exportar_relatorio_excel() -> str:
         ("Estoque atual",               r_fin["estoque"],             None),
         ("", "", None),
         ("💲 INDICADORES DE CUSTO", None, CORES["verde_medio"]),
-        ("CMP  (Custo Médio Ponderado)", r_fin["cmp"],                "money"),
-        ("GPCab (Gastos acum./cabeça)", r_fin["gpcab"],               "money"),
-        ("CTCab (Custo Total/cabeça)",  r_fin["ctcab"],               "money"),
+        ("CMP (compra/cab. rebanho atual)", r_fin["cmp"],                "money"),
+        ("GPCab (gastos/cab. rebanho atual)", r_fin["gpcab"],               "money"),
+        ("CTCab (custo/cab. rebanho atual)", r_fin["ctcab"],               "money"),
         ("", "", None),
         ("💰 FINANCEIRO", None, CORES["verde_medio"]),
         ("Total compras",               r_fin["total_comp"],          "money"),
@@ -152,7 +152,8 @@ def exportar_relatorio_excel() -> str:
     row_i += 1
 
     cols_m = ["Membro", "Cabeças", "Receita", "Custo Compra",
-              "Custo Gastos", "Custo Total", "Resultado", "Margem"]
+              "Custo Gastos", "Custo Total", "Resultado", "Margem",
+              "Perdas (mortes)", "Resultado Líquido"]   # novas no fim: mesma ordem de antes
     for ci, col in enumerate(cols_m, 1):
         c = ws.cell(row_i, ci, col)
         c.fill = fill(CORES["verde_escuro"])
@@ -171,11 +172,13 @@ def exportar_relatorio_excel() -> str:
             mr["custo_total"],
             mr["resultado"],
             mr["margem_pct"] / 100,
+            mr["perdas"],
+            mr["resultado_liquido"],
         ]
         for ci, v in enumerate(vals_m, 1):
             cell = ws.cell(row_i, ci, v)
             cell.border = _border
-            if ci in [3, 4, 5, 6, 7]:
+            if ci in [3, 4, 5, 6, 7, 9, 10]:
                 cell.number_format = _money
             elif ci == 8:
                 cell.number_format = _pct
@@ -187,7 +190,7 @@ def exportar_relatorio_excel() -> str:
 
     ws.column_dimensions["A"].width = 32
     ws.column_dimensions["B"].width = 16
-    for c in "CDEFGH":
+    for c in "CDEFGHIJ":
         ws.column_dimensions[c].width = 18
 
     # ── Abas de dados ────────────────────────────────────────────────────────

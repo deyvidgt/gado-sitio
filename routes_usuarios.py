@@ -192,6 +192,9 @@ def resetar_senha():
 
     dados[alvo]["hash"] = _hash_bcrypt(senha) if _bcrypt_disponivel() else _sha256(senha)
     _salvar_usuarios_local(dados)
+    # Senha nova = desbloqueia na hora (senão o usuário esperava os 15 min mesmo assim).
+    from routes_auth import _limpar_falhas
+    _limpar_falhas(alvo)
     flash(f"✅ Senha de '{alvo.capitalize()}' redefinida!", "success")
     return redirect(url_for("configuracoes"))
 

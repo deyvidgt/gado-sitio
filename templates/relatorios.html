@@ -33,17 +33,17 @@
 
   <div class="card">
     <div class="card-title">💲 Indicadores de Custo</div>
-    <div class="kv"><span class="kv-key">CMP (Custo Médio Ponderado)</span><span style="font-weight:600">{{ r.cmp | brl }}/cab.</span></div>
-    <div class="kv"><span class="kv-key">GPCab (Gastos acum./cabeça)</span><span>{{ r.gpcab | brl }}/cab.</span></div>
-    <div class="kv"><span class="kv-key">CTCab (Custo Total/cabeça)</span><span style="font-weight:600">{{ r.ctcab | brl }}/cab.</span></div>
+    <div class="kv"><span class="kv-key">CMP (compra/cab. do rebanho atual)</span><span style="font-weight:600">{{ r.cmp | brl }}/cab.</span></div>
+    <div class="kv"><span class="kv-key">GPCab (gastos/cab. do rebanho atual)</span><span>{{ r.gpcab | brl }}/cab.</span></div>
+    <div class="kv"><span class="kv-key">CTCab (custo total/cab. do rebanho atual)</span><span style="font-weight:600">{{ r.ctcab | brl }}/cab.</span></div>
     <div class="kv"><span class="kv-key">Ticket Médio de Venda</span><span>{{ r.ticket_medio | brl }}/cab.</span></div>
     <div class="kv"><span class="kv-key">Margem Bruta</span><span>{{ r.margem_bruta | pct }}</span></div>
     <div class="kv"><span class="kv-key">Break-even do Estoque</span>
       <span style="font-weight:600;color:var(--gold)">{{ r.break_even | brl }}/cab.</span></div>
     <div class="kv"><span class="kv-key">Capital Imobilizado</span><span>{{ r.capital_imobilizado | brl }}</span></div>
     <div style="margin-top:14px;padding:12px;background:var(--green-50);border-radius:8px;font-size:12px;color:var(--text-2)">
-      <strong>Glossário:</strong> CMP = custo médio ponderado de todas as compras ·
-      GPCab = gastos por cabeça no período · CTCab = CMP + GPCab ·
+      <strong>Glossário:</strong> média móvel do gado que está no pasto hoje —
+      CMP = custo de compra por cabeça · GPCab = gastos por cabeça · CTCab = CMP + GPCab ·
       Break-even = preço mínimo p/ recuperar o capital do estoque atual
     </div>
   </div>
@@ -98,6 +98,13 @@
       <span class="kv-key">Resultado</span>
       <span class="{{ 'pos' if mr.resultado >= 0 else 'neg' }}">{{ mr.resultado | brl }}</span>
     </div>
+    {% if mr.perdas and mr.perdas > 0 %}
+    <div class="kv"><span class="kv-key">Perdas (mortes)</span><span class="neg">− {{ mr.perdas | brl }}</span></div>
+    <div class="kv">
+      <span class="kv-key">Resultado líquido</span>
+      <span class="{{ 'pos' if mr.resultado_liquido >= 0 else 'neg' }}">{{ mr.resultado_liquido | brl }}</span>
+    </div>
+    {% endif %}
     <div class="kv"><span class="kv-key">Margem</span><span>{{ mr.margem_pct | pct }}</span></div>
     <div class="kv"><span class="kv-key">Ticket médio</span><span>{{ mr.ticket_medio | brl }}/cab.</span></div>
   </div>

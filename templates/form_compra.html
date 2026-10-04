@@ -119,7 +119,7 @@
 
   function calcCab() {
     const c = parseInt(cab.value) || 0;
-    const v = parseFloat((val.value||"").replace(",",".")) || 0;
+    const v = parseValorBR(val.value);
     res.value = c > 0 ? "R$ " + (v/c).toFixed(2).replace(".",",") : "";
     checkSoma();
   }

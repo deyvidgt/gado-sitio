@@ -607,7 +607,7 @@ async function loadUltimaVisita() {
     const sug = document.getElementById("vis-sugestoes");
     if (d.sugestoes) {
       sug.innerHTML = d.sugestoes.split(" | ").map(s => s.trim()).filter(Boolean)
-        .map(s => `<div style="margin-bottom:2px">${s}</div>`).join("");
+        .map(s => `<div style="margin-bottom:2px">${esc(s)}</div>`).join("");
     } else { sug.style.display = "none"; }
 
   } catch(e) {
@@ -803,23 +803,23 @@ function mostrarTooltipCal(e, dia, mes, ano) {
     porCat[cat].forEach(ev => {
       const emoji = cat === "manejo" ? (TIPO_EMOJI[ev.tipo] || "📋") : catEmoji[cat];
       const titulo = cat === "manejo" ? ev.tipo : catTitulo[cat];
-      let info = ev.desc || "";
+      let info = esc(ev.desc || "");
       if (cat === "visita") {
         const partes = [];
-        if (ev.responsavel)               partes.push(`👤 ${ev.responsavel}`);
-        if (ev.cabecas)                   partes.push(`🐄 ${ev.cabecas} cab.`);
-        if (ev.grama)                     partes.push(`🌿 Pasto: ${ev.grama}`);
-        if (ev.chuva)                     partes.push(`🌧️ Chuva: ${ev.chuva}`);
-        if (ev.obs && ev.obs !== "nan")   partes.push(`📝 ${ev.obs}`);
+        if (ev.responsavel)               partes.push(`👤 ${esc(ev.responsavel)}`);
+        if (ev.cabecas)                   partes.push(`🐄 ${esc(ev.cabecas)} cab.`);
+        if (ev.grama)                     partes.push(`🌿 Pasto: ${esc(ev.grama)}`);
+        if (ev.chuva)                     partes.push(`🌧️ Chuva: ${esc(ev.chuva)}`);
+        if (ev.obs && ev.obs !== "nan")   partes.push(`📝 ${esc(ev.obs)}`);
         info = partes.join(" · ");
       } else if (cat === "compra" || cat === "venda") {
-        info = ev.desc || "";
-        if (ev.cabecas) info = `🐄 ${ev.cabecas} cab. — ` + info;
+        info = esc(ev.desc || "");
+        if (ev.cabecas) info = `🐄 ${esc(ev.cabecas)} cab. — ` + info;
       } else {
-        info = ev.desc || "";
+        info = esc(ev.desc || "");
       }
       html += `<div style="margin-bottom:6px;padding:5px 0;border-bottom:1px solid var(--cream-dk)">
-        <div style="font-size:12px;font-weight:600;color:var(--text)">${emoji} ${titulo}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${emoji} ${esc(titulo)}</div>
         ${info ? `<div style="font-size:11px;color:var(--text-3);margin-top:2px;line-height:1.5">${info}</div>` : ""}
       </div>`;
     });
@@ -827,7 +827,7 @@ function mostrarTooltipCal(e, dia, mes, ano) {
 
   // Previstos
   prev.forEach(p => {
-    html += `<div style="margin-top:4px;font-size:11px;color:var(--info);font-style:italic">📌 Previsto: ${p.tipo}</div>`;
+    html += `<div style="margin-top:4px;font-size:11px;color:var(--info);font-style:italic">📌 Previsto: ${esc(p.tipo)}</div>`;
   });
 
   tip.innerHTML = html;
@@ -939,7 +939,7 @@ async function loadWppStatus() {
     const d = await _apiFetch("/api/config-whatsapp");
     const wrap = document.getElementById("wpp-status-cfg");
     if (d.apikey_configurada && d.telefone) {
-      wrap.innerHTML = `<span style="font-size:12px;background:var(--green-100);color:var(--green-700);padding:2px 8px;border-radius:20px;font-weight:500">✅ Configurado — ${d.telefone}</span>
+      wrap.innerHTML = `<span style="font-size:12px;background:var(--green-100);color:var(--green-700);padding:2px 8px;border-radius:20px;font-weight:500">✅ Configurado — ${esc(d.telefone)}</span>
         <span style="font-size:12px;color:var(--text-3);margin-left:4px">Alertas ${d.alertas_ativos ? "ativos" : "pausados"}</span>`;
     } else {
       wrap.innerHTML = `<span style="font-size:12px;color:var(--text-3)">⚙️ Não configurado — <a href="/configuracoes#wpp" style="color:var(--green-600)">configurar aqui</a></span>`;
@@ -1293,9 +1293,9 @@ async function buscarCotacaoScot() {
     if (d.ok && d.cotacoes && d.cotacoes.length > 0) {
       let html = '';
       d.cotacoes.forEach(c => {
-        const preco = c.preco ? brl(c.preco) + "/@" : c.raw;
+        const preco = c.preco ? brl(c.preco) + "/@" : esc(c.raw);
         html += `<div style="background:var(--green-50);border:1.5px solid var(--green-100);border-radius:10px;padding:14px;margin-bottom:10px">
-          <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;margin-bottom:4px">📍 ${c.regiao}</div>
+          <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;margin-bottom:4px">📍 ${esc(c.regiao)}</div>
           <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--green-700)">${preco}</div>
           <div style="font-size:11px;color:var(--text-3);margin-top:4px">Novilha — preço por arroba</div>
         </div>`;
@@ -1304,7 +1304,7 @@ async function buscarCotacaoScot() {
       wrap.innerHTML = html;
     } else {
       wrap.innerHTML = `<div style="font-size:13px;color:var(--text-2)">
-        ⚠️ ${d.erro || "Não encontrado"}<br>
+        ⚠️ ${esc(d.erro || "Não encontrado")}<br>
         <a href="https://www.scotconsultoria.com.br/cotacoes/novilha/" target="_blank"
            style="color:var(--green-600);font-weight:600;margin-top:6px;display:inline-block">
           📊 Ver cotação no site da Scot →</a></div>`;
@@ -1372,7 +1372,7 @@ async function buscarCotacaoImea() {
       document.getElementById("cotacao-footer").style.display = "block";
     } else {
       wrap.innerHTML = `<div style="font-size:13px;color:var(--text-2)">
-        ⚠️ ${d.erro || "Indisponível"}<br>
+        ⚠️ ${esc(d.erro || "Indisponível")}<br>
         <a href="https://www.imea.com.br/imea-site/indicador-boi" target="_blank"
            style="color:var(--green-600);font-weight:600;margin-top:6px;display:inline-block">
           📋 Ver cotação no site do IMEA →</a></div>`;

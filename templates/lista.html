@@ -91,12 +91,12 @@
 <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
   {% if total_valor %}
   <div style="font-size:13px;color:var(--text-2)">
-    💰 Total: <strong>{{ total_valor | brl }}</strong>
+    💰 Total: <strong id="total-valor">{{ total_valor | brl }}</strong>
   </div>
   {% endif %}
   {% if total_cabecas %}
   <div style="font-size:13px;color:var(--text-2)">
-    🐄 Cabeças: <strong>{{ total_cabecas }}</strong>
+    🐄 Cabeças: <strong id="total-cab">{{ total_cabecas }}</strong>
   </div>
   {% endif %}
 </div>
@@ -135,7 +135,11 @@
            excluir/editar atuem no registro correto mesmo com tabela ordenada #}
         {% set i = row._idx if row._idx is defined else loop.index0 %}
         {% set pessoa = (row.get('Registrado Por','') if secao == 'gastos' else (row.get('Responsável','') if secao == 'manejo' else '')) %}
-      <tr data-pessoa="{{ (pessoa or '')|string }}">
+        {% set _val = row.get('Valor Total (R$)') %}
+        {% set _cab = row.get('Qtd Cabeças') %}
+      <tr data-pessoa="{{ (pessoa or '')|string }}"
+          data-valor="{{ _val if (_val is number and _val == _val) else 0 }}"
+          data-cab="{{ _cab if (_cab is number and _cab == _cab) else 0 }}">
         <td style="color:var(--text-3);font-size:12px">{{ loop.index }}</td>
         {% for col in colunas %}
           <td>
@@ -148,6 +152,9 @@
                             'Resultado Mae (R$)', 'Resultado Deyvid (R$)', 'Resultado Nilson (R$)',
                             'CMP no momento (R$)'] %}
               {{ v | brl }}
+            {% elif v is number and v == v|int %}
+              {# Inteiro lido como float pelo pandas (coluna com célula vazia): 7.0 → 7 #}
+              {{ v|int }}
             {% elif col == 'Tipo' and secao == 'gastos' %}
               <span class="badge badge-gasto">{{ v }}</span>
             {% elif col == 'Tipo' and secao == 'manejo' %}
@@ -196,7 +203,7 @@
     const tipo   = document.getElementById('filtro-tipo')?.value || '';
     const pessoa = document.getElementById('filtro-pessoa')?.value || '';
     const linhas = document.querySelectorAll('tbody tr');
-    let vis = 0;
+    let vis = 0, somaValor = 0, somaCab = 0;
 
     linhas.forEach(tr => {
       const txt  = tr.textContent.toLowerCase();
@@ -216,8 +223,18 @@
 
       const show = okBusca && okAno && okTipo && okPessoa;
       tr.style.display = show ? '' : 'none';
-      if (show) vis++;
+      if (show) {
+        vis++;
+        somaValor += parseFloat(tr.dataset.valor) || 0;
+        somaCab   += parseFloat(tr.dataset.cab)   || 0;
+      }
     });
+
+    // Totais do topo acompanham o filtro (antes mostravam sempre todos os anos).
+    const elV = document.getElementById('total-valor');
+    const elC = document.getElementById('total-cab');
+    if (elV) elV.textContent = 'R$ ' + somaValor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if (elC) elC.textContent = Math.round(somaCab);
 
     const total = linhas.length;
     const cont  = document.getElementById('filtro-contagem');

@@ -85,7 +85,7 @@
   const cab = document.getElementById("cab-in");
   const res = document.getElementById("val-cab");
   function calc() {
-    const v = parseFloat(val.value.replace(",", ".")) || 0;
+    const v = parseValorBR(val.value);
     const c = parseInt(cab.value) || 1;
     res.value = "R$ " + (v / c).toFixed(4).replace(".", ",");
   }

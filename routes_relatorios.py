@@ -76,7 +76,9 @@ def relatorio_pdf():
                                    textColor=verde, fontSize=18, spaceAfter=6)
     sub_style    = ParagraphStyle("sub", parent=styles["Normal"],
                                    textColor=colors.gray, fontSize=10, spaceAfter=16)
-    story.append(Paragraph("🐄 Sítio Santo Antonio — Relatório Financeiro", titulo_style))
+    # Sem emoji: a fonte padrão do PDF (Helvetica) não tem esses caracteres e
+    # eles saíam como quadrados pretos.
+    story.append(Paragraph("Sítio Santo Antonio — Relatório Financeiro", titulo_style))
     story.append(Paragraph("Família: Geane, Deyvid e Nilson", sub_style))
     story.append(Spacer(1, 0.3*cm))
 
@@ -115,9 +117,9 @@ def relatorio_pdf():
         ["Cabeças compradas",             str(r["cab_comp"])],
         ["Cabeças vendidas",              str(r["cab_vend"])],
         ["Estoque atual",                 str(r["estoque"])],
-        ["CMP (Custo Médio Ponderado)",   brl(r["cmp"]) + "/cab."],
-        ["GPCab (Gastos acum./cabeça)",   brl(r["gpcab"]) + "/cab."],
-        ["CTCab (Custo Total/cabeça)",    brl(r["ctcab"]) + "/cab."],
+        ["CMP (compra/cab. rebanho atual)", brl(r["cmp"]) + "/cab."],
+        ["GPCab (gastos/cab. rebanho atual)", brl(r["gpcab"]) + "/cab."],
+        ["CTCab (custo/cab. rebanho atual)", brl(r["ctcab"]) + "/cab."],
         ["Total Compras",                 brl(r["total_comp"])],
         ["Total Gastos",                  brl(r["total_gast"])],
         ["Custo Total",                   brl(r["total_custo"])],
@@ -141,7 +143,8 @@ def relatorio_pdf():
 
     # Resultado por membro
     story.append(Paragraph("Resultado por Membro", styles["Heading2"]))
-    mbr_data = [["Membro", "Cabeças", "Receita", "Custo Total", "Resultado", "Margem"]]
+    # "Líquido" = resultado das vendas − perdas por morte (o mesmo que o painel mostra).
+    mbr_data = [["Membro", "Cab.", "Receita", "Custo", "Resultado", "Perdas", "Líquido"]]
     for m in MEMBROS:
         mr = mbr[m]
         mbr_data.append([
@@ -150,10 +153,17 @@ def relatorio_pdf():
             brl(mr["receita"]),
             brl(mr["custo_total"]),
             brl(mr["resultado"]),
-            pct(mr["margem_pct"]),
+            brl(mr["perdas"]),
+            brl(mr["resultado_liquido"]),
         ])
-    t2 = Table(mbr_data, colWidths=[3.5*cm, 2*cm, 3.5*cm, 3.5*cm, 3.5*cm, 2.5*cm])
-    t2.setStyle(TableStyle(hdr_style))
+    # 17 cm = largura útil do A4 com margens de 2 cm (antes somava 18 cm e vazava).
+    t2 = Table(mbr_data, colWidths=[2.2*cm, 1.2*cm, 2.8*cm, 2.8*cm, 2.8*cm, 2.4*cm, 2.8*cm])
+    t2.setStyle(TableStyle(hdr_style + [
+        ("FONTSIZE",     (0, 0), (-1, -1), 8),
+        ("ALIGN",        (1, 0), (-1, -1), "RIGHT"),
+        ("LEFTPADDING",  (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+    ]))
     story.append(t2)
 
     doc.build(story)
