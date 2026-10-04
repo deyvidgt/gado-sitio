@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,6 +7,13 @@
   <link rel="icon" href="/static/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script>
+    // Mesmo tema escolhido dentro do sistema (chave "gado-theme"), aplicado antes de
+    // desenhar a tela para não piscar branco no modo escuro.
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("gado-theme") || "light");
+    } catch (e) {}
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -21,6 +28,7 @@
     }
 
     .card {
+      position: relative;
       background: #fff;
       border-radius: 20px;
       padding: 44px 40px 36px;
@@ -169,11 +177,50 @@
       margin-bottom: 14px;
     }
     .tentativas.poucas { color: #e65100; font-weight: 600; }
+
+    .esqueceu {
+      text-align: center;
+      font-size: 12.5px;
+      color: #666;
+      margin-top: 16px;
+      line-height: 1.5;
+    }
+
+    /* Botão de tema (canto do cartão) — mesmo visual do botão do sistema */
+    .btn-theme {
+      position: absolute; top: 14px; right: 14px;
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      background: #f8f4ee; border: 1.5px solid #ede7dc;
+      font-size: 16px; cursor: pointer; transition: border-color .18s;
+    }
+    .btn-theme:hover { border-color: #52a044; }
+
+    /* ── Tema escuro (cores do base.html) ── */
+    [data-theme="dark"] body { background: linear-gradient(135deg, #070d08 0%, #142b17 60%, #0c1a0e 100%); }
+    [data-theme="dark"] .card { background: #1a2119; box-shadow: 0 24px 64px rgba(0,0,0,.6); }
+    [data-theme="dark"] .logo-title { color: #90c97f; }
+    [data-theme="dark"] .logo-sub,
+    [data-theme="dark"] .tentativas { color: #b0bfae; }
+    [data-theme="dark"] .footer { color: #6b7d69; }
+    [data-theme="dark"] .divider { background: #1e2820; }
+    [data-theme="dark"] label { color: #b0bfae; }
+    [data-theme="dark"] .input-wrap input { background: #222d22; border-color: #2c3a2d; color: #e8ede7; color-scheme: dark; }
+    [data-theme="dark"] .input-wrap input:focus { background: #1a2119; border-color: #52a044; }
+    [data-theme="dark"] .input-wrap input::placeholder { color: #6b7d69; }
+    [data-theme="dark"] .btn-eye { color: #6b7d69; }
+    [data-theme="dark"] .capslock-warn { background: rgba(201,151,42,.15); border-color: #8a6a1e; color: #f4c56a; }
+    [data-theme="dark"] .erro { background: rgba(192,57,43,.15); border-color: #7a2e26; color: #ff8a80; }
+    [data-theme="dark"] .tentativas.poucas { color: #f4a84a; }
+    [data-theme="dark"] .btn-theme { background: #222d22; border-color: #2c3a2d; }
+    [data-theme="dark"] .esqueceu { color: #b0bfae; }
   </style>
 </head>
 <body>
 
 <div class="card">
+  <button type="button" class="btn-theme" id="btn-theme" onclick="toggleTheme()"
+          title="Mudar para tema escuro" aria-label="Alternar tema">☀️</button>
   <div class="logo">
     <span class="logo-icon">🐄</span>
     <div class="logo-title">Sítio Santo Antonio</div>
@@ -200,7 +247,8 @@
       <input type="text" id="usuario" name="usuario"
              value="{{ usuario_digitado or '' }}"
              placeholder="geane / deyvid / nilson"
-             autofocus autocomplete="username" spellcheck="false">
+             autofocus autocomplete="username" spellcheck="false"
+             autocapitalize="none" autocorrect="off">
     </div>
 
     <label for="senha">Senha</label>
@@ -214,11 +262,15 @@
 
     <!-- Aviso CapsLock — aparece automaticamente -->
     <div class="capslock-warn" id="caps-warn">
-      ⚠️ <span>CapsLock ativado — verifique as maiúsculas</span>
+      ⚠️ <span id="caps-msg">CapsLock ativado — verifique as maiúsculas</span>
     </div>
 
     <button type="submit" class="btn-login" id="btn-submit">🔓 Entrar</button>
   </form>
+
+  <div class="esqueceu">
+    🔑 Esqueceu a senha? Fale com um administrador do site para alterar.
+  </div>
 
   <div class="footer">
     v{{ VERSAO }}
@@ -238,20 +290,47 @@ if ("caches" in window) {
   const btnSubmit   = document.getElementById("btn-submit");
   const form        = document.getElementById("form-login");
 
-  // ── CapsLock detector ────────────────────────────────────────────────────
-  // Funciona em todos os navegadores modernos via event.getModifierState
-  function checkCaps(e) {
-    if (e.getModifierState) {
-      const caps = e.getModifierState("CapsLock");
-      capsWarn.classList.toggle("show", caps);
-    }
+  // ── Aviso de CapsLock / maiúsculas ───────────────────────────────────────
+  // Computador: o navegador informa o CapsLock (getModifierState); como reforço,
+  // letra maiúscula SEM Shift (ou minúscula COM Shift) também indica CapsLock.
+  // Celular: o teclado virtual não informa CapsLock — então avisa quando a senha
+  // está sendo digitada toda em maiúsculas (maiúscula "travada" no teclado).
+  const capsMsg = document.getElementById("caps-msg");
+  let capsTeclado = false;   // detectado pelo teclado físico
+
+  function mostrarAviso(ligado, texto) {
+    capsWarn.classList.toggle("show", ligado);
+    if (ligado) capsMsg.textContent = texto;
   }
 
-  senhaInput.addEventListener("keyup",    checkCaps);
-  senhaInput.addEventListener("keydown",  checkCaps);
-  senhaInput.addEventListener("focus",    checkCaps);
-  // Também checar no campo usuário (CapsLock pode ativar enquanto digita lá)
-  document.getElementById("usuario").addEventListener("keyup", checkCaps);
+  function checkCaps(e) {
+    if (!e.getModifierState) return;
+    let caps = e.getModifierState("CapsLock");
+    const k = e.key || "";
+    if (!caps && k.length === 1 && k.toLowerCase() !== k.toUpperCase()) {
+      caps = (k === k.toUpperCase() && !e.shiftKey) || (k === k.toLowerCase() && e.shiftKey);
+    }
+    // Teclas sem letra (ex.: números, Tab) não desligam um aviso já detectado,
+    // exceto a própria tecla CapsLock, que informa o estado novo.
+    if (k === "CapsLock" || (k.length === 1 && k.toLowerCase() !== k.toUpperCase())) {
+      capsTeclado = caps;
+    }
+    mostrarAviso(capsTeclado, "CapsLock ativado — verifique as maiúsculas");
+  }
+
+  function checkMaiusculasCelular() {
+    if (capsTeclado) return;   // teclado físico já cuida do aviso
+    const letras = senhaInput.value.replace(/[^A-Za-zÀ-ÿ]/g, "");
+    const tudoMaiusculo = letras.length >= 2 && letras === letras.toUpperCase();
+    mostrarAviso(tudoMaiusculo, "Letras MAIÚSCULAS ativadas — verifique a senha");
+  }
+
+  senhaInput.addEventListener("keydown", checkCaps);
+  senhaInput.addEventListener("keyup",   checkCaps);
+  senhaInput.addEventListener("input",   checkMaiusculasCelular);
+  // Também no campo usuário (CapsLock pode ter sido ligado enquanto digita lá)
+  document.getElementById("usuario").addEventListener("keydown", checkCaps);
+  document.getElementById("usuario").addEventListener("keyup",   checkCaps);
 
   // ── Mostrar / ocultar senha ──────────────────────────────────────────────
   function toggleSenha() {
@@ -260,6 +339,20 @@ if ("caches" in window) {
     btnEye.textContent = tipo === "password" ? "👁️" : "🙈";
     senhaInput.focus();
   }
+
+  // ── Tema claro/escuro (mesma chave do sistema: vale para as duas telas) ───
+  const btnTheme = document.getElementById("btn-theme");
+  function aplicarTema(tema) {
+    document.documentElement.setAttribute("data-theme", tema);
+    try { localStorage.setItem("gado-theme", tema); } catch (e) {}
+    const escuro = tema === "dark";
+    btnTheme.textContent = escuro ? "🌙" : "☀️";
+    btnTheme.title = escuro ? "Mudar para tema claro" : "Mudar para tema escuro";
+  }
+  function toggleTheme() {
+    aplicarTema(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+  }
+  aplicarTema(document.documentElement.getAttribute("data-theme") || "light");
 
   // ── Feedback visual no botão durante submit ──────────────────────────────
   form.addEventListener("submit", function() {

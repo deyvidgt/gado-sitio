@@ -320,3 +320,10 @@ def test_service_worker_servido_e_o_do_git(flask_app, tmp_path, monkeypatch):
     monkeypatch.setattr(routes_auth, "BUNDLE_DIR", str(tmp_path))
     r = flask_app.test_client().get("/sw.js")
     assert r.get_data() == raiz
+
+
+def test_tela_de_login_tem_tema_e_aviso_de_senha(flask_app):
+    html = flask_app.test_client().get("/login").get_data(as_text=True)
+    assert 'id="btn-theme"' in html and "gado-theme" in html
+    assert 'id="caps-warn"' in html
+    assert "Esqueceu a senha? Fale com um administrador do site para alterar." in html
