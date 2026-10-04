@@ -7,7 +7,7 @@
 //    (evita o bug "body is locked" e garante dados sempre frescos)
 // ═══════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = "gado-v3";   // v4.1: troca de versão limpa o cache antigo dos celulares
+const CACHE_VERSION = "gado-v4";   // troca de versão limpa o cache antigo dos celulares
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_PAGES   = `${CACHE_VERSION}-pages`;
 
@@ -94,7 +94,10 @@ async function cacheFirst(request) {
 async function networkFirstPage(request) {
   try {
     const response = await fetch(request);
-    if (response.ok) {
+    // Só guarda PÁGINAS (HTML) que não sejam a de login. Antes guardava também os
+    // downloads (planilha de dados, PDF, backups) no celular.
+    const tipo = response.headers.get("Content-Type") || "";
+    if (response.ok && tipo.includes("text/html") && !new URL(response.url).pathname.startsWith("/login")) {
       const cache = await caches.open(CACHE_PAGES);
       cache.put(request, response.clone());  // clone antes de usar
     }

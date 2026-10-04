@@ -131,6 +131,8 @@ def lembretes_sazonais(df_man: pd.DataFrame, hoje: datetime | None = None) -> li
 
 def brucelose_proxima(df_man: pd.DataFrame, hoje: datetime) -> dict:
     """Item da campanha de brucelose no formato da lista 'próximas' do calendário."""
+    # Só a data: com a hora atual, o próprio dia do prazo contava como −1.
+    hoje = datetime(hoje.year, hoje.month, hoje.day)
     b = brucelose_status(df_man, hoje)
     if b["vacinou"]:
         # já vacinou neste semestre: o próximo prazo é o da etapa seguinte

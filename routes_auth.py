@@ -173,8 +173,9 @@ def favicon():
 def service_worker():
     """Service Worker para PWA — servido da raiz para ter escopo correto."""
     from flask import send_from_directory, Response
-    # Tentar static/ primeiro, depois raiz do projeto
-    for pasta in [os.path.join(BUNDLE_DIR, "static"), BASE_DIR, BUNDLE_DIR]:
+    # Raiz do projeto primeiro (é o arquivo versionado no Git); static/ guardava uma
+    # cópia feita pelo atualizar.sh que ficava velha quando só se dava "git pull".
+    for pasta in [BASE_DIR, BUNDLE_DIR, os.path.join(BUNDLE_DIR, "static")]:
         caminho = os.path.join(pasta, "sw.js")
         if os.path.exists(caminho):
             resp = send_from_directory(pasta, "sw.js")
@@ -189,7 +190,7 @@ def service_worker():
 def manifest():
     """Web App Manifest para PWA."""
     from flask import send_from_directory
-    for pasta in [os.path.join(BUNDLE_DIR, "static"), BASE_DIR, BUNDLE_DIR]:
+    for pasta in [BASE_DIR, BUNDLE_DIR, os.path.join(BUNDLE_DIR, "static")]:
         caminho = os.path.join(pasta, "manifest.json")
         if os.path.exists(caminho):
             resp = send_from_directory(pasta, "manifest.json")

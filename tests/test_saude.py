@@ -89,3 +89,25 @@ def test_prazo_salvo_com_padrao_antigo_vira_o_novo(tmp_path, monkeypatch):
     assert prazos["Vermifugação"] == 240   # 120 era o padrão antigo → padrão novo
     assert prazos["Pesagem"] == 60         # ajuste de verdade é respeitado
     assert "Vacinação" not in prazos       # chave antiga ignorada
+
+
+def test_vencimento_no_proprio_dia_nao_aparece_atrasado(monkeypatch):
+    """Data prevista é meia-noite; com a hora atual o dia do vencimento dava −1."""
+    from datetime import datetime
+    import pandas as pd
+    import routes_api_extras as rae
+    from saude import brucelose_proxima
+    agora = datetime(2026, 10, 4, 15, 30)
+    man = pd.DataFrame({"Data": [pd.Timestamp("2025-10-04")], "Tipo": ["Vacina Raiva"],
+                        "Qtd Cabeças": [10]})
+    monkeypatch.setattr(rae, "_agora", lambda: agora)
+    monkeypatch.setattr(rae, "carregar_aba",
+                        lambda aba: man if aba == "Manejo" else pd.DataFrame())
+    monkeypatch.setattr(rae, "get_alertas_saude", lambda: {"Vacina Raiva": 365})
+    with rae.app.test_request_context():
+        from flask import session
+        session["logado"] = True
+        dados = rae.api_calendario_manejo.__wrapped__().get_json()
+    raiva = next(p for p in dados["proximas"] if p["tipo"] == "Vacina Raiva")
+    assert raiva["dias_restantes"] == 0 and raiva["status"] != "atrasado"
+    assert brucelose_proxima(man, datetime(2026, 12, 31, 18, 0))["dias_restantes"] == 0

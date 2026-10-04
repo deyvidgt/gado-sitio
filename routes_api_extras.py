@@ -171,7 +171,9 @@ def api_calendario_manejo():
             ultima_br = _br(ult)
             prox = ult + timedelta(days=intervalo)
             prevista  = _iso(prox)
-            dias_rest = (prox.to_pydatetime() - hoje).days
+            # Compara DATAS (sem hora): com a hora atual, no próprio dia do
+            # vencimento dava −1 ("atrasado") e na véspera dava 0.
+            dias_rest = (prox.normalize() - pd.Timestamp(hoje).normalize()).days
             status = (
                 "atrasado" if dias_rest < 0 else
                 "urgente"  if dias_rest <= 7 else

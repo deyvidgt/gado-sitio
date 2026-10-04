@@ -226,6 +226,12 @@
 </div>
 
 <script>
+// Saiu do sistema (logout ou sessão expirada): apaga as páginas guardadas pelo
+// app no celular, para o painel com os dados não continuar abrindo offline.
+if ("caches" in window) {
+  caches.keys().then(ks => ks.filter(k => k.endsWith("-pages")).forEach(k => caches.delete(k)))
+    .catch(() => {});
+}
   const senhaInput  = document.getElementById("senha");
   const capsWarn    = document.getElementById("caps-warn");
   const btnEye      = document.getElementById("btn-eye");

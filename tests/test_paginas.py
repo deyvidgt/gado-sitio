@@ -3,6 +3,8 @@
 Smoke test das páginas: abre todas as rotas GET (logado) e garante que
 nenhuma devolve erro 500. Roda numa cópia temporária dos dados.
 """
+import os
+
 import pytest
 
 import db
@@ -305,3 +307,16 @@ def test_redefinir_senha_tira_bloqueio(cliente, login_teste, monkeypatch):
                      data={"csrf_token": "tok", "usuario": "teste", "senha_nova": "nova123"})
     assert r.status_code == 302
     assert not login_teste._estado_login("teste")["bloqueio_ate"]
+
+
+def test_service_worker_servido_e_o_do_git(flask_app, tmp_path, monkeypatch):
+    """Uma cópia velha em static/sw.js (do atualizar.sh antigo) não pode vencer
+    o sw.js da raiz, que é o que vem no git pull."""
+    import routes_auth
+    with open(os.path.join(routes_auth.BASE_DIR, "sw.js"), "rb") as f:
+        raiz = f.read()
+    (tmp_path / "static").mkdir()
+    (tmp_path / "static" / "sw.js").write_text("// velho", encoding="utf-8")
+    monkeypatch.setattr(routes_auth, "BUNDLE_DIR", str(tmp_path))
+    r = flask_app.test_client().get("/sw.js")
+    assert r.get_data() == raiz

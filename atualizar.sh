@@ -19,20 +19,16 @@ fi
 echo "=== Atualizando Sistema de Gado ==="
 echo "📂 Pasta do projeto: $PASTA_GADO"
 
-# 1) Criar pasta templates/ e copiar HTMLs
-mkdir -p "$PASTA_GADO/templates"
-cp "$PASTA_GADO"/*.html "$PASTA_GADO/templates/" 2>/dev/null && \
-    echo "✅ $(ls "$PASTA_GADO"/templates/*.html 2>/dev/null | wc -l) templates copiados" || \
-    echo "⚠️  Nenhum HTML encontrado na raiz"
+# 1) Templates vêm só do Git (pasta templates/). ANTES este passo copiava qualquer
+#    .html da raiz POR CIMA de templates/ — um HTML velho esquecido na raiz
+#    desfazia correções de tela a cada atualização. Agora só avisa.
+if ls "$PASTA_GADO"/*.html >/dev/null 2>&1; then
+    echo "⚠️  HTML antigo na raiz do projeto (não é usado — pode apagar):"
+    ls "$PASTA_GADO"/*.html
+fi
 
-# 2) Criar pasta static/ se não existir  
+# 2) Pasta static/ (ícones) — sw.js e manifest.json são servidos direto da raiz.
 mkdir -p "$PASTA_GADO/static"
-
-# 3) Copiar manifest.json e sw.js para static/ (necessário para PWA)
-for f in manifest.json sw.js; do
-    [ -f "$PASTA_GADO/$f" ] && cp "$PASTA_GADO/$f" "$PASTA_GADO/static/$f" && \
-        echo "✅ $f copiado para static/"
-done
 
 # 4) Garantir que gado-dados/ existe (pasta de dados fora do repo)
 mkdir -p ~/gado-dados/backups

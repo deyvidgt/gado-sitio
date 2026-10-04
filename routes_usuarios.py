@@ -236,7 +236,9 @@ def salvar_sitio_config():
         os.makedirs(static_dir, exist_ok=True)
         nome_arquivo = "sitio_logo" + ext
         arquivo.save(os.path.join(static_dir, nome_arquivo))
-        cfg["logo"]      = "/static/" + nome_arquivo
+        # ?v= muda a cada upload: o app no celular guarda /static/ em cache para
+        # sempre, então com a mesma URL o logo novo nunca aparecia.
+        cfg["logo"]      = f"/static/{nome_arquivo}?v={int(_agora().timestamp())}"
         cfg["logo_tipo"] = "imagem"
     elif logo_emoji:
         cfg["logo"]      = logo_emoji
