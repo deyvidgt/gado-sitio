@@ -416,6 +416,7 @@
   applyTheme(localStorage.getItem("gado-theme") || "light");
   chk.addEventListener("change", toggleTheme);
 </script>
+<script src="{{ url_for('static', filename='fila_visitas.js') }}?v={{ VERSAO }}"></script>
 {% block scripts %}{% endblock %}
 <script>
 // ── PWA: registrar service worker ──────────────────────────────────────────

@@ -12,7 +12,7 @@ from calculos import (
     dividir_cotas,
 )
 from config import (TIPOS_GASTO, TIPOS_MANEJO, MEMBROS, NOMES_MEMBROS, COLUNAS_VENDAS,
-                    TIPOS_COM_PRODUTO)
+                    TIPOS_COM_PRODUTO, INSUMOS)
 from extensions import (
     app, _agora, _validar_csrf, login_required,
     _get_dados_cache, _get_resumo_cache,
@@ -192,12 +192,22 @@ def gastos():
         rows.append(d)
     return render_template("lista.html", titulo="Gastos 💸", secao="gastos", aba="Gastos",
                            colunas=["Data","Tipo","Descrição","Valor Total (R$)",
-                                    "Qtd Cabeças","Valor/Cabeça (R$)","Registrado Por"],
+                                    "Qtd Cabeças","Valor/Cabeça (R$)","Registrado Por",
+                                    "Produto","Qtd Sacos"],
                            rows=rows, ordem=ordem,
                            anos_disponiveis=_anos_de(df),
                            tipos_disponiveis=_tipos_de(df),
                            pessoas_disponiveis=_pessoas_de(df, "Registrado Por"),
                            total_valor=_total_valor(df), total_cabecas=_total_cab(df))
+
+def _insumo_do_form(f):
+    """(produto, sacos) de uma compra de Sal/Proteinado; vazio nos outros tipos."""
+    produto = f.get("produto", "").strip()
+    if f.get("tipo") != "Sal/Proteínado" or produto not in INSUMOS:
+        return "", None
+    sacos = _int_form(f.get("qtd_sacos"), 0)
+    return produto, (sacos if sacos > 0 else None)
+
 
 @app.route("/gastos/novo", methods=["GET", "POST"])
 @login_required
@@ -217,10 +227,11 @@ def novo_gasto():
         if cab <= 0:
             cab = max(1, estoque)
         v_cab = round(valor / cab, 4) if cab > 0 else 0
-        salvar_linha("Gastos", [data, tipo, desc, valor, cab, v_cab, membro])
+        produto, sacos = _insumo_do_form(f)
+        salvar_linha("Gastos", [data, tipo, desc, valor, cab, v_cab, membro, produto, sacos])
         flash(f"Gasto registrado! {fmt_brl(valor)} ({tipo})", "success")
         return redirect(url_for("gastos"))
-    return render_template("form_gasto.html", estoque=estoque, gpcab=gpcab,
+    return render_template("form_gasto.html", estoque=estoque, gpcab=gpcab, INSUMOS=INSUMOS,
                            TIPOS=TIPOS_GASTO, MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            hoje=_agora().strftime("%Y-%m-%d"))
 
@@ -248,10 +259,12 @@ def editar_gasto(idx):
         v_cab = round(valor / cab, 4) if cab > 0 else 0
         fazer_backup()
         _limpar_backups_antigos()
+        produto, sacos = _insumo_do_form(f)
         updates = {"Data": pd.to_datetime(data, dayfirst=True, errors="coerce"),
                    "Tipo": tipo, "Descrição": desc,
                    "Valor Total (R$)": valor, "Qtd Cabeças": cab,
-                   "Valor/Cabeça (R$)": v_cab, "Registrado Por": membro}
+                   "Valor/Cabeça (R$)": v_cab, "Registrado Por": membro,
+                   "Produto": produto, "Qtd Sacos": sacos}
         _aplicar_updates(df, idx, updates)
         reescrever_aba("Gastos", df)
         flash("Gasto atualizado!", "success")
@@ -260,7 +273,7 @@ def editar_gasto(idx):
     row["Data"] = fmt_data(row.get("Data"))
     row["data_input"] = df.iloc[idx]["Data"].strftime("%Y-%m-%d") if pd.notna(df.iloc[idx].get("Data")) else ""
     return render_template("form_gasto.html", modo="editar", row=row, idx=idx,
-                           estoque=estoque, gpcab=gpcab,
+                           estoque=estoque, gpcab=gpcab, INSUMOS=INSUMOS,
                            TIPOS=TIPOS_GASTO, MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            hoje=_agora().strftime("%Y-%m-%d"))
 

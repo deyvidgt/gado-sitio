@@ -60,6 +60,10 @@
   /* Modo escuro: os fundos pastel acima deixavam o texto claro do tema ilegível.
      Usa um tom translúcido da mesma cor sobre o fundo escuro. */
   [data-theme="dark"] .vis-section h3 { color: var(--green-300); }
+  .envio-status { padding:14px 16px; border-radius:10px; margin-bottom:16px; font-size:14px; line-height:1.5; }
+  .envio-status.ok      { background:var(--green-50); border:1.5px solid var(--green-200); color:var(--green-700); }
+  .envio-status.offline { background:var(--gold-lt); border:1.5px solid var(--gold); color:var(--text); }
+  .envio-status.erro    { background:rgba(192,57,43,.08); border:1.5px solid var(--danger); color:var(--danger); }
   [data-theme="dark"] .gado-display .val { color: var(--green-300); }
   [data-theme="dark"] #faltando-box { background: rgba(229,115,115,.12); border-color: rgba(229,115,115,.4); }
   [data-theme="dark"] #faltando-box .val { color: #ef9a9a; }
@@ -133,6 +137,7 @@
 
   <form method="post" id="form-visita">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="id_envio" id="id-envio">
 
     <!-- ── Seção 1: Identificação ───────────────────────────────────── -->
     <div class="vis-section">
@@ -186,6 +191,10 @@
     <!-- ── Seção 3: Insumos ─────────────────────────────────────────── -->
     <div class="vis-section">
       <h3>🧂 Insumos — Sal, Ração e Proteinado</h3>
+      <p style="font-size:12px;color:var(--text-3);margin:-6px 0 12px">
+        📦 Em "Sacos em estoque", conte os sacos <strong>fechados guardados</strong> no sítio.
+        Com isso o painel prevê quando cada insumo vai acabar.
+      </p>
       <div class="status-grid" style="grid-template-columns: repeat(auto-fill, minmax(210px, 1fr))">
 
         <!-- Sal -->
@@ -198,7 +207,7 @@
             <option value="Vazio">🚨 Vazio — esgotou!</option>
           </select>
           <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
-            <span style="font-size:12px;font-weight:500;color:var(--text-2);white-space:nowrap">Sacos:</span>
+            <span style="font-size:12px;font-weight:500;color:var(--text-2);white-space:nowrap" title="Quantos sacos fechados há guardados no sítio">Sacos em estoque:</span>
             <input type="number" name="sacos_sal" min="0" max="999" placeholder="—"
                    style="width:72px;padding:5px 8px;border:1.5px solid var(--cream-dk);
                           border-radius:7px;font-size:14px;font-weight:600;text-align:center;
@@ -216,7 +225,7 @@
             <option value="Vazio">🚨 Vazio — esgotou!</option>
           </select>
           <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
-            <span style="font-size:12px;font-weight:500;color:var(--text-2);white-space:nowrap">Sacos:</span>
+            <span style="font-size:12px;font-weight:500;color:var(--text-2);white-space:nowrap" title="Quantos sacos fechados há guardados no sítio">Sacos em estoque:</span>
             <input type="number" name="sacos_racao" min="0" max="999" placeholder="—"
                    style="width:72px;padding:5px 8px;border:1.5px solid var(--cream-dk);
                           border-radius:7px;font-size:14px;font-weight:600;text-align:center;
@@ -234,7 +243,7 @@
             <option value="Vazio">🚨 Vazio — esgotou!</option>
           </select>
           <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
-            <span style="font-size:12px;font-weight:500;color:var(--text-2);white-space:nowrap">Sacos:</span>
+            <span style="font-size:12px;font-weight:500;color:var(--text-2);white-space:nowrap" title="Quantos sacos fechados há guardados no sítio">Sacos em estoque:</span>
             <input type="number" name="sacos_prot" min="0" max="999" placeholder="—"
                    style="width:72px;padding:5px 8px;border:1.5px solid var(--cream-dk);
                           border-radius:7px;font-size:14px;font-weight:600;text-align:center;
@@ -383,8 +392,9 @@
     </div>
 
     <!-- Botões -->
+    <div id="envio-status" class="envio-status" style="display:none"></div>
     <div style="display:flex;gap:12px;margin-bottom:40px">
-      <button type="submit" class="btn btn-primary" style="font-size:15px;padding:12px 28px">
+      <button type="submit" id="btn-salvar-visita" class="btn btn-primary" style="font-size:15px;padding:12px 28px">
         🌾 Salvar Visita
       </button>
       <a href="{{ url_for('visitas') }}" class="btn btn-outline">Cancelar</a>
@@ -392,7 +402,10 @@
 
   </form>
 </div>
+{% endblock %}
 
+{# O bloco de scripts estava DENTRO do bloco content: o Jinja o desenhava duas vezes
+   e cada clique em "Salvar" disparava dois envios. #}
 {% block scripts %}
 <script>
 (function () {  /* IIFE — isola escopo, evita conflito com variáveis globais do base.html */
@@ -446,6 +459,54 @@
     sel.addEventListener("change", () => colorirSelect(sel));
   });
 
+  // ── Envio: na hora se houver internet; sem sinal, guarda no celular ────────
+  // O código único (id_envio) impede o servidor de gravar a mesma visita duas
+  // vezes se o celular reenviar por não ter recebido a confirmação.
+  const form   = document.getElementById("form-visita");
+  const status = document.getElementById("envio-status");
+  const btn    = document.getElementById("btn-salvar-visita");
+
+  function mostrarStatus(cls, html) {
+    status.className = "envio-status " + cls;
+    status.innerHTML = html;
+    status.style.display = "block";
+    status.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  form.addEventListener("submit", async (ev) => {
+    if (!window.FilaVisitas) return;   // sem o script da fila: envio normal do navegador
+    ev.preventDefault();
+    if (!form.reportValidity()) return;
+    btn.disabled = true; btn.textContent = "⏳ Salvando...";
+    document.getElementById("id-envio").value = FilaVisitas.novoId();
+
+    const campos = [];
+    for (const [k, v] of new FormData(form).entries()) {
+      if (k !== "csrf_token") campos.push([k, String(v)]);
+    }
+    const item = { id_envio: document.getElementById("id-envio").value,
+                   campos, criado_em: Date.now() };
+
+    const r = await FilaVisitas.enviarOuGuardar(item);
+    if (r.enviada) {
+      mostrarStatus("ok", r.gado_faltando > 0
+        ? `⚠️ Visita salva — mas ${r.gado_faltando} cabeça(s) estão faltando! Avisando a família…`
+        : "✅ Visita registrada! Avisando a família pelo WhatsApp…");
+      setTimeout(() => { location.href = "{{ url_for('visitas') }}"; }, 1500);
+    } else if (r.guardada) {
+      mostrarStatus("offline",
+        "📴 <strong>Sem internet agora — a visita ficou guardada neste celular.</strong><br>" +
+        "Ela será enviada sozinha assim que houver sinal (basta abrir o app). " +
+        (r.motivo === "login" ? "Antes, entre no sistema de novo." : ""));
+      btn.textContent = "✅ Guardada no celular";
+      form.querySelectorAll("input, select, textarea, button").forEach(el => el.disabled = true);
+    } else {
+      mostrarStatus("erro", "❌ Não foi possível salvar nem guardar a visita neste celular. " +
+                            "Tente de novo ou anote no papel.");
+      btn.disabled = false; btn.textContent = "🌾 Salvar Visita";
+    }
+  });
+
   // Toggle chuva/mm
   document.querySelectorAll("[name='choveu']").forEach(r => {
     r.addEventListener("change", function () {
@@ -455,5 +516,4 @@
   });
 })();  /* fim IIFE */
 </script>
-{% endblock %}
 {% endblock %}

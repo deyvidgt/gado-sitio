@@ -75,7 +75,10 @@ def dashboard():
         rebanho_est["rendimento"]   = rendimento
         rebanho_est["preco_arroba"] = PRECO_ARROBA_REF
 
-    return render_template("dashboard.html", r=r, membros=membros_r,
+    from insumos import previsao_todos
+    insumos = previsao_todos(dados["Visitas"], dados["Gastos"], _agora())
+
+    return render_template("dashboard.html", r=r, membros=membros_r, insumos=insumos,
                            estoque_membro=estoque_membro, recentes=recentes[:6],
                            alertas=_gerar_alertas(dados),
                            indicadores=indicadores, rebanho_est=rebanho_est,

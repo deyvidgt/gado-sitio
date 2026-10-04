@@ -3,12 +3,18 @@
 """
 Rotas de Visitas ao Sítio — Sítio Santo Antonio
 """
-from flask import render_template, request, redirect, url_for, flash, session
+import os
+import re
+import threading
+import time
+from contextlib import contextmanager
+
+from flask import render_template, request, redirect, url_for, flash, session, jsonify
 from db import carregar_aba, fazer_backup
 from calculos import calcular_estoque
 from config import MEMBROS, NOMES_MEMBROS
 from extensions import (
-    app, _agora, _validar_csrf, login_required,
+    app, _agora, _validar_csrf, _gerar_csrf, login_required,
     _get_dados_cache, salvar_linha, reescrever_aba,
     _limpar_backups_antigos, fmt_data,
 )
@@ -88,28 +94,25 @@ def _gerar_sugestoes_visita(f, estoque_esperado):
 
 # ── Notificação WhatsApp ao registrar visita ──────────────────────────────────
 
-def _notificar_visita_whatsapp(row_dict: dict, estoque_esperado: int,
-                                usuario_logado: str):
+def _enviar_avisos_depois(resposta):
     """
-    Dispara notificação WhatsApp para toda a família informando que
-    uma nova visita foi registrada, com todos os detalhes.
-    Roda em background thread para não travar a resposta HTTP.
+    Envia os avisos de visita pendentes DEPOIS que a resposta saiu para o celular
+    (response.call_on_close): quem registrou não espera, e roda no próprio
+    processo do servidor (antes era uma thread, que o PythonAnywhere não garante).
+    O aviso fica gravado em avisos_pendentes.json até sair — se a conexão cair,
+    a próxima requisição de visita (ou a Task diária) envia.
     """
-    import threading
-
     def _enviar():
         try:
-            from alertas_whatsapp import montar_msg_nova_visita, enviar_para_familia
-            msg = montar_msg_nova_visita(row_dict, estoque_esperado)
-            enviados = enviar_para_familia(msg)
-            app.logger.info(
-                f"Notificação de visita enviada para {enviados} destinatário(s) "
-                f"(registrado por: {usuario_logado})"
-            )
+            from alertas_whatsapp import enviar_avisos_pendentes
+            n = enviar_avisos_pendentes()
+            if n:
+                app.logger.info(f"Aviso de visita enviado para {n} destinatário(s)")
         except Exception as e:
             app.logger.error(f"Erro ao notificar visita via WhatsApp: {e}")
 
-    threading.Thread(target=_enviar, daemon=True).start()
+    resposta.call_on_close(_enviar)
+    return resposta
 
 
 # ── Listar visitas ────────────────────────────────────────────────────────────
@@ -155,109 +158,209 @@ def visitas():
 
 # ── Nova visita ───────────────────────────────────────────────────────────────
 
-@app.route("/visitas/nova", methods=["GET", "POST"])
-@login_required
-def nova_visita():
+def _id_envio_valido(v) -> str:
+    v = (v or "").strip()
+    return v if re.fullmatch(r"[0-9a-fA-F-]{8,64}", v) else ""
+
+
+@contextmanager
+def _trava_visitas(espera_max: float = 15.0):
+    """
+    Uma visita por vez entre "esse ID Envio já existe?" e a gravação. Sem isso,
+    duas abas do celular reenviando a mesma visita ao mesmo tempo passavam as
+    duas pela checagem e gravavam em dobro. Arquivo de trava na pasta de dados
+    (vale para mais de um processo do servidor) + lock da thread.
+    """
+    from db import DATA_DIR
+    caminho = os.path.join(DATA_DIR, ".visitas.lock")
+    with _lock_visitas:
+        inicio = time.time()
+        while True:
+            try:
+                fd = os.open(caminho, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                break
+            except FileExistsError:
+                try:   # trava esquecida por um processo que caiu
+                    if time.time() - os.path.getmtime(caminho) > 60:
+                        os.remove(caminho)
+                        continue
+                except OSError:
+                    continue
+                if time.time() - inicio > espera_max:
+                    raise TimeoutError("Trava de visitas ocupada")
+                time.sleep(0.05)
+        try:
+            yield
+        finally:
+            os.close(fd)
+            try:
+                os.remove(caminho)
+            except OSError:
+                pass
+
+
+_lock_visitas = threading.Lock()
+
+
+def _registrar_visita(f) -> dict:
+    with _trava_visitas():
+        return _registrar_visita_sem_trava(f)
+
+
+def _registrar_visita_sem_trava(f) -> dict:
+    """
+    Grava uma visita a partir do formulário (enviado na hora ou guardado no
+    celular sem internet). Retorna {"duplicada", "row", "estoque", "gado_falt"}.
+    Se o mesmo "ID Envio" já existir (o celular reenviou porque não recebeu a
+    confirmação), não grava de novo.
+    """
     dados   = _get_dados_cache()
     estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
 
-    if request.method == "POST":
-        _validar_csrf()
-        f = request.form
+    # Gravado como "id:<código>": um código só de dígitos virava NÚMERO na leitura
+    # da planilha (pandas) e a checagem de duplicata falhava.
+    id_envio = _id_envio_valido(f.get("id_envio"))
+    chave_envio = f"id:{id_envio}" if id_envio else None
+    if chave_envio:
+        df_vis = carregar_aba("Visitas")
+        if "ID Envio" in df_vis.columns and (df_vis["ID Envio"].astype(str) == chave_envio).any():
+            return {"duplicada": True, "row": None, "estoque": estoque, "gado_falt": 0}
 
-        data        = f.get("data") or _agora().strftime("%d/%m/%Y")
-        responsavel = f.get("responsavel", "")
-        gado_cnt    = _int_seguro(f.get("gado_contado"))
-        gado_esp    = estoque
-        gado_falt   = max(0, gado_esp - gado_cnt) if gado_cnt > 0 else 0
+    data        = f.get("data") or _agora().strftime("%d/%m/%Y")
+    responsavel = f.get("responsavel", "")
+    gado_cnt    = _int_seguro(f.get("gado_contado"))
+    gado_esp    = estoque
+    gado_falt   = max(0, gado_esp - gado_cnt) if gado_cnt > 0 else 0
 
-        sal      = f.get("sal_racao",  "OK")
-        racao    = f.get("racao",      "OK")
-        prot     = f.get("proteinado", "OK")
-        mato     = f.get("mato",       "Limpo")
-        grama    = f.get("grama",      "Boa")
-        corrego  = f.get("corrego",    "Normal")
-        quintal  = f.get("quintal",    "OK")
-        cisterna = f.get("cisterna",   "OK")
-        caixa_agua = f.get("caixa_agua", "Cheia")
-        conteiner  = f.get("conteiner",  "Cheio")
-        choveu   = "Sim" if f.get("choveu") == "sim" else "Não"
+    sal      = f.get("sal_racao",  "OK")
+    racao    = f.get("racao",      "OK")
+    prot     = f.get("proteinado", "OK")
+    mato     = f.get("mato",       "Limpo")
+    grama    = f.get("grama",      "Boa")
+    corrego  = f.get("corrego",    "Normal")
+    quintal  = f.get("quintal",    "OK")
+    cisterna = f.get("cisterna",   "OK")
+    caixa_agua = f.get("caixa_agua", "Cheia")
+    conteiner  = f.get("conteiner",  "Cheio")
+    choveu   = "Sim" if f.get("choveu") == "sim" else "Não"
 
-        def _litros_safe(v):
-            try:
-                s = str(v).strip().replace(",", ".")
-                return round(float(s), 1) if s else None
-            except Exception:
-                return None
-
-        caixa_agua_litros = _litros_safe(f.get("caixa_agua_litros"))
-        conteiner_litros  = _litros_safe(f.get("conteiner_litros"))
-
+    def _litros_safe(v):
         try:
-            chuva_mm = float(str(f.get("chuva_mm", "0") or "0").replace(",", "."))
+            s = str(v).strip().replace(",", ".")
+            return round(float(s), 1) if s else None
         except Exception:
-            chuva_mm = 0.0
+            return None
 
-        obs       = f.get("observacoes", "").strip()
-        sugestoes = _gerar_sugestoes_visita(f, estoque)
+    caixa_agua_litros = _litros_safe(f.get("caixa_agua_litros"))
+    conteiner_litros  = _litros_safe(f.get("conteiner_litros"))
 
-        def _int_safe(v):
-            try:
-                return int(str(v).strip()) if v and str(v).strip() else None
-            except Exception:
-                return None
+    try:
+        chuva_mm = float(str(f.get("chuva_mm", "0") or "0").replace(",", "."))
+    except Exception:
+        chuva_mm = 0.0
 
-        sacos_sal  = _int_safe(f.get("sacos_sal"))
-        sacos_racao = _int_safe(f.get("sacos_racao"))
-        sacos_prot = _int_safe(f.get("sacos_prot"))
+    obs       = f.get("observacoes", "").strip()
+    sugestoes = _gerar_sugestoes_visita(f, estoque)
 
-        salvar_linha("Visitas", [
-            data, responsavel,
-            gado_cnt, gado_esp, gado_falt,
-            sal, prot, mato, grama, corrego,
-            quintal, cisterna,
-            choveu, chuva_mm if chuva_mm > 0 else None,
-            obs, sugestoes,
-            sacos_sal, sacos_prot,
-            caixa_agua, caixa_agua_litros,
-            conteiner, conteiner_litros,
-            racao, sacos_racao,
-        ])
+    def _int_safe(v):
+        try:
+            return int(str(v).strip()) if v and str(v).strip() else None
+        except Exception:
+            return None
 
-        # ── Notificar família via WhatsApp ────────────────────────────────────
-        row_para_wpp = {
-            "Responsável":    responsavel,
-            "Data":           data,
-            "Gado Contado":   gado_cnt,
-            "Gado Esperado":  gado_esp,
-            "Gado Faltando":  gado_falt,
-            "Sal/Ração":      sal,
-            "Ração":          racao,
-            "Proteinado":     prot,
-            "Mato/Vegetação": mato,
-            "Grama/Pastagem": grama,
-            "Córrego/Água":   corrego,
-            "Quintal":        quintal,
-            "Cisterna":       cisterna,
-            "Choveu":         choveu,
-            "Chuva mm":       chuva_mm if chuva_mm > 0 else 0,
-            "Observações":    obs,
-            "Sugestões":      sugestoes,
-        }
-        _notificar_visita_whatsapp(
-            row_para_wpp, estoque,
-            usuario_logado=session.get("usuario", "")
-        )
+    sacos_sal   = _int_safe(f.get("sacos_sal"))
+    sacos_racao = _int_safe(f.get("sacos_racao"))
+    sacos_prot  = _int_safe(f.get("sacos_prot"))
 
-        if gado_falt > 0:
-            flash(f"⚠️ Visita salva — mas {gado_falt} cabeça(s) estão faltando!", "warning")
+    salvar_linha("Visitas", [
+        data, responsavel,
+        gado_cnt, gado_esp, gado_falt,
+        sal, prot, mato, grama, corrego,
+        quintal, cisterna,
+        choveu, chuva_mm if chuva_mm > 0 else None,
+        obs, sugestoes,
+        sacos_sal, sacos_prot,
+        caixa_agua, caixa_agua_litros,
+        conteiner, conteiner_litros,
+        racao, sacos_racao,
+        chave_envio,
+    ])
+
+    row = {
+        "Responsável":    responsavel,
+        "Data":           data,
+        "Gado Contado":   gado_cnt,
+        "Gado Esperado":  gado_esp,
+        "Gado Faltando":  gado_falt,
+        "Sal/Ração":      sal,
+        "Ração":          racao,
+        "Proteinado":     prot,
+        "Mato/Vegetação": mato,
+        "Grama/Pastagem": grama,
+        "Córrego/Água":   corrego,
+        "Quintal":        quintal,
+        "Cisterna":       cisterna,
+        "Choveu":         choveu,
+        "Chuva mm":       chuva_mm if chuva_mm > 0 else 0,
+        "Observações":    obs,
+        "Sugestões":      sugestoes,
+    }
+    try:
+        from alertas_whatsapp import montar_msg_nova_visita, guardar_aviso_pendente
+        guardar_aviso_pendente(montar_msg_nova_visita(row, estoque))
+    except Exception as e:
+        app.logger.error(f"Não foi possível guardar o aviso da visita: {e}")
+    return {"duplicada": False, "row": row, "estoque": estoque, "gado_falt": gado_falt}
+
+
+@app.route("/visitas/nova", methods=["GET", "POST"])
+@login_required
+def nova_visita():
+    if request.method == "POST":
+        # Caminho sem JavaScript (normalmente o formulário envia por /api/visitas).
+        _validar_csrf()
+        r = _registrar_visita(request.form)
+        if r["duplicada"]:
+            flash("Esta visita já tinha sido registrada.", "info")
+            return _enviar_avisos_depois(redirect(url_for("visitas")))
+        if r["gado_falt"] > 0:
+            flash(f"⚠️ Visita salva — mas {r['gado_falt']} cabeça(s) estão faltando!", "warning")
         else:
             flash("✅ Visita registrada! Avisando a família pelo WhatsApp…", "success")
-        return redirect(url_for("visitas"))
+        return _enviar_avisos_depois(redirect(url_for("visitas")))
 
+    dados   = _get_dados_cache()
+    estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
     return render_template("form_visita.html", estoque=estoque,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            hoje=_agora().strftime("%Y-%m-%d"))
+
+
+@app.route("/api/csrf")
+def api_csrf():
+    """Token CSRF da sessão atual — o celular usa ao enviar visitas guardadas
+    offline (a página guardada pode ter o token de uma sessão antiga)."""
+    if not session.get("logado"):
+        return jsonify({"ok": False, "erro": "login"}), 401
+    return jsonify({"ok": True, "csrf_token": _gerar_csrf()})
+
+
+@app.route("/api/visitas", methods=["POST"])
+def api_registrar_visita():
+    """
+    Recebe a visita do celular — na hora, ou depois, quando estava sem internet.
+    Responde sempre em JSON (nunca redireciona para o login): o celular precisa
+    saber se tira a visita da fila ou tenta de novo mais tarde.
+    """
+    if not session.get("logado"):
+        return jsonify({"ok": False, "erro": "login"}), 401
+    token = request.form.get("csrf_token", "")
+    if not token or token != session.get("csrf_token"):
+        return jsonify({"ok": False, "erro": "csrf"}), 403
+    r = _registrar_visita(request.form)
+    # Também no reenvio duplicado: se a 1ª conexão caiu antes de avisar, avisa agora.
+    return _enviar_avisos_depois(jsonify({"ok": True, "duplicada": r["duplicada"],
+                                          "gado_faltando": r["gado_falt"]}))
 
 
 # ── Excluir visita ────────────────────────────────────────────────────────────

@@ -23,7 +23,7 @@
         </div>
         <div class="form-group">
           <label>Tipo de Gasto</label>
-          <select name="tipo" required>
+          <select name="tipo" required id="tipo-in">
             <option value="">Selecione...</option>
             {% for t in TIPOS %}
               <option value="{{ t }}" {{ 'selected' if modo == 'editar' and row and row.Tipo == t }}>{{ t }}</option>
@@ -35,6 +35,25 @@
           <input type="text" name="descricao"
                  value="{{ row.get('Descrição','') if modo == 'editar' and row else '' }}"
                  placeholder="ex: Sal proteínado 50kg">
+        </div>
+        {# v4.2: compra de insumo → alimenta a previsão de estoque do painel #}
+        {% set prod_atual = (row.get('Produto') if modo == 'editar' and row else '') %}
+        {% set sacos_atual = (row.get('Qtd Sacos') if modo == 'editar' and row else '') %}
+        <div class="form-group campo-insumo">
+          <label>Produto comprado</label>
+          <select name="produto">
+            <option value="">— não é compra de saco —</option>
+            {% for p in INSUMOS %}
+              <option value="{{ p }}" {{ 'selected' if prod_atual == p }}>{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group campo-insumo">
+          <label>Quantos sacos</label>
+          <input type="number" name="qtd_sacos" min="0" max="999" step="1"
+                 value="{{ sacos_atual|int if (sacos_atual is number and sacos_atual == sacos_atual) else '' }}"
+                 placeholder="ex: 10">
+          <span class="hint">Usado para prever quando o estoque acaba</span>
         </div>
         <div class="form-group">
           <label>Valor Total (R$)</label>
@@ -92,5 +111,14 @@
   val.addEventListener("input", calc);
   cab.addEventListener("input", calc);
   calc();
+
+  // Produto/sacos só aparecem em compra de Sal/Proteinado
+  const tipo = document.getElementById("tipo-in");
+  function mostrarInsumo() {
+    const sim = tipo.value === "Sal/Proteínado";
+    document.querySelectorAll(".campo-insumo").forEach(el => el.style.display = sim ? "" : "none");
+  }
+  tipo.addEventListener("change", mostrarInsumo);
+  mostrarInsumo();
 </script>
 {% endblock %}

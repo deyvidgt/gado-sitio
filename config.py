@@ -20,7 +20,7 @@ for _stream in ("stdout", "stderr"):
         pass
 
 ARQUIVO_DADOS = "gado_familia.xlsx"
-VERSAO = "4.1.1"
+VERSAO = "4.2.0"
 NOME_SITIO = "Sítio Santo Antonio"
 FAMILIA = "Geane, Deyvid e Nilson"
 
@@ -101,6 +101,9 @@ COLUNAS_COMPRAS = [
 COLUNAS_GASTOS = [
     "Data", "Tipo", "Descrição", "Valor Total (R$)",
     "Qtd Cabeças", "Valor/Cabeça (R$)", "Registrado Por",
+    # NOVO v4.2: compra de insumo (Sal/Proteinado/Ração) e quantos sacos — alimenta
+    # a previsão de estoque (insumos.py).
+    "Produto", "Qtd Sacos",
 ]
 COLUNAS_VENDAS = [
     "Data", "Qtd Cabeças", "Valor Total (R$)", "Valor/Cabeça (R$)",
@@ -140,7 +143,18 @@ COLUNAS_VISITAS = [
     "Conteiner", "Conteiner Litros",
     # NOVO v4.0: Ração separada do Sal (a coluna "Sal/Ração" guarda o Sal).
     "Ração", "Sacos Ração",
+    # NOVO v4.2: código único gerado no celular — evita gravar a mesma visita
+    # duas vezes quando o envio offline é repetido.
+    "ID Envio",
 ]
+
+# v4.2: na visita, "Sacos" = sacos EM ESTOQUE no sítio (contados naquela visita).
+# Coluna da aba Visitas com o estoque contado de cada insumo.
+INSUMOS = {
+    "Sal":        "Sacos Sal/Ração",
+    "Proteinado": "Sacos Proteinado",
+    "Ração":      "Sacos Ração",
+}
 
 OPCOES_VISITA = {
     "sal_racao":  ["OK", "Meio Saco", "Baixo", "Vazio"],

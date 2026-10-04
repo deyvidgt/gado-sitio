@@ -208,6 +208,42 @@
 
 </div>
 
+<!-- ═══ ESTOQUE DE INSUMOS (v4.2) ════════════════════════════════════════════ -->
+<div class="card" style="margin-bottom:24px" id="card-insumos">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div class="card-title" style="margin-bottom:0">🧂 Estoque de Insumos</div>
+    <a href="{{ url_for('novo_gasto') }}" class="btn btn-outline btn-sm">+ Lançar compra</a>
+  </div>
+  <div class="insumos-grid">
+    {% for p in insumos %}
+    <div class="insumo insumo-{{ p.status }}">
+      <div class="insumo-nome">{{ p.produto }}</div>
+      {% if p.status == 'sem_dados' %}
+        <div class="insumo-num">—</div>
+        <div class="insumo-txt">Conte os sacos em estoque na próxima visita.</div>
+      {% else %}
+        <div class="insumo-num">~{{ '%g'|format(p.estoque)|replace('.', ',') }} <small>saco(s)</small></div>
+        {% if p.status == 'sem_consumo' %}
+          <div class="insumo-txt">Contado em {{ p.contado_em.strftime('%d/%m') }}. Conte de novo na próxima visita para calcular o consumo.</div>
+        {% elif p.status == 'acabou' %}
+          <div class="insumo-txt"><strong>Provavelmente acabou — comprar já.</strong></div>
+        {% else %}
+          <div class="insumo-txt">
+            Acaba por volta de <strong>{{ p.acaba_em.strftime('%d/%m') }}</strong>
+            ({{ p.dias_restantes }} dia{{ 's' if p.dias_restantes != 1 else '' }}).<br>
+            Compre até <strong>{{ p.comprar_ate.strftime('%d/%m') }}</strong>.
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <div style="font-size:11.5px;color:var(--text-3);margin-top:10px;line-height:1.5">
+    Calculado pelos sacos contados em estoque nas visitas e pelas compras lançadas em Gastos
+    (tipo Sal/Proteínado, com produto e quantidade de sacos).
+  </div>
+</div>
+
 <!-- ═══ ATALHO WHATSAPP ═══════════════════════════════════════════════════════ -->
 <div class="card" style="margin-bottom:24px" id="card-whatsapp">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
@@ -498,6 +534,18 @@
   /* widget externo (Notícias Agrícolas) vem com texto #333 fixo */
   [data-theme="dark"] .widget-na, [data-theme="dark"] .widget-na * { color:var(--text) !important; background-color:transparent !important; }
   [data-theme="dark"] .widget-na th { color:var(--text-2) !important; }
+
+  /* ── Estoque de insumos ── */
+  .insumos-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:10px; }
+  .insumo { border-radius:10px; padding:12px 14px; background:var(--cream); border:1.5px solid var(--cream-dk); }
+  .insumo-nome { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-3); }
+  .insumo-num { font-family:'Playfair Display',serif; font-size:24px; font-weight:700; color:var(--text); margin:2px 0 4px; }
+  .insumo-num small { font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500; color:var(--text-3); }
+  .insumo-txt { font-size:12.5px; color:var(--text-2); line-height:1.5; }
+  .insumo-ok      { border-color:var(--green-200); background:var(--green-50); }
+  .insumo-proximo { border-color:var(--gold); background:var(--gold-lt); }
+  .insumo-urgente, .insumo-acabou { border-color:var(--danger); background:rgba(192,57,43,.08); }
+  .insumo-urgente .insumo-num, .insumo-acabou .insumo-num { color:var(--danger); }
 
   /* ── Tooltip calendário ── */
   .cal-tooltip { display:none;position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--cream-dk);border-radius:12px;padding:12px 16px;box-shadow:0 8px 28px rgba(0,0,0,.18);font-size:12.5px;max-width:240px;pointer-events:none;transition:opacity .15s; }

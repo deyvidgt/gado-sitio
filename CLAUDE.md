@@ -47,10 +47,12 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 | `calculos.py` | **Motor financeiro** (CMP, GPCab, CTCab, resultado por membro, resumo) |
 | `routes_*.py` | Rotas por área (registros, visitas, relatórios, api, usuários, auth…) |
 | `relatorios.py` / `exportar.py` | Geração de relatórios e exportação |
-| `alertas_whatsapp.py` | Notificações via CallMeBot |
+| `alertas_whatsapp.py` | Notificações via CallMeBot: Task diária só com urgentes (sem repetir), resumo semanal na segunda; fila de avisos de visita (`avisos_pendentes.json`) |
 | `saude.py` | Calendário sanitário (Triângulo Mineiro): vacina por tipo, campanha de brucelose, vermifugação 5-7-9 — fonte única p/ painel, calendário e WhatsApp |
 | `backup_automatico.py` | Backup diário (Task do PythonAnywhere) |
 | `resumo_mensal.py` | Resumo do mês no WhatsApp no dia 1º (Task diária; `--teste` só mostra) |
+| `insumos.py` | Estoque de Sal/Proteinado/Ração: sacos em estoque contados nas visitas + compras (Gastos: Produto/Qtd Sacos) → consumo e "acaba em" (painel e WhatsApp) |
+| `static/fila_visitas.js` | Visita offline: guarda no celular (IndexedDB) e envia por `/api/visitas` quando há sinal; `ID Envio` evita duplicata |
 | `tests/` | Testes automáticos (pytest) |
 | `templates/` | Jinja2 (base.html + páginas); `static/` assets e PWA (`sw.js`, `manifest.json`) |
 

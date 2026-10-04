@@ -2,6 +2,32 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
+## [4.2.0] — 2026-10-04
+
+### Novo
+- **Visita sem internet**: o formulário de visita abre e salva sem sinal. A visita fica
+  guardada no celular (`static/fila_visitas.js`, IndexedDB) e é enviada sozinha quando a
+  internet volta (ao abrir o app, ao reconectar ou a cada 30 s). Faixa no topo mostra
+  quantas aguardam envio. Cada visita tem um código único (`ID Envio`): reenvio nunca
+  grava em dobro. Novo endpoint `/api/visitas` (JSON) e `/api/csrf`.
+- **Estoque de insumos** (`insumos.py`, card no painel): na visita, "Sacos em estoque"
+  de Sal, Proteinado e Ração; no gasto do tipo Sal/Proteínado, produto e quantidade de
+  sacos comprados. Calcula consumo, estoque estimado e "acaba por volta de / compre até".
+- **WhatsApp**: nos dias comuns só alertas **urgentes** (vacina atrasada ou vencendo em
+  até 7 dias, insumo acabando, 14+ dias sem visita, lembrete de campanha), cada um
+  repetido no máximo a cada poucos dias; sem urgência, nada é enviado. **Segunda-feira**:
+  resumo semanal completo. `alertas_whatsapp.py --teste [--semanal]` mostra sem enviar.
+
+### Corrigido
+- Aviso de visita no WhatsApp rodava numa thread (o PythonAnywhere não garante) — agora
+  fica numa fila (`avisos_pendentes.json`) e sai logo após a resposta; se a conexão cair,
+  sai na próxima requisição de visita ou na Task diária.
+- `form_visita.html` e `form_manejo.html`: o bloco de scripts estava dentro do conteúdo e
+  era desenhado **duas vezes** (com o envio novo, cada "Salvar" mandaria duas visitas).
+
+### Colunas novas (no fim, migradas automaticamente)
+- Gastos: `Produto`, `Qtd Sacos` · Visitas: `ID Envio`
+
 ## [4.1.1] — 2026-10-03
 
 ### Corrigido — modo escuro

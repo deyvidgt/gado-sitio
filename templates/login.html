@@ -284,6 +284,8 @@ if ("caches" in window) {
   caches.keys().then(ks => ks.filter(k => k.endsWith("-pages")).forEach(k => caches.delete(k)))
     .catch(() => {});
 }
+// …e o formulário de visita offline precisa ser guardado de novo após o login.
+try { localStorage.removeItem("gado-form-visita-ts"); } catch (e) {}
   const senhaInput  = document.getElementById("senha");
   const capsWarn    = document.getElementById("caps-warn");
   const btnEye      = document.getElementById("btn-eye");
