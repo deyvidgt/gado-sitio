@@ -14,11 +14,19 @@ from extensions import (
 )
 
 
+def _int_seguro(v) -> int:
+    """Inteiro do formulário; vazio/inválido vira 0 em vez de erro 500."""
+    try:
+        return max(0, int(float(str(v).strip().replace(",", "."))))
+    except (TypeError, ValueError):
+        return 0
+
+
 # ── Sugestões automáticas ─────────────────────────────────────────────────────
 
 def _gerar_sugestoes_visita(f, estoque_esperado):
     sug = []
-    gado_contado = int(f.get("gado_contado") or 0)
+    gado_contado = _int_seguro(f.get("gado_contado"))
     if gado_contado > 0 and estoque_esperado > 0:
         if gado_contado < estoque_esperado:
             falt = estoque_esperado - gado_contado
@@ -157,9 +165,9 @@ def nova_visita():
         _validar_csrf()
         f = request.form
 
-        data        = f.get("data", _agora().strftime("%d/%m/%Y"))
+        data        = f.get("data") or _agora().strftime("%d/%m/%Y")
         responsavel = f.get("responsavel", "")
-        gado_cnt    = int(f.get("gado_contado") or 0)
+        gado_cnt    = _int_seguro(f.get("gado_contado"))
         gado_esp    = estoque
         gado_falt   = max(0, gado_esp - gado_cnt) if gado_cnt > 0 else 0
 
@@ -244,7 +252,7 @@ def nova_visita():
         if gado_falt > 0:
             flash(f"⚠️ Visita salva — mas {gado_falt} cabeça(s) estão faltando!", "warning")
         else:
-            flash("✅ Visita registrada! Família notificada via WhatsApp.", "success")
+            flash("✅ Visita registrada! Avisando a família pelo WhatsApp…", "success")
         return redirect(url_for("visitas"))
 
     return render_template("form_visita.html", estoque=estoque,

@@ -273,6 +273,10 @@ def _preparar_valor(v):
     if isinstance(v, float) and (pd.isna(v) or v != v):
         return None
 
+    # NaT (data vazia) não é Timestamp nem float — ia parar na planilha como "NaT".
+    if v is pd.NaT:
+        return None
+
     return v
 
 
@@ -296,9 +300,10 @@ def reescrever_aba(aba: str, df: pd.DataFrame):
     wb = load_workbook(ARQUIVO_PATH)
     ws = wb[aba]
 
-    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
-        for cell in row:
-            cell.value = None
+    # Apaga as linhas antigas (não só os valores): antes as linhas ficavam vazias e
+    # o append gravava DEPOIS delas — a aba dobrava de tamanho a cada edição/exclusão.
+    if ws.max_row > 1:
+        ws.delete_rows(2, ws.max_row - 1)
 
     for _, row in df.iterrows():
         ws.append([_preparar_valor(v) for v in row])

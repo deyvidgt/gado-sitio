@@ -148,3 +148,111 @@ def test_form_manejo_sugere_produtos_do_mercado(cliente):
 def test_lista_de_visitas_nao_mostra_nan(cliente):
     html = cliente.get("/visitas").get_data(as_text=True)
     assert "📝 nan" not in html
+
+
+# ── Regressões (revisão de bugs out/2026) ──────────────────────────────────────
+
+def test_editar_nao_deixa_linhas_vazias_na_planilha(cliente, dados_restaurados):
+    """reescrever_aba só limpava os valores: a aba dobrava a cada edição."""
+    from openpyxl import load_workbook
+    with cliente.session_transaction() as s:
+        s["csrf_token"] = "tok"
+    n = len(db.carregar_aba("Gastos"))
+    r = cliente.post("/gastos/editar/0", data={
+        "csrf_token": "tok", "data": "2025-01-05", "tipo": "Sal/Proteínado",
+        "descricao": "teste", "valor": "100", "cabecas": "10"})
+    assert r.status_code == 302
+    assert load_workbook(db.ARQUIVO_PATH)["Gastos"].max_row == n + 1
+    assert len(db.carregar_aba("Gastos")) == n
+
+
+def test_numero_invalido_no_form_nao_da_500(cliente, dados_restaurados):
+    with cliente.session_transaction() as s:
+        s["csrf_token"] = "tok"
+    r = cliente.post("/compras/nova", data={"csrf_token": "tok", "data": "2026-01-10",
+                                            "cabecas": "abc", "valor": "10"})
+    assert r.status_code == 302
+
+
+def test_login_nao_redireciona_para_site_externo(flask_app, login_teste):
+    cli = flask_app.test_client()
+    with cli.session_transaction() as s:
+        s["csrf_token"] = "tok"
+    r = cli.post("/login?next=https://evil.example",
+                 data={"csrf_token": "tok", "usuario": "teste", "senha": "x"})
+    assert r.status_code == 302
+    assert "evil.example" not in r.headers["Location"]
+
+
+@pytest.fixture
+def login_teste(monkeypatch):
+    """Usuário fictício 'teste' (senha 'x') e arquivo de bloqueios zerado."""
+    import os
+    import extensions
+    import routes_auth
+    monkeypatch.setattr(routes_auth, "_carregar_usuarios",
+                        lambda: {"teste": {"hash": extensions._sha256("x")}})
+    monkeypatch.setattr(routes_auth, "_bcrypt_disponivel", lambda: False)
+    caminho = routes_auth._bloqueios_path()
+    if os.path.exists(caminho):
+        os.remove(caminho)
+    yield routes_auth
+    if os.path.exists(caminho):
+        os.remove(caminho)
+
+
+def _tentar_login(flask_app, senha):
+    """Cada tentativa num navegador NOVO (= cookie apagado)."""
+    cli = flask_app.test_client()
+    with cli.session_transaction() as s:
+        s["csrf_token"] = "tok"
+    return cli.post("/login", data={"csrf_token": "tok", "usuario": "teste", "senha": senha})
+
+
+def test_bloqueio_de_login_vale_mesmo_apagando_o_cookie(flask_app, login_teste):
+    from config import MAX_TENTATIVAS_LOGIN
+    for _ in range(MAX_TENTATIVAS_LOGIN):
+        assert _tentar_login(flask_app, "errada").status_code == 200
+    # Bloqueado: nem a senha CERTA entra, mesmo vindo de outro navegador.
+    r = _tentar_login(flask_app, "x")
+    assert r.status_code == 200
+    assert "Aguarde" in r.get_data(as_text=True)
+
+
+def test_bloqueio_expira_e_login_certo_zera_contador(flask_app, login_teste):
+    from datetime import timedelta
+    from config import MAX_TENTATIVAS_LOGIN
+    for _ in range(MAX_TENTATIVAS_LOGIN):
+        _tentar_login(flask_app, "errada")
+    # Simula os 15 minutos passando: bloqueio vencido no arquivo.
+    dados = login_teste._ler_bloqueios()
+    dados["teste"]["bloqueio_ate"] = (login_teste._agora() - timedelta(minutes=1)).isoformat()
+    login_teste._gravar_bloqueios(dados)
+    assert _tentar_login(flask_app, "x").status_code == 302
+    assert "teste" not in login_teste._ler_bloqueios()
+
+
+def test_login_certo_antes_do_limite_zera_falhas(flask_app, login_teste):
+    _tentar_login(flask_app, "errada")
+    _tentar_login(flask_app, "errada")
+    assert _tentar_login(flask_app, "x").status_code == 302
+    assert login_teste._estado_login("teste")["falhas"] == 0
+
+
+def test_alerta_diario_whatsapp_aguenta_visita_com_campo_vazio(monkeypatch):
+    """Visita com 'Gado Contado' vazio derrubava o relatório diário inteiro."""
+    import alertas_whatsapp as aw
+    original = aw.carregar_todas
+
+    def com_vazio():
+        dados = original()
+        vis = dados["Visitas"].copy()
+        if not vis.empty:
+            i = vis["Data"].idxmax()
+            vis.loc[i, ["Gado Contado", "Gado Esperado", "Gado Faltando", "Chuva mm"]] = float("nan")
+        dados["Visitas"] = vis
+        return dados
+
+    monkeypatch.setattr(aw, "carregar_todas", com_vazio)
+    assert aw.montar_mensagem_alertas(aw.montar_alertas())
+    assert aw.montar_msg_nova_visita({"Gado Contado": float("nan")}, 10)

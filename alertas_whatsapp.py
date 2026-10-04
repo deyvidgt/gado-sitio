@@ -106,6 +106,16 @@ def _str_campo(v, default="—"):
     return s if s else default
 
 
+def _num_campo(v) -> float:
+    """Número de célula; vazio (NaN) vira 0. `NaN or 0` continua NaN e int(NaN)
+    derrubava o relatório diário inteiro — ninguém recebia nada naquele dia."""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return 0.0
+    return f if f == f else 0.0
+
+
 # ── Mensagem de NOVA VISITA (disparada ao registrar) ─────────────────────────
 
 def montar_msg_nova_visita(row: dict, estoque_esperado: int) -> str:
@@ -128,9 +138,9 @@ def montar_msg_nova_visita(row: dict, estoque_esperado: int) -> str:
     else:
         data_str = datetime.now().strftime("%d/%m/%Y")
 
-    gado_cnt  = int(row.get("Gado Contado")  or 0)
-    gado_esp  = int(row.get("Gado Esperado") or estoque_esperado)
-    gado_falt = int(row.get("Gado Faltando") or 0)
+    gado_cnt  = int(_num_campo(row.get("Gado Contado")))
+    gado_esp  = int(_num_campo(row.get("Gado Esperado")) or estoque_esperado)
+    gado_falt = int(_num_campo(row.get("Gado Faltando")))
 
     sal      = _v("Sal/Ração",    "OK")
     prot     = _v("Proteinado",   "OK")
@@ -140,7 +150,7 @@ def montar_msg_nova_visita(row: dict, estoque_esperado: int) -> str:
     quintal  = _v("Quintal",      "OK")
     cisterna = _v("Cisterna",     "OK")
     choveu   = _v("Choveu",       "Não")
-    chuva_mm = float(row.get("Chuva mm") or 0)
+    chuva_mm = _num_campo(row.get("Chuva mm"))
     obs      = _v("Observações",  "")
     sug      = _v("Sugestões",    "")
 
@@ -287,9 +297,9 @@ def montar_alertas() -> list[str]:
         data_ult   = ultima_data.strftime("%d/%m/%Y") if pd.notna(ultima_data) else "?"
 
         # Sempre incluir resumo da última visita no alerta diário
-        gado_cnt  = int(ultima_vis.get("Gado Contado")  or 0)
-        gado_esp  = int(ultima_vis.get("Gado Esperado") or 0)
-        gado_falt = int(ultima_vis.get("Gado Faltando") or 0)
+        gado_cnt  = int(_num_campo(ultima_vis.get("Gado Contado")))
+        gado_esp  = int(_num_campo(ultima_vis.get("Gado Esperado")))
+        gado_falt = int(_num_campo(ultima_vis.get("Gado Faltando")))
 
         sal      = _str_campo(ultima_vis.get("Sal/Ração"),    "OK")
         prot     = _str_campo(ultima_vis.get("Proteinado"),   "OK")
@@ -297,7 +307,7 @@ def montar_alertas() -> list[str]:
         corrego  = _str_campo(ultima_vis.get("Córrego/Água"), "Normal")
         cisterna = _str_campo(ultima_vis.get("Cisterna"),     "OK")
         choveu   = _str_campo(ultima_vis.get("Choveu"),       "Não")
-        chuva_mm = float(ultima_vis.get("Chuva mm") or 0)
+        chuva_mm = _num_campo(ultima_vis.get("Chuva mm"))
 
         # Linha de resumo da visita
         vis_header = (

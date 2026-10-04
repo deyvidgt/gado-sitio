@@ -9,6 +9,7 @@ import pandas as pd
 from db import carregar_aba, carregar_todas, fazer_backup
 from calculos import (
     calcular_estoque, calcular_cmp, calcular_gpcab, custo_medio_movel_venda,
+    dividir_cotas,
 )
 from config import (TIPOS_GASTO, TIPOS_MANEJO, MEMBROS, NOMES_MEMBROS, COLUNAS_VENDAS,
                     TIPOS_COM_PRODUTO)
@@ -55,6 +56,29 @@ def _pessoas_de(df, *colunas):
                     nomes.add(s)
     return sorted(nomes)
 
+
+def _int_form(v, padrao=0) -> int:
+    """Inteiro vindo do formulário; texto inválido ("abc", "") vira `padrao`
+    em vez de erro 500. Aceita "1,5"/"1.5" (trunca)."""
+    try:
+        return int(float(str(v).strip().replace(",", ".")))
+    except (TypeError, ValueError):
+        return padrao
+
+
+def _aplicar_updates(df, idx, updates):
+    """Grava os campos editados na linha `idx`. Converte a coluna para object antes
+    de pôr texto numa coluna lida como float (ex.: "Perda De" toda vazia) — o pandas
+    avisa que isso vira erro. Data inválida/vazia mantém a data original."""
+    for col, val in updates.items():
+        if col == "Data" and pd.isna(val):
+            continue
+        if col not in df.columns:
+            df[col] = None
+        if isinstance(val, str) and df[col].dtype != object:
+            df[col] = df[col].astype(object)
+        df.at[idx, col] = val
+
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/compras")
@@ -86,27 +110,17 @@ def nova_compra():
     if request.method == "POST":
         _validar_csrf()
         f = request.form
-        data    = f.get("data", _agora().strftime("%d/%m/%Y"))
-        cabecas = int(f.get("cabecas", 0) or 0)
+        data    = f.get("data") or _agora().strftime("%d/%m/%Y")
+        cabecas = _int_form(f.get("cabecas"))
         valor   = parse_valor(f.get("valor", 0))
         desc    = f.get("descricao", "").strip()
         membro  = f.get("membro", "")
         if cabecas <= 0:
             flash("Informe ao menos 1 cabeça.", "error")
             return redirect(url_for("nova_compra"))
-        qtd_mae    = int(f.get("qtd_mae",    0) or 0)
-        qtd_deyvid = int(f.get("qtd_deyvid", 0) or 0)
-        qtd_nilson = int(f.get("qtd_nilson", 0) or 0)
-        soma = qtd_mae + qtd_deyvid + qtd_nilson
-        if soma == 0:
-            base = cabecas // 3
-            qtd_mae = qtd_deyvid = base
-            qtd_nilson = cabecas - base * 2
-        elif soma != cabecas:
-            fator = cabecas / soma
-            qtd_mae    = round(qtd_mae    * fator)
-            qtd_deyvid = round(qtd_deyvid * fator)
-            qtd_nilson = cabecas - qtd_mae - qtd_deyvid
+        qtd_mae, qtd_deyvid, qtd_nilson = dividir_cotas(
+            cabecas, _int_form(f.get("qtd_mae")), _int_form(f.get("qtd_deyvid")),
+            _int_form(f.get("qtd_nilson")))
         val_cab = round(valor / cabecas, 2) if cabecas > 0 else 0
         salvar_linha("Compras", [data, cabecas, valor, val_cab, qtd_mae, qtd_deyvid, qtd_nilson, desc, membro])
         flash(f"Compra registrada! {cabecas} cabeças por {fmt_brl(valor)}", "success")
@@ -126,26 +140,16 @@ def editar_compra(idx):
         _validar_csrf()
         f = request.form
         data    = f.get("data", "")
-        cabecas = int(f.get("cabecas", 0) or 0)
+        cabecas = _int_form(f.get("cabecas"))
         valor   = parse_valor(f.get("valor", 0))
         desc    = f.get("descricao", "").strip()
         membro  = f.get("membro", "")
         if cabecas <= 0:
             flash("Informe ao menos 1 cabeça.", "error")
             return redirect(url_for("editar_compra", idx=idx))
-        qtd_mae    = int(f.get("qtd_mae",    0) or 0)
-        qtd_deyvid = int(f.get("qtd_deyvid", 0) or 0)
-        qtd_nilson = int(f.get("qtd_nilson", 0) or 0)
-        soma = qtd_mae + qtd_deyvid + qtd_nilson
-        if soma == 0:
-            base = cabecas // 3
-            qtd_mae = qtd_deyvid = base
-            qtd_nilson = cabecas - base * 2
-        elif soma != cabecas:
-            fator = cabecas / soma
-            qtd_mae    = round(qtd_mae    * fator)
-            qtd_deyvid = round(qtd_deyvid * fator)
-            qtd_nilson = cabecas - qtd_mae - qtd_deyvid
+        qtd_mae, qtd_deyvid, qtd_nilson = dividir_cotas(
+            cabecas, _int_form(f.get("qtd_mae")), _int_form(f.get("qtd_deyvid")),
+            _int_form(f.get("qtd_nilson")))
         val_cab = round(valor / cabecas, 2) if cabecas > 0 else 0
         fazer_backup()
         _limpar_backups_antigos()
@@ -154,11 +158,7 @@ def editar_compra(idx):
                    "Valor/Cabeça (R$)": val_cab, "Qtd Mae": qtd_mae,
                    "Qtd Deyvid": qtd_deyvid, "Qtd Nilson": qtd_nilson,
                    "Descrição": desc, "Registrado Por": membro}
-        for col, val in updates.items():
-            if col in df.columns:
-                df.at[idx, col] = val
-            else:
-                df[col] = None; df.at[idx, col] = val
+        _aplicar_updates(df, idx, updates)
         reescrever_aba("Compras", df)
         flash("Compra atualizada!", "success")
         return redirect(url_for("compras"))
@@ -208,11 +208,11 @@ def novo_gasto():
     if request.method == "POST":
         _validar_csrf()
         f = request.form
-        data   = f.get("data", _agora().strftime("%d/%m/%Y"))
+        data   = f.get("data") or _agora().strftime("%d/%m/%Y")
         tipo   = f.get("tipo", "")
         desc   = f.get("descricao", "").strip()
         valor  = parse_valor(f.get("valor", 0))
-        cab    = int(f.get("cabecas", estoque) or estoque)
+        cab    = _int_form(f.get("cabecas"), estoque)
         membro = f.get("membro", "")
         if cab <= 0:
             cab = max(1, estoque)
@@ -241,7 +241,7 @@ def editar_gasto(idx):
         tipo   = f.get("tipo", "")
         desc   = f.get("descricao", "").strip()
         valor  = parse_valor(f.get("valor", 0))
-        cab    = int(f.get("cabecas", estoque) or estoque)
+        cab    = _int_form(f.get("cabecas"), estoque)
         membro = f.get("membro", "")
         if cab <= 0:
             cab = max(1, estoque)
@@ -252,11 +252,7 @@ def editar_gasto(idx):
                    "Tipo": tipo, "Descrição": desc,
                    "Valor Total (R$)": valor, "Qtd Cabeças": cab,
                    "Valor/Cabeça (R$)": v_cab, "Registrado Por": membro}
-        for col, val in updates.items():
-            if col in df.columns:
-                df.at[idx, col] = val
-            else:
-                df[col] = None; df.at[idx, col] = val
+        _aplicar_updates(df, idx, updates)
         reescrever_aba("Gastos", df)
         flash("Gasto atualizado!", "success")
         return redirect(url_for("gastos"))
@@ -279,26 +275,15 @@ def _salvar_venda(form, dados, idx=None):
     Calcula CMP + GPCab no momento da venda e preenche TODAS as 19 colunas,
     igual ao CLI em registros.py.
     """
-    data         = form.get("data", _agora().strftime("%d/%m/%Y"))
-    cabecas      = int(form.get("cabecas", 0) or 0)
+    data         = form.get("data") or _agora().strftime("%d/%m/%Y")
+    cabecas      = _int_form(form.get("cabecas"))
     valor_total  = parse_valor(form.get("valor", 0))
     valor_arroba = parse_valor(form.get("valor_arroba", 0))
     desc         = form.get("descricao", "").strip()
 
-    q_mae    = int(form.get("qtd_mae",    0) or 0)
-    q_deyvid = int(form.get("qtd_deyvid", 0) or 0)
-    q_nilson = int(form.get("qtd_nilson", 0) or 0)
-
-    soma_q = q_mae + q_deyvid + q_nilson
-    if soma_q == 0:
-        base = cabecas // 3
-        q_mae = q_deyvid = base
-        q_nilson = cabecas - base * 2
-    elif soma_q != cabecas:
-        fator    = cabecas / soma_q
-        q_mae    = round(q_mae    * fator)
-        q_deyvid = round(q_deyvid * fator)
-        q_nilson = cabecas - q_mae - q_deyvid
+    q_mae, q_deyvid, q_nilson = dividir_cotas(
+        cabecas, _int_form(form.get("qtd_mae")), _int_form(form.get("qtd_deyvid")),
+        _int_form(form.get("qtd_nilson")))
 
     val_cab  = round(valor_total / cabecas, 2) if cabecas > 0 else 0
     v_mae    = round(q_mae    * val_cab, 2)
@@ -341,12 +326,7 @@ def _salvar_venda(form, dados, idx=None):
     else:
         df = carregar_aba("Vendas")
         linha[0] = data_ts  # usar Timestamp para edição no DataFrame
-        for col, val in zip(COLUNAS_VENDAS, linha):
-            if col in df.columns:
-                df.at[idx, col] = val
-            else:
-                df[col] = None
-                df.at[idx, col] = val
+        _aplicar_updates(df, idx, dict(zip(COLUNAS_VENDAS, linha)))
         reescrever_aba("Vendas", df)
 
 
@@ -383,7 +363,7 @@ def nova_venda():
     r_fin = _get_resumo_cache()
     if request.method == "POST":
         _validar_csrf()
-        cabecas = int(request.form.get("cabecas", 0) or 0)
+        cabecas = _int_form(request.form.get("cabecas"))
         if cabecas <= 0:
             flash("Informe ao menos 1 cabeça.", "error")
             return redirect(url_for("nova_venda"))
@@ -405,6 +385,9 @@ def editar_venda(idx):
     r_fin = _get_resumo_cache()
     if request.method == "POST":
         _validar_csrf()
+        if _int_form(request.form.get("cabecas")) <= 0:
+            flash("Informe ao menos 1 cabeça.", "error")
+            return redirect(url_for("editar_venda", idx=idx))
         fazer_backup()
         _limpar_backups_antigos()
         _salvar_venda(request.form, dados, idx=idx)
@@ -479,7 +462,7 @@ def novo_manejo():
         if f.get("tipo") in TIPOS_COM_PRODUTO and not produto:
             flash("Informe qual remédio/produto foi usado.", "error")
             return redirect(url_for("novo_manejo"))
-        salvar_linha("Manejo", [f.get("data"), f.get("tipo"), int(f.get("cabecas", 0) or 0),
+        salvar_linha("Manejo", [f.get("data") or _agora().strftime("%d/%m/%Y"), f.get("tipo"), _int_form(f.get("cabecas")),
                                 f.get("descricao", "").strip(), f.get("responsavel", ""),
                                 perda_de, produto, nasc_de])
         flash(f"Manejo registrado! ({f.get('tipo')})", "success")
@@ -509,18 +492,14 @@ def editar_manejo(idx):
         updates = {
             "Data":        pd.to_datetime(f.get("data",""), dayfirst=True, errors="coerce"),
             "Tipo":        f.get("tipo",""),
-            "Qtd Cabeças": int(f.get("cabecas", 0) or 0),
+            "Qtd Cabeças": _int_form(f.get("cabecas")),
             "Descrição":   f.get("descricao","").strip(),
             "Responsável": f.get("responsavel",""),
             "Perda De":    f.get("perda_de", "") if f.get("tipo") == "Morte/Perda" else "",
             "Produto":     _produto_do_form(f),
             "Nascimento De": f.get("nascimento_de", "") if f.get("tipo") == "Nascimento" else "",
         }
-        for col, val in updates.items():
-            if col in df.columns:
-                df.at[idx, col] = val
-            else:
-                df[col] = None; df.at[idx, col] = val
+        _aplicar_updates(df, idx, updates)
         reescrever_aba("Manejo", df)
         flash("Manejo atualizado!", "success")
         return redirect(url_for("manejo"))
@@ -547,6 +526,9 @@ def editar_manejo(idx):
 @login_required
 def excluir(aba, idx):
     _validar_csrf()
+    if aba not in ("Compras", "Gastos", "Vendas", "Manejo"):
+        flash("Aba inválida.", "error")
+        return redirect(url_for("dashboard"))
     fazer_backup()
     _limpar_backups_antigos()
     df = carregar_aba(aba)

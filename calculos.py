@@ -77,6 +77,39 @@ def _normalizar_membro(valor) -> str | None:
             return m
     return None
 
+def _num(v) -> float:
+    """Número seguro: None/NaN/texto inválido viram 0. Células vazias do Excel chegam
+    como NaN, e `NaN or 0` continua NaN (NaN é truthy) — int(NaN) derrubava a página."""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return 0.0
+    return f if f == f else 0.0
+
+
+def dividir_cotas(cabecas: int, mae: int = 0, deyvid: int = 0, nilson: int = 0) -> tuple[int, int, int]:
+    """
+    Ajusta as cotas (Mae, Deyvid, Nilson) para somarem `cabecas`.
+    Sem cotas → terços (resto p/ Nilson, igual ao estoque por membro).
+    Soma diferente → proporcional pelo maior resto, nunca negativa
+    (o arredondamento simples podia gerar cota −1, ex.: 3 cab com 5/5/0).
+    """
+    cotas = [max(0, int(mae)), max(0, int(deyvid)), max(0, int(nilson))]
+    soma = sum(cotas)
+    if cabecas <= 0:
+        return 0, 0, 0
+    if soma == 0:
+        base = cabecas // 3
+        return base, base, cabecas - base * 2
+    if soma == cabecas:
+        return tuple(cotas)
+    exatas = [c * cabecas / soma for c in cotas]
+    inteiras = [int(x) for x in exatas]
+    falta = cabecas - sum(inteiras)
+    for i in sorted(range(3), key=lambda i: exatas[i] - inteiras[i], reverse=True)[:falta]:
+        inteiras[i] += 1
+    return tuple(inteiras)
+
 # Preço de referência da arroba para cálculos de break-even e arrobas mínimas.
 # Atualize conforme cotação do mercado local (Triângulo/MG, Scot/IMEA).
 # Valor indicativo para boi gordo Nelore, Sudeste, 2026.
@@ -210,9 +243,9 @@ def _build_gpcab_timeline(df_gast: pd.DataFrame,
 
     df_sorted = df_gast.sort_values("Data", na_position="last")
     for _, row in df_sorted.iterrows():
-        val  = float(row.get("Valor Total (R$)", 0) or 0)
-        vcab = float(row.get("Valor/Cabeça (R$)", 0) or 0)
-        qtd  = float(row.get("Qtd Cabeças",      0) or 0)
+        val  = _num(row.get("Valor Total (R$)"))
+        vcab = _num(row.get("Valor/Cabeça (R$)"))
+        qtd  = _num(row.get("Qtd Cabeças"))
         data = row.get("Data")
 
         if vcab > 0:
@@ -317,18 +350,18 @@ def _simular_media_movel(df_comp: pd.DataFrame,
     if not df_comp.empty:
         for _, r in df_comp.iterrows():
             eventos.append((_data(r.get("Data")), 0, "compra",
-                            float(r.get("Qtd Cabeças", 0) or 0),
-                            float(r.get("Valor Total (R$)", 0) or 0), None, None))
+                            _num(r.get("Qtd Cabeças")),
+                            _num(r.get("Valor Total (R$)")), None, None))
 
     if not df_gast.empty:
         for _, r in df_gast.iterrows():
             eventos.append((_data(r.get("Data")), 1, "gasto",
-                            0.0, float(r.get("Valor Total (R$)", 0) or 0), None, None))
+                            0.0, _num(r.get("Valor Total (R$)")), None, None))
 
     if df_man is not None and not df_man.empty and "Tipo" in df_man.columns:
         for _, r in df_man.iterrows():
             tipo = r.get("Tipo")
-            qtd  = float(r.get("Qtd Cabeças", 0) or 0)
+            qtd  = _num(r.get("Qtd Cabeças"))
             if qtd <= 0:
                 continue
             if tipo == "Nascimento":
@@ -340,7 +373,7 @@ def _simular_media_movel(df_comp: pd.DataFrame,
     if not df_vend.empty:
         for vidx, r in df_vend.iterrows():
             eventos.append((_data(r.get("Data")), 3, "venda",
-                            float(r.get("Qtd Cabeças", 0) or 0), 0.0, vidx, None))
+                            _num(r.get("Qtd Cabeças")), 0.0, vidx, None))
 
     # Ordena por data e, dentro da mesma data, pela prioridade (entradas antes de saídas)
     eventos.sort(key=lambda e: (e[0], e[1]))
@@ -480,10 +513,10 @@ def enriquecer_gastos(df_gast: pd.DataFrame,
             df[col] = df[col].astype(float)
 
     for idx, row in df.iterrows():
-        vcab = float(row.get("Valor/Cabeça (R$)", 0) or 0)
-        qtd  = float(row.get("Qtd Cabeças",      0) or 0)
+        vcab = _num(row.get("Valor/Cabeça (R$)"))
+        qtd  = _num(row.get("Qtd Cabeças"))
         if vcab == 0 and qtd == 0:
-            val = float(row.get("Valor Total (R$)", 0) or 0)
+            val = _num(row.get("Valor Total (R$)"))
             if val > 0:
                 data = row.get("Data")
                 est  = (calcular_estoque_ate_data(df_comp, _df_vend, _df_man, data)
@@ -622,8 +655,16 @@ def calcular_resultado_membro(membro: str, df_vend: pd.DataFrame,
         return resultado
 
     for vidx, venda in df_vend.iterrows():
-        qtd_m = int(venda.get(col_qtd, 0) or 0)
-        val_m = float(venda.get(col_val, 0) or 0)
+        qtd_m = int(_num(venda.get(col_qtd)))
+        val_m = _num(venda.get(col_val))
+        cotas = [int(_num(venda.get(f"Qtd {m}"))) for m in MEMBROS]
+        if sum(cotas) == 0 and membro in MEMBROS:
+            # Venda sem cotas (ex.: importada): rateio em terços, igual ao
+            # calcular_estoque_por_membro — senão o custo dela não ia para
+            # ninguém e a soma dos membros não fechava com o COGS global.
+            total = int(_num(venda.get("Qtd Cabeças")))
+            qtd_m = dividir_cotas(total)[MEMBROS.index(membro)]
+            val_m = _num(venda.get("Valor Total (R$)")) * qtd_m / total if total > 0 else 0.0
         if qtd_m <= 0:
             continue
 
@@ -854,10 +895,10 @@ def calcular_estoque_por_membro(df_comp: pd.DataFrame, df_vend: pd.DataFrame,
     # Compras
     if not df_comp.empty:
         for _, row in df_comp.iterrows():
-            total = int(row.get("Qtd Cabeças", 0) or 0)
-            mae    = int(row.get("Qtd Mae",    0) or 0)
-            deyvid = int(row.get("Qtd Deyvid", 0) or 0)
-            nilson = int(row.get("Qtd Nilson", 0) or 0)
+            total = int(_num(row.get("Qtd Cabeças")))
+            mae    = int(_num(row.get("Qtd Mae")))
+            deyvid = int(_num(row.get("Qtd Deyvid")))
+            nilson = int(_num(row.get("Qtd Nilson")))
             if "Qtd Mae" in row and pd.notna(row.get("Qtd Mae")) and (mae + deyvid + nilson) > 0:
                 resultado["Mae"]    += mae
                 resultado["Deyvid"] += deyvid
@@ -874,10 +915,10 @@ def calcular_estoque_por_membro(df_comp: pd.DataFrame, df_vend: pd.DataFrame,
     # BUG CORRIGIDO: registros importados com soma zero agora usam fallback de terços
     if not df_vend.empty:
         for _, row in df_vend.iterrows():
-            total  = int(row.get("Qtd Cabeças", 0) or 0)
-            mae    = int(row.get("Qtd Mae",    0) or 0)
-            deyvid = int(row.get("Qtd Deyvid", 0) or 0)
-            nilson = int(row.get("Qtd Nilson", 0) or 0)
+            total  = int(_num(row.get("Qtd Cabeças")))
+            mae    = int(_num(row.get("Qtd Mae")))
+            deyvid = int(_num(row.get("Qtd Deyvid")))
+            nilson = int(_num(row.get("Qtd Nilson")))
             soma   = mae + deyvid + nilson
 
             if soma > 0:
@@ -907,7 +948,7 @@ def calcular_estoque_por_membro(df_comp: pd.DataFrame, df_vend: pd.DataFrame,
 
         for _, row in df_man.iterrows():
             tipo = row.get("Tipo")
-            qtd  = int(row.get("Qtd Cabeças", 0) or 0)
+            qtd  = int(_num(row.get("Qtd Cabeças")))
             if qtd <= 0:
                 continue
 
@@ -952,7 +993,7 @@ def calcular_fluxo_caixa(df_comp, df_gast, df_vend) -> pd.DataFrame:
             registros.append({
                 "Data":      r["Data"],
                 "Tipo":      "Compra",
-                "Valor":     -float(r.get("Valor Total (R$)", 0) or 0),
+                "Valor":     -_num(r.get("Valor Total (R$)")),
                 "Descrição": r.get("Descrição", ""),
             })
 
@@ -961,7 +1002,7 @@ def calcular_fluxo_caixa(df_comp, df_gast, df_vend) -> pd.DataFrame:
             registros.append({
                 "Data":      r["Data"],
                 "Tipo":      "Gasto",
-                "Valor":     -float(r.get("Valor Total (R$)", 0) or 0),
+                "Valor":     -_num(r.get("Valor Total (R$)")),
                 "Descrição": r.get("Descrição", ""),
             })
 
@@ -970,7 +1011,7 @@ def calcular_fluxo_caixa(df_comp, df_gast, df_vend) -> pd.DataFrame:
             registros.append({
                 "Data":      r["Data"],
                 "Tipo":      "Venda",
-                "Valor":     float(r.get("Valor Total (R$)", 0) or 0),
+                "Valor":     _num(r.get("Valor Total (R$)")),
                 "Descrição": r.get("Descrição", ""),
             })
 

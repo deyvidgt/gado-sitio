@@ -13,10 +13,89 @@ from extensions import (
 )
 from config import MAX_TENTATIVAS_LOGIN
 from datetime import datetime, timedelta
+import json
 import os
+import threading
 
 # Minutos de bloqueio após exceder as tentativas (desbloqueio automático).
 BLOQUEIO_MINUTOS = 15
+
+# ── Bloqueio de login NO SERVIDOR ─────────────────────────────────────────────
+# Antes o contador ficava no cookie da sessão: bastava apagar o cookie (ou abrir
+# aba anônima) para ganhar mais 5 tentativas. Agora fica num arquivo na pasta de
+# dados, por usuário — vale para qualquer navegador/IP e sobrevive a reinícios
+# e a mais de um processo do servidor (o arquivo é a fonte da verdade).
+_bloqueio_lock = threading.Lock()
+
+
+def _bloqueios_path() -> str:
+    from db import DATA_DIR
+    return os.path.join(DATA_DIR, "login_bloqueios.json")
+
+
+def _ler_bloqueios() -> dict:
+    try:
+        with open(_bloqueios_path(), encoding="utf-8") as f:
+            dados = json.load(f)
+        return dados if isinstance(dados, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _gravar_bloqueios(dados: dict):
+    caminho = _bloqueios_path()
+    tmp = caminho + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(dados, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, caminho)   # troca atômica: nunca deixa o arquivo pela metade
+
+
+def _estado_login(usuario: str) -> dict:
+    """{'falhas': n, 'bloqueio_ate': iso|None} do usuário; expira bloqueios vencidos."""
+    reg = _ler_bloqueios().get(usuario) or {}
+    ate = reg.get("bloqueio_ate")
+    if ate:
+        try:
+            if _agora() >= datetime.fromisoformat(ate):
+                return {"falhas": 0, "bloqueio_ate": None}
+        except ValueError:
+            return {"falhas": 0, "bloqueio_ate": None}
+    return {"falhas": int(reg.get("falhas", 0) or 0), "bloqueio_ate": ate}
+
+
+def _registrar_falha(usuario: str) -> dict:
+    with _bloqueio_lock:
+        dados = _ler_bloqueios()
+        est = _estado_login(usuario)
+        est["falhas"] += 1
+        if est["falhas"] >= MAX_TENTATIVAS_LOGIN:
+            est["bloqueio_ate"] = (_agora() + timedelta(minutes=BLOQUEIO_MINUTOS)).isoformat()
+        dados[usuario] = est
+        # Limpa registros vencidos para o arquivo não crescer com nomes digitados errado.
+        agora = _agora()
+        for u in [u for u, r in dados.items() if u != usuario
+                  and (r.get("bloqueio_ate") or "") < agora.isoformat()
+                  and (r.get("ultima") or "") < (agora - timedelta(days=1)).isoformat()]:
+            dados.pop(u, None)
+        dados[usuario]["ultima"] = agora.isoformat()
+        _gravar_bloqueios(dados)
+        return est
+
+
+def _limpar_falhas(usuario: str):
+    with _bloqueio_lock:
+        dados = _ler_bloqueios()
+        if dados.pop(usuario, None) is not None:
+            _gravar_bloqueios(dados)
+
+
+def _minutos_restantes(ate_iso: str) -> int:
+    try:
+        seg = (datetime.fromisoformat(ate_iso) - _agora()).total_seconds()
+    except (TypeError, ValueError):
+        return BLOQUEIO_MINUTOS
+    return max(1, int(seg // 60) + (1 if seg % 60 else 0))
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -25,28 +104,21 @@ def login():
 
     erro = None
     usuario_digitado = ""
+    tentativas_restantes = MAX_TENTATIVAS_LOGIN
 
     if request.method == "POST":
         _validar_csrf()
         usuario = request.form.get("usuario", "").strip().lower()
         senha   = request.form.get("senha",   "").strip()
         usuario_digitado = usuario
-
-        # Desbloqueio automático: se já passou o tempo de bloqueio, zera tentativas.
-        bloqueio_ate = session.get("bloqueio_ate")
-        if bloqueio_ate:
-            try:
-                if _agora() >= datetime.fromisoformat(bloqueio_ate):
-                    session["tentativas_login"] = 0
-                    session.pop("bloqueio_ate", None)
-            except Exception:
-                session.pop("bloqueio_ate", None)
-
-        tentativas = session.get("tentativas_login", 0)
         usuarios_db = _carregar_usuarios()
+        estado = _estado_login(usuario)
 
-        if tentativas >= MAX_TENTATIVAS_LOGIN:
-            erro = f"Muitas tentativas. Aguarde {BLOQUEIO_MINUTOS} minutos e tente novamente."
+        if estado["bloqueio_ate"]:
+            # Bloqueado: nem confere a senha (senão o bloqueio não impediria adivinhar).
+            erro = (f"Muitas tentativas. Aguarde {_minutos_restantes(estado['bloqueio_ate'])} "
+                    f"minuto(s) e tente novamente.")
+            tentativas_restantes = 0
         elif usuario in usuarios_db and _verificar_hash(senha, usuarios_db[usuario]["hash"]):
             # ✅ Login OK — migrar SHA-256 → bcrypt se possível
             if _bcrypt_disponivel():
@@ -55,24 +127,27 @@ def login():
                     dados = usuarios_db
                     dados[usuario]["hash"] = _hash_bcrypt(senha)
                     _salvar_usuarios(dados)
+            _limpar_falhas(usuario)
             session.clear()
             session["logado"]  = True
             session["usuario"] = usuario
             _gerar_csrf()   # novo token após login
-            next_url = request.args.get("next") or url_for("dashboard")
+            # Só aceita caminho interno ("/vendas"); "https://..." ou "//site"
+            # mandaria o usuário para fora do sistema após o login (open redirect).
+            next_url = request.args.get("next", "")
+            if not next_url.startswith("/") or next_url.startswith("//") or "\\" in next_url:
+                next_url = url_for("dashboard")
             return redirect(next_url)
         else:
-            session["tentativas_login"] = tentativas + 1
-            restantes = MAX_TENTATIVAS_LOGIN - session["tentativas_login"]
-            if restantes <= 0:
-                session["bloqueio_ate"] = (_agora() + timedelta(minutes=BLOQUEIO_MINUTOS)).isoformat()
+            estado = _registrar_falha(usuario)
+            tentativas_restantes = max(0, MAX_TENTATIVAS_LOGIN - estado["falhas"])
+            if estado["bloqueio_ate"]:
                 erro = f"Acesso bloqueado por {BLOQUEIO_MINUTOS} minutos após muitas tentativas."
             elif usuario and usuario not in usuarios_db:
                 erro = f"Usuário '{usuario}' não encontrado."
             else:
                 erro = "Usuário ou senha incorretos."
 
-    tentativas_restantes = MAX_TENTATIVAS_LOGIN - session.get("tentativas_login", 0)
     return render_template("login.html", erro=erro,
                            usuario_digitado=usuario_digitado,
                            tentativas_restantes=tentativas_restantes)

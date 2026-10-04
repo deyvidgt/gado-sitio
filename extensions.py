@@ -39,6 +39,9 @@ app = Flask(
 
 from config import SECRET_KEY, SESSAO_MINUTOS, CACHE_RESUMO_TTL, VERSAO
 app.secret_key = SECRET_KEY
+# Cookie de sessão não vai em POST vindo de outro site (proteção extra das rotas
+# /api/* em JSON, que não usam o token CSRF do formulário).
+app.config.update(SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_HTTPONLY=True)
 app.jinja_env.globals["enumerate"] = enumerate
 
 @app.before_request

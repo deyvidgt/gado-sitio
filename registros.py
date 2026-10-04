@@ -16,7 +16,7 @@ from ui_helper import (
 )
 from calculos import (
     calcular_estoque, calcular_cmp, calcular_gpcab,
-    calcular_cmp_ate_data, calcular_gpcab_ate_data,
+    calcular_cmp_ate_data, calcular_gpcab_ate_data, dividir_cotas,
 )
 
 
@@ -39,17 +39,9 @@ def adicionar_compra():
     qtd_nilson = ui_int("  Nilson — quantidade de cabeças", 0, cabecas)
 
     soma = qtd_mae + qtd_deyvid + qtd_nilson
-    if soma == 0:
-        # Divisão igualitária automática
-        base = cabecas // 3
-        qtd_mae = qtd_deyvid = base
-        qtd_nilson = cabecas - base * 2
-    elif soma != cabecas:
+    if soma not in (0, cabecas):
         ui_aviso(f"Soma ({soma}) ≠ cabeças compradas ({cabecas}). Ajustando proporcionalmente.")
-        fator      = cabecas / soma
-        qtd_mae    = round(qtd_mae    * fator)
-        qtd_deyvid = round(qtd_deyvid * fator)
-        qtd_nilson = cabecas - qtd_mae - qtd_deyvid
+    qtd_mae, qtd_deyvid, qtd_nilson = dividir_cotas(cabecas, qtd_mae, qtd_deyvid, qtd_nilson)
 
     # Mostrar como isso afeta o CMP
     df_comp = carregar_aba("Compras")
@@ -136,10 +128,7 @@ def adicionar_venda():
     total_cotas = qtd_mae + qtd_deyvid + qtd_nilson
     if total_cotas != cabecas:
         ui_aviso(f"Soma ({total_cotas}) ≠ cabeças vendidas ({cabecas}). Ajustando proporcionalmente.")
-        fator      = cabecas / total_cotas if total_cotas > 0 else 0
-        qtd_mae    = round(qtd_mae    * fator)
-        qtd_deyvid = round(qtd_deyvid * fator)
-        qtd_nilson = cabecas - qtd_mae - qtd_deyvid
+    qtd_mae, qtd_deyvid, qtd_nilson = dividir_cotas(cabecas, qtd_mae, qtd_deyvid, qtd_nilson)
 
     valor_cab    = round(valor / cabecas, 2) if cabecas > 0 else 0
     valor_mae    = round(valor * (qtd_mae    / cabecas), 2) if cabecas > 0 else 0

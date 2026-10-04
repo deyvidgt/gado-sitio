@@ -832,8 +832,9 @@ function mostrarTooltipCal(e, dia, mes, ano) {
 
   tip.innerHTML = html;
 
-  // Posicionamento: mobile centraliza na tela, desktop segue o cursor
-  tip.style.display = "block";
+  // Posicionamento: mobile centraliza na tela, desktop segue o cursor.
+  // Visibilidade SÓ pela classe .show — um style.display="block" aqui vencia o CSS
+  // e o popup nunca mais fechava (nem pelo timer, nem tocando fora).
   tip.classList.add("show");
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -854,12 +855,21 @@ function mostrarTooltipCal(e, dia, mes, ano) {
     tip.style.top  = top  + "px";
   }
 
-  setTimeout(() => tip.classList.remove("show"), 6000);
+  // Um timer por popup: o de um dia tocado antes não fecha o popup novo cedo demais.
+  clearTimeout(_calTipTimer);
+  _calTipTimer = setTimeout(fecharTooltipCal, 6000);
 }
-document.addEventListener("click", () => {
+let _calTipTimer = null;
+function fecharTooltipCal() {
   const tip = document.getElementById("cal-tooltip");
   if (tip) tip.classList.remove("show");
-});
+}
+// pointerdown (e não click): no iPhone o Safari não dispara "click" ao tocar numa
+// área não clicável da página, então tocar fora não fechava. Tocar outro dia
+// fecha aqui e o click desse dia reabre com o conteúdo novo.
+document.addEventListener("pointerdown", fecharTooltipCal, true);
+// O popup é position:fixed — ao rolar a página ele ficaria solto sobre outro conteúdo.
+window.addEventListener("scroll", fecharTooltipCal, { passive: true });
 
 function renderProximas(proximas) {
   const wrap = document.getElementById("cal-proximas");

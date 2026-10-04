@@ -2,6 +2,8 @@
 # NUNCA versionar — contém dados reais da família
 gado_familia.xlsx
 usuarios.json
+login_bloqueios.json
+login_bloqueios.json.tmp
 backups/
 *.bak
 fotos/

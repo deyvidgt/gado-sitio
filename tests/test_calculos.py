@@ -226,3 +226,41 @@ def test_nascimento_com_dono_nao_mexe_nas_invariantes():
                        ("2025-03-01", "Morte/Perda", 1, "Mae", None))
     df_vend = vendas(("2025-04-01", {"Nilson": (4, 6_000.0)}))
     checar_invariantes(df_comp, gastos(), df_vend, df_man)
+
+
+# ── Regressões (revisão de bugs out/2026) ──────────────────────────────────────
+
+@pytest.mark.parametrize("cab,cotas,esperado", [
+    (3, (5, 5, 0), (2, 1, 0)),   # antes: (2, 2, -1) — cota negativa
+    (7, (0, 0, 0), (2, 2, 3)),   # sem cotas: terços, resto p/ Nilson
+    (5, (2, 2, 1), (2, 2, 1)),   # já bate: mantém
+    (10, (1, 1, 1), (4, 3, 3)),
+])
+def test_dividir_cotas_nunca_negativa_e_fecha(cab, cotas, esperado):
+    r = c.dividir_cotas(cab, *cotas)
+    assert r == esperado
+    assert sum(r) == cab and min(r) >= 0
+
+
+def test_venda_sem_cotas_rateia_custo_em_tercos():
+    """Venda importada sem Qtd por membro: o custo tem que ir para os membros
+    (invariante 2), senão some da soma deles."""
+    df_c = compras(("2025-01-01", 9, 9000.0, 3, 3, 3))
+    df_g = gastos(("2025-02-01", 900.0))
+    df_v = vendas(("2025-03-01", {}))
+    df_v.loc[0, ["Qtd Cabeças", "Valor Total (R$)"]] = [3, 6000.0]
+    checar_invariantes(df_c, df_g, df_v, VAZIO_MAN)
+    membros = c.calcular_todos_membros(df_v, df_c, df_g, VAZIO_MAN)
+    assert sum(m["receita"] for m in membros.values()) == pytest.approx(6000.0)
+
+
+def test_celula_vazia_nan_nao_derruba_calculos():
+    nan = float("nan")
+    df_c = compras(("2025-01-01", 9, 9000.0, 3, 3, 3))
+    df_c.loc[0, "Qtd Mae"] = nan
+    df_g = gastos(("2025-02-01", 900.0), ("2025-02-02", nan))
+    df_v = vendas(("2025-03-01", {"Mae": (1, 2000.0)}))
+    c.calcular_estoque_por_membro(df_c, df_v, VAZIO_MAN)
+    r = c.calcular_resumo_financeiro(df_c, df_g, df_v, VAZIO_MAN)
+    assert r["capital_imobilizado"] == pytest.approx(9900.0 * 8 / 9, abs=TOL)
+    checar_invariantes(df_c, df_g, df_v, VAZIO_MAN)
