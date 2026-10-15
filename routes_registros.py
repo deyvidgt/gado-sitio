@@ -102,6 +102,24 @@ def compras():
                            anos_disponiveis=_anos_de(df),
                            total_valor=_total_valor(df), total_cabecas=_total_cab(df))
 
+def gravar_compra(f) -> int:
+    """Grava a compra do formulário (ou do comando de voz). Devolve o índice da
+    linha nova na aba Compras — usado para pôr brinco nos animais dela."""
+    data    = f.get("data") or _agora().strftime("%d/%m/%Y")
+    cabecas = _int_form(f.get("cabecas"))
+    valor   = parse_valor(f.get("valor", 0))
+    desc    = f.get("descricao", "").strip()
+    membro  = f.get("membro", "")
+    if cabecas <= 0:
+        raise ValueError("Informe ao menos 1 cabeça.")
+    qtd_mae, qtd_deyvid, qtd_nilson = dividir_cotas(
+        cabecas, _int_form(f.get("qtd_mae")), _int_form(f.get("qtd_deyvid")),
+        _int_form(f.get("qtd_nilson")))
+    val_cab = round(valor / cabecas, 2) if cabecas > 0 else 0
+    salvar_linha("Compras", [data, cabecas, valor, val_cab, qtd_mae, qtd_deyvid, qtd_nilson, desc, membro])
+    return len(carregar_aba("Compras")) - 1
+
+
 @app.route("/compras/nova", methods=["GET", "POST"])
 @login_required
 def nova_compra():
@@ -110,20 +128,15 @@ def nova_compra():
     if request.method == "POST":
         _validar_csrf()
         f = request.form
-        data    = f.get("data") or _agora().strftime("%d/%m/%Y")
-        cabecas = _int_form(f.get("cabecas"))
-        valor   = parse_valor(f.get("valor", 0))
-        desc    = f.get("descricao", "").strip()
-        membro  = f.get("membro", "")
-        if cabecas <= 0:
-            flash("Informe ao menos 1 cabeça.", "error")
+        try:
+            idx = gravar_compra(f)
+        except ValueError as e:
+            flash(str(e), "error")
             return redirect(url_for("nova_compra"))
-        qtd_mae, qtd_deyvid, qtd_nilson = dividir_cotas(
-            cabecas, _int_form(f.get("qtd_mae")), _int_form(f.get("qtd_deyvid")),
-            _int_form(f.get("qtd_nilson")))
-        val_cab = round(valor / cabecas, 2) if cabecas > 0 else 0
-        salvar_linha("Compras", [data, cabecas, valor, val_cab, qtd_mae, qtd_deyvid, qtd_nilson, desc, membro])
-        flash(f"Compra registrada! {cabecas} cabeças por {fmt_brl(valor)}", "success")
+        flash(f"Compra registrada! {_int_form(f.get('cabecas'))} cabeças por "
+              f"{fmt_brl(parse_valor(f.get('valor', 0)))}", "success")
+        if f.get("brincar"):
+            return redirect(url_for("brincar_compra", idx=idx))
         return redirect(url_for("compras"))
     return render_template("form_compra.html", modo="nova", cmp_atual=cmp_atual,
                            row=None, idx=None, MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
@@ -209,6 +222,21 @@ def _insumo_do_form(f):
     return produto, (sacos if sacos > 0 else None)
 
 
+def gravar_gasto(f, estoque: int):
+    """Grava o gasto do formulário (ou do comando de voz)."""
+    data   = f.get("data") or _agora().strftime("%d/%m/%Y")
+    tipo   = f.get("tipo", "")
+    desc   = f.get("descricao", "").strip()
+    valor  = parse_valor(f.get("valor", 0))
+    cab    = _int_form(f.get("cabecas"), estoque)
+    membro = f.get("membro", "")
+    if cab <= 0:
+        cab = max(1, estoque)
+    v_cab = round(valor / cab, 4) if cab > 0 else 0
+    produto, sacos = _insumo_do_form(f)
+    salvar_linha("Gastos", [data, tipo, desc, valor, cab, v_cab, membro, produto, sacos])
+
+
 @app.route("/gastos/novo", methods=["GET", "POST"])
 @login_required
 def novo_gasto():
@@ -218,18 +246,8 @@ def novo_gasto():
     if request.method == "POST":
         _validar_csrf()
         f = request.form
-        data   = f.get("data") or _agora().strftime("%d/%m/%Y")
-        tipo   = f.get("tipo", "")
-        desc   = f.get("descricao", "").strip()
-        valor  = parse_valor(f.get("valor", 0))
-        cab    = _int_form(f.get("cabecas"), estoque)
-        membro = f.get("membro", "")
-        if cab <= 0:
-            cab = max(1, estoque)
-        v_cab = round(valor / cab, 4) if cab > 0 else 0
-        produto, sacos = _insumo_do_form(f)
-        salvar_linha("Gastos", [data, tipo, desc, valor, cab, v_cab, membro, produto, sacos])
-        flash(f"Gasto registrado! {fmt_brl(valor)} ({tipo})", "success")
+        gravar_gasto(f, estoque)
+        flash(f"Gasto registrado! {fmt_brl(parse_valor(f.get('valor', 0)))} ({f.get('tipo', '')})", "success")
         return redirect(url_for("gastos"))
     return render_template("form_gasto.html", estoque=estoque, gpcab=gpcab, INSUMOS=INSUMOS,
                            TIPOS=TIPOS_GASTO, MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
@@ -293,6 +311,7 @@ def _salvar_venda(form, dados, idx=None):
     valor_total  = parse_valor(form.get("valor", 0))
     valor_arroba = parse_valor(form.get("valor_arroba", 0))
     desc         = form.get("descricao", "").strip()
+    brincos      = form.get("brincos_refs", "")   # já resolvido em _brincos_do_form
 
     q_mae, q_deyvid, q_nilson = dividir_cotas(
         cabecas, _int_form(form.get("qtd_mae")), _int_form(form.get("qtd_deyvid")),
@@ -323,7 +342,7 @@ def _salvar_venda(form, dados, idx=None):
     r_deyvid = result_m(v_deyvid, q_deyvid)
     r_nilson = result_m(v_nilson, q_nilson)
 
-    # 19 colunas alinhadas com COLUNAS_VENDAS
+    # Colunas alinhadas com COLUNAS_VENDAS (19 originais + Brincos)
     linha = [
         data, cabecas, valor_total, val_cab, valor_arroba,
         q_mae, q_deyvid, q_nilson,
@@ -332,7 +351,13 @@ def _salvar_venda(form, dados, idx=None):
         r_mae, r_deyvid, r_nilson,
         round(ctcab_v, 2),
         desc,
+        brincos,
     ]
+
+    if brincos:
+        # Os animais com brinco saem do cadastro como Vendidos (libera o brinco).
+        import animais
+        animais.baixa_por_refs(brincos, "Vendido", data_ts if pd.notna(data_ts) else None)
 
     if idx is None:
         salvar_linha("Vendas", linha)
@@ -341,6 +366,30 @@ def _salvar_venda(form, dados, idx=None):
         linha[0] = data_ts  # usar Timestamp para edição no DataFrame
         _aplicar_updates(df, idx, dict(zip(COLUNAS_VENDAS, linha)))
         reescrever_aba("Vendas", df)
+
+
+def _brincos_do_form(form):
+    """Campo "Brincos" digitado/ditado ('amarelo 21, azul 12') → (form com
+    'brincos_refs' resolvido, erro). Refs ficam no formato 'Amarelo 21 #A0003'."""
+    texto = (form.get("brincos") or "").strip()
+    novo = dict(form.items())
+    novo["brincos_refs"] = ""
+    if not texto:
+        return novo, None
+    import animais
+    refs, erros = animais.resolver_texto(texto)
+    if erros:
+        return novo, " ".join(erros)
+    novo["brincos_refs"] = "; ".join(refs)
+    return novo, None
+
+
+def _brincos_legiveis(v) -> str:
+    """'Amarelo 21 #A0003; Azul 12 #A0007' → 'Amarelo 21, Azul 12' (campo do formulário)."""
+    import re as _re
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return ""
+    return ", ".join(p.strip() for p in _re.sub(r"\s*#A\d+", "", str(v)).split(";") if p.strip())
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -359,12 +408,13 @@ def vendas():
     for real_idx, row in (df.iterrows() if not df.empty else []):
         d = row.to_dict()
         d["Data"] = fmt_data(d.get("Data"))
+        d["Brincos"] = _brincos_legiveis(d.get("Brincos"))
         d["_idx"] = int(real_idx)
         rows.append(d)
     return render_template("lista.html", titulo="Vendas 🤝", secao="vendas", aba="Vendas",
                            colunas=["Data","Qtd Cabeças","Valor Total (R$)","Valor/Cabeça (R$)",
                                     "Valor Arroba (R$)","Qtd Mae","Qtd Deyvid","Qtd Nilson",
-                                    "Valor Mae (R$)","Valor Deyvid (R$)","Valor Nilson (R$)","Descrição"],
+                                    "Valor Mae (R$)","Valor Deyvid (R$)","Valor Nilson (R$)","Descrição","Brincos"],
                            rows=rows, ordem=ordem,
                            anos_disponiveis=_anos_de(df),
                            total_valor=_total_valor(df), total_cabecas=_total_cab(df))
@@ -380,7 +430,11 @@ def nova_venda():
         if cabecas <= 0:
             flash("Informe ao menos 1 cabeça.", "error")
             return redirect(url_for("nova_venda"))
-        _salvar_venda(request.form, dados)
+        form, erro = _brincos_do_form(request.form)
+        if erro:
+            flash(erro, "error")
+            return redirect(url_for("nova_venda"))
+        _salvar_venda(form, dados)
         flash("Venda registrada!", "success")
         return redirect(url_for("vendas"))
     return render_template("form_venda.html", modo="nova", row=None, idx=None, r_fin=r_fin,
@@ -401,14 +455,19 @@ def editar_venda(idx):
         if _int_form(request.form.get("cabecas")) <= 0:
             flash("Informe ao menos 1 cabeça.", "error")
             return redirect(url_for("editar_venda", idx=idx))
+        form, erro = _brincos_do_form(request.form)
+        if erro:
+            flash(erro, "error")
+            return redirect(url_for("editar_venda", idx=idx))
         fazer_backup()
         _limpar_backups_antigos()
-        _salvar_venda(request.form, dados, idx=idx)
+        _salvar_venda(form, dados, idx=idx)
         flash("Venda atualizada!", "success")
         return redirect(url_for("vendas"))
     row = df.iloc[idx].to_dict()
     row["Data"] = fmt_data(row.get("Data"))
     row["data_input"] = df.iloc[idx]["Data"].strftime("%Y-%m-%d") if pd.notna(df.iloc[idx]["Data"]) else ""
+    row["brincos_txt"] = _brincos_legiveis(row.get("Brincos"))
     return render_template("form_venda.html", modo="editar", row=row, idx=idx, r_fin=r_fin,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            hoje=_agora().strftime("%Y-%m-%d"))
@@ -427,10 +486,11 @@ def manejo():
     for real_idx, row in (df.iterrows() if not df.empty else []):
         d = row.to_dict()
         d["Data"] = fmt_data(d.get("Data"))
+        d["Brincos"] = _brincos_legiveis(d.get("Brincos"))
         d["_idx"] = int(real_idx)
         rows.append(d)
     return render_template("lista.html", titulo="Manejo 🩺", secao="manejo", aba="Manejo",
-                           colunas=["Data","Tipo","Qtd Cabeças","Produto","Descrição","Responsável","Perda De","Nascimento De"],
+                           colunas=["Data","Tipo","Qtd Cabeças","Produto","Brincos","Descrição","Responsável","Perda De","Nascimento De"],
                            rows=rows,
                            anos_disponiveis=_anos_de(df),
                            tipos_disponiveis=_tipos_de(df),
@@ -475,9 +535,13 @@ def novo_manejo():
         if f.get("tipo") in TIPOS_COM_PRODUTO and not produto:
             flash("Informe qual remédio/produto foi usado.", "error")
             return redirect(url_for("novo_manejo"))
+        form, erro = _brincos_do_form(f)
+        if erro:
+            flash(erro, "error")
+            return redirect(url_for("novo_manejo"))
         salvar_linha("Manejo", [f.get("data") or _agora().strftime("%d/%m/%Y"), f.get("tipo"), _int_form(f.get("cabecas")),
                                 f.get("descricao", "").strip(), f.get("responsavel", ""),
-                                perda_de, produto, nasc_de])
+                                perda_de, produto, nasc_de, form["brincos_refs"]])
         flash(f"Manejo registrado! ({f.get('tipo')})", "success")
         return redirect(url_for("manejo"))
     return render_template("form_manejo.html", estoque=estoque, TIPOS=TIPOS_MANEJO,
@@ -500,9 +564,14 @@ def editar_manejo(idx):
     if request.method == "POST":
         _validar_csrf()
         f = request.form
+        form, erro = _brincos_do_form(f)
+        if erro:
+            flash(erro, "error")
+            return redirect(url_for("editar_manejo", idx=idx))
         fazer_backup()
         _limpar_backups_antigos()
         updates = {
+            "Brincos":     form["brincos_refs"],
             "Data":        pd.to_datetime(f.get("data",""), dayfirst=True, errors="coerce"),
             "Tipo":        f.get("tipo",""),
             "Qtd Cabeças": _int_form(f.get("cabecas")),
@@ -520,6 +589,7 @@ def editar_manejo(idx):
     row["data_input"] = df.iloc[idx]["Data"].strftime("%Y-%m-%d") if pd.notna(df.iloc[idx].get("Data")) else ""
     if pd.isna(row.get("Produto")):
         row["Produto"] = ""
+    row["brincos_txt"] = _brincos_legiveis(row.get("Brincos"))
     return render_template("form_manejo.html", modo="editar", row=row, idx=idx,
                            estoque=estoque, TIPOS=TIPOS_MANEJO,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,

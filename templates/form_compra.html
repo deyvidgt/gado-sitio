@@ -98,6 +98,14 @@
             {% endfor %}
           </select>
         </div>
+        {% if modo != "editar" %}
+        <div class="form-group full">
+          <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:13.5px">
+            <input type="checkbox" name="brincar" value="1" style="width:auto">
+            🏷️ Colocar brinco nos animais desta compra logo depois de salvar
+          </label>
+        </div>
+        {% endif %}
       </div>
 
       <div style="margin-top:28px;display:flex;gap:12px">

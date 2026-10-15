@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}{{ a.brinco }} — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Ficha do animal 🏷️{% endblock %}
+
+{% block content %}
+<style>
+  .ficha-top { display:flex; gap:18px; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
+  .brinco-grande { width:84px; height:84px; border-radius:50% 50% 50% 8px; display:flex; align-items:center;
+                   justify-content:center; font-size:30px; font-weight:700; border:3px solid rgba(0,0,0,.2);
+                   box-shadow:var(--shadow); flex:none; }
+  .ficha-top h2 { font-family:'Playfair Display',serif; font-size:24px; color:var(--green-700); }
+  .tag-status { display:inline-block; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:600; }
+  .st-Vivo { background:var(--green-100); color:var(--green-700); }
+  .st-Vendido { background:rgba(41,128,185,.12); color:var(--info); }
+  .st-Morto { background:rgba(192,57,43,.12); color:var(--danger); }
+  .hist { list-style:none; }
+  .hist li { padding:10px 0; border-bottom:1px solid var(--cream-dk); font-size:13.5px; display:flex; gap:12px; }
+  .hist .d { color:var(--text-3); min-width:86px; }
+  .muted { color:var(--text-3); font-size:12px; }
+</style>
+
+<div class="ficha-top">
+  <div class="brinco-grande" style="background:{{ a.hex }};color:{{ '#222' if a.cor in ['Amarelo','Branco','Rosa','Laranja'] else '#fff' }}">
+    {{ '%02d' % a.num if a.num is not none else '??' }}
+  </div>
+  <div>
+    <h2>{{ a.brinco }} · {{ a.categoria or 'Animal' }}</h2>
+    <div style="margin-top:4px">
+      <span class="tag-status st-{{ a.status }}">{{ a.status }}{% if a.saida %} em {{ a.saida }}{% endif %}</span>
+      <span class="muted">&nbsp;#{{ a.id }}</span>
+    </div>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+    <a href="{{ url_for('editar_animal', id_=a.id) }}" class="btn btn-outline btn-sm">✏️ Editar</a>
+    {% if a.status == 'Vivo' %}
+    <a href="{{ url_for('novo_manejo', prefill=1, brincos=a.brinco, cabecas=1) }}" class="btn btn-primary btn-sm">🩺 Manejo neste animal</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <div class="card-title">Cadastro</div>
+    <div class="kv"><span class="kv-key">Dono</span><span>{{ NOMES.get(a.dono, a.dono) }}</span></div>
+    <div class="kv"><span class="kv-key">Sexo</span><span>{{ {'F':'Fêmea','M':'Macho'}.get(a.sexo, '—') }}</span></div>
+    <div class="kv"><span class="kv-key">Raça</span><span>{{ a.raca or '—' }}</span></div>
+    <div class="kv"><span class="kv-key">Pelagem</span><span>{{ a.pelagem or '—' }}</span></div>
+    <div class="kv"><span class="kv-key">Sinais</span><span>{{ a.sinais or '—' }}</span></div>
+    <div class="kv"><span class="kv-key">Nascimento</span><span>{{ nascimento or '—' }}{% if a.idade %} <span class="muted">({{ a.idade }})</span>{% endif %}</span></div>
+    <div class="kv"><span class="kv-key">Origem</span><span>{{ a.origem }}{% if raw['Ref Compra'] %} <span class="muted">({{ raw['Ref Compra'] }})</span>{% endif %}</span></div>
+    <div class="kv"><span class="kv-key">Entrada</span><span>{{ a.entrada or '—' }}</span></div>
+    <div class="kv"><span class="kv-key">Mãe</span><span>
+      {% if mae_id %}<a href="{{ url_for('ficha_animal', id_=mae_id) }}">{{ mae_txt }}</a>{% else %}{{ mae_txt or '—' }}{% endif %}</span></div>
+    {% if filhos %}
+    <div class="kv"><span class="kv-key">Crias</span><span>
+      {% for fi in filhos %}<a href="{{ url_for('ficha_animal', id_=fi.id) }}">{{ fi.brinco }}</a>{{ ', ' if not loop.last }}{% endfor %}</span></div>
+    {% endif %}
+    {% if raw['Observações'] %}<div class="kv"><span class="kv-key">Obs.</span><span>{{ raw['Observações'] }}</span></div>{% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-title">Histórico</div>
+    {% if historico %}
+    <ul class="hist">
+      {% for h in historico %}
+        <li><span class="d">{{ h.data|data_br }}</span><span><b>{{ h.tipo }}</b>{% if h.detalhe %}<br><span class="muted">{{ h.detalhe }}</span>{% endif %}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+      <p class="muted">Nada registrado neste brinco ainda. Vacinas, vermífugos e pesagens com o brinco aparecem aqui.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if a.status == 'Vivo' %}
+<details class="card" style="margin-top:20px">
+  <summary style="cursor:pointer;font-weight:600">📤 Dar baixa (vendido / morreu)</summary>
+  <form method="post" action="{{ url_for('baixa_animal', id_=a.id) }}" style="margin-top:14px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Motivo</label>
+        <select name="status" id="sel-baixa">
+          <option value="Vendido">Vendido</option>
+          <option value="Morto">Morreu / perda</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" name="data" value="{{ hoje }}">
+      </div>
+      <div class="form-group full">
+        <label>Detalhe (opcional)</label>
+        <input type="text" name="motivo" maxlength="160" placeholder="ex: picada de cobra">
+      </div>
+      <div class="form-group full" id="grp-morte" style="display:none">
+        <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:13.5px">
+          <input type="checkbox" name="registrar_morte" value="1" checked style="width:auto">
+          Registrar também a Morte/Perda no Manejo (perda de {{ NOMES.get(a.dono, a.dono) }})
+        </label>
+      </div>
+    </div>
+    <p class="muted" style="margin:10px 0">Vendido: o valor vai em <a href="{{ url_for('nova_venda') }}">Nova Venda</a>
+      (lá dá para citar o brinco, e a baixa sai sozinha). O brinco fica livre para reaproveitar.</p>
+    <button class="btn btn-danger btn-sm">Dar baixa</button>
+  </form>
+</details>
+{% endif %}
+
+<form method="post" action="{{ url_for('excluir_animal', id_=a.id) }}" style="margin-top:20px"
+      onsubmit="return confirm('Excluir este cadastro feito por engano? (Manejo e Vendas não mudam)')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button class="btn btn-outline btn-sm" style="color:var(--danger)">🗑️ Excluir cadastro</button>
+  <a href="{{ url_for('animais') }}" class="btn btn-outline btn-sm">← Voltar</a>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const sel = document.getElementById("sel-baixa"), grp = document.getElementById("grp-morte");
+  if (!sel) return;
+  const t = () => grp.style.display = sel.value === "Morto" ? "" : "none";
+  sel.addEventListener("change", t); t();
+})();
+</script>
+{% endblock %}

@@ -24,7 +24,7 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 
 ## ⚠️ Dados / banco (LER ANTES DE MEXER)
 
-- Os dados ficam em **`gado_familia.xlsx`** (abas: Compras, Gastos, Vendas, Manejo, Visitas).
+- Os dados ficam em **`gado_familia.xlsx`** (abas: Compras, Gastos, Vendas, Manejo, Visitas, Animais).
 - Em produção o arquivo mora em **`~/gado-dados/`**, **fora do Git**, para o `git pull`
   nunca apagar dados. Resolução do caminho: `db.py: _resolver_data_dir()`
   (ordem: `GADO_DATA_DIR` → `~/gado-dados/` → pasta do .exe → pasta do script).
@@ -52,6 +52,9 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 | `backup_automatico.py` | Backup diário (Task do PythonAnywhere) |
 | `resumo_mensal.py` | Resumo do mês no WhatsApp no dia 1º (Task diária; `--teste` só mostra) |
 | `insumos.py` | Estoque de Sal/Proteinado/Ração: sacos em estoque contados nas visitas + compras (Gastos: Produto/Qtd Sacos) → consumo e "acaba em" (painel e WhatsApp) |
+| `animais.py` | Cadastro individual por brinco (aba `Animais`): cor por dono, nº 01–99 reaproveitado, ID `A0001` liga o histórico (`Brincos` em Manejo/Vendas = "Amarelo 21 #A0003"); baixa, brucelose por animal |
+| `comando_voz.py` | Comando de voz por regras: `analisar(texto)` → intenção; `montar(intenção, ctx)` confere nos dados. Rotas em `routes_animais.py` (`/voz`, `/api/voz/*`) |
+| `static/voz_campos.js` | Prefill de formulário por `?prefill=1&campo=valor` e 🎤 de ditado nos campos de texto |
 | `static/fila_visitas.js` | Visita offline: guarda no celular (IndexedDB) e envia por `/api/visitas` quando há sinal; `ID Envio` evita duplicata |
 | `tests/` | Testes automáticos (pytest) |
 | `templates/` | Jinja2 (base.html + páginas); `static/` assets e PWA (`sw.js`, `manifest.json`) |
@@ -73,6 +76,9 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 - **Nascimentos (v4.1):** entram a custo zero no rebanho (baixam a média). Com
   "Nascimento De", a cabeça vai para o estoque desse dono; senão é rateada em terços —
   o inverso de "Perda De". Não afeta valores, só o estoque por membro.
+- **Animais com brinco (v4.3):** o cadastro NÃO entra nas contas (a cabeça já veio pela
+  compra/nascimento). Só o atalho Nascimento grava no Manejo e a baixa por morte grava a
+  Morte/Perda — nunca cadastre E registre a mesma cabeça duas vezes.
 - **Invariantes (teste sempre que mexer em finanças):**
   1. `custo_vendidos + perdas + capital_imobilizado == total_custo` (nada aparece do nada);
   2. soma dos `custo_total` dos membros == `custo_vendidos` global;

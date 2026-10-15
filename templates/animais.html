@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Animais — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Animais 🏷️{% endblock %}
+
+{% block content %}
+<style>
+  .chip-brinco { display:inline-flex; align-items:center; gap:6px; font-weight:600; white-space:nowrap; }
+  .chip-brinco .bol { width:14px; height:14px; border-radius:50%; border:1.5px solid rgba(0,0,0,.25); flex:none; }
+  .tabs-status { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .tabs-status a { padding:6px 14px; border-radius:20px; font-size:13px; text-decoration:none;
+                   border:1.5px solid var(--cream-dk); color:var(--text-2); background:var(--surface); }
+  .tabs-status a.on { background:var(--green-700); color:#fff; border-color:var(--green-700); }
+  .conf-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:20px; }
+  .conf-card { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; }
+  .conf-card .nome { font-size:13px; color:var(--text-3); display:flex; align-items:center; gap:8px; }
+  .conf-card .num { font-size:22px; font-weight:600; margin:4px 0; }
+  .conf-card small { font-size:12px; color:var(--text-3); }
+  .alerta-bruc { background:var(--gold-lt); border:1px solid var(--gold); border-radius:var(--radius);
+                 padding:12px 16px; margin-bottom:18px; font-size:13.5px; }
+  .alerta-bruc ul { margin:6px 0 0 18px; }
+  table.tab-animais { width:100%; border-collapse:collapse; font-size:13.5px; }
+  table.tab-animais th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+                         color:var(--text-3); padding:10px 12px; border-bottom:1.5px solid var(--cream-dk); }
+  table.tab-animais td { padding:10px 12px; border-bottom:1px solid var(--cream-dk); vertical-align:top; }
+  table.tab-animais tr:hover td { background:var(--green-50); }
+  table.tab-animais a { color:inherit; text-decoration:none; }
+  .muted { color:var(--text-3); font-size:12px; }
+  @media (max-width:700px) { .col-opc { display:none; } }
+</style>
+
+<div class="section-head">
+  <h2>Rebanho com brinco <span class="muted">({{ total_vivos }} vivos)</span></h2>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a href="{{ url_for('voz') }}" class="btn btn-outline">🎤 Comando de voz</a>
+    <a href="{{ url_for('novo_animal') }}" class="btn btn-primary">+ Cadastrar animal</a>
+  </div>
+</div>
+
+{% if brucelose %}
+<div class="alerta-bruc">
+  💉 <b>Brucelose (fêmeas de 3 a 8 meses):</b>
+  <ul>
+    {% for b in brucelose %}
+      <li><a href="{{ url_for('ficha_animal', id_=b.id) }}"><span class="chip-brinco"><span class="bol" style="background:{{ b.hex }}"></span>{{ b.brinco }}</span></a>
+        ({{ b.categoria or 'fêmea' }} · {{ NOMES.get(b.dono, b.dono) }}) {{ b.msg }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="conf-grid">
+  {% for c in conferencia %}
+  <div class="conf-card">
+    <div class="nome"><span class="chip-brinco"><span class="bol" style="background:{{ COR_HEX.get(cores_dono[c.membro], '#999') }}"></span></span>
+      {{ NOMES[c.membro] }} · {{ cores_dono[c.membro] }}</div>
+    <div class="num">{{ c.com_brinco }} <span class="muted">de {{ c.estoque }} no estoque</span></div>
+    {% if c.sem_brinco %}<small>⚠️ {{ c.sem_brinco }} ainda sem brinco</small>
+    {% elif c.sobrando %}<small>⚠️ {{ c.sobrando }} a mais que o estoque — confira compras/vendas</small>
+    {% else %}<small>✅ todos com brinco</small>{% endif %}
+    <br><small>Próximo brinco: <b>{{ cores_dono[c.membro] }} {{ '%02d' % proximos[c.membro] if proximos[c.membro] else '—' }}</b></small>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="tabs-status">
+  {% for st, rot in [('Vivo','🐄 Vivos'),('Vendido','🤝 Vendidos'),('Morto','⚰️ Mortos'),('todos','Todos')] %}
+    <a href="?status={{ st }}" class="{{ 'on' if status == st }}">{{ rot }}</a>
+  {% endfor %}
+  <input type="text" id="busca" placeholder="🔍 Buscar brinco, dono, raça…" oninput="filtrar()"
+         style="flex:1;min-width:180px;padding:7px 12px;border:1.5px solid var(--cream-dk);border-radius:8px;
+                font-size:13px;font-family:inherit;background:var(--surface-2);color:var(--text)">
+</div>
+
+<div class="card" style="padding:0;overflow-x:auto">
+  {% if rows %}
+  <table class="tab-animais">
+    <thead><tr>
+      <th>Brinco</th><th>Dono</th><th>Categoria</th><th class="col-opc">Raça / Pelagem</th>
+      <th class="col-opc">Idade</th><th class="col-opc">Origem</th>{% if status != 'Vivo' %}<th>Situação</th>{% endif %}
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr class="linha" data-busca="{{ (r.brinco ~ ' ' ~ NOMES.get(r.dono, r.dono) ~ ' ' ~ r.categoria ~ ' ' ~ r.raca ~ ' ' ~ r.pelagem ~ ' ' ~ r.sinais)|lower }}">
+        <td><a href="{{ url_for('ficha_animal', id_=r.id) }}"><span class="chip-brinco"><span class="bol" style="background:{{ r.hex }}"></span>{{ r.brinco }}</span></a></td>
+        <td>{{ NOMES.get(r.dono, r.dono) }}</td>
+        <td><a href="{{ url_for('ficha_animal', id_=r.id) }}">{{ r.categoria or '—' }}</a></td>
+        <td class="col-opc">{{ r.raca or '—' }}{% if r.pelagem %} · {{ r.pelagem }}{% endif %}
+          {% if r.sinais %}<div class="muted">{{ r.sinais }}</div>{% endif %}</td>
+        <td class="col-opc">{{ r.idade or '—' }}</td>
+        <td class="col-opc">{{ r.origem }}</td>
+        {% if status != 'Vivo' %}<td>{{ r.status }}{% if r.saida %} <span class="muted">{{ r.saida }}</span>{% endif %}</td>{% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p style="padding:28px;text-align:center;color:var(--text-3)">
+      Nenhum animal aqui ainda. Cadastre pelo botão acima, pela compra (🏷️ ao salvar) ou falando no 🎤.
+    </p>
+  {% endif %}
+</div>
+
+<details class="card" style="margin-top:20px">
+  <summary style="cursor:pointer;font-weight:600">🎨 Cor do brinco de cada dono</summary>
+  <form method="post" action="{{ url_for('animais_cores') }}" style="margin-top:14px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      {% for m in MEMBROS %}
+      <div class="form-group">
+        <label>{{ NOMES[m] }}</label>
+        <select name="cor_{{ m }}">
+          {% for c in CORES %}<option value="{{ c }}" {{ 'selected' if cores_dono[m] == c }}>{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="muted" style="margin:8px 0 12px">Numeração de 01 a 99 por cor; depois do 99 recomeça do 01,
+      pulando os brincos que ainda estão em animais vivos.</p>
+    <button class="btn btn-primary btn-sm">Salvar cores</button>
+  </form>
+</details>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filtrar() {
+  const q = document.getElementById("busca").value.trim().toLowerCase();
+  document.querySelectorAll("tr.linha").forEach(tr =>
+    tr.style.display = !q || tr.dataset.busca.includes(q) ? "" : "none");
+}
+</script>
+{% endblock %}

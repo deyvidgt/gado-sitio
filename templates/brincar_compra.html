@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Brincos da compra — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Brincos da compra 🏷️{% endblock %}
+
+{% block content %}
+<style>
+  .lin-brinco { display:grid; grid-template-columns:28px 1.1fr 1fr 70px 1.1fr 1fr 1fr; gap:8px; align-items:center;
+                padding:10px 0; border-bottom:1px solid var(--cream-dk); }
+  .lin-brinco select, .lin-brinco input[type=text], .lin-brinco input[type=number] {
+    width:100%; padding:7px 8px; border:1.5px solid var(--cream-dk); border-radius:8px; font-size:13px;
+    font-family:inherit; background:var(--surface-2); color:var(--text); }
+  .lin-cab { font-size:11px; text-transform:uppercase; color:var(--text-3); letter-spacing:.05em; }
+  @media (max-width:760px) {
+    .lin-brinco { grid-template-columns:28px 1fr 1fr 64px; }
+    .lin-brinco .opc { grid-column:2 / -1; }
+    .lin-cab { display:none; }
+  }
+</style>
+<div class="form-card">
+  <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--green-700);margin-bottom:6px">
+    Compra de {{ ref_compra }}
+  </h2>
+  <p style="font-size:12.5px;color:var(--text-3);margin-bottom:16px">
+    Uma linha por cabeça, já com o dono da divisão da compra e o próximo número livre da cor dele.
+    Ajuste para o número que está no brinco de verdade. Desmarque quem ainda não recebeu brinco.
+    Isto não mexe nas contas (a compra já está registrada).
+  </p>
+  <form method="post" data-sem-mic>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="qtd" value="{{ linhas|length }}">
+    <div class="lin-brinco lin-cab"><span></span><span>Dono</span><span>Cor</span><span>Nº</span><span>Categoria</span><span>Raça</span><span>Pelagem / sinais</span></div>
+    {% for l in linhas %}
+    {% set i = loop.index0 %}
+    <div class="lin-brinco">
+      <input type="checkbox" name="incluir_{{ i }}" value="1" checked style="width:18px;height:18px">
+      <select name="dono_{{ i }}" class="sel-dono" data-i="{{ i }}">
+        <option value="">Dono…</option>
+        {% for m in MEMBROS %}<option value="{{ m }}" {{ 'selected' if l.dono == m }}>{{ NOMES[m] }}</option>{% endfor %}
+      </select>
+      <select name="cor_{{ i }}" id="cor_{{ i }}">
+        <option value="">Cor…</option>
+        {% for c in CORES %}<option value="{{ c }}" {{ 'selected' if l.cor == c }}>{{ c }}</option>{% endfor %}
+      </select>
+      <input type="number" name="numero_{{ i }}" min="1" max="99" value="{{ l.numero or '' }}" placeholder="nº">
+      <select name="categoria_{{ i }}" class="opc">
+        <option value="">Categoria…</option>
+        {% for c in CATEGORIAS %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+      </select>
+      <input type="text" name="raca_{{ i }}" class="opc" list="lista-racas" placeholder="Raça">
+      <input type="text" name="pelagem_{{ i }}" class="opc" placeholder="Pelagem, sinais">
+    </div>
+    {% endfor %}
+    <datalist id="lista-racas">
+      {% for r in ['Nelore','Anelorado','Angus','Girolando','Gir','Guzerá','Tabapuã','Brahman','Senepol','Mestiço','Cruzado'] %}<option value="{{ r }}">{% endfor %}
+    </datalist>
+    <div style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary">✅ Cadastrar brincos</button>
+      <a href="{{ url_for('compras') }}" class="btn btn-outline">Agora não</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const CORES_DONO = {{ cores_dono | tojson }};
+  document.querySelectorAll(".sel-dono").forEach(sel => sel.addEventListener("change", () => {
+    const cor = document.getElementById("cor_" + sel.dataset.i);
+    if (CORES_DONO[sel.value]) cor.value = CORES_DONO[sel.value];
+  }));
+  // "pelagem, sinais": o que vem depois da 1ª vírgula vira sinais
+  document.querySelector("form").addEventListener("submit", e => {
+    document.querySelectorAll("input[name^='pelagem_']").forEach(inp => {
+      const i = inp.name.split("_")[1], partes = inp.value.split(",");
+      if (partes.length > 1) {
+        inp.value = partes[0].trim();
+        const h = document.createElement("input");
+        h.type = "hidden"; h.name = "sinais_" + i; h.value = partes.slice(1).join(",").trim();
+        e.target.appendChild(h);
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

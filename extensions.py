@@ -315,6 +315,17 @@ def _gerar_alertas(dados):
             alertas.append({"nivel": "danger",
                              "msg": f"{tipo} atrasada! Última: {ultima.strftime('%d/%m/%Y')} ({d} dias)"})
     alertas.extend(lembretes_sazonais(df_man, hoje))
+    # v4.3: fêmeas com brinco na janela da brucelose (3–8 meses), pelo nascimento.
+    try:
+        import animais as _A
+        for b in _A.janela_brucelose(_A.carregar(), df_man, hoje):
+            if b["situacao"] == "na janela":
+                a = b["animal"]
+                alertas.append({"nivel": "warning",
+                                "msg": f"Brucelose: {a['Categoria'] or 'fêmea'} "
+                                       f"{_A.fmt_brinco(a['Brinco Cor'], a['Brinco Nº'])} {b['msg']}"})
+    except Exception:
+        pass
     from calculos import calcular_resumo_financeiro
     r_fin = _get_resumo_cache()
     if r_fin["resultado_realizado"] < 0:

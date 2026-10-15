@@ -307,11 +307,14 @@
     <a href="{{ url_for('nova_venda') }}"   class="nav-link {% if request.endpoint=='nova_venda'   %}active{% endif %}"><span class="ico">🤝</span> Nova Venda</a>
     <a href="{{ url_for('novo_manejo') }}"  class="nav-link {% if request.endpoint=='novo_manejo'  %}active{% endif %}"><span class="ico">🩺</span> Novo Manejo</a>
     <a href="{{ url_for('nova_visita') }}"  class="nav-link {% if request.endpoint=='nova_visita'  %}active{% endif %}"><span class="ico">🌾</span> Visita ao Sítio</a>
+    <a href="{{ url_for('novo_animal') }}"  class="nav-link {% if request.endpoint in ['novo_animal','brincar_compra'] %}active{% endif %}"><span class="ico">🏷️</span> Cadastrar Animal</a>
+    <a href="{{ url_for('voz') }}"          class="nav-link {% if request.endpoint=='voz' %}active{% endif %}"><span class="ico">🎤</span> Comando de Voz</a>
     <div class="nav-section">Consultas</div>
     <a href="{{ url_for('compras') }}"   class="nav-link {% if request.endpoint=='compras'   %}active{% endif %}"><span class="ico">📦</span> Compras</a>
     <a href="{{ url_for('gastos') }}"    class="nav-link {% if request.endpoint=='gastos'    %}active{% endif %}"><span class="ico">📋</span> Gastos</a>
     <a href="{{ url_for('vendas') }}"    class="nav-link {% if request.endpoint=='vendas'    %}active{% endif %}"><span class="ico">📊</span> Vendas</a>
     <a href="{{ url_for('manejo') }}"    class="nav-link {% if request.endpoint=='manejo'    %}active{% endif %}"><span class="ico">🌿</span> Manejo</a>
+    <a href="{{ url_for('animais') }}"   class="nav-link {% if request.endpoint in ['animais','ficha_animal','editar_animal'] %}active{% endif %}"><span class="ico">🐄</span> Animais</a>
     <a href="{{ url_for('visitas') }}"   class="nav-link {% if request.endpoint in ['visitas','nova_visita','excluir_visita'] %}active{% endif %}"><span class="ico">🗓️</span> Visitas</a>
     <a href="{{ url_for('relatorios') }}" class="nav-link {% if request.endpoint=='relatorios' %}active{% endif %}"><span class="ico">📈</span> Relatórios</a>
     <div class="nav-section">Ferramentas</div>
@@ -356,6 +359,10 @@
     </div>
     <div class="topbar-right">
       <span class="topbar-date" id="now-date"></span>
+      {% if request.endpoint != 'voz' %}
+      <a href="{{ url_for('voz', ouvir=1) }}" class="btn-theme" id="btn-voz-top" title="Comando de voz"
+         style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">🎤</a>
+      {% endif %}
       <button class="btn-theme" id="btn-theme-top" title="Alternar tema" onclick="toggleTheme()">☀️</button>
     </div>
   </div>
@@ -417,6 +424,7 @@
   chk.addEventListener("change", toggleTheme);
 </script>
 <script src="{{ url_for('static', filename='fila_visitas.js') }}?v={{ VERSAO }}"></script>
+<script src="{{ url_for('static', filename='voz_campos.js') }}?v={{ VERSAO }}"></script>
 {% block scripts %}{% endblock %}
 <script>
 // ── PWA: registrar service worker ──────────────────────────────────────────

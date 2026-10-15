@@ -2,6 +2,43 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
+## [4.3.0] — 2026-10-15
+
+### Novo
+- **Animais com brinco** (`animais.py`, página **Animais**): cadastro individual com
+  brinco (cor + nº), dono, categoria, raça, pelagem, sinais, nascimento, mãe e origem.
+  Cada dono tem a sua cor (padrão: Deyvid amarelo, Nilson azul, Geane vermelho —
+  ajustável na página). Numeração 01–99 por cor; depois do 99 recomeça do 01, pulando
+  os brincos de animais vivos. O ID interno (`A0001`…) nunca se repete e é o que liga o
+  histórico — o brinco só é único entre os vivos.
+- Ficha do animal com histórico (manejos e vendas com o brinco), crias e baixa
+  (vendido / morreu). Conferência "com brinco × estoque" por dono e alerta de
+  **brucelose por animal** (fêmeas de 3–8 meses, também no painel).
+- **Compra → brincos**: opção "colocar brinco nos animais desta compra" abre uma tela
+  com uma linha por cabeça, dono e próximo número já sugeridos.
+- Campo **Brincos** no Manejo e na Venda ("amarelo 21, azul 12"). Na venda, os animais
+  citados saem como Vendidos e o brinco fica livre.
+- **Comando de voz** (`comando_voz.py`, página **Comando de Voz** e 🎤 no topo de todas
+  as páginas): cadastro, nascimento (com mãe), vacinas, vermífugo, pesagem, tratamento,
+  pasto, morte, compra, venda, gasto, visita e ficha, falados em português. Entende
+  números falados ("vinte e um", "zero sete", "quinze mil"), "ontem"/"dia 12" e pergunta
+  quando um nº sem cor bate em mais de um animal. Nada grava sem confirmar; modo
+  **mãos livres** lê o resumo em voz alta e salva com "sim". Sem internet, o comando
+  fica guardado no celular para conferir depois. A visita só preenche o formulário.
+  Também responde perguntas: "quantas cabeças eu tenho", "quanto gado tem o Nilson",
+  "quantas novilhas do Deyvid". Bateria de 86 frases em `tests/test_comando_voz.py`.
+- 🎤 de **ditado** nos campos de texto livre (descrição, observações, sinais, produto,
+  brincos…) e formulários preenchidos por link (`?prefill=1&campo=valor`,
+  `static/voz_campos.js`).
+
+### Regras financeiras
+- O cadastro não mexe nas contas. Só o **Nascimento** com brinco grava a linha de
+  Nascimento no Manejo, e a baixa por **morte** grava a Morte/Perda (Perda De = dono).
+  Invariantes cobertas em `tests/test_animais.py`.
+
+### Colunas novas (no fim, migradas automaticamente)
+- Aba nova `Animais` · Manejo: `Brincos` · Vendas: `Brincos`
+
 ## [4.2.0] — 2026-10-04
 
 ### Novo

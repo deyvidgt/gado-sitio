@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}Comando de Voz — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Comando de Voz 🎤{% endblock %}
+
+{% block content %}
+<style>
+  .voz-wrap { max-width:720px; }
+  .mic-grande { width:120px; height:120px; border-radius:50%; border:none; cursor:pointer; font-size:48px;
+                background:var(--green-700); color:#fff; box-shadow:0 6px 24px rgba(45,90,39,.35);
+                display:block; margin:8px auto 10px; transition:transform .15s, background .2s; }
+  .mic-grande:active { transform:scale(.96); }
+  .mic-grande.ouvindo { background:var(--danger); animation:pulsar 1.2s infinite; }
+  @keyframes pulsar { 0%{box-shadow:0 0 0 0 rgba(192,57,43,.5)} 70%{box-shadow:0 0 0 22px rgba(192,57,43,0)} 100%{box-shadow:0 0 0 0 rgba(192,57,43,0)} }
+  .status-mic { text-align:center; font-size:13px; color:var(--text-3); min-height:20px; margin-bottom:12px; }
+  #texto { width:100%; min-height:70px; padding:12px 14px; font-size:16px; font-family:inherit;
+           border:1.5px solid var(--cream-dk); border-radius:10px; background:var(--surface-2); color:var(--text); resize:vertical; }
+  .res-card { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px 20px; margin-top:18px; }
+  .res-card h3 { font-family:'Playfair Display',serif; font-size:19px; color:var(--green-700); margin-bottom:12px; }
+  .res-tab { width:100%; border-collapse:collapse; font-size:14px; }
+  .res-tab td { padding:7px 4px; border-bottom:1px solid var(--cream-dk); vertical-align:top; }
+  .res-tab td:first-child { color:var(--text-3); width:38%; font-size:13px; }
+  .msg-aviso { background:var(--gold-lt); border-radius:8px; padding:8px 12px; font-size:13px; margin-top:8px; }
+  .msg-erro { background:rgba(192,57,43,.1); color:var(--danger); border-radius:8px; padding:8px 12px; font-size:13px; margin-top:8px; }
+  .msg-ok { background:var(--green-100); color:var(--green-700); border-radius:8px; padding:10px 14px; font-size:14px; margin-top:8px; }
+  .pergunta { margin-top:12px; }
+  .pergunta .ops { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+  .acoes-res { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+  .exemplos { font-size:13px; }
+  .exemplos li { margin:6px 0; cursor:pointer; color:var(--green-700); list-style:none; }
+  .exemplos li::before { content:"🗣️ "; }
+  .pend li { font-size:13px; margin:6px 0; list-style:none; display:flex; gap:8px; align-items:center; }
+  .opt-linha { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; font-size:13px; color:var(--text-2); margin-bottom:14px; }
+  .opt-linha label { display:flex; gap:6px; align-items:center; cursor:pointer; }
+</style>
+
+<div class="voz-wrap">
+  <div class="form-card">
+    <button type="button" id="btn-mic" class="mic-grande" title="Falar">🎤</button>
+    <div class="status-mic" id="status-mic">Toque no microfone e fale o comando.</div>
+    <div class="opt-linha">
+      <label><input type="checkbox" id="opt-maos" style="width:auto"> 🙌 Mãos livres (lê em voz alta e confirma com "sim")</label>
+    </div>
+    <textarea id="texto" placeholder="Ou escreva / use o microfone do teclado: registrar bezerra brinco amarelo 21 deyvid nelore branca"></textarea>
+    <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+      <button type="button" class="btn btn-primary" id="btn-entender">🔎 Entender</button>
+      <button type="button" class="btn btn-outline" id="btn-limpar">Limpar</button>
+    </div>
+    <div id="resultado"></div>
+  </div>
+
+  <div class="card" id="card-pend" style="margin-top:18px;display:none">
+    <div class="card-title">📴 Comandos guardados sem internet</div>
+    <ul class="pend" id="lista-pend"></ul>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <div class="card-title">O que dá para falar</div>
+    <ul class="exemplos">
+      <li>registrar bezerra brinco amarelo 21 deyvid nelore branca</li>
+      <li>registrar novilha brinco vermelho 07 geane amarela com detalhe branco na testa</li>
+      <li>registrar garrote brinco azul 15 com 8 meses comprado</li>
+      <li>nasceu bezerra amarelo 22 nelore, mãe amarelo 08</li>
+      <li>vacina brucelose novilha 35</li>
+      <li>vacina raiva amarelo 21 e 22 com Raivacel</li>
+      <li>vermifuguei o rebanho todo com ivermectina</li>
+      <li>pesagem amarelo 21 320 quilos, azul 12 280 quilos</li>
+      <li>morreu a vaca azul 12 picada de cobra</li>
+      <li>comprei 5 cabeças por 15 mil, 2 do deyvid 2 do nilson 1 da mãe</li>
+      <li>vendi amarelo 21 e azul 12 por 9 mil, arroba a 310</li>
+      <li>gastei 350 reais de sal, 10 sacos</li>
+      <li>visita contei 38 cabeças, choveu 20 milímetros, sal baixo, proteinado ok</li>
+      <li>ficha amarelo 21</li>
+    </ul>
+    <p style="font-size:12px;color:var(--text-3);margin-top:10px">
+      Cores dos brincos: {% for m, c in cores_dono.items() %}{{ NOMES[m] }} = {{ c }}{{ ' · ' if not loop.last }}{% endfor %}.
+      Sem a cor, vale se só houver um animal vivo com aquele número. Datas: "ontem", "anteontem", "dia 12".
+      Nada é gravado sem você confirmar.
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const txt = $("texto"), res = $("resultado"), btnMic = $("btn-mic"), stMic = $("status-mic");
+  const optMaos = $("opt-maos");
+  const CHAVE_PEND = "gado-voz-pendentes", CHAVE_MAOS = "gado-voz-maos-livres";
+  let escolhas = {}, ultimo = null, ouvindo = false, modoConfirmacao = false;
+
+  try { optMaos.checked = localStorage.getItem(CHAVE_MAOS) === "1"; } catch (e) {}
+  optMaos.addEventListener("change", () => { try { localStorage.setItem(CHAVE_MAOS, optMaos.checked ? "1" : "0"); } catch (e) {} });
+
+  // ── Reconhecimento de voz (Chrome/Android, Safari/iOS) ─────────────────
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null;
+  if (SR) {
+    rec = new SR();
+    rec.lang = "pt-BR";
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.onresult = ev => {
+      let final = "", parcial = "";
+      for (const r of ev.results) (r.isFinal ? (final += r[0].transcript) : (parcial += r[0].transcript));
+      if (modoConfirmacao) { if (final) responderConfirmacao(final); return; }
+      txt.value = (final || parcial).trim();
+    };
+    rec.onend = () => {
+      const eraConfirmacao = modoConfirmacao;
+      pararVisual();
+      if (!eraConfirmacao && txt.value.trim()) entender();
+    };
+    rec.onerror = ev => {
+      pararVisual();
+      stMic.textContent = ev.error === "not-allowed" ? "Permita o microfone nas configurações do navegador."
+        : ev.error === "network" ? "Sem internet para reconhecer a voz — use o microfone do teclado."
+        : ev.error === "no-speech" ? "Não ouvi nada. Toque e fale de novo." : "Erro no microfone: " + ev.error;
+    };
+  } else {
+    stMic.textContent = "Este navegador não reconhece voz aqui — use o 🎤 do teclado no campo abaixo.";
+    btnMic.style.opacity = ".5";
+  }
+  function pararVisual() { ouvindo = false; btnMic.classList.remove("ouvindo"); if (!modoConfirmacao) stMic.textContent = "Toque no microfone e fale o comando."; }
+  function ouvir(confirmacao) {
+    if (!rec) { txt.focus(); return; }
+    modoConfirmacao = !!confirmacao;
+    try { rec.start(); } catch (e) { return; }
+    ouvindo = true;
+    btnMic.classList.add("ouvindo");
+    stMic.textContent = confirmacao ? "Diga “sim” para salvar ou “não” para cancelar…" : "Ouvindo… fale o comando.";
+  }
+  btnMic.addEventListener("click", () => {
+    if (ouvindo) { rec.stop(); return; }
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    escolhas = {};
+    txt.value = "";
+    res.innerHTML = "";
+    ouvir(false);
+  });
+
+  // ── Fala de volta (mãos livres) ─────────────────────────────────────────
+  function falar(frase, depois) {
+    if (!window.speechSynthesis) { depois && depois(); return; }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(frase);
+    u.lang = "pt-BR"; u.rate = 1.05;
+    u.onend = () => depois && depois();
+    speechSynthesis.speak(u);
+  }
+  function responderConfirmacao(frase) {
+    modoConfirmacao = false;
+    const f = frase.toLowerCase();
+    if (/\b(sim|salva|salvar|confirma|confirmo|pode|isso|ok)\b/.test(f)) salvar();
+    else { falar("Cancelado."); stMic.textContent = "Cancelado. Corrija o texto ou fale de novo."; }
+  }
+
+  // ── Servidor ────────────────────────────────────────────────────────────
+  async function token() {
+    try {
+      const r = await fetch("/api/csrf", { credentials: "same-origin", cache: "no-store" });
+      if (r.ok) return (await r.json()).csrf_token;
+    } catch (e) {}
+    return "{{ csrf_token }}";
+  }
+  async function chamar(rota, corpo) {
+    const r = await fetch(rota, {
+      method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": await token() },
+      body: JSON.stringify(corpo),
+    });
+    if (r.status === 401) { location.href = "/login?next=/voz"; throw new Error("login"); }
+    return r.json();
+  }
+
+  async function entender() {
+    const texto = txt.value.trim();
+    if (!texto) return;
+    if (!navigator.onLine) { guardarPendente(texto); return; }
+    res.innerHTML = '<p class="status-mic">Entendendo…</p>';
+    try {
+      ultimo = await chamar("/api/voz/interpretar", { texto, escolhas });
+      mostrar(ultimo);
+    } catch (e) {
+      if (e.message !== "login") guardarPendente(texto);
+    }
+  }
+
+  function mostrar(d) {
+    let h = '<div class="res-card">';
+    h += "<h3>" + esc(d.titulo || "Comando") + "</h3>";
+    if (d.campos && d.campos.length) {
+      h += '<table class="res-tab">';
+      d.campos.forEach(([k, v]) => h += "<tr><td>" + esc(k) + "</td><td><b>" + esc(v) + "</b></td></tr>");
+      h += "</table>";
+    }
+    (d.erros || []).forEach(e => h += '<div class="msg-erro">❌ ' + esc(e) + "</div>");
+    (d.avisos || []).forEach(a => h += '<div class="msg-aviso">⚠️ ' + esc(a) + "</div>");
+    (d.perguntas || []).forEach(p => {
+      h += '<div class="pergunta"><b>❓ ' + esc(p.pergunta) + '</b><div class="ops">';
+      p.opcoes.forEach(o => h += '<button type="button" class="btn btn-outline btn-sm op" data-i="' + esc(p.indice) +
+                                 '" data-id="' + esc(o.id) + '">' + esc(o.rotulo) + "</button>");
+      h += "</div></div>";
+    });
+    h += '<div class="acoes-res">';
+    if (d.pode_salvar) h += '<button type="button" class="btn btn-primary" id="btn-salvar">✅ Salvar</button>';
+    if (d.acao === "ficha" && !(d.erros || []).length && !(d.perguntas || []).length)
+      h += '<button type="button" class="btn btn-primary" id="btn-salvar">🔎 Abrir ficha</button>';
+    if (d.url_form) h += '<a class="btn ' + (d.so_formulario ? "btn-primary" : "btn-outline") + '" href="' + esc(d.url_form) +
+                         '">📝 ' + (d.so_formulario ? "Abrir formulário preenchido" : "Corrigir no formulário") + "</a>";
+    h += "</div></div>";
+    res.innerHTML = h;
+    res.querySelectorAll(".op").forEach(b => b.addEventListener("click", () => {
+      escolhas[b.dataset.i] = b.dataset.id;
+      entender();
+    }));
+    const bs = $("btn-salvar");
+    if (bs) bs.addEventListener("click", salvar);
+
+    if (optMaos.checked) {
+      const resumo = (d.titulo || "").replace(/[^\p{L}\p{N}\s/,.-]/gu, "") + ". " +
+        (d.campos || []).filter(([, v]) => v && v !== "—").map(([k, v]) => k + " " + v).join(", ") + ".";
+      if (d.erros && d.erros.length) falar(d.erros.join(" "));
+      else if (d.perguntas && d.perguntas.length) falar(d.perguntas[0].pergunta + " Toque na opção certa.");
+      else if (d.pode_salvar) falar(resumo + " Posso salvar?", () => ouvir(true));
+      else if (d.so_formulario) falar(resumo + " Abra o formulário para conferir e salvar.");
+      else if (d.so_info) falar(resumo);
+    }
+  }
+
+  async function salvar() {
+    const bs = $("btn-salvar");
+    if (bs) { bs.disabled = true; bs.textContent = "Salvando…"; }
+    try {
+      const d = await chamar("/api/voz/executar", { texto: txt.value.trim(), escolhas });
+      if (d.ok) {
+        if (ultimo && ultimo.acao === "ficha") { location.href = d.url; return; }
+        res.innerHTML = '<div class="msg-ok">' + esc(d.msg) + ' &nbsp;<a href="' + esc(d.url) + '">ver</a></div>';
+        if (optMaos.checked) falar("Salvo.");
+        txt.value = ""; escolhas = {};
+        if (d.url && /\/animais\/compra\//.test(d.url)) location.href = d.url;
+      } else {
+        res.insertAdjacentHTML("beforeend", '<div class="msg-erro">❌ ' + esc(d.erro || "Não salvou.") + "</div>");
+        if (bs) { bs.disabled = false; bs.textContent = "✅ Salvar"; }
+        if (optMaos.checked) falar("Não salvou. " + (d.erro || ""));
+      }
+    } catch (e) {
+      res.insertAdjacentHTML("beforeend", '<div class="msg-erro">❌ Sem conexão — tente de novo.</div>');
+      if (bs) { bs.disabled = false; bs.textContent = "✅ Salvar"; }
+    }
+  }
+
+  // ── Sem internet: guarda o texto para conferir depois ─────────────────
+  function lerPend() { try { return JSON.parse(localStorage.getItem(CHAVE_PEND) || "[]"); } catch (e) { return []; } }
+  function gravarPend(l) { try { localStorage.setItem(CHAVE_PEND, JSON.stringify(l)); } catch (e) {} }
+  function guardarPendente(texto) {
+    const l = lerPend();
+    l.push({ texto, quando: new Date().toLocaleString("pt-BR") });
+    gravarPend(l);
+    res.innerHTML = '<div class="msg-aviso">📴 Sem internet: comando guardado no celular. Quando tiver sinal, confira e salve aqui embaixo.</div>';
+    txt.value = "";
+    desenharPend();
+  }
+  function desenharPend() {
+    const l = lerPend(), ul = $("lista-pend");
+    $("card-pend").style.display = l.length ? "" : "none";
+    ul.innerHTML = l.map((p, i) => '<li><button type="button" class="btn btn-outline btn-sm" data-usar="' + i +
+      '">Conferir</button><button type="button" class="btn btn-outline btn-sm" data-apagar="' + i + '">✕</button><span>' +
+      esc(p.texto) + ' <span style="color:var(--text-3)">(' + esc(p.quando) + ")</span></span></li>").join("");
+    ul.querySelectorAll("[data-usar]").forEach(b => b.addEventListener("click", () => {
+      const l2 = lerPend(), p = l2.splice(+b.dataset.usar, 1)[0];
+      gravarPend(l2); desenharPend();
+      txt.value = p.texto; escolhas = {}; entender();
+    }));
+    ul.querySelectorAll("[data-apagar]").forEach(b => b.addEventListener("click", () => {
+      const l2 = lerPend(); l2.splice(+b.dataset.apagar, 1); gravarPend(l2); desenharPend();
+    }));
+  }
+  desenharPend();
+
+  $("btn-entender").addEventListener("click", () => { escolhas = {}; entender(); });
+  $("btn-limpar").addEventListener("click", () => { txt.value = ""; res.innerHTML = ""; escolhas = {}; });
+  txt.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); escolhas = {}; entender(); } });
+  document.querySelectorAll(".exemplos li").forEach(li => li.addEventListener("click", () => {
+    txt.value = li.textContent.trim(); escolhas = {}; entender(); window.scrollTo({ top: 0, behavior: "smooth" });
+  }));
+  // Atalho vindo do botão 🎤 do topo: já abre ouvindo
+  if (new URLSearchParams(location.search).get("ouvir") === "1" && rec) setTimeout(() => btnMic.click(), 300);
+})();
+</script>
+{% endblock %}

@@ -39,6 +39,15 @@
           <label>Descrição</label>
           <input type="text" name="descricao" value="{{ row['Descrição'] if row else '' }}" placeholder="ex: Nelore gordos para frigorífico">
         </div>
+        <div class="form-group full">
+          <label>Brincos dos animais vendidos — opcional</label>
+          <input type="text" name="brincos" maxlength="400" autocomplete="off"
+                 value="{{ row.brincos_txt if row and row.brincos_txt is defined else '' }}"
+                 placeholder="ex: amarelo 21, azul 12">
+          <small style="color:var(--text-3);font-size:11px">
+            Os animais citados saem do cadastro como Vendidos e o brinco fica livre para reaproveitar.
+          </small>
+        </div>
       </div>
 
       <!-- Distribuição por membro -->

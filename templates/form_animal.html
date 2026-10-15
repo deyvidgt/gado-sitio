@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if modo == 'editar' else 'Cadastrar' }} Animal — Sítio Santo Antonio{% endblock %}
+{% block page_title %}{{ 'Editar' if modo == 'editar' else 'Cadastrar' }} Animal 🏷️{% endblock %}
+
+{% block content %}
+{% set v = form or {} %}
+<div style="max-width:720px">
+  <div class="form-card">
+    <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--green-700);margin-bottom:8px">
+      {{ 'Editar cadastro' if modo == 'editar' else 'Novo animal com brinco' }}
+    </h2>
+    <p style="font-size:12.5px;color:var(--text-3);margin-bottom:20px">
+      O cadastro não mexe nas contas — a cabeça já entrou pela compra ou pelo nascimento.
+      Só a origem <b>Nascimento</b> grava também o Nascimento no Manejo.
+    </p>
+    <form method="post" action="{{ url_for('editar_animal', id_=id_) if modo == 'editar' else url_for('novo_animal') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="ref_compra" value="{{ v.get('ref_compra', '') }}">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Dono</label>
+          <select name="dono" id="sel-dono" required>
+            <option value="">Selecione...</option>
+            {% for m in MEMBROS %}
+              <option value="{{ m }}" {{ 'selected' if v.get('dono') == m }}>{{ NOMES[m] }} ({{ cores_dono[m] }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Categoria</label>
+          <select name="categoria" required>
+            <option value="">Selecione...</option>
+            {% for c in CATEGORIAS %}<option value="{{ c }}" {{ 'selected' if v.get('categoria') == c }}>{{ c }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Cor do brinco</label>
+          <select name="cor" id="sel-cor" required>
+            <option value="">Selecione...</option>
+            {% for c in CORES %}<option value="{{ c }}" {{ 'selected' if v.get('cor') == c }}>{{ c }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Número do brinco (01–99)</label>
+          <input type="number" name="numero" id="inp-num" min="1" max="99" required
+                 value="{{ v.get('numero', '') }}">
+          <small id="dica-num" style="color:var(--text-3);font-size:11px"></small>
+        </div>
+        <div class="form-group">
+          <label>Raça</label>
+          <input type="text" name="raca" list="lista-racas" maxlength="40" value="{{ v.get('raca', '') }}">
+          <datalist id="lista-racas">
+            {% for r in ['Nelore','Anelorado','Angus','Red Angus','Brangus','Girolando','Gir','Guzerá','Tabapuã','Brahman','Senepol','Holandesa','Jersey','Mestiço','Cruzado','Caracu','Canchim','Simental','Meio-sangue'] %}<option value="{{ r }}">{% endfor %}
+          </datalist>
+        </div>
+        <div class="form-group">
+          <label>Pelagem (cor do animal)</label>
+          <input type="text" name="pelagem" list="lista-pelagens" maxlength="40" value="{{ v.get('pelagem', '') }}">
+          <datalist id="lista-pelagens">
+            {% for p in ['Branca','Preta','Amarela','Vermelha','Malhada','Pintada','Rajada','Baia','Castanha','Cinza','Moura','Chitada'] %}<option value="{{ p }}">{% endfor %}
+          </datalist>
+        </div>
+        <div class="form-group full">
+          <label>Sinais / detalhes</label>
+          <input type="text" name="sinais" maxlength="200" placeholder="ex: detalhe branco na testa, mocha"
+                 value="{{ v.get('sinais', '') }}">
+        </div>
+        <div class="form-group">
+          <label>Origem</label>
+          <select name="origem" id="sel-origem">
+            {% for o in ORIGENS %}<option value="{{ o }}" {{ 'selected' if v.get('origem') == o }}>{{ o }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Sexo</label>
+          <select name="sexo">
+            <option value="">Pela categoria</option>
+            <option value="F" {{ 'selected' if v.get('sexo') == 'F' }}>Fêmea</option>
+            <option value="M" {{ 'selected' if v.get('sexo') == 'M' }}>Macho</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Nascimento <span style="font-weight:400">(se souber)</span></label>
+          <input type="date" name="nascimento" id="inp-nasc" value="{{ v.get('nascimento', '') }}">
+          <small style="color:var(--text-3);font-size:11px">Com a data, o sistema avisa a hora da brucelose.</small>
+        </div>
+        <div class="form-group">
+          <label>Entrada no sítio / brincado em</label>
+          <input type="date" name="entrada" value="{{ v.get('entrada', '') or hoje }}">
+        </div>
+        <div class="form-group full">
+          <label>Mãe (brinco) — opcional</label>
+          <input type="text" name="mae" maxlength="60" placeholder="ex: amarelo 08"
+                 value="{{ v.get('mae', '') }}">
+        </div>
+        <div class="form-group full">
+          <label>Observações</label>
+          <textarea name="observacoes" rows="2">{{ v.get('observacoes', '') }}</textarea>
+        </div>
+      </div>
+      <div id="aviso-nasc" class="hint" style="display:none;margin-top:14px;font-size:12.5px;color:var(--green-700)">
+        🐮 Ao salvar, também registra o <b>Nascimento</b> no Manejo — a cabeça entra no estoque do dono.
+      </div>
+      <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap">
+        <button type="submit" class="btn btn-primary">{{ '💾 Salvar alterações' if modo == 'editar' else '✅ Cadastrar' }}</button>
+        {% if modo != 'editar' %}
+        <button type="submit" name="outro" value="1" class="btn btn-gold">✅ Cadastrar e fazer outro</button>
+        {% endif %}
+        <a href="{{ url_for('ficha_animal', id_=id_) if modo == 'editar' else url_for('animais') }}" class="btn btn-outline">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const CORES_DONO = {{ cores_dono | tojson }};
+  const EDITANDO = {{ 'true' if modo == 'editar' else 'false' }};
+  const selDono = document.getElementById("sel-dono");
+  const selCor  = document.getElementById("sel-cor");
+  const inpNum  = document.getElementById("inp-num");
+  const dica    = document.getElementById("dica-num");
+  const selOrig = document.getElementById("sel-origem");
+  const inpNasc = document.getElementById("inp-nasc");
+  const aviso   = document.getElementById("aviso-nasc");
+
+  async function sugerirNumero() {
+    if (!selCor.value) return;
+    try {
+      const r = await fetch("/api/animais/proximo?cor=" + encodeURIComponent(selCor.value),
+                            { credentials: "same-origin" });
+      const d = await r.json();
+      if (!d.ok) return;
+      if (d.numero) {
+        dica.textContent = "Próximo livre: " + selCor.value + " " + String(d.numero).padStart(2, "0");
+        if (!inpNum.value && !EDITANDO) inpNum.value = d.numero;
+      } else {
+        dica.textContent = "Todos os brincos " + selCor.value + " estão em uso.";
+      }
+    } catch (e) { /* sem internet: digita o número */ }
+  }
+  selDono.addEventListener("change", ev => {
+    if (!ev.isTrusted && selCor.value) return;   // preenchido pela voz: mantém a cor dita
+    if (CORES_DONO[selDono.value]) { selCor.value = CORES_DONO[selDono.value]; sugerirNumero(); }
+  });
+  selCor.addEventListener("change", ev => {
+    if (!selDono.value) {
+      const dono = Object.keys(CORES_DONO).find(k => CORES_DONO[k] === selCor.value);
+      if (dono) selDono.value = dono;
+    }
+    // só quando a pessoa troca a cor (não no preenchimento pelo comando de voz)
+    if (!EDITANDO && ev.isTrusted) inpNum.value = "";
+    sugerirNumero();
+  });
+  function toggleNasc() {
+    const nasc = selOrig.value === "Nascimento";
+    aviso.style.display = nasc && !EDITANDO ? "" : "none";
+    if (nasc && !inpNasc.value) inpNasc.value = "{{ hoje }}";
+  }
+  selOrig.addEventListener("change", toggleNasc);
+  toggleNasc();
+  if (selDono.value && !selCor.value) selCor.value = CORES_DONO[selDono.value] || "";
+  sugerirNumero();
+})();
+</script>
+{% endblock %}

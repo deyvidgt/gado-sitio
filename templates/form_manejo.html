@@ -72,6 +72,15 @@
           <small id="dica-produto" style="color:var(--text-3);font-size:11px"></small>
         </div>
         <div class="form-group full">
+          <label>Brincos dos animais — opcional</label>
+          <input type="text" name="brincos" id="inp-brincos" maxlength="400" autocomplete="off"
+                 value="{{ row.brincos_txt if modo == 'editar' and row else '' }}"
+                 placeholder="ex: amarelo 21, azul 12 — em branco = rebanho/lote sem brinco">
+          <small style="color:var(--text-3);font-size:11px">
+            Fica no histórico de cada animal. Sem cor, vale se só houver um animal vivo com o número.
+          </small>
+        </div>
+        <div class="form-group full">
           <label>Descrição / Observações</label>
           <textarea name="descricao" rows="3" placeholder="Detalhes do manejo...">{{ row.get('Descrição','') if modo == 'editar' and row else '' }}</textarea>
         </div>
@@ -96,7 +105,9 @@
   // nascimento/morte isso induziria a registrar 28 bezerros — sugere 1.
   const inpQtd  = document.querySelector("input[name='cabecas']");
   const ESTOQUE = "{{ estoque }}";
-  const NOVO    = {{ 'false' if modo == 'editar' else 'true' }};
+  // Preenchido pelo comando de voz: a quantidade dita/calculada vale como está.
+  const NOVO    = {{ 'false' if modo == 'editar' else 'true' }} &&
+                  new URLSearchParams(location.search).get("prefill") !== "1";
   function toggle() {
     const tipo = selTipo ? selTipo.value : "";
     grpPerda.style.display = tipo === "Morte/Perda" ? "" : "none";
@@ -108,6 +119,15 @@
     }
   }
   if (selTipo) { selTipo.addEventListener("change", toggle); toggle(); }
+
+  // Com brincos, a quantidade passa a ser o nº de animais citados.
+  const inpBrincos = document.getElementById("inp-brincos");
+  if (inpBrincos && inpQtd) {
+    inpBrincos.addEventListener("change", () => {
+      const n = (inpBrincos.value.match(/\d+/g) || []).length;
+      if (n > 0) inpQtd.value = String(n);
+    });
+  }
 
   // Remédio/produto: só para vacinas e vermifugação. Obrigatório ao registrar
   // um manejo novo; ao editar registro antigo pode ficar em branco.

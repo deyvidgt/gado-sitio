@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-app.py — Sítio Santo Antonio v4.1
+app.py — Sítio Santo Antonio v4.3
 """
 
 import sys, os
@@ -45,6 +45,9 @@ from routes_visitas import *    # noqa: F401, F403
 
 # ── 9) Relatórios e PDF ──────────────────────────────────────────────────────
 from routes_relatorios import * # noqa: F401, F403
+
+# ── 10) Animais (brincos) e Comando de Voz ───────────────────────────────────
+from routes_animais import *    # noqa: F401, F403
 
 # ── Migração/criação do arquivo de dados ──────────────────────────────────────
 # IMPORTANTE: roda em QUALQUER forma de entrada (wsgi/PythonAnywhere, .exe e dev).

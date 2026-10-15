@@ -20,7 +20,7 @@ for _stream in ("stdout", "stderr"):
         pass
 
 ARQUIVO_DADOS = "gado_familia.xlsx"
-VERSAO = "4.2.0"
+VERSAO = "4.3.0"
 NOME_SITIO = "Sítio Santo Antonio"
 FAMILIA = "Geane, Deyvid e Nilson"
 
@@ -113,6 +113,8 @@ COLUNAS_VENDAS = [
     "Custo Mae (R$)", "Custo Deyvid (R$)", "Custo Nilson (R$)",
     "Resultado Mae (R$)", "Resultado Deyvid (R$)", "Resultado Nilson (R$)",
     "CMP no momento (R$)", "Descrição",
+    # NOVO v4.3: brincos dos animais vendidos (ex.: "Amarelo 21 #A0003; Azul 12 #A0007").
+    "Brincos",
 ]
 COLUNAS_MANEJO = [
     "Data", "Tipo", "Qtd Cabeças", "Descrição", "Responsável",
@@ -122,6 +124,8 @@ COLUNAS_MANEJO = [
     "Produto",
     # NOVO v4.1: em caso de Nascimento, de qual membro é o bezerro (o inverso de "Perda De").
     "Nascimento De",
+    # NOVO v4.3: em quais animais (brincos) o manejo foi feito — mesmo formato de Vendas.
+    "Brincos",
 ]
 
 # Tipos de manejo em que o formulário pergunta qual remédio/produto foi usado.
@@ -147,6 +151,32 @@ COLUNAS_VISITAS = [
     # duas vezes quando o envio offline é repetido.
     "ID Envio",
 ]
+
+# ── Animais com brinco (v4.3) ────────────────────────────────────────────────
+# Uma linha por animal. O "ID" (A0001…) nunca se repete; o brinco (cor + nº) se
+# repete entre cores e é reaproveitado depois do 99 — só é único entre os VIVOS.
+# Por isso o histórico (Manejo/Vendas → coluna "Brincos") guarda o ID junto.
+# O cadastro NÃO mexe nas finanças: a cabeça já entrou pela compra ou pelo
+# nascimento (aba Manejo). Datas sem a coluna "Data" de propósito: esta aba
+# não entra nas somas por ano do dashboard.
+COLUNAS_ANIMAIS = [
+    "ID", "Brinco Cor", "Brinco Nº", "Dono", "Categoria", "Sexo",
+    "Raça", "Pelagem", "Sinais", "Nascimento", "Entrada", "Origem",
+    "Ref Compra", "Mãe", "Status", "Data Saída", "Observações", "Registrado Por",
+]
+
+# Cada dono tem a sua cor de brinco (ajustável na página Animais → Cores).
+CORES_BRINCO_PADRAO = {"Deyvid": "Amarelo", "Nilson": "Azul", "Mae": "Vermelho"}
+CORES_BRINCO = ["Amarelo", "Azul", "Vermelho", "Verde", "Laranja", "Branco",
+                "Rosa", "Roxo", "Preto", "Cinza"]
+BRINCO_MAX = 99   # numeração 01..99 por cor; depois recomeça do 01
+
+CATEGORIAS_ANIMAL = {   # categoria → sexo
+    "Bezerra": "F", "Novilha": "F", "Vaca": "F",
+    "Bezerro": "M", "Garrote": "M", "Novilho": "M", "Boi": "M", "Touro": "M",
+}
+ORIGENS_ANIMAL = ["Já no sítio", "Compra", "Nascimento"]
+STATUS_ANIMAL  = ["Vivo", "Vendido", "Morto"]
 
 # v4.2: na visita, "Sacos" = sacos EM ESTOQUE no sítio (contados naquela visita).
 # Coluna da aba Visitas com o estoque contado de cada insumo.
