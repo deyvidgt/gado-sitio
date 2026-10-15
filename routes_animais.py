@@ -234,6 +234,7 @@ def editar_animal(id_):
         dados = _dados_form(request.form)
         if not request.form.get("origem"):
             dados.pop("Origem")
+        dados["Sexo"] = a["Sexo"]   # o form não tem mais sexo; sem categoria, mantém o antigo
         try:
             fazer_backup_seguro()
             for av in A.atualizar(id_, dados):

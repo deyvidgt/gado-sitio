@@ -539,6 +539,16 @@ _VACINAS = [
     ("polivalente", "Vacina Clostridioses"), ("manqueira", "Vacina Clostridioses"),
 ]
 
+# Voz só LANÇA registro novo. Apagar/editar/transferir pela voz é arriscado (um erro
+# de reconhecimento mexe em lançamento antigo) — essas frases são recusadas antes de
+# qualquer outra ação, senão "apaga a última venda" viraria uma venda nova.
+_RECUSA = re.compile(r"\b(apag\w*|exclu\w*|delet\w*|remov\w*|edit\w*|corrig\w*|corrij\w*|"
+                     r"alter\w*|cancel\w*|desfaz\w*|desfiz\w*|estorn\w*|transfer\w*)\b")
+
+# Palavras de gado: "comprei" sem nenhuma delas é compra de insumo (gasto), não de gado.
+_GADO = re.compile(r"\b(gado|boi|bois|bezerr\w*|novilh\w*|vaca|vacas|garrote\w*|touro\w*|"
+                   r"cabeca|cabecas|animal|animais|rez|res|reses|brinco\w*)\b")
+
 _ACOES = [
     ("consulta",   r"\b(quanto|quantos|quantas|quantidade)\b"),
     ("ficha",      r"\b(ficha|quem e|mostrar?|mostra|abrir?|abre|ver|historico)\b"),
@@ -557,6 +567,11 @@ _ACOES = [
 
 
 def _acao(n: str, toks) -> str | None:
+    if _RECUSA.search(n):
+        return "recusa"
+    if re.search(r"\b(comprei|compramos|comprou)\b", n) and not _GADO.search(n) \
+            and not any(t.n in _CORES or t.n in _CATEGORIAS for t in toks):
+        return "gasto"
     for nome, rx in _ACOES:
         if re.search(rx, n):
             if nome == "compra":
@@ -740,6 +755,10 @@ def analisar(texto: str, hoje: datetime | None = None) -> dict:
     r = {"acao": acao, "texto": str(texto or "").strip(), "data": None}
     if acao is None:
         return r
+    if acao == "recusa":
+        m = _RECUSA.search(n).group(1)
+        r["verbo"] = "transferir" if m.startswith("transfer") else "apagar/editar"
+        return r
     r["data"] = _data(toks, hoje)
 
     if acao == "visita":
@@ -834,7 +853,9 @@ def analisar(texto: str, hoje: datetime | None = None) -> dict:
             if t.v is not None and i + 1 < len(toks) and toks[i + 1].n in ("saco", "sacos"):
                 sacos = int(t.v); t.usado = toks[i + 1].usado = True
                 break
-        valor, _ = _dinheiro(toks)
+        valor, por_unidade = _dinheiro(toks)
+        if por_unidade and sacos and valor:   # "3 sacos a 95 cada" → total da compra
+            valor = round(valor * sacos, 2)
         tipo, produto = "Manutenção/Outros", ""
         if re.search(r"\bproteinad\w*|\bproteina\b", n):
             tipo, produto = "Sal/Proteínado", "Proteinado"
@@ -885,6 +906,16 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
     if not acao:
         out["erros"].append("Não entendi o comando. Comece com: registrar, nasceu, vacina, "
                             "vermífugo, pesagem, morreu, comprei, vendi, gastei, visita ou ficha.")
+        return out
+    if acao == "recusa":
+        out["titulo"] = "Não faço isso por voz"
+        if intencao.get("verbo") == "transferir":
+            out["erros"].append("Transferir animal de dono não é feito por voz. Abra a ficha do "
+                                "animal em Animais e use Editar.")
+        else:
+            out["erros"].append("Por voz eu só lanço registros novos — não apago, edito nem "
+                                "cancelo. Para mudar um lançamento, abra a lista (Compras, Vendas, "
+                                "Gastos, Manejo ou Animais) e use Editar/Excluir.")
         return out
     df = ctx["df_animais"]
     data = intencao.get("data")

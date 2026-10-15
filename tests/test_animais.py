@@ -351,3 +351,44 @@ def test_frases_do_usuario_gravam_de_verdade(cliente, sem_animais):
     assert len(vivos) == 1 and int(vivos.iloc[0]["Brinco Nº"]) == 12   # só o amarelo 12 ficou
     d = db.carregar_todas()
     checar_invariantes(d["Compras"], d["Gastos"], d["Vendas"], d["Manejo"])
+
+
+# ── Evolução de categoria e sexo ─────────────────────────────────────────────
+
+def _animal(id_, cat, nasc=None, mae="", status="Vivo"):
+    from config import COLUNAS_ANIMAIS
+    return {**{c: "" for c in COLUNAS_ANIMAIS}, "ID": id_, "Categoria": cat, "Status": status,
+            "Nascimento": pd.Timestamp(nasc) if nasc else pd.NaT, "Mãe": mae}
+
+
+@pytest.mark.parametrize("cat,nasc,esperado", [
+    ("Bezerra", "2025-10-16", "Bezerra"),    # 1 dia antes dos 12 meses
+    ("Bezerra", "2025-10-15", "Novilha"),    # 12 meses certinho
+    ("Bezerro", "2025-06-01", "Garrote"),
+    ("Garrote", "2024-10-15", "Boi"),        # 24 meses
+    ("Bezerro", "2023-01-01", "Boi"),        # pula dois degraus de uma vez
+    ("Bezerra", None, "Bezerra"),            # sem nascimento não dá para saber
+    ("Touro", "2020-01-01", "Touro"),        # manual, não muda
+    ("Novilho", "2020-01-01", "Novilho"),
+    ("Vaca", "2026-01-01", "Vaca"),          # nunca desce
+    ("Novilha", "2020-01-01", "Novilha"),    # vira vaca só com cria, não por idade
+])
+def test_evolucao_por_idade(cat, nasc, esperado):
+    df = pd.DataFrame([_animal("A0001", cat, nasc)])
+    assert A.evoluir_categorias(df, HOJE).at[0, "Categoria"] == esperado
+
+
+def test_novilha_com_cria_vira_vaca_e_morto_nao_evolui():
+    df = pd.DataFrame([_animal("A0001", "Novilha", "2024-01-01"),
+                       _animal("A0002", "Bezerra", "2026-09-01", mae="Amarelo 01 #A0001"),
+                       _animal("A0003", "Bezerra", "2020-01-01", status="Morto")])
+    cats = list(A.evoluir_categorias(df, HOJE)["Categoria"])
+    assert cats == ["Vaca", "Bezerra", "Bezerra"]
+
+
+def test_sexo_vem_da_categoria():
+    reg, _ = A.normalizar({"Dono": "Deyvid", "Brinco Nº": 77, "Categoria": "Novilha", "Sexo": "M"},
+                          A.carregar().iloc[0:0])
+    assert reg["Sexo"] == "F"     # categoria manda, mesmo com sexo errado vindo
+    reg, _ = A.normalizar({"Dono": "Deyvid", "Brinco Nº": 78, "Sexo": "M"}, A.carregar().iloc[0:0])
+    assert reg["Sexo"] == "M"     # sem categoria, vale o informado

@@ -113,7 +113,33 @@ def carregar() -> pd.DataFrame:
         df[c] = df[c].apply(lambda v: "" if v is None or (isinstance(v, float) and pd.isna(v))
                             else str(v).strip()).astype(object)
     df.loc[df["Status"] == "", "Status"] = "Vivo"
-    return df.reset_index(drop=True)
+    return evoluir_categorias(df.reset_index(drop=True))
+
+
+# Categoria → (idade em meses, próxima). Só sobe, nunca desce; Touro/Novilho são manuais.
+EVOLUCAO_IDADE = {"Bezerra": (12, "Novilha"), "Bezerro": (12, "Garrote"), "Garrote": (24, "Boi")}
+
+
+def evoluir_categorias(df: pd.DataFrame, hoje=None) -> pd.DataFrame:
+    """Atualiza a categoria dos vivos: bezerra/bezerro → novilha/garrote aos 12 meses,
+    garrote → boi aos 24 (precisa da data de nascimento); fêmea com cria cadastrada
+    (alguém tem ela como "Mãe") → vaca. Calculado na leitura, então toda tela vê a
+    categoria de hoje; a planilha recebe o valor novo na próxima gravação da aba."""
+    if df.empty:
+        return df
+    hoje = pd.Timestamp(hoje or datetime.now()).normalize()
+    maes = set()
+    for ref in df["Mãe"]:
+        maes |= set(ids_de(ref))
+    for i in df.index[df["Status"] == "Vivo"]:
+        cat, nasc = df.at[i, "Categoria"], df.at[i, "Nascimento"]
+        if pd.notna(nasc):
+            while cat in EVOLUCAO_IDADE and nasc + pd.DateOffset(months=EVOLUCAO_IDADE[cat][0]) <= hoje:
+                cat = EVOLUCAO_IDADE[cat][1]
+        if cat in ("Bezerra", "Novilha") and df.at[i, "ID"] in maes:
+            cat = "Vaca"
+        df.at[i, "Categoria"] = cat
+    return df
 
 
 def _gravar(df: pd.DataFrame):
@@ -201,7 +227,7 @@ def normalizar(dados: dict, df: pd.DataFrame, reservados_num=None, exceto_id=Non
 
     - sem cor → cor do dono; sem dono → dono dono da cor;
     - sem nº → próximo livre da cor;
-    - sexo vem da categoria quando não informado.
+    - sexo vem da categoria (o formulário não pergunta mais).
     """
     reservados_num = reservados_num or {}
     avisos = []
@@ -242,7 +268,8 @@ def normalizar(dados: dict, df: pd.DataFrame, reservados_num=None, exceto_id=Non
     categoria = _txt(dados.get("Categoria"))
     if categoria and categoria not in CATEGORIAS_ANIMAL:
         raise ValueError(f"Categoria inválida: {categoria}")
-    sexo = _txt(dados.get("Sexo")) or CATEGORIAS_ANIMAL.get(categoria, "")
+    # A categoria manda no sexo (Novilha é sempre fêmea); o informado só vale sem categoria.
+    sexo = CATEGORIAS_ANIMAL.get(categoria) or _txt(dados.get("Sexo"))
 
     reg = {c: dados.get(c, "") for c in COLUNAS_ANIMAIS}
     reg.update({"Brinco Cor": cor, "Brinco Nº": num, "Dono": dono,

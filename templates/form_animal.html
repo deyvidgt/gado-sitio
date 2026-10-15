@@ -72,14 +72,6 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Sexo</label>
-          <select name="sexo">
-            <option value="">Pela categoria</option>
-            <option value="F" {{ 'selected' if v.get('sexo') == 'F' }}>Fêmea</option>
-            <option value="M" {{ 'selected' if v.get('sexo') == 'M' }}>Macho</option>
-          </select>
-        </div>
-        <div class="form-group">
           <label>Nascimento <span style="font-weight:400">(se souber)</span></label>
           <input type="date" name="nascimento" id="inp-nasc" value="{{ v.get('nascimento', '') }}">
           <small style="color:var(--text-3);font-size:11px">Com a data, o sistema avisa a hora da brucelose.</small>
