@@ -528,3 +528,8 @@ def test_privacidade_e_publica(flask_app):
     assert "Política de Privacidade" in html
     assert "Google Drive" in html
     assert "nilsondavid45@gmail.com" in html
+
+
+def test_cache_cabe_no_disco_do_pythonanywhere():
+    # Plano gratuito: 512 MB no total, ~284 MB já usados (planilha, backups, código).
+    assert routes_fotos.LIMITE_CACHE == 50 * 1024 * 1024

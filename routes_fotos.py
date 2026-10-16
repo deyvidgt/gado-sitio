@@ -21,7 +21,7 @@ from extensions import _validar_csrf, app, login_required
 from routes_animais import _membro_logado
 
 _RE_ID = re.compile(r"^F\d{5}$")
-LIMITE_CACHE = 200 * 1024 * 1024
+LIMITE_CACHE = 50 * 1024 * 1024   # o disco do PythonAnywhere gratuito é de 512 MB no total
 LIMITE_PEDIDO = 9 * 1024 * 1024   # foto de 8 MB + campos do formulário
 LADO_MINI = 400
 
