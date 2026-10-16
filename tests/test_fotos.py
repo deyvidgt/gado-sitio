@@ -125,3 +125,150 @@ def test_drive_renova_token_e_envia(monkeypatch, tmp_path):
                         if "oauth2" in url else _Resp(500, {"error": "x"}))
     with pytest.raises(drive.DriveErro):
         d.enviar("PASTA", "c.jpg", b"\xff\xd8\xff", "image/jpeg", {})
+
+
+# ── Task 2: regras das fotos ─────────────────────────────────────────────────
+
+import animais as A  # noqa: E402
+import fotos  # noqa: E402
+
+JPG = b"\xff\xd8\xff\xe0" + b"0" * 100
+
+
+@pytest.fixture(autouse=True)
+def _sem_sobra_de_backup():
+    """Excluir faz backup de verdade; apaga os criados aqui (o teste de limpeza
+    de backups conta os arquivos da pasta)."""
+    pasta = os.path.join(db.DATA_DIR, "backups")
+    antes = set(os.listdir(pasta)) if os.path.isdir(pasta) else set()
+    yield
+    if os.path.isdir(pasta):
+        for n in set(os.listdir(pasta)) - antes:
+            os.remove(os.path.join(pasta, n))
+
+
+@pytest.fixture
+def amb(dados_restaurados):
+    """Um animal novo (Amarelo 91) e o Drive falso no lugar do Google."""
+    db.inicializar()
+    A._gravar(A.carregar().iloc[0:0])
+    id_ = A.cadastrar([{"Dono": "Deyvid", "Brinco Nº": 91, "Categoria": "Bezerra"}])[0]["ID"]
+    falso = DriveFalso()
+    drive.definir_cliente(falso)
+    yield falso, id_
+    drive.definir_cliente(None)
+
+
+def _env(id_, envio, data="10/10/2026", tipo="Evolução", conteudo=JPG):
+    return fotos.enviar(id_, conteudo, data, tipo, "legenda", "Deyvid", envio)
+
+
+def test_envio_grava_linha_na_ordem(amb):
+    falso, id_ = amb
+    r = _env(id_, "e1")
+    assert r == {"duplicada": False, "id_foto": "F00001"}
+    ws = load_workbook(db.ARQUIVO_PATH)["Fotos"]
+    linha = dict(zip([c.value for c in ws[1]], [c.value for c in ws[2]]))
+    assert linha["ID Foto"] == "F00001" and linha["Animal"] == id_
+    assert linha["Tipo"] == "Evolução" and linha["ID Envio"] == "e1"
+    arq = falso.arquivos[linha["Drive ID"]]
+    assert arq["nome"] == "2026-10-10_F00001.jpg"
+    assert arq["props"]["id_envio"] == "e1"
+    assert falso.pastas[id_] == arq["pasta"]
+
+
+def test_primeira_foto_vira_principal(amb):
+    _, id_ = amb
+    _env(id_, "e1")
+    assert fotos.principais() == {id_: "F00001"}
+
+
+def test_segunda_nao_tira_a_principal(amb):
+    _, id_ = amb
+    _env(id_, "e1")
+    _env(id_, "e2", tipo="Perfil")
+    assert [f["principal"] for f in fotos.listar(id_)].count(True) == 1
+    assert fotos.principais() == {id_: "F00001"}
+
+
+def test_reenvio_nao_duplica(amb):
+    falso, id_ = amb
+    _env(id_, "e1")
+    assert _env(id_, "e1") == {"duplicada": True, "id_foto": "F00001"}
+    assert len(fotos.carregar()) == 1 and len(falso.arquivos) == 1
+
+
+def test_orfao_no_drive_e_reaproveitado(amb):
+    falso, id_ = amb
+    pasta = falso.pasta_animal(id_, "x")
+    fid = falso.enviar(pasta, "orfao.jpg", JPG, "image/jpeg", {"id_envio": "e9"})
+    _env(id_, "e9")
+    assert len(falso.arquivos) == 1
+    assert fotos.carregar().iloc[0]["Drive ID"] == fid
+
+
+def test_recusa_nao_imagem(amb):
+    _, id_ = amb
+    with pytest.raises(fotos.FotoInvalida):
+        _env(id_, "e1", conteudo=b"%PDF-1.4 nada de foto")
+
+
+def test_recusa_grande(amb):
+    _, id_ = amb
+    with pytest.raises(fotos.FotoInvalida):
+        _env(id_, "e1", conteudo=JPG + b"0" * (8 * 1024 * 1024))
+
+
+def test_recusa_animal_inexistente(amb):
+    with pytest.raises(fotos.FotoInvalida):
+        _env("A9999", "e1")
+
+
+def test_recusa_tipo_invalido(amb):
+    _, id_ = amb
+    with pytest.raises(fotos.FotoInvalida):
+        _env(id_, "e1", tipo="Selfie")
+
+
+def test_drive_fora_nao_grava(amb):
+    falso, id_ = amb
+    falso.falhar = True
+    with pytest.raises(drive.DriveErro):
+        _env(id_, "e1")
+    assert fotos.carregar().empty
+
+
+def test_definir_principal_unica(amb):
+    _, id_ = amb
+    _env(id_, "e1")
+    _env(id_, "e2")
+    fotos.definir_principal("F00002")
+    assert [(f["id_foto"], f["principal"]) for f in fotos.listar(id_) if f["principal"]] == [("F00002", True)]
+
+
+def test_excluir_principal_promove_proxima(amb):
+    falso, id_ = amb
+    _env(id_, "e1", data="01/10/2026")
+    _env(id_, "e2", data="05/10/2026")
+    _env(id_, "e3", data="03/10/2026")
+    drive_id = fotos.por_id("F00001")["drive_id"]
+    fotos.excluir("F00001")
+    assert fotos.por_id("F00001") is None
+    assert falso.arquivos[drive_id]["lixeira"] is True
+    assert fotos.principais() == {id_: "F00002"}
+
+
+def test_listar_mais_recente_primeiro(amb):
+    _, id_ = amb
+    _env(id_, "e1", data="01/10/2026")
+    _env(id_, "e2", data="05/10/2026")
+    assert [f["id_foto"] for f in fotos.listar(id_)] == ["F00002", "F00001"]
+
+
+def test_editar(amb):
+    _, id_ = amb
+    _env(id_, "e1")
+    fotos.editar("F00001", "Ocorrência", "pata machucada", "12/10/2026")
+    f = fotos.listar(id_)[0]
+    assert (f["tipo"], f["legenda"], f["data"].strftime("%d/%m/%Y")) == \
+        ("Ocorrência", "pata machucada", "12/10/2026")
