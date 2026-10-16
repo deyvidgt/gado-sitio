@@ -49,6 +49,9 @@ from routes_relatorios import * # noqa: F401, F403
 # ── 10) Animais (brincos) e Comando de Voz ───────────────────────────────────
 from routes_animais import *    # noqa: F401, F403
 
+# v4.4 — Fotos dos animais (Google Drive)
+from routes_fotos import *      # noqa: F401, F403
+
 # ── Migração/criação do arquivo de dados ──────────────────────────────────────
 # IMPORTANTE: roda em QUALQUER forma de entrada (wsgi/PythonAnywhere, .exe e dev).
 # Antes só rodava em `python app.py`, então no servidor as colunas novas (ex.: "Perda De",

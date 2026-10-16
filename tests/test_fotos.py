@@ -272,3 +272,122 @@ def test_editar(amb):
     f = fotos.listar(id_)[0]
     assert (f["tipo"], f["legenda"], f["data"].strftime("%d/%m/%Y")) == \
         ("Ocorrência", "pata machucada", "12/10/2026")
+
+
+# ── Task 3: rotas ────────────────────────────────────────────────────────────
+
+import io  # noqa: E402
+import time  # noqa: E402
+
+import routes_fotos  # noqa: E402
+
+
+def _jpeg_real(w=900, h=600) -> bytes:
+    from PIL import Image
+    buf = io.BytesIO()
+    Image.new("RGB", (w, h), (120, 90, 60)).save(buf, "JPEG")
+    return buf.getvalue()
+
+
+def _post_foto(cliente, id_, envio="e1", csrf="tok", conteudo=None):
+    with cliente.session_transaction() as s:
+        s["csrf_token"] = "tok"
+    return cliente.post("/api/fotos", data={
+        "id_animal": id_, "tipo": "Evolução", "legenda": "", "data": "10/10/2026",
+        "id_envio": envio, "csrf_token": csrf,
+        "foto": (io.BytesIO(conteudo or _jpeg_real()), "f.jpg"),
+    }, content_type="multipart/form-data")
+
+
+@pytest.fixture
+def cache_limpo():
+    import shutil
+    shutil.rmtree(routes_fotos.cache_dir(), ignore_errors=True)
+    yield
+    shutil.rmtree(routes_fotos.cache_dir(), ignore_errors=True)
+
+
+def test_api_sem_login_401(flask_app):
+    r = flask_app.test_client().post("/api/fotos", data={})
+    assert r.status_code == 401 and r.get_json()["erro"] == "login"
+
+
+def test_api_sem_csrf_403(cliente, amb):
+    r = _post_foto(cliente, amb[1], csrf="errado")
+    assert r.status_code == 403 and r.get_json()["erro"] == "csrf"
+
+
+def test_api_envia_e_duplicada(cliente, amb):
+    r = _post_foto(cliente, amb[1])
+    assert r.status_code == 200 and r.get_json() == {"ok": True, "duplicada": False, "id_foto": "F00001"}
+    r = _post_foto(cliente, amb[1])
+    assert r.get_json()["duplicada"] is True
+    assert fotos.carregar().iloc[0]["Enviado Por"] == "Deyvid"
+
+
+def test_api_invalida_400(cliente, amb):
+    r = _post_foto(cliente, amb[1], conteudo=b"%PDF nada")
+    assert r.status_code == 400 and r.get_json()["erro"] == "invalida"
+
+
+def test_api_drive_fora_nao_grava(cliente, amb):
+    amb[0].falhar = True
+    r = _post_foto(cliente, amb[1])
+    assert r.status_code == 502 and r.get_json()["erro"] == "drive"
+    assert fotos.carregar().empty
+
+
+def test_api_nao_configurado_503(cliente, amb, monkeypatch, tmp_path):
+    drive.definir_cliente(None)
+    monkeypatch.setattr(drive, "token_path", lambda: str(tmp_path / "nada.json"))
+    r = _post_foto(cliente, amb[1])
+    assert r.status_code == 503 and r.get_json()["erro"] == "drive"
+
+
+def test_rota_imagem_usa_cache(cliente, amb, cache_limpo):
+    _post_foto(cliente, amb[1])
+    r1 = cliente.get("/fotos/F00001")
+    r2 = cliente.get("/fotos/F00001")
+    assert r1.status_code == 200 and r1.data == r2.data
+    assert amb[0].baixados == 1
+    assert "private" in r1.headers["Cache-Control"]
+    mini = cliente.get("/fotos/F00001/mini")
+    from PIL import Image
+    assert max(Image.open(io.BytesIO(mini.data)).size) <= 400
+
+
+def test_rota_id_invalido_404(cliente, amb, cache_limpo):
+    for url in ("/fotos/..%2Fx", "/fotos/F99999", "/fotos/abc/mini"):
+        assert cliente.get(url).status_code == 404, url
+
+
+def test_rota_imagem_exige_login(flask_app):
+    r = flask_app.test_client().get("/fotos/F00001")
+    assert r.status_code == 302
+
+
+def test_principal_e_excluir_pela_rota(cliente, amb, cache_limpo):
+    _post_foto(cliente, amb[1], "e1")
+    _post_foto(cliente, amb[1], "e2")
+    cliente.get("/fotos/F00001")  # popula o cache
+    r = cliente.post("/fotos/F00002/principal", data={"csrf_token": "tok"})
+    assert r.status_code == 302 and fotos.principais() == {amb[1]: "F00002"}
+    r = cliente.post("/fotos/F00001/excluir", data={"csrf_token": "tok"})
+    assert r.status_code == 302 and fotos.por_id("F00001") is None
+    assert not os.path.exists(os.path.join(routes_fotos.cache_dir(), "F00001.jpg"))
+    r = cliente.post("/fotos/F00002/editar", data={"csrf_token": "tok", "tipo": "Perfil",
+                                                   "legenda": "x", "data": "2026-10-11"})
+    assert r.status_code == 302 and fotos.por_id("F00002")["tipo"] == "Perfil"
+
+
+def test_limpar_cache_respeita_limite(cache_limpo):
+    pasta = routes_fotos.cache_dir()
+    os.makedirs(pasta, exist_ok=True)
+    agora = time.time()
+    for i, nome in enumerate(("F00001.jpg", "F00002.jpg", "F00003.jpg")):
+        p = os.path.join(pasta, nome)
+        with open(p, "wb") as f:
+            f.write(b"0" * 1024)
+        os.utime(p, (agora - 100 + i * 10, agora - 100 + i * 10))
+    routes_fotos.limpar_cache(2048)
+    assert sorted(os.listdir(pasta)) == ["F00002.jpg", "F00003.jpg"]
