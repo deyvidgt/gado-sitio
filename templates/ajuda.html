@@ -147,7 +147,7 @@
 <ol>
   <li>Menu → <strong>🛒 Nova Compra</strong>.</li>
   <li>Preencha a <strong>data</strong>, a <strong>quantidade total de cabeças</strong> e o <strong>valor total</strong>. O valor por cabeça é calculado sozinho.</li>
-  <li>Divida as cabeças entre os donos (Geane, Deyvid e Nilson). A soma tem que bater com o total.</li>
+  <li>Divida as cabeças entre os donos (Geane, Deyvid e Nilson). A soma tem que bater com o total — deixando em branco, o sistema divide igualmente.</li>
   <li>Toque em <strong>Salvar</strong>. Depois, se quiser, use <strong>colocar brinco nos animais desta compra</strong>.</li>
 </ol>
 {{ passo('c-compra-1.png', 'Nova compra') }}
@@ -195,7 +195,7 @@
 <h3>Ficha do animal</h3>
 <p>Em <strong>🐄 Animais</strong>, toque no brinco para abrir a ficha: cadastro, crias, <strong>histórico</strong> (vacinas, pesagens,
   vendas com aquele brinco), <a href="#fotos">fotos</a> e o botão <strong>Dar baixa</strong> (vendido ou morreu).</p>
-{{ passo('c-animal-2.png', 'Ficha do animal') }}
+{{ passo('c-animal-2.png', 'Ficha do animal (animal de exemplo)') }}
 <a class="voltar" href="#indice">↑ voltar ao índice</a>
 
 <!-- ═════════════════════════════════════════════════════════════════════ -->
@@ -207,11 +207,14 @@
     <em>Ocorrência</em> (machucado, doença, parto). Legenda e data são opcionais.</li>
   <li>Toque em <strong>📤 Enviar</strong>.</li>
 </ol>
-{{ passo('c-fotos-1.png', 'Quadro de fotos na ficha do animal') }}
+{{ passo('c-fotos-1.png', 'Quadro de fotos na ficha do animal (fotos de exemplo)') }}
 <ul>
   <li>A <strong>primeira foto</strong> vira a principal: aparece grande no topo da ficha e na lista de Animais.</li>
   <li>Toque numa foto para ver grande e usar ⭐ <strong>Tornar principal</strong>, ✏️ <strong>Editar</strong> ou 🗑️ <strong>Excluir</strong>
     (toque duas vezes para confirmar; ela vai para a lixeira do Drive e pode ser recuperada por 30 dias).</li>
+</ul>
+{{ passo('c-fotos-2.png', 'Foto aberta com os botões Tornar principal, Editar e Excluir') }}
+<ul>
   <li>As fotos ficam no Google Drive, numa pasta para cada animal (ex.: <em>A0003 - Amarelo 21</em>).</li>
 </ul>
 <div class="dica">📴 <strong>Sem sinal?</strong> A foto aparece como "⏳ aguardando sinal" e sobe sozinha quando a internet voltar.</div>
@@ -233,6 +236,7 @@
     </ul>
   </li>
   <li>Confira o resumo e toque em <strong>Salvar</strong> — ou corrija o que precisar.</li>
+  <li>Com <strong>Mãos livres</strong> marcado, o sistema lê o resumo em voz alta e salva quando você responde <em>"sim"</em>.</li>
 </ol>
 {{ passo('c-voz-1.png', 'Comando de voz') }}
 <div class="dica">Por segurança, a voz <strong>não apaga nem edita</strong> registros — isso só pela tela.
@@ -258,10 +262,11 @@
 <!-- ═════════════════════════════════════════════════════════════════════ -->
 <h2 id="ferramentas">12. Importar, Exportar e Backups</h2>
 <ul>
-  <li><strong>⬆️ Importar Excel</strong>: traz registros de uma planilha. Confira os detalhes antes de confirmar.</li>
+  <li><strong>⬆️ Importar Excel</strong>: traz os dados da <strong>planilha antiga</strong> (abas por ano: 2024, 2025…).
+    Os registros são somados aos que já existem — faça um backup antes.</li>
   <li><strong>⬇️ Exportar Excel</strong>: baixa um relatório em planilha.</li>
-  <li><strong>💾 Backups</strong>: o sistema faz uma cópia de segurança <strong>todo dia</strong> (guarda as 30 últimas).
-    Aqui dá para baixar qualquer uma ou fazer uma agora.</li>
+  <li><strong>💾 Backups</strong>: o sistema faz cópias de segurança sozinho (todo dia e a cada hora de uso) e guarda as
+    30 últimas. Aqui dá para baixar qualquer uma ou usar <strong>Fazer Backup Agora</strong>.</li>
 </ul>
 {{ passo('p-importar.png', 'Importar Excel') }}
 {{ passo('p-backups.png', 'Backups') }}

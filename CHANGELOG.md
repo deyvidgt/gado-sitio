@@ -2,6 +2,19 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
+## [4.5.0] — 2026-10-16
+
+### Novo
+- **Aba ❓ Ajuda** (menu, acima de Configurações): manual de todo o sistema com passo a passo
+  e prints — celular para o dia a dia (visita, manejo, compra, gasto, venda, animal, fotos,
+  voz) e computador para consultas, relatórios, backups e configurações. Inclui como as
+  contas funcionam e problemas comuns.
+- Os prints ficam no **Google Drive** (pasta *Ajuda - passo a passo*); o site acha cada um
+  pela marca `ajuda=<nome>` e guarda no cache. Sem Drive, a página mostra só o texto.
+  Para trocar prints: `python subir_prints_ajuda.py <pasta>`.
+- Página pública `/privacidade` (exigida pelo Google para publicar o app do Drive).
+- Cache de fotos limitado a 50 MB (disco do PythonAnywhere).
+
 ## [4.4.0] — 2026-10-16
 
 ### Novo
