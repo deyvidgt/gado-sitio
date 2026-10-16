@@ -17,9 +17,30 @@
   .hist li { padding:10px 0; border-bottom:1px solid var(--cream-dk); font-size:13.5px; display:flex; gap:12px; }
   .hist .d { color:var(--text-3); min-width:86px; }
   .muted { color:var(--text-3); font-size:12px; }
+  .foto-principal { width:120px; height:120px; border-radius:14px; object-fit:cover; box-shadow:var(--shadow); cursor:pointer; flex:none; }
+  .fotos-dia { margin-top:12px; }
+  .fotos-dia h4 { font-size:12px; color:var(--text-3); font-weight:600; margin-bottom:6px; }
+  .fotos-grade { display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:8px; }
+  .foto-item { position:relative; border-radius:10px; overflow:hidden; background:var(--cream-dk); aspect-ratio:1; cursor:pointer; border:0; padding:0; }
+  .foto-item img { width:100%; height:100%; object-fit:cover; display:block; }
+  .foto-item .etq { position:absolute; left:4px; bottom:4px; font-size:10.5px; padding:1px 6px; border-radius:8px; background:rgba(0,0,0,.6); color:#fff; }
+  .foto-item .est { position:absolute; right:4px; top:4px; font-size:14px; }
+  .foto-item.pendente { opacity:.6; cursor:default; }
+  .foto-form { display:none; margin-top:12px; padding:12px; border-radius:10px; background:var(--surface-2); }
+  .visor { position:fixed; inset:0; background:rgba(0,0,0,.88); display:none; flex-direction:column; align-items:center; justify-content:center; z-index:1000; padding:16px; }
+  .visor img { max-width:100%; max-height:70vh; border-radius:10px; }
+  .visor .info { color:#fff; margin:10px 0; font-size:13.5px; text-align:center; }
+  .visor .acoes { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .visor .acoes .btn { background:#fff; }
+  .visor .editar { display:none; background:var(--surface); padding:12px; border-radius:10px; margin-top:10px; width:min(420px,100%); }
 </style>
 
 <div class="ficha-top">
+  {% set principal = fotos|selectattr('principal')|first %}
+  {% if principal %}
+  <img class="foto-principal" src="{{ url_for('foto_mini', id_foto=principal.id_foto) }}" alt="Foto de {{ a.brinco }}"
+       data-foto="{{ principal.id_foto }}">
+  {% endif %}
   <div class="brinco-grande" style="background:{{ a.hex }};color:{{ '#222' if a.cor in ['Amarelo','Branco','Rosa','Laranja'] else '#fff' }}">
     {{ '%02d' % a.num if a.num is not none else '??' }}
   </div>
@@ -72,6 +93,85 @@
   </div>
 </div>
 
+<div class="card" id="fotos" style="margin-top:20px" data-animal="{{ a.id }}">
+  <div class="card-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <span>📷 Fotos</span>
+    {% if fotos_ativas %}
+    <label class="btn btn-primary btn-sm" style="margin-left:auto;cursor:pointer">📷 Tirar foto
+      <input type="file" id="foto-arquivo" accept="image/*" capture="environment" multiple hidden>
+    </label>
+    {% endif %}
+  </div>
+  {% if not fotos_ativas %}
+    <p class="muted">Fotos não configuradas — veja <a href="{{ url_for('configuracoes') }}#fotos">Configurações → Fotos</a>.</p>
+  {% else %}
+  <div class="foto-form" id="foto-form">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Tipo</label>
+        <select id="foto-tipo">{% for t in TIPOS_FOTO %}<option{{ ' selected' if t == 'Evolução' }}>{{ t }}</option>{% endfor %}</select>
+      </div>
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" id="foto-data" value="{{ hoje }}">
+      </div>
+      <div class="form-group full">
+        <label>Legenda (opcional)</label>
+        <input type="text" id="foto-legenda" maxlength="160" placeholder="ex: engordou bem / machucado na pata">
+      </div>
+    </div>
+    <p class="muted" id="foto-qtd" style="margin:8px 0"></p>
+    <button type="button" class="btn btn-primary btn-sm" id="foto-enviar">📤 Enviar</button>
+    <button type="button" class="btn btn-outline btn-sm" id="foto-cancelar">Cancelar</button>
+  </div>
+  <div id="fotos-pendentes"></div>
+  {% endif %}
+
+  {% if fotos %}
+    {% for data, grupo in fotos|groupby('data')|reverse %}
+    <div class="fotos-dia">
+      <h4>{{ data|data_br }}</h4>
+      <div class="fotos-grade">
+        {% for f in grupo %}
+        <button type="button" class="foto-item" data-foto="{{ f.id_foto }}" data-tipo="{{ f.tipo }}"
+                data-legenda="{{ f.legenda }}" data-data="{{ f.data.strftime('%Y-%m-%d') if f.data else '' }}"
+                data-por="{{ NOMES.get(f.enviado_por, f.enviado_por) }}" data-principal="{{ 1 if f.principal else 0 }}">
+          <img loading="lazy" src="{{ url_for('foto_mini', id_foto=f.id_foto) }}" alt="{{ f.legenda or f.tipo }}">
+          <span class="etq">{{ f.tipo }}</span>
+          {% if f.principal %}<span class="est">⭐</span>{% endif %}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  {% elif fotos_ativas %}
+    <p class="muted">Nenhuma foto ainda. Tire uma de perfil para reconhecer o animal se o brinco cair.</p>
+  {% endif %}
+</div>
+
+<div class="visor" id="visor" role="dialog" aria-modal="true">
+  <img id="visor-img" alt="">
+  <div class="info" id="visor-info"></div>
+  <div class="acoes">
+    <form method="post" id="visor-principal"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn-outline btn-sm">⭐ Tornar principal</button></form>
+    <button type="button" class="btn btn-outline btn-sm" id="visor-btn-editar">✏️ Editar</button>
+    <form method="post" id="visor-excluir"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger)" id="visor-btn-excluir">🗑️ Excluir</button></form>
+    <button type="button" class="btn btn-outline btn-sm" id="visor-fechar">✕ Fechar</button>
+  </div>
+  <form method="post" class="editar" id="visor-editar">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <div class="form-group"><label>Tipo</label>
+        <select name="tipo" id="ed-tipo">{% for t in TIPOS_FOTO %}<option>{{ t }}</option>{% endfor %}</select></div>
+      <div class="form-group"><label>Data</label><input type="date" name="data" id="ed-data"></div>
+      <div class="form-group full"><label>Legenda</label><input type="text" name="legenda" id="ed-legenda" maxlength="160"></div>
+    </div>
+    <button class="btn btn-primary btn-sm" style="margin-top:8px">Salvar</button>
+  </form>
+</div>
+
 {% if a.status == 'Vivo' %}
 <details class="card" style="margin-top:20px">
   <summary style="cursor:pointer;font-weight:600">📤 Dar baixa (vendido / morreu)</summary>
@@ -117,6 +217,89 @@
 
 {% block scripts %}
 <script>
+(function () {
+  // ── Visualizador (sem confirm(): excluir pede um 2º toque) ──
+  const visor = document.getElementById("visor");
+  const base = "{{ url_for('foto_inteira', id_foto='F00000') }}".replace("F00000", "");
+  let atual = null;
+  function abrir(d) {
+    atual = d;
+    document.getElementById("visor-img").src = base + d.foto;
+    document.getElementById("visor-info").textContent =
+      [d.tipo, d.legenda, d.por ? "por " + d.por : ""].filter(Boolean).join(" · ");
+    const fp = document.getElementById("visor-principal");
+    fp.action = base + d.foto + "/principal";
+    fp.style.display = d.principal === "1" ? "none" : "";
+    document.getElementById("visor-excluir").action = base + d.foto + "/excluir";
+    const fe = document.getElementById("visor-editar");
+    fe.action = base + d.foto + "/editar";
+    fe.style.display = "none";
+    const bx = document.getElementById("visor-btn-excluir");
+    bx.dataset.armado = ""; bx.textContent = "🗑️ Excluir";
+    visor.style.display = "flex";
+  }
+  document.querySelectorAll(".foto-item[data-foto]").forEach(el => el.addEventListener("click", () => abrir(el.dataset)));
+  const fp = document.querySelector(".foto-principal");
+  if (fp) fp.addEventListener("click", () => {
+    const alvo = document.querySelector(`.foto-item[data-foto="${fp.dataset.foto}"]`);
+    if (alvo) abrir(alvo.dataset);
+  });
+  document.getElementById("visor-fechar").onclick = () => visor.style.display = "none";
+  visor.addEventListener("click", e => { if (e.target === visor) visor.style.display = "none"; });
+  document.getElementById("visor-btn-editar").onclick = () => {
+    document.getElementById("ed-tipo").value = atual.tipo;
+    document.getElementById("ed-data").value = atual.data;
+    document.getElementById("ed-legenda").value = atual.legenda;
+    document.getElementById("visor-editar").style.display = "block";
+  };
+  document.getElementById("visor-btn-excluir").onclick = function () {
+    if (this.dataset.armado) { this.closest("form").submit(); return; }
+    this.dataset.armado = "1"; this.textContent = "Toque de novo para excluir";
+  };
+
+  // ── Tirar / enviar foto ──
+  const inp = document.getElementById("foto-arquivo");
+  if (!inp || !window.FilaFotos) return;
+  const form = document.getElementById("foto-form");
+  const idAnimal = document.getElementById("fotos").dataset.animal;
+  inp.addEventListener("change", () => {
+    if (!inp.files.length) return;
+    document.getElementById("foto-qtd").textContent = inp.files.length + " foto(s) escolhida(s)";
+    form.style.display = "block";
+  });
+  document.getElementById("foto-cancelar").onclick = () => { inp.value = ""; form.style.display = "none"; };
+  document.getElementById("foto-enviar").onclick = async function () {
+    this.disabled = true; this.textContent = "⏳ Enviando...";
+    await FilaFotos.enviar(idAnimal, inp.files, {
+      tipo: document.getElementById("foto-tipo").value,
+      legenda: document.getElementById("foto-legenda").value,
+      data: document.getElementById("foto-data").value,
+    });
+    location.reload();
+  };
+
+  // Fotos ainda no celular (sem sinal): aparecem com a imagem local.
+  async function mostrarPendentes() {
+    const caixa = document.getElementById("fotos-pendentes");
+    const itens = await FilaFotos.pendentes(idAnimal).catch(() => []);
+    caixa.innerHTML = "";
+    if (!itens.length) return;
+    caixa.innerHTML = '<div class="fotos-dia"><h4>⏳ Aguardando sinal para enviar</h4><div class="fotos-grade"></div></div>';
+    const grade = caixa.querySelector(".fotos-grade");
+    for (const it of itens) {
+      const d = document.createElement("div");
+      d.className = "foto-item pendente";
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(it.blob);
+      const etq = document.createElement("span");
+      etq.className = "etq"; etq.textContent = "⏳ " + it.tipo;
+      d.append(img, etq); grade.append(d);
+    }
+  }
+  mostrarPendentes();
+  document.addEventListener("fotos:atualizadas", () => location.reload());
+})();
+
 (function () {
   const sel = document.getElementById("sel-baixa"), grp = document.getElementById("grp-morte");
   if (!sel) return;

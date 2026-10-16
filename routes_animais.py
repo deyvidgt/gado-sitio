@@ -10,9 +10,11 @@ from flask import render_template, request, redirect, url_for, flash, jsonify, s
 
 import animais as A
 import comando_voz as V
+import drive
+import fotos as F
 from calculos import calcular_estoque, calcular_estoque_por_membro
 from config import (MEMBROS, NOMES_MEMBROS, CORES_BRINCO, CATEGORIAS_ANIMAL,
-                    ORIGENS_ANIMAL, COLUNAS_MANEJO, TIPOS_COM_PRODUTO)
+                    ORIGENS_ANIMAL, COLUNAS_MANEJO, TIPOS_COM_PRODUTO, TIPOS_FOTO)
 from db import fazer_backup
 from extensions import (app, _agora, _validar_csrf, login_required, _get_dados_cache,
                         salvar_linha, fmt_data, _limpar_backups_antigos)
@@ -91,7 +93,8 @@ def animais():
                            brucelose=[{**_linha_animal(b["animal"], hoje), "msg": b["msg"],
                                        "situacao": b["situacao"]}
                                       for b in A.janela_brucelose(df, dados["Manejo"], hoje)],
-                           proximos=proximos, **_ctx_templates())
+                           proximos=proximos, fotos_principais=F.principais(),
+                           **_ctx_templates())
 
 
 @app.route("/animais/cores", methods=["POST"])
@@ -218,7 +221,8 @@ def ficha_animal(id_):
                            mae_txt=A._RE_ID.sub("", a["Mãe"]).strip(), mae_id=mae_id,
                            filhos=[_linha_animal(x, hoje) for _, x in filhos.iterrows()],
                            historico=A.historico(id_, dados["Manejo"], dados["Vendas"]),
-                           **_ctx_templates())
+                           fotos=F.listar(id_), fotos_ativas=drive.configurado() or drive.cliente() is not None,
+                           TIPOS_FOTO=TIPOS_FOTO, **_ctx_templates())
 
 
 @app.route("/animais/<id_>/editar", methods=["GET", "POST"])

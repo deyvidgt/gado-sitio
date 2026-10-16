@@ -391,3 +391,26 @@ def test_limpar_cache_respeita_limite(cache_limpo):
         os.utime(p, (agora - 100 + i * 10, agora - 100 + i * 10))
     routes_fotos.limpar_cache(2048)
     assert sorted(os.listdir(pasta)) == ["F00002.jpg", "F00003.jpg"]
+
+
+# ── Task 4: telas ────────────────────────────────────────────────────────────
+
+def test_ficha_com_fotos_mostra_miniaturas(cliente, amb):
+    _post_foto(cliente, amb[1])
+    html = cliente.get(f"/animais/{amb[1]}").get_data(as_text=True)
+    assert "/fotos/F00001/mini" in html
+    assert "📷 Tirar foto" in html
+    assert "fila_fotos.js" in html
+
+
+def test_ficha_sem_drive_mostra_aviso(cliente, amb, monkeypatch, tmp_path):
+    drive.definir_cliente(None)
+    monkeypatch.setattr(drive, "token_path", lambda: str(tmp_path / "nada.json"))
+    r = cliente.get(f"/animais/{amb[1]}")
+    assert r.status_code == 200
+    assert "Fotos não configuradas" in r.get_data(as_text=True)
+
+
+def test_lista_animais_com_principal(cliente, amb):
+    _post_foto(cliente, amb[1])
+    assert "/fotos/F00001/mini" in cliente.get("/animais").get_data(as_text=True)
