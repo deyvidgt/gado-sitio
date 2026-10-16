@@ -81,9 +81,10 @@
           <input type="date" name="entrada" value="{{ v.get('entrada', '') or hoje }}">
         </div>
         <div class="form-group full">
-          <label>Mãe (brinco) — opcional</label>
+          <label>Mãe (brinco da vaca mãe) — opcional</label>
           <input type="text" name="mae" maxlength="60" placeholder="ex: amarelo 08"
                  value="{{ v.get('mae', '') }}">
+          <small style="color:var(--text-3);font-size:11px">Se a mãe tem brinco, escreva cor e número. As fichas da mãe e do bezerro ficam ligadas.</small>
         </div>
         <div class="form-group full">
           <label>Observações</label>

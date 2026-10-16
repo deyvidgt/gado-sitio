@@ -342,3 +342,9 @@ def test_faixa_de_info_do_formulario_nao_vira_colunas(cliente, url):
 
 def test_alert_strip_quebra_linha(cliente):
     assert "flex-wrap:wrap" in cliente.get("/vendas/nova").get_data(as_text=True).split(".alert-strip {")[1].split("}")[0]
+
+
+def test_campo_mae_explica_que_e_o_brinco_da_vaca_mae(cliente):
+    html = cliente.get("/animais/novo").get_data(as_text=True)
+    assert "Mãe (brinco da vaca mãe) — opcional" in html
+    assert "fichas da mãe e do bezerro ficam ligadas" in html
