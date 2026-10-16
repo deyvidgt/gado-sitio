@@ -59,7 +59,7 @@ DATA_DIR = _resolver_data_dir()
 from config import (
     ARQUIVO_DADOS,
     COLUNAS_COMPRAS, COLUNAS_GASTOS,
-    COLUNAS_VENDAS, COLUNAS_MANEJO, COLUNAS_VISITAS, COLUNAS_ANIMAIS,
+    COLUNAS_VENDAS, COLUNAS_MANEJO, COLUNAS_VISITAS, COLUNAS_ANIMAIS, COLUNAS_FOTOS,
 )
 
 # Mapa aba → colunas esperadas, usado para migrar colunas novas sem perder dados.
@@ -70,6 +70,7 @@ _SCHEMA_ABAS = {
     "Manejo":  COLUNAS_MANEJO,
     "Visitas": COLUNAS_VISITAS,
     "Animais": COLUNAS_ANIMAIS,   # v4.3 — criada sozinha no arquivo existente
+    "Fotos":   COLUNAS_FOTOS,     # v4.4
 }
 
 # Caminho completo do arquivo de dados
@@ -211,6 +212,8 @@ def inicializar():
 
         ws_ani = wb.create_sheet("Animais")
         ws_ani.append(COLUNAS_ANIMAIS)
+
+        wb.create_sheet("Fotos").append(COLUNAS_FOTOS)
 
         wb.create_sheet("Resumo")
         wb.save(ARQUIVO_PATH)

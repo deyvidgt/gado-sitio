@@ -20,7 +20,7 @@ for _stream in ("stdout", "stderr"):
         pass
 
 ARQUIVO_DADOS = "gado_familia.xlsx"
-VERSAO = "4.3.0"
+VERSAO = "4.4.0"
 NOME_SITIO = "Sítio Santo Antonio"
 FAMILIA = "Geane, Deyvid e Nilson"
 
@@ -164,6 +164,15 @@ COLUNAS_ANIMAIS = [
     "Raça", "Pelagem", "Sinais", "Nascimento", "Entrada", "Origem",
     "Ref Compra", "Mãe", "Status", "Data Saída", "Observações", "Registrado Por",
 ]
+
+# v4.4 — Fotos dos animais (arquivos no Google Drive; aqui só os dados de cada foto).
+COLUNAS_FOTOS = [
+    "ID Foto", "Animal", "Data", "Tipo", "Legenda", "Principal",
+    "Drive ID", "Enviado Por", "Enviado Em", "ID Envio",
+]
+TIPOS_FOTO = ["Perfil", "Evolução", "Ocorrência"]
+# Pasta "Sítio Santo Antonio" no Drive do Nilson (pode ser trocada no drive_token.json).
+DRIVE_PASTA_PADRAO = "1hVTxC--URXg1j3rylOYyRt1nSuC_vbUt"
 
 # Cada dono tem a sua cor de brinco (ajustável na página Animais → Cores).
 CORES_BRINCO_PADRAO = {"Deyvid": "Amarelo", "Nilson": "Azul", "Mae": "Vermelho"}

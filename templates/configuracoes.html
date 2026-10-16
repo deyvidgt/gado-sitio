@@ -492,6 +492,24 @@
   </form>
 </div>
 
+<!-- ── Fotos dos animais (Google Drive) ─────────────────────────────────────── -->
+<div class="card" style="margin-top:24px" id="fotos">
+  <div class="card-title">📷 Fotos</div>
+  <p style="font-size:13px;color:var(--text-3);margin-bottom:12px">
+    As fotos dos animais ficam na pasta do Google Drive da família; o site só mostra para quem está logado.
+  </p>
+  {% if drive_configurado %}
+    <p style="font-size:13.5px;margin-bottom:12px">✅ Credencial do Drive instalada.</p>
+  {% else %}
+    <p style="font-size:13.5px;margin-bottom:12px">❌ Drive não configurado — falta o <code>drive_token.json</code>
+      na pasta de dados. Passo a passo em <code>docs/FOTOS_DRIVE.md</code>.</p>
+  {% endif %}
+  <form method="post" action="{{ url_for('testar_drive') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="btn btn-outline">🔌 Testar conexão</button>
+  </form>
+</div>
+
 <!-- ── Backup / Cópia dos dados ──────────────────────────────────────────────── -->
 <div class="card" style="margin-top:24px">
   <div class="card-title">💾 Backup dos Dados</div>

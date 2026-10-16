@@ -6,6 +6,7 @@
 <style>
   .chip-brinco { display:inline-flex; align-items:center; gap:6px; font-weight:600; white-space:nowrap; }
   .chip-brinco .bol { width:14px; height:14px; border-radius:50%; border:1.5px solid rgba(0,0,0,.25); flex:none; }
+  .chip-brinco .mini-redonda { width:30px; height:30px; border-radius:50%; object-fit:cover; border:2px solid; flex:none; }
   .tabs-status { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
   .tabs-status a { padding:6px 14px; border-radius:20px; font-size:13px; text-decoration:none;
                    border:1.5px solid var(--cream-dk); color:var(--text-2); background:var(--surface); }
@@ -81,7 +82,7 @@
     <tbody>
     {% for r in rows %}
       <tr class="linha" data-busca="{{ (r.brinco ~ ' ' ~ NOMES.get(r.dono, r.dono) ~ ' ' ~ r.categoria ~ ' ' ~ r.raca ~ ' ' ~ r.pelagem ~ ' ' ~ r.sinais)|lower }}">
-        <td><a href="{{ url_for('ficha_animal', id_=r.id) }}"><span class="chip-brinco"><span class="bol" style="background:{{ r.hex }}"></span>{{ r.brinco }}</span></a></td>
+        <td><a href="{{ url_for('ficha_animal', id_=r.id) }}"><span class="chip-brinco">{% if fotos_principais.get(r.id) %}<img class="mini-redonda" loading="lazy" alt="" src="{{ url_for('foto_mini', id_foto=fotos_principais[r.id]) }}" style="border-color:{{ r.hex }}">{% else %}<span class="bol" style="background:{{ r.hex }}"></span>{% endif %}{{ r.brinco }}</span></a></td>
         <td>{{ NOMES.get(r.dono, r.dono) }}</td>
         <td><a href="{{ url_for('ficha_animal', id_=r.id) }}">{{ r.categoria or '—' }}</a></td>
         <td class="col-opc">{{ r.raca or '—' }}{% if r.pelagem %} · {{ r.pelagem }}{% endif %}

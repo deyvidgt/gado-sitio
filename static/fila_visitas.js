@@ -14,8 +14,13 @@
 
   function abrirDB() {
     return new Promise((ok, falha) => {
-      const req = indexedDB.open(DB_NOME, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore(STORE, { keyPath: "id_envio" });
+      // v2 (v4.4): o mesmo banco guarda também as fotos (fila_fotos.js abre igual).
+      const req = indexedDB.open(DB_NOME, 2);
+      req.onupgradeneeded = () => {
+        for (const nome of ["visitas", "fotos"]) {
+          if (!req.result.objectStoreNames.contains(nome)) req.result.createObjectStore(nome, { keyPath: "id_envio" });
+        }
+      };
       req.onsuccess = () => ok(req.result);
       req.onerror = () => falha(req.error);
     });

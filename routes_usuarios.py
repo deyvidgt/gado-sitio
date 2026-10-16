@@ -95,8 +95,25 @@ def configuracoes():
     usuarios     = _carregar_usuarios_local()
     sitio_config = _carregar_sitio_config()
     alertas_saude = get_alertas_saude()
+    import drive
     return render_template("configuracoes.html", usuarios=usuarios,
-                           sitio_config=sitio_config, alertas_saude=alertas_saude)
+                           sitio_config=sitio_config, alertas_saude=alertas_saude,
+                           drive_configurado=drive.configurado() or drive.cliente() is not None)
+
+
+@app.route("/configuracoes/testar-drive", methods=["POST"])
+@login_required
+def testar_drive():
+    """Fala com o Drive só quando pedido (abrir Configurações não espera o Google)."""
+    import drive
+    _validar_csrf()
+    cli = drive.cliente()
+    if cli is None:
+        flash("📷 Fotos: Drive não configurado (falta o drive_token.json — veja docs/FOTOS_DRIVE.md).", "error")
+    else:
+        ok, msg = cli.testar()
+        flash(f"📷 {msg}", "success" if ok else "error")
+    return redirect(url_for("configuracoes") + "#fotos")
 
 
 @app.route("/configuracoes/trocar-senha", methods=["POST"])

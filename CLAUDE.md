@@ -24,7 +24,7 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 
 ## ⚠️ Dados / banco (LER ANTES DE MEXER)
 
-- Os dados ficam em **`gado_familia.xlsx`** (abas: Compras, Gastos, Vendas, Manejo, Visitas, Animais).
+- Os dados ficam em **`gado_familia.xlsx`** (abas: Compras, Gastos, Vendas, Manejo, Visitas, Animais, Fotos).
 - Em produção o arquivo mora em **`~/gado-dados/`**, **fora do Git**, para o `git pull`
   nunca apagar dados. Resolução do caminho: `db.py: _resolver_data_dir()`
   (ordem: `GADO_DATA_DIR` → `~/gado-dados/` → pasta do .exe → pasta do script).
@@ -55,6 +55,9 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 | `animais.py` | Cadastro individual por brinco (aba `Animais`): cor por dono, nº 01–99 reaproveitado, ID `A0001` liga o histórico (`Brincos` em Manejo/Vendas = "Amarelo 21 #A0003"); baixa, brucelose por animal |
 | `comando_voz.py` | Comando de voz por regras: `analisar(texto)` → intenção; `montar(intenção, ctx)` confere nos dados. Rotas em `routes_animais.py` (`/voz`, `/api/voz/*`) |
 | `static/voz_campos.js` | Prefill de formulário por `?prefill=1&campo=valor` e 🎤 de ditado nos campos de texto |
+| `drive.py` | Cliente mínimo do Google Drive (só `requests`, OAuth com refresh token em `<dados>/drive_token.json`); só opera dentro da pasta raiz |
+| `fotos.py` / `routes_fotos.py` | Fotos dos animais (v4.4): aba `Fotos` + arquivos no Drive; site faz proxy das imagens com cache em `<dados>/cache_fotos/`. `configurar_drive.py` autoriza uma vez (ver `docs/FOTOS_DRIVE.md`) |
+| `static/fila_fotos.js` | Foto offline: reduz no celular (1600 px), guarda no IndexedDB (mesmo banco das visitas, v2) e envia por `/api/fotos` |
 | `static/fila_visitas.js` | Visita offline: guarda no celular (IndexedDB) e envia por `/api/visitas` quando há sinal; `ID Envio` evita duplicata |
 | `tests/` | Testes automáticos (pytest) |
 | `templates/` | Jinja2 (base.html + páginas); `static/` assets e PWA (`sw.js`, `manifest.json`) |

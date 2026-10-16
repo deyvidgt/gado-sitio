@@ -7,7 +7,7 @@
 //    (evita o bug "body is locked" e garante dados sempre frescos)
 // ═══════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = "gado-v4";   // troca de versão limpa o cache antigo dos celulares
+const CACHE_VERSION = "gado-v5";   // troca de versão limpa o cache antigo dos celulares
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_PAGES   = `${CACHE_VERSION}-pages`;
 
@@ -51,6 +51,9 @@ self.addEventListener("fetch", evt => {
 
   // ── APIs: NUNCA cachear — passa direto para a rede ────────────
   // Isso elimina o bug "body is locked" e garante dados frescos.
+  // Fotos (v4.4): o navegador já guarda pelo Cache-Control; não misturar no cache de páginas.
+  if (url.pathname.startsWith("/fotos/")) return;
+
   if (url.pathname.startsWith("/api/")) {
     // Deixa o browser lidar normalmente (não chama evt.respondWith)
     return;
