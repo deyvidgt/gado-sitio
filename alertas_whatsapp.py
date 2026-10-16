@@ -355,6 +355,18 @@ def montar_itens(hoje: datetime | None = None) -> list[dict]:
     except Exception as e:
         logging.error(f"Erro no resumo financeiro: {e}")
 
+    # ── 5) Fotos: Drive parou de aceitar (token revogado, pasta sumiu…) ───────
+    # As fotos ficam guardadas nos celulares; o aviso é para alguém consertar.
+    try:
+        import drive
+        if drive.configurado() and drive.cliente() is not None:
+            ok, msg = drive.cliente().testar()
+            if not ok:
+                item("drive:erro", f"📷 Fotos: o Google Drive não está aceitando envios — {msg}",
+                     urgente=True, repetir=1)
+    except Exception as e:
+        logging.error(f"Erro ao testar o Drive: {e}")
+
     return itens
 
 

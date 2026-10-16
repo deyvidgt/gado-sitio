@@ -414,3 +414,47 @@ def test_ficha_sem_drive_mostra_aviso(cliente, amb, monkeypatch, tmp_path):
 def test_lista_animais_com_principal(cliente, amb):
     _post_foto(cliente, amb[1])
     assert "/fotos/F00001/mini" in cliente.get("/animais").get_data(as_text=True)
+
+
+# ── Task 5: configuração e alerta ────────────────────────────────────────────
+
+def test_configuracoes_mostra_cartao_fotos(cliente, monkeypatch, tmp_path):
+    drive.definir_cliente(None)
+    monkeypatch.setattr(drive, "token_path", lambda: str(tmp_path / "nada.json"))
+    html = cliente.get("/configuracoes").get_data(as_text=True)
+    assert "📷 Fotos" in html and "não configurado" in html
+
+
+def test_testar_drive_com_falso_ok(cliente):
+    drive.definir_cliente(DriveFalso())
+    try:
+        with cliente.session_transaction() as s:
+            s["csrf_token"] = "tok"
+        r = cliente.post("/configuracoes/testar-drive", data={"csrf_token": "tok"})
+        assert r.status_code == 302
+        with cliente.session_transaction() as s:
+            assert any("Drive conectado" in m for _, m in s.get("_flashes", []))
+    finally:
+        drive.definir_cliente(None)
+
+
+def test_alerta_drive_quebrado(monkeypatch):
+    import alertas_whatsapp as W
+    monkeypatch.setattr(drive, "configurado", lambda: True)
+    drive.definir_cliente(DriveFalso(falhar=True))
+    try:
+        itens = W.montar_itens()
+    finally:
+        drive.definir_cliente(None)
+    alerta = [i for i in itens if i["chave"] == "drive:erro"]
+    assert alerta and alerta[0]["urgente"] and alerta[0]["repetir"] == 1
+
+
+def test_alerta_drive_ok_nao_avisa(monkeypatch):
+    import alertas_whatsapp as W
+    monkeypatch.setattr(drive, "configurado", lambda: True)
+    drive.definir_cliente(DriveFalso())
+    try:
+        assert not [i for i in W.montar_itens() if i["chave"] == "drive:erro"]
+    finally:
+        drive.definir_cliente(None)

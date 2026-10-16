@@ -2,6 +2,21 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
+## [4.4.0] — 2026-10-16
+
+### Novo
+- **Fotos dos animais** (ficha do animal → 📷 Fotos): linha do tempo com data, tipo
+  (Perfil / Evolução / Ocorrência), legenda e quem enviou; uma foto **principal** aparece
+  na ficha e como miniatura na lista de animais. Qualquer usuário logado pode enviar.
+- Os arquivos ficam na pasta do **Google Drive** da família (uma subpasta por animal); os
+  dados de cada foto na nova aba `Fotos`. As fotos são privadas: o site busca no Drive e
+  mostra só para quem está logado (com cache em `cache_fotos/`).
+- **Sem sinal no sítio**: a foto é reduzida no celular e fica guardada até a internet
+  voltar; o envio não duplica (`ID Envio`).
+- Excluir manda a foto para a lixeira do Drive (30 dias). Configurações → 📷 Fotos testa a
+  conexão; o WhatsApp de urgentes avisa se o Drive parar de aceitar envios.
+- Configuração única: `configurar_drive.py` + `docs/FOTOS_DRIVE.md`.
+
 ## [4.3.0] — 2026-10-15
 
 ### Novo
