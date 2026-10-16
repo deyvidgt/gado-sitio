@@ -165,6 +165,15 @@ COLUNAS_ANIMAIS = [
     "Ref Compra", "Mãe", "Status", "Data Saída", "Observações", "Registrado Por",
 ]
 
+# v4.4 — Fotos dos animais (arquivos no Google Drive; aqui só os dados de cada foto).
+COLUNAS_FOTOS = [
+    "ID Foto", "Animal", "Data", "Tipo", "Legenda", "Principal",
+    "Drive ID", "Enviado Por", "Enviado Em", "ID Envio",
+]
+TIPOS_FOTO = ["Perfil", "Evolução", "Ocorrência"]
+# Pasta "Sítio Santo Antonio" no Drive do Nilson (pode ser trocada no drive_token.json).
+DRIVE_PASTA_PADRAO = "1hVTxC--URXg1j3rylOYyRt1nSuC_vbUt"
+
 # Cada dono tem a sua cor de brinco (ajustável na página Animais → Cores).
 CORES_BRINCO_PADRAO = {"Deyvid": "Amarelo", "Nilson": "Azul", "Mae": "Vermelho"}
 CORES_BRINCO = ["Amarelo", "Azul", "Vermelho", "Verde", "Laranja", "Branco",

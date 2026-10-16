@@ -48,3 +48,8 @@ iniciar.bat
 # ── Scripts utilitários locais ──────────────────────────
 diagnostico.py
 migrar.py
+
+# ── Fotos no Google Drive (v4.4) — credencial e cache, nunca no Git ──
+drive_token.json
+client_secret*.json
+cache_fotos/
