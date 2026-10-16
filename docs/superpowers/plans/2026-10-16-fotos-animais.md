@@ -95,7 +95,7 @@
 
 - [ ] **Step 1: Write the failing tests** (fixture autouse: `drive.definir_cliente(DriveFalso())`, limpa a aba `Fotos` e os backups criados; usa um animal real ou cadastra um com `animais.cadastrar`)
   - `test_envio_grava_linha_na_ordem`: `enviar(...)` → linha com `Animal == id`, `Tipo == "Evolução"`, `ID Foto == "F00001"`, `Drive ID` = id do falso; arquivo no falso tem nome `AAAA-MM-DD_F00001.jpg` e `props["id_envio"]`.
-  - `test_primeira_foto_vira_principal`, `test_segunda_nao_tira_a_principal` e `test_perfil_vira_principal_se_nao_houver` (animal cuja principal foi excluída e restou só foto de Evolução → nova foto Perfil vira principal).
+  - `test_primeira_foto_vira_principal` e `test_segunda_nao_tira_a_principal` (como excluir a principal sempre promove outra, "não ter principal" só acontece com zero fotos — a regra do *Perfil* da spec fica coberta pela da 1ª foto).
   - `test_reenvio_nao_duplica`: mesmo `id_envio` duas vezes → 1 linha, 1 arquivo, 2ª retorna `duplicada=True`.
   - `test_orfao_no_drive_e_reaproveitado`: arquivo já no falso com `id_envio` X e sem linha → `enviar(id_envio=X)` grava a linha sem novo upload.
   - `test_recusa_nao_imagem` (`b"%PDF-1.4..."` → `FotoInvalida`), `test_recusa_grande` (8 MB + 1 byte → `FotoInvalida`), `test_recusa_animal_inexistente`, `test_recusa_tipo_invalido`.
