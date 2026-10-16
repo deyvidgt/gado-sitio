@@ -12,6 +12,8 @@ appProperties — o reenvio do celular o encontra e só grava a linha.
 from __future__ import annotations
 
 import logging
+import os
+import threading
 from datetime import datetime
 
 import pandas as pd
@@ -24,6 +26,9 @@ from extensions import _agora, _limpar_backups_antigos
 
 ABA = "Fotos"
 MAX_BYTES = 8 * 1024 * 1024
+# Um envio por vez: o upload ao Drive leva segundos no 3G, e dois envios juntos
+# (2 celulares, ou o reenvio da fila) leriam a mesma aba e gravariam o mesmo ID.
+_trava = threading.Lock()
 _TEXTO = ("ID Foto", "Animal", "Tipo", "Legenda", "Principal", "Drive ID",
           "Enviado Por", "Enviado Em", "ID Envio")
 
@@ -76,13 +81,32 @@ def _data(v) -> pd.Timestamp:
         raise FotoInvalida(f"Data inválida: {txt}")
 
 
+def _ultimo_id_path() -> str:
+    return os.path.join(db.DATA_DIR, "fotos_ultimo_id.txt")
+
+
 def _proximo_id(df: pd.DataFrame) -> str:
+    """Nunca reaproveita: o navegador guarda /fotos/<id> por 7 dias, e um ID reusado
+    mostraria a foto excluída no lugar da nova. O maior já usado fica num arquivo."""
     nums = [int(x[1:]) for x in df["ID Foto"] if x[1:].isdigit()]
-    return f"F{max(nums, default=0) + 1:05d}"
+    try:
+        with open(_ultimo_id_path(), encoding="utf-8") as f:
+            nums.append(int(f.read().strip() or 0))
+    except (OSError, ValueError):
+        pass
+    n = max(nums, default=0) + 1
+    try:
+        with open(_ultimo_id_path(), "w", encoding="utf-8") as f:
+            f.write(str(n))
+    except OSError as e:
+        logging.warning(f"Não foi possível guardar o último ID de foto: {e}")
+    return f"F{n:05d}"
 
 
 def _linha(r) -> dict:
-    return {"id_foto": r["ID Foto"], "animal": r["Animal"], "data": r["Data"],
+    data = r["Data"] if pd.notna(r["Data"]) else None   # célula apagada à mão no Excel
+    return {"id_foto": r["ID Foto"], "animal": r["Animal"], "data": data,
+            "dia": data.strftime("%Y-%m-%d") if data is not None else "",
             "tipo": r["Tipo"], "legenda": r["Legenda"], "principal": r["Principal"] == "Sim",
             "drive_id": r["Drive ID"], "enviado_por": r["Enviado Por"],
             "enviado_em": r["Enviado Em"]}
@@ -90,6 +114,11 @@ def _linha(r) -> dict:
 
 def enviar(id_animal: str, conteudo: bytes, data: str | None, tipo: str, legenda: str,
            enviado_por: str, id_envio: str) -> dict:
+    with _trava:
+        return _enviar(id_animal, conteudo, data, tipo, legenda, enviado_por, id_envio)
+
+
+def _enviar(id_animal, conteudo, data, tipo, legenda, enviado_por, id_envio) -> dict:
     df = carregar()
     if id_envio:
         ja = df[df["ID Envio"] == id_envio]

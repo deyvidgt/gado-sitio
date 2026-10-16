@@ -6,6 +6,8 @@ Nenhum teste fala com o Google: um DriveFalso (em memória) é injetado com
 drive.definir_cliente(). Tudo roda na cópia temporária dos dados (conftest).
 """
 import json
+
+import pandas as pd
 import os
 
 import pytest
@@ -151,12 +153,16 @@ def _sem_sobra_de_backup():
 def amb(dados_restaurados):
     """Um animal novo (Amarelo 91) e o Drive falso no lugar do Google."""
     db.inicializar()
+    if os.path.exists(fotos._ultimo_id_path()):
+        os.remove(fotos._ultimo_id_path())
     A._gravar(A.carregar().iloc[0:0])
     id_ = A.cadastrar([{"Dono": "Deyvid", "Brinco Nº": 91, "Categoria": "Bezerra"}])[0]["ID"]
     falso = DriveFalso()
     drive.definir_cliente(falso)
     yield falso, id_
     drive.definir_cliente(None)
+    if os.path.exists(fotos._ultimo_id_path()):
+        os.remove(fotos._ultimo_id_path())
 
 
 def _env(id_, envio, data="10/10/2026", tipo="Evolução", conteudo=JPG):
@@ -458,3 +464,56 @@ def test_alerta_drive_ok_nao_avisa(monkeypatch):
         assert not [i for i in W.montar_itens() if i["chave"] == "drive:erro"]
     finally:
         drive.definir_cliente(None)
+
+
+# ── Revisão final ────────────────────────────────────────────────────────────
+
+import threading  # noqa: E402
+
+
+def test_id_nao_e_reaproveitado_apos_excluir_a_ultima(amb):
+    _, id_ = amb
+    _env(id_, "e1")
+    _env(id_, "e2")
+    fotos.excluir("F00002")
+    assert _env(id_, "e3")["id_foto"] == "F00003"
+
+
+class _DriveLento(DriveFalso):
+    def enviar(self, *a, **kw):
+        time.sleep(0.3)
+        return super().enviar(*a, **kw)
+
+
+def _em_paralelo(*funcs):
+    ts = [threading.Thread(target=f) for f in funcs]
+    for t in ts:
+        t.start()
+    for t in ts:
+        t.join()
+
+
+def test_mesmo_envio_simultaneo_nao_duplica(amb):
+    _, id_ = amb
+    lento = _DriveLento()
+    drive.definir_cliente(lento)
+    _em_paralelo(lambda: _env(id_, "x"), lambda: _env(id_, "x"))
+    assert len(fotos.carregar()) == 1 and len(lento.arquivos) == 1
+
+
+def test_envios_simultaneos_ids_distintos_e_uma_principal(amb):
+    _, id_ = amb
+    drive.definir_cliente(_DriveLento())
+    _em_paralelo(lambda: _env(id_, "a"), lambda: _env(id_, "b"))
+    df = fotos.carregar()
+    assert sorted(df["ID Foto"]) == ["F00001", "F00002"]
+    assert (df["Principal"] == "Sim").sum() == 1
+
+
+def test_ficha_com_foto_sem_data_nao_quebra(cliente, amb):
+    _post_foto(cliente, amb[1])
+    df = fotos.carregar()
+    df["Data"] = pd.NaT
+    fotos._gravar(df)
+    r = cliente.get(f"/animais/{amb[1]}")
+    assert r.status_code == 200 and "/fotos/F00001/mini" in r.get_data(as_text=True)

@@ -128,9 +128,9 @@
   {% endif %}
 
   {% if fotos %}
-    {% for data, grupo in fotos|groupby('data')|reverse %}
+    {% for dia, grupo in fotos|groupby('dia')|reverse %}
     <div class="fotos-dia">
-      <h4>{{ data|data_br }}</h4>
+      <h4>{{ grupo[0].data|data_br if grupo[0].data else 'Sem data' }}</h4>
       <div class="fotos-grade">
         {% for f in grupo %}
         <button type="button" class="foto-item" data-foto="{{ f.id_foto }}" data-tipo="{{ f.tipo }}"
@@ -270,11 +270,13 @@
   document.getElementById("foto-cancelar").onclick = () => { inp.value = ""; form.style.display = "none"; };
   document.getElementById("foto-enviar").onclick = async function () {
     this.disabled = true; this.textContent = "⏳ Enviando...";
-    await FilaFotos.enviar(idAnimal, inp.files, {
+    const r = await FilaFotos.enviar(idAnimal, inp.files, {
       tipo: document.getElementById("foto-tipo").value,
       legenda: document.getElementById("foto-legenda").value,
       data: document.getElementById("foto-data").value,
     });
+    // Se alguma se perdeu, fica na página para o aviso ser lido.
+    if (r && r.perdidas) { this.disabled = false; this.textContent = "📤 Enviar"; return; }
     location.reload();
   };
 

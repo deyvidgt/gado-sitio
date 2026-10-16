@@ -11,7 +11,7 @@
   const DB_NOME = "gado-offline", STORE = "fotos";
   const TEMPO_LIMITE_MS = 60000;   // foto pesa mais que visita: espera mais no 3G
   const LADO_MAX = 1600, QUALIDADE = 0.82;
-  let enviando = false;
+  let rodada = Promise.resolve(0);   // rodadas de envio uma atrás da outra, nunca juntas
 
   function abrirDB() {
     return new Promise((ok, falha) => {
@@ -135,13 +135,37 @@
                    data: campos.data || "", criado_em: Date.now() });
     }
     // Guarda ANTES de tentar: se a página fechar no meio, a foto não se perde.
-    for (const it of itens) await guardar(it).catch(() => {});
+    // Sem IndexedDB (aba anônima, celular sem espaço): tenta enviar direto e,
+    // se não der, AVISA — nunca some calada.
+    let naoGuardadas = 0, perdidas = 0;
+    for (const it of itens) {
+      try {
+        if (!window.indexedDB) throw new Error("sem IndexedDB");
+        await guardar(it);
+      } catch (e) {
+        naoGuardadas++;
+        const tk = await tokenAtual().catch(() => ({ erro: "rede" }));
+        const r = tk.token ? await enviarUma(it, tk.token) : { ok: false };
+        if (!r.ok) perdidas++;
+      }
+    }
+    if (perdidas) {
+      avisar(`❌ ${perdidas} foto(s) NÃO foram enviadas e não puderam ser guardadas neste celular ` +
+             "(sem sinal e sem espaço/modo anônimo). Tente de novo com internet.", "erro");
+    }
     await enviarPendentes();
+    return { perdidas, naoGuardadas };
   }
 
-  async function enviarPendentes() {
-    if (enviando || !window.indexedDB) return 0;
-    enviando = true;
+  // Espera a rodada em andamento (ex.: a do timer) e roda de novo: assim a foto
+  // recém-tirada não fica para trás nem é enviada duas vezes ao mesmo tempo.
+  function enviarPendentes() {
+    rodada = rodada.then(rodar, rodar);
+    return rodada;
+  }
+
+  async function rodar() {
+    if (!window.indexedDB) return 0;
     let enviadas = 0;
     try {
       const itens = await listar();
@@ -155,8 +179,6 @@
       }
     } catch (e) {
       /* sem IndexedDB/rede: tenta na próxima vez */
-    } finally {
-      enviando = false;
     }
     await atualizarAviso();
     if (enviadas) document.dispatchEvent(new CustomEvent("fotos:atualizadas"));
