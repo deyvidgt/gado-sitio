@@ -130,6 +130,25 @@ class Drive:
                        headers={"Content-Type": f"multipart/related; boundary={fronteira}"})
         return r.json()["id"]
 
+    def pasta(self, nome: str, props: dict) -> str:
+        """Subpasta da raiz achada pelas appProperties (ex.: {"ajuda": "pasta"}) ou criada."""
+        filtro = " and ".join(f"appProperties has {{ key='{_q(k)}' and value='{_q(str(v))}' }}"
+                              for k, v in props.items())
+        achadas = self._buscar(f"'{_q(self.raiz)}' in parents and mimeType='{TIPO_PASTA}' "
+                               f"and trashed=false and {filtro}")
+        if achadas:
+            return achadas[0]["id"]
+        r = self._http(requests.post, URL_API, params={"fields": "id"}, json={
+            "name": nome, "mimeType": TIPO_PASTA, "parents": [self.raiz],
+            "appProperties": {k: str(v) for k, v in props.items()}})
+        return r.json()["id"]
+
+    def achar_por_prop(self, chave: str, valor: str) -> str | None:
+        """Arquivo marcado com appProperties chave=valor (ex.: print da Ajuda)."""
+        achados = self._buscar(
+            f"appProperties has {{ key='{_q(chave)}' and value='{_q(valor)}' }} and trashed=false")
+        return achados[0]["id"] if achados else None
+
     def achar_por_envio(self, id_envio: str) -> str | None:
         """Arquivo que já subiu com esse id_envio (o Excel pode não ter gravado)."""
         achados = self._buscar(

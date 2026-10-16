@@ -56,6 +56,20 @@ class DriveFalso:
                 return fid
         return None
 
+    def achar_por_prop(self, chave, valor):
+        self._checar()
+        for fid, a in self.arquivos.items():
+            if a["props"].get(chave) == valor and not a["lixeira"]:
+                return fid
+        return None
+
+    def pasta(self, nome, props):
+        self._checar()
+        chave = "pasta:" + repr(sorted(props.items()))
+        if chave not in self.pastas:
+            self.pastas[chave] = self._novo_id("pasta")
+        return self.pastas[chave]
+
     def baixar(self, file_id):
         self._checar()
         self.baixados += 1

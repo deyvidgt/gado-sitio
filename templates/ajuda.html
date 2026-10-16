@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}Ajuda — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Ajuda ❓{% endblock %}
+
+{% macro passo(img, alt) -%}
+  {%- if prints_ativos -%}
+  <figure class="print {{ 'print-cel' if img.startswith('c-') else 'print-pc' }}">
+    <a href="{{ url_for('ajuda_img', nome=img) }}" target="_blank" rel="noopener">
+      <img loading="lazy" src="{{ url_for('ajuda_img', nome=img) }}" alt="{{ alt }}"
+           onerror="this.closest('figure').classList.add('falhou')"></a>
+    <figcaption class="print-falha">🖼️ imagem indisponível — {{ alt }}</figcaption>
+  </figure>
+  {%- else -%}
+  <div class="print-vazio">🖼️ imagem indisponível — {{ alt }}</div>
+  {%- endif -%}
+{%- endmacro %}
+
+{% block content %}
+<style>
+  .ajuda { max-width:860px; }
+  .ajuda h2 { font-family:'Playfair Display',serif; color:var(--green-700); font-size:22px; margin:34px 0 8px; scroll-margin-top:80px; }
+  .ajuda h3 { font-size:16px; margin:22px 0 6px; color:var(--text); scroll-margin-top:80px; }
+  .ajuda p, .ajuda li { font-size:14.5px; line-height:1.65; }
+  .ajuda ol, .ajuda ul { padding-left:22px; margin:6px 0 10px; }
+  .ajuda li { margin:3px 0; }
+  .ajuda code { background:var(--surface-2); padding:1px 6px; border-radius:6px; font-size:13px; }
+  .indice { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:6px 18px; }
+  .indice a { font-size:14px; }
+  .dica { background:var(--green-50); border-left:4px solid var(--green-500); padding:10px 14px; border-radius:8px; margin:10px 0; font-size:14px; }
+  .atencao { background:var(--gold-lt); border-left:4px solid var(--gold); padding:10px 14px; border-radius:8px; margin:10px 0; font-size:14px; }
+  .print { margin:12px 0 18px; }
+  .print img { display:block; width:100%; border-radius:12px; border:1px solid var(--cream-dk); box-shadow:var(--shadow); }
+  .print-cel { max-width:300px; }
+  .print-pc { max-width:820px; }
+  .print-falha { display:none; }
+  .print.falhou img { display:none; }
+  .print.falhou .print-falha, .print-vazio { display:block; padding:14px; border:1.5px dashed var(--cream-dk);
+                                            border-radius:10px; color:var(--text-3); font-size:13px; margin:10px 0 16px; }
+  .voltar { font-size:12.5px; margin-top:6px; display:inline-block; }
+</style>
+
+<div class="ajuda">
+<p>Este é o manual do sistema do <strong>Sítio Santo Antonio</strong>. Toque num assunto para ir direto a ele.
+  Os prints de <strong>celular</strong> mostram as tarefas do dia a dia; os de <strong>computador</strong>, as consultas.
+  Toque num print para vê-lo grande. Os prints também ficam no Google Drive, na pasta
+  <em>sitio santo antonio → Ajuda - passo a passo</em>.</p>
+
+<div class="card indice" id="indice">
+  <a href="#inicio">1. Primeiros passos</a>
+  <a href="#painel">2. Painel (Dashboard)</a>
+  <a href="#visita">3. Visita ao Sítio</a>
+  <a href="#manejo">4. Novo Manejo</a>
+  <a href="#compra">5. Nova Compra</a>
+  <a href="#gasto">6. Novo Gasto</a>
+  <a href="#venda">7. Nova Venda</a>
+  <a href="#animal">8. Animais e brincos</a>
+  <a href="#fotos">9. Fotos do animal</a>
+  <a href="#voz">10. Comando de Voz</a>
+  <a href="#consultas">11. Consultas e Relatórios</a>
+  <a href="#ferramentas">12. Importar, Exportar e Backups</a>
+  <a href="#config">13. Configurações</a>
+  <a href="#contas">14. Como as contas funcionam</a>
+  <a href="#problemas">15. Problemas comuns</a>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="inicio">1. Primeiros passos</h2>
+<h3>Entrar no sistema</h3>
+<ol>
+  <li>Abra <code>deyvidgt16.pythonanywhere.com</code> no navegador.</li>
+  <li>Digite seu <strong>usuário</strong> (geane, deyvid ou nilson) e a <strong>senha</strong>.</li>
+  <li>Se aparecer o aviso de <em>Caps Lock</em>, a senha está sendo digitada em maiúsculas.</li>
+</ol>
+{{ passo('p-login.png', 'Tela de login') }}
+
+<h3>Instalar no celular (fica como um aplicativo)</h3>
+<ol>
+  <li>No celular, abra o site pelo <strong>Chrome</strong> e entre.</li>
+  <li>Toque em <strong>Instalar</strong> no aviso verde que aparece embaixo — ou no menu ⋮ do Chrome →
+    <strong>Adicionar à tela inicial</strong>.</li>
+  <li>Pronto: o ícone do sítio aparece junto dos outros apps.</li>
+</ol>
+
+<h3>Menu e tema</h3>
+<ul>
+  <li>No celular o menu fica escondido: toque no botão <strong>☰</strong> no alto à esquerda.</li>
+  <li>O botão 🌙/☀️ no alto troca entre tema claro e escuro.</li>
+  <li>O 🎤 no alto abre o <a href="#voz">Comando de Voz</a> de qualquer página.</li>
+</ul>
+{{ passo('c-menu.png', 'Menu aberto no celular') }}
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="painel">2. Painel (Dashboard)</h2>
+<p>É a primeira tela depois do login. Mostra um resumo de tudo:</p>
+<ul>
+  <li><strong>Financeiro Geral</strong>: quanto entrou com vendas, quanto custou o que foi vendido e o resultado.</li>
+  <li><strong>Resultado por Membro</strong>: lucro ou prejuízo de cada dono (Geane, Deyvid e Nilson) e quantas cabeças cada um tem.</li>
+  <li><strong>Valor Estimado do Rebanho</strong> e <strong>Evolução do Rebanho</strong>.</li>
+  <li><strong>Agenda de Manejo</strong>: vacinas e vermífugos que estão vencendo ou atrasados.</li>
+  <li><strong>Estoque de Insumos</strong>: quantos sacos de sal, proteinado e ração ainda tem e quando acabam.</li>
+  <li><strong>Última Visita</strong>, <strong>Chuvas por Mês</strong>, <strong>Cotações de Mercado</strong> e <strong>Atividade Recente</strong>.</li>
+</ul>
+{{ passo('p-painel-1.png', 'Painel — resumo financeiro e rebanho') }}
+{{ passo('p-painel-2.png', 'Painel — agenda de manejo e insumos') }}
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="visita">3. Visita ao Sítio</h2>
+<p>Registre <strong>toda ida ao sítio</strong>: a contagem do gado, a chuva e como estão os insumos e as instalações.
+  A família recebe um aviso no WhatsApp.</p>
+<ol>
+  <li>Menu → <strong>🌾 Visita ao Sítio</strong>.</li>
+  <li>Confira a <strong>data</strong> e marque <strong>quem foi</strong>.</li>
+  <li>Em <strong>Quantas cabeças você contou?</strong>, digite a contagem. Se for menos que o esperado, o sistema avisa que está faltando gado.</li>
+  <li>Em <strong>Sal, Ração e Proteinado</strong>, informe quantos sacos <strong>ainda tem no sítio</strong> (é com isso que o sistema calcula quando acaba).</li>
+  <li>Marque como estão <strong>pastagem, mato, córrego, cisterna, quintal, caixa d'água e contêiner</strong>.</li>
+  <li>Toque em <strong>Salvar</strong>.</li>
+</ol>
+{{ passo('c-visita-1.png', 'Visita — data, quem foi e contagem') }}
+{{ passo('c-visita-2.png', 'Visita — insumos e instalações') }}
+<div class="dica">📴 <strong>Sem sinal no sítio?</strong> Pode salvar normalmente. A visita fica guardada no celular
+  (aparece uma faixa amarela "aguardando internet") e é enviada sozinha quando o sinal voltar. Não salve de novo:
+  ela não duplica.</div>
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="manejo">4. Novo Manejo</h2>
+<p>Tudo o que se faz com o gado: vacinas, vermífugo, pesagem, tratamento, troca de pasto, <strong>nascimento</strong> e <strong>morte</strong>.</p>
+<ol>
+  <li>Menu → <strong>🩺 Novo Manejo</strong>.</li>
+  <li>Escolha o <strong>Tipo de Manejo</strong> (Vacina Raiva, Vacina Clostridioses, Vacina Brucelose, Vermifugação, Pesagem, Morte/Perda, Nascimento…).</li>
+  <li>Informe a <strong>quantidade de cabeças</strong> e o <strong>responsável</strong>.</li>
+  <li>Em vacina e remédio, diga <strong>qual produto</strong> foi usado (o sistema lembra os já usados).</li>
+  <li>Se foram animais com brinco, escreva os <strong>brincos</strong> (ex.: <code>amarelo 21, azul 12</code>) — aparece no histórico de cada um.</li>
+  <li>Toque em <strong>Salvar</strong>.</li>
+</ol>
+{{ passo('c-manejo-1.png', 'Novo manejo — tipo, quantidade e produto') }}
+<div class="atencao">⚠️ <strong>Morte/Perda:</strong> escolha <em>De quem foi a perda?</em> — o prejuízo vai para esse dono.
+  Deixando em branco, é dividido entre os três. <strong>Nascimento:</strong> escolha <em>De quem é o bezerro?</em> —
+  a cabeça entra no estoque desse dono.</div>
+{{ passo('c-manejo-2.png', 'Manejo de morte — de quem foi a perda') }}
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="compra">5. Nova Compra</h2>
+<ol>
+  <li>Menu → <strong>🛒 Nova Compra</strong>.</li>
+  <li>Preencha a <strong>data</strong>, a <strong>quantidade total de cabeças</strong> e o <strong>valor total</strong>. O valor por cabeça é calculado sozinho.</li>
+  <li>Divida as cabeças entre os donos (Geane, Deyvid e Nilson). A soma tem que bater com o total.</li>
+  <li>Toque em <strong>Salvar</strong>. Depois, se quiser, use <strong>colocar brinco nos animais desta compra</strong>.</li>
+</ol>
+{{ passo('c-compra-1.png', 'Nova compra') }}
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="gasto">6. Novo Gasto</h2>
+<ol>
+  <li>Menu → <strong>💸 Novo Gasto</strong>.</li>
+  <li>Escolha o <strong>tipo</strong>: Remédio/Vacina, Sal/Proteinado, Gasolina/Transporte, Veneno/Defensivo, Calcário/Adubação ou Manutenção/Outros.</li>
+  <li>Em <strong>Sal/Proteinado</strong>, diga o <strong>produto</strong> e <strong>quantos sacos</strong> — entra no estoque de insumos.</li>
+  <li>Informe o <strong>valor total</strong> e toque em <strong>Salvar</strong>.</li>
+</ol>
+{{ passo('c-gasto-1.png', 'Novo gasto') }}
+<div class="dica">O gasto é dividido entre os donos <strong>pelo número de cabeças</strong> de cada um — ninguém precisa fazer conta.</div>
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="venda">7. Nova Venda</h2>
+<ol>
+  <li>Menu → <strong>🤝 Nova Venda</strong>.</li>
+  <li>Preencha a <strong>data</strong>, as <strong>cabeças</strong> e o <strong>valor recebido</strong>; a arroba é opcional.</li>
+  <li>Divida as cabeças vendidas entre os donos.</li>
+  <li>Se vendeu animais com brinco, escreva os <strong>brincos</strong>: eles saem da lista de vivos e o brinco fica livre.</li>
+  <li>Toque em <strong>Salvar</strong>. O sistema calcula o custo e o lucro da venda.</li>
+</ol>
+{{ passo('c-venda-1.png', 'Nova venda') }}
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="animal">8. Animais e brincos</h2>
+<p>Cada dono tem a <strong>sua cor de brinco</strong> (ajustável na página Animais). Os números vão de <strong>01 a 99</strong>
+  em cada cor; depois do 99 recomeça do 01, pulando os que estão em animais vivos.</p>
+<h3>Cadastrar um animal</h3>
+<ol>
+  <li>Menu → <strong>🏷️ Cadastrar Animal</strong>.</li>
+  <li>Escolha o <strong>dono</strong> (a cor do brinco vem junto) e a <strong>categoria</strong> (Bezerra, Novilha, Vaca, Bezerro, Garrote, Novilho, Boi, Touro).</li>
+  <li>O <strong>número</strong> já vem sugerido com o próximo livre.</li>
+  <li>Preencha raça, pelagem, sinais, nascimento, <strong>origem</strong> (Já no sítio, Compra ou Nascimento) e a mãe, se souber.</li>
+  <li>Toque em <strong>Salvar</strong>.</li>
+</ol>
+{{ passo('c-animal-1.png', 'Cadastrar animal') }}
+<div class="atencao">⚠️ O cadastro <strong>não</strong> mexe nas contas: a cabeça já entrou pela compra ou pelo nascimento.
+  Não registre a mesma cabeça duas vezes.</div>
+<h3>Ficha do animal</h3>
+<p>Em <strong>🐄 Animais</strong>, toque no brinco para abrir a ficha: cadastro, crias, <strong>histórico</strong> (vacinas, pesagens,
+  vendas com aquele brinco), <a href="#fotos">fotos</a> e o botão <strong>Dar baixa</strong> (vendido ou morreu).</p>
+{{ passo('c-animal-2.png', 'Ficha do animal') }}
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="fotos">9. Fotos do animal</h2>
+<ol>
+  <li>Abra a <strong>ficha do animal</strong> (Animais → toque no brinco) e desça até <strong>📷 Fotos</strong>.</li>
+  <li>Toque em <strong>📷 Tirar foto</strong>: abre a câmera (ou escolha fotos da galeria, várias de uma vez).</li>
+  <li>Escolha o <strong>tipo</strong>: <em>Perfil</em> (para reconhecer o animal), <em>Evolução</em> (crescimento) ou
+    <em>Ocorrência</em> (machucado, doença, parto). Legenda e data são opcionais.</li>
+  <li>Toque em <strong>📤 Enviar</strong>.</li>
+</ol>
+{{ passo('c-fotos-1.png', 'Quadro de fotos na ficha do animal') }}
+<ul>
+  <li>A <strong>primeira foto</strong> vira a principal: aparece grande no topo da ficha e na lista de Animais.</li>
+  <li>Toque numa foto para ver grande e usar ⭐ <strong>Tornar principal</strong>, ✏️ <strong>Editar</strong> ou 🗑️ <strong>Excluir</strong>
+    (toque duas vezes para confirmar; ela vai para a lixeira do Drive e pode ser recuperada por 30 dias).</li>
+  <li>As fotos ficam no Google Drive, numa pasta para cada animal (ex.: <em>A0003 - Amarelo 21</em>).</li>
+</ul>
+<div class="dica">📴 <strong>Sem sinal?</strong> A foto aparece como "⏳ aguardando sinal" e sobe sozinha quando a internet voltar.</div>
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="voz">10. Comando de Voz</h2>
+<p>Fale o que aconteceu e o sistema preenche para você. Ele <strong>mostra o que entendeu antes de salvar</strong>.</p>
+<ol>
+  <li>Toque no 🎤 no alto da tela (ou Menu → <strong>🎤 Comando de Voz</strong>).</li>
+  <li>Fale uma frase, por exemplo:
+    <ul>
+      <li><code>vacina raiva amarelo 21 e 22 com Raivacel</code></li>
+      <li><code>nasceu bezerra amarelo 22 nelore, mãe amarelo 08</code></li>
+      <li><code>gastei 350 reais de sal, 10 sacos</code></li>
+      <li><code>vendi amarelo 21 e azul 12 por 9 mil, arroba a 310</code></li>
+      <li><code>visita contei 38 cabeças, choveu 20 milímetros, sal baixo</code></li>
+      <li><code>ficha amarelo 21</code> (abre a ficha)</li>
+    </ul>
+  </li>
+  <li>Confira o resumo e toque em <strong>Salvar</strong> — ou corrija o que precisar.</li>
+</ol>
+{{ passo('c-voz-1.png', 'Comando de voz') }}
+<div class="dica">Por segurança, a voz <strong>não apaga nem edita</strong> registros — isso só pela tela.
+  Nos formulários, o 🎤 ao lado dos campos de texto serve para ditar.</div>
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="consultas">11. Consultas e Relatórios</h2>
+<p>No grupo <strong>Consultas</strong> do menu ficam as listas de tudo que foi registrado:</p>
+<ul>
+  <li><strong>📦 Compras, 📋 Gastos, 📊 Vendas, 🌿 Manejo</strong>: busca, filtro, ✏️ editar e 🗑️ excluir cada registro.</li>
+  <li><strong>🐄 Animais</strong>: lista por brinco, filtro por vivos/vendidos/mortos, conferência "com brinco × estoque" e alerta de brucelose.</li>
+  <li><strong>🗓️ Visitas</strong>: todas as visitas com contagem, chuva e insumos.</li>
+  <li><strong>📈 Relatórios</strong>: resumo financeiro, indicadores de custo, gastos por categoria, histórico de cada dono, chuvas — e o <strong>PDF</strong>.</li>
+</ul>
+{{ passo('p-compras.png', 'Lista de compras') }}
+{{ passo('p-manejo.png', 'Lista de manejos') }}
+{{ passo('p-animais.png', 'Lista de animais') }}
+{{ passo('p-visitas.png', 'Lista de visitas') }}
+{{ passo('p-relatorios.png', 'Relatórios') }}
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="ferramentas">12. Importar, Exportar e Backups</h2>
+<ul>
+  <li><strong>⬆️ Importar Excel</strong>: traz registros de uma planilha. Confira os detalhes antes de confirmar.</li>
+  <li><strong>⬇️ Exportar Excel</strong>: baixa um relatório em planilha.</li>
+  <li><strong>💾 Backups</strong>: o sistema faz uma cópia de segurança <strong>todo dia</strong> (guarda as 30 últimas).
+    Aqui dá para baixar qualquer uma ou fazer uma agora.</li>
+</ul>
+{{ passo('p-importar.png', 'Importar Excel') }}
+{{ passo('p-backups.png', 'Backups') }}
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="config">13. Configurações</h2>
+<ul>
+  <li><strong>🔑 Trocar minha senha</strong> e, para quem administra, <strong>usuários do sistema</strong>.</li>
+  <li><strong>📱 WhatsApp</strong>: telefone e chave de cada um para receber os avisos (todo dia só o urgente; resumo na segunda;
+    resumo do mês no dia 1º; aviso de cada visita).</li>
+  <li><strong>🩺 Alertas de Saúde</strong>: de quantos em quantos dias cada vacina/vermífugo deve ser repetido.</li>
+  <li><strong>🐄 Rebanho</strong>: valor estimado por cabeça/arroba.</li>
+  <li><strong>📷 Fotos</strong>: mostra se o Google Drive está ligado e tem o botão <strong>Testar conexão</strong>.</li>
+  <li><strong>💾 Backup</strong> e <strong>🏡 Identidade do Sítio</strong> (nome e logo).</li>
+</ul>
+{{ passo('p-config-1.png', 'Configurações — senha e usuários') }}
+{{ passo('p-config-2.png', 'Configurações — WhatsApp e alertas') }}
+{{ passo('p-config-3.png', 'Configurações — fotos e backup') }}
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="contas">14. Como as contas funcionam</h2>
+<ul>
+  <li><strong>Custo de cada cabeça:</strong> o sistema soma o que se pagou nas compras e os gastos, e divide pelas cabeças
+    <em>que estão no sítio naquele momento</em> (média móvel). Gado comprado depois não paga despesa antiga.</li>
+  <li><strong>Quando vende:</strong> cada cabeça vendida sai pelo custo médio daquele dia. Lucro = valor da venda − esse custo.</li>
+  <li><strong>Divisão entre os donos:</strong> pelo número de cabeças de cada um, não por porcentagem fixa.</li>
+  <li><strong>Morte/perda:</strong> o custo da cabeça morta vira <em>perda</em> do dono informado (ou dos três, se em branco) —
+    não encarece as que ficaram.</li>
+  <li><strong>Nascimento:</strong> entra com custo zero e baixa a média de custo do rebanho.</li>
+  <li><strong>Brincos e fotos</strong> não entram nas contas: são só para identificar e acompanhar os animais.</li>
+</ul>
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="problemas">15. Problemas comuns</h2>
+<h3>Faixa amarela "aguardando internet" / foto "⏳ aguardando sinal"</h3>
+<p>Ficou guardado no celular porque estava sem sinal. Abra o sistema com internet: envia sozinho.
+  <strong>Não registre de novo</strong> e não limpe os dados do navegador antes disso.</p>
+<h3>Esqueci a senha</h3>
+<p>Peça a quem administra para usar <strong>Configurações → Usuários → Resetar senha</strong>.</p>
+<h3>As fotos não aparecem / "Fotos não configuradas"</h3>
+<p>Em <strong>Configurações → 📷 Fotos → Testar conexão</strong>. Se der erro, a autorização do Google Drive precisa ser refeita
+  (passo a passo no arquivo <code>docs/FOTOS_DRIVE.md</code> do projeto). As fotos tiradas nesse tempo continuam guardadas nos celulares.</p>
+<h3>O WhatsApp não chega</h3>
+<p>Confira em <strong>Configurações → WhatsApp</strong> o telefone e a chave do CallMeBot. Os avisos só saem uma vez por dia
+  (urgentes) e não se repetem.</p>
+<h3>Registrei errado</h3>
+<p>Vá na lista (Compras, Gastos, Vendas, Manejo ou Visitas) e use ✏️ para editar ou 🗑️ para excluir.
+  Antes de cada exclusão o sistema faz um backup.</p>
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+</div>
+{% endblock %}
