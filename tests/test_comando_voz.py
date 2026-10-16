@@ -721,3 +721,34 @@ def test_frase(frase, acao, estado, campos):
               "info" if r.get("so_info") else "pergunta" if r["perguntas"] else "erro")
     assert obtido == estado, (r["erros"], r["perguntas"])
     assert {k: v for k, v in r["campos"] if k != "Descrição"} == campos
+
+
+# ── Visita falada do jeito que a família fala (teste real de 16/10/2026) ─────
+
+FRASE_VISITA = ("nova vizita, deyvid, gado esta correto e contado, choveu 20milimitros, caixa d'agua "
+                "quase cheia 800 litros, contener com 300 litros, sal acabou, raçao acabou, sal "
+                "proteinado tem 1 saco sobrando, plantas daninhas (mato) tem poucas, o pasto esta "
+                "amarelando/ meio seco,")
+
+
+def test_vizita_com_z_e_visita_e_nao_manejo():
+    assert V.analisar(FRASE_VISITA, HOJE)["acao"] == "visita"
+    assert V.analisar("vizita, contei 30 cabeças, pasto bom", HOJE)["acao"] == "visita"
+
+
+def test_visita_falada_preenche_tudo():
+    r = V.montar(V.analisar(FRASE_VISITA, HOJE), CTX)
+    assert r["so_formulario"] and not r["erros"]
+    assert dict(r["campos"]) == {
+        "Data": "15/10/2026",
+        "Quem foi": "Deyvid",
+        "Gado contado": 30,                 # "correto" = o esperado no sistema
+        "Choveu": "Sim", "Chuva (mm)": 20,
+        "Caixa d'água": "Cheia", "Caixa d'água (L)": 800,
+        "Contêiner (L)": 300,
+        "Sal": "Vazio", "Ração": "Vazio",
+        "Sacos de proteinado": 1,
+        "Mato": "Algumas, Não Precisa Capinar",
+        "Pastagem": "Amarelando/Secando",
+    }
+    assert "responsavel=Deyvid" in r["url_form"] and "gado_contado=30" in r["url_form"]

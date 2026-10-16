@@ -166,7 +166,7 @@ def tokenizar(texto: str) -> list[Tok]:
             n = n[2:].strip()
             o = o[2:].strip()
         # "21kg", "320kg" → número + unidade
-        m = re.fullmatch(r"(\d+(?:[.,]\d+)?)(kg|mm|l)", n)
+        m = re.fullmatch(r"(\d+(?:[.,]\d+)?)(kg|mm|l|litros?|milim\w*)", n)
         if m:
             brutos.append(Tok(m.group(1), m.group(1), _num_digitos(m.group(1))))
             brutos.append(Tok(m.group(2), m.group(2)))
@@ -552,7 +552,7 @@ _GADO = re.compile(r"\b(gado|boi|bois|bezerr\w*|novilh\w*|vaca|vacas|garrote\w*|
 _ACOES = [
     ("consulta",   r"\b(quanto|quantos|quantas|quantidade)\b"),
     ("ficha",      r"\b(ficha|quem e|mostrar?|mostra|abrir?|abre|ver|historico)\b"),
-    ("visita",     r"\b(visita|visitei|fui no sitio|fui ao sitio)\b"),
+    ("visita",     r"\b(vi[sz]ita|vi[sz]itei|fui no sitio|fui ao sitio)\b"),
     ("morte",      r"\b(morreu|morreram|morte|morta|morto|faleceu|perdemos|perdi)\b"),
     ("venda",      r"\b(vendi|vendeu|vendemos|venda|vendido|vendida|vendidos|vendidas)\b"),
     ("gasto",      r"\b(gastei|gastamos|gasto|gastos|paguei|pagamos|despesa)\b"),
@@ -675,19 +675,31 @@ def _nivel(toks, chaves: set, opcoes, ate=4):
     return None
 
 
+_CONTEINER = re.compile(r"cont[ea]i?ner")
+
+
 def _analisar_visita(toks, n):
     campos = {}
+    for t in toks:
+        if t.n in _DONOS:            # "visita, deyvid, …" → quem foi
+            campos["responsavel"] = NOMES_MEMBROS[_DONOS[t.n]]
+            break
+    if re.search(r"\b(gado|contagem|contei|contado)\b(\s+\w+){0,3}?\s+(correto|certo|conferido|bateu|completo)\b", n):
+        campos["gado_contado"] = "esperado"   # montar() troca pelo estoque do sistema
     for i, t in enumerate(toks):
         if t.v is not None and (t.n.isdigit() or True):
             prox = toks[i + 1].n if i + 1 < len(toks) else ""
             ant = toks[i - 1].n if i else ""
             if prox in ("cabecas", "cabeca", "animais", "bois", "reses") or ant in ("contei", "contamos", "contado"):
-                campos.setdefault("gado_contado", int(t.v))
-            elif prox in ("mm", "milimetros", "milimetro"):
+                campos["gado_contado"] = int(t.v)
+            elif prox == "mm" or prox.startswith("milim"):
                 campos["chuva_mm"] = t.v
                 campos["choveu"] = "sim"
-            elif prox in ("saco", "sacos") and i + 2 < len(toks):
-                alvo = " ".join(x.n for x in toks[i + 2:i + 4])
+            elif prox in ("saco", "sacos"):
+                # "2 sacos de sal" (produto depois) ou "proteinado tem 1 saco" (produto antes)
+                depois = " ".join(x.n for x in toks[i + 2:i + 4])
+                antes = " ".join(x.n for x in toks[max(0, i - 3):i])
+                alvo = depois if re.search(r"prot|racao|sal", depois) else antes
                 if "prot" in alvo:
                     campos["sacos_prot"] = int(t.v)
                 elif "racao" in alvo:
@@ -696,22 +708,26 @@ def _analisar_visita(toks, n):
                     campos["sacos_sal"] = int(t.v)
             elif prox in ("litro", "litros"):
                 alvo = " ".join(x.n for x in toks[max(0, i - 4):i])
-                if "conteiner" in alvo or "container" in alvo:
+                if _CONTEINER.search(alvo):
                     campos["conteiner_litros"] = t.v
                 else:
-                    campos["caixa_agua_litros"] = t.v
+                    campos.setdefault("caixa_agua_litros", t.v)
     if re.search(r"\b(nao choveu|sem chuva)\b", n):
         campos["choveu"] = "nao"
     elif re.search(r"\bchoveu\b|\bchuva\b", n):
         campos.setdefault("choveu", "sim")
+    # "sal proteinado" é o proteinado, não o sal comum
+    toks_ins = [t for i, t in enumerate(toks)
+                if not (t.n == "sal" and i + 1 < len(toks) and toks[i + 1].n.startswith("protein"))]
     for campo, chaves in (("sal_racao", {"sal"}), ("racao", {"racao"}),
                           ("proteinado", {"proteinado", "proteina"})):
-        v = _nivel(toks, chaves, _NIVEL_INSUMO, ate=2)
+        v = _nivel(toks_ins, chaves, _NIVEL_INSUMO, ate=2)
         if v:
             campos[campo] = v
-    v = _nivel(toks, {"mato", "vegetacao", "capim"}, [
+    v = _nivel(toks, {"mato", "vegetacao", "capim", "daninha", "daninhas"}, [
         (("limpo",), "Limpo"), (("muito", "alto"), "Muito Mato"),
-        (("capinar", "precisa", "crescendo"), "Precisa Capinar")])
+        (("capinar", "precisa", "crescendo"), "Precisa Capinar"),
+        (("pouco", "pouca", "poucos", "poucas", "algumas", "alguns"), "Algumas, Não Precisa Capinar")])
     if v:
         campos["mato"] = v
     v = _nivel(toks, {"grama", "pastagem", "pasto"}, [
@@ -734,7 +750,7 @@ def _analisar_visita(toks, n):
         (("cheia",), "Cheia"), (("meia", "metade"), "Meia"), (("baixa",), "Baixa"), (("vazia",), "Vazia")], ate=4)
     if v:
         campos["caixa_agua"] = v
-    v = _nivel(toks, {"conteiner", "container"}, [
+    v = _nivel(toks, {t.n for t in toks if _CONTEINER.fullmatch(t.n)}, [
         (("cheio",), "Cheio"), (("meio", "metade"), "Meio"), (("baixo",), "Baixo"), (("vazio",), "Vazio")])
     if v:
         campos["conteiner"] = v
@@ -980,7 +996,9 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
     if acao == "visita":
         campos = dict(intencao.get("visita") or {})
         out["titulo"] = "🌾 Visita ao sítio"
-        rot = {"gado_contado": "Gado contado", "choveu": "Choveu", "chuva_mm": "Chuva (mm)",
+        if campos.get("gado_contado") == "esperado":
+            campos["gado_contado"] = int(ctx.get("estoque") or 0)
+        rot = {"responsavel": "Quem foi", "gado_contado": "Gado contado", "choveu": "Choveu", "chuva_mm": "Chuva (mm)",
                "sal_racao": "Sal", "racao": "Ração", "proteinado": "Proteinado",
                "sacos_sal": "Sacos de sal (estoque)", "sacos_racao": "Sacos de ração",
                "sacos_prot": "Sacos de proteinado", "mato": "Mato", "grama": "Pastagem",
