@@ -6,7 +6,7 @@
 <div style="max-width:720px">
   {% if cmp_atual > 0 %}
   <div class="alert-strip info" style="margin-bottom:20px">
-    💡 CMP atual: <strong>{{ cmp_atual | brl }}/cabeça</strong>{% if modo == "nova" %} — esta compra vai atualizar o custo médio.{% endif %}
+    <span>💡 CMP atual: <strong>{{ cmp_atual | brl }}/cabeça</strong>{% if modo == "nova" %} — esta compra vai atualizar o custo médio.{% endif %}</span>
   </div>
   {% endif %}
 

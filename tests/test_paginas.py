@@ -327,3 +327,18 @@ def test_tela_de_login_tem_tema_e_aviso_de_senha(flask_app):
     assert 'id="btn-theme"' in html and "gado-theme" in html
     assert 'id="caps-warn"' in html
     assert "Esqueceu a senha? Fale com um administrador do site para alterar." in html
+
+
+@pytest.mark.parametrize("url", ["/vendas/nova", "/compras/nova", "/gastos/novo"])
+def test_faixa_de_info_do_formulario_nao_vira_colunas(cliente, url):
+    """A faixa azul é flex: cada pedaço de texto solto virava uma coluna e, no
+    celular, passava da largura da tela. O texto tem que estar num só <span>."""
+    import re
+    html = cliente.get(url).get_data(as_text=True)
+    m = re.search(r'<div class="alert-strip info"[^>]*>(.*?)</div>', html, re.S)
+    assert m, "faixa de info não encontrada"
+    assert re.fullmatch(r"\s*<span>.*</span>\s*", m.group(1), re.S), m.group(1)
+
+
+def test_alert_strip_quebra_linha(cliente):
+    assert "flex-wrap:wrap" in cliente.get("/vendas/nova").get_data(as_text=True).split(".alert-strip {")[1].split("}")[0]
