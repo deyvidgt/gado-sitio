@@ -11,7 +11,8 @@ import logging
 import os
 import re
 
-from flask import Response, abort, flash, jsonify, redirect, request, session, url_for
+from flask import (Response, abort, flash, jsonify, redirect, render_template, request,
+                   session, url_for)
 
 import db
 import drive
@@ -180,3 +181,9 @@ def foto_excluir(id_foto):
         fotos.excluir(id_foto)
         _apagar_do_cache(id_foto)
     return _acao(id_foto, fazer, "🗑️ Foto excluída (fica 30 dias na lixeira do Drive).")
+
+
+@app.route("/privacidade")
+def privacidade():
+    """Pública (sem login): o Google exige o link para publicar o app OAuth do Drive."""
+    return render_template("privacidade.html")

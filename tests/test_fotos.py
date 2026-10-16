@@ -517,3 +517,14 @@ def test_ficha_com_foto_sem_data_nao_quebra(cliente, amb):
     fotos._gravar(df)
     r = cliente.get(f"/animais/{amb[1]}")
     assert r.status_code == 200 and "/fotos/F00001/mini" in r.get_data(as_text=True)
+
+
+# ── Política de privacidade (exigida pelo Google para publicar o app OAuth) ───
+
+def test_privacidade_e_publica(flask_app):
+    r = flask_app.test_client().get("/privacidade")
+    assert r.status_code == 200
+    html = r.get_data(as_text=True)
+    assert "Política de Privacidade" in html
+    assert "Google Drive" in html
+    assert "nilsondavid45@gmail.com" in html
