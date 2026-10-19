@@ -110,10 +110,19 @@ def dividir_cotas(cabecas: int, mae: int = 0, deyvid: int = 0, nilson: int = 0) 
         inteiras[i] += 1
     return tuple(inteiras)
 
-# Preço de referência da arroba para cálculos de break-even e arrobas mínimas.
-# Atualize conforme cotação do mercado local (Triângulo/MG, Scot/IMEA).
-# Valor indicativo para boi gordo Nelore, Sudeste, 2026.
+# Preço PADRÃO da arroba (estimativa do rebanho e arrobas mínimas) — só vale
+# enquanto ninguém salvar outro em ⚙️ Configurações → Rebanho (sitio_config.json,
+# chave "preco_arroba"; ver preco_arroba_config()).
 PRECO_ARROBA_REF: float = 340.0   # R$/@
+
+
+def preco_arroba_config(cfg: dict | None) -> float:
+    """Preço da arroba salvo nas Configurações; vazio/inválido → PRECO_ARROBA_REF."""
+    try:
+        v = float((cfg or {}).get("preco_arroba") or 0)
+    except (TypeError, ValueError):
+        v = 0.0
+    return v if v > 0 else PRECO_ARROBA_REF
 
 
 # ── Estoque global ────────────────────────────────────────────────────────────
@@ -297,7 +306,8 @@ def _query_gpcab_timeline(datas: np.ndarray, gpcab_cumsum: np.ndarray,
 def _simular_media_movel(df_comp: pd.DataFrame,
                          df_gast: pd.DataFrame,
                          df_vend: pd.DataFrame,
-                         df_man:  pd.DataFrame | None = None) -> dict:
+                         df_man:  pd.DataFrame | None = None,
+                         cortes: list | None = None) -> dict:
     """
     Simula o rebanho ao longo do tempo pela MÉDIA MÓVEL PERPÉTUA e devolve o
     custo real por cabeça no momento de cada venda.
@@ -337,6 +347,12 @@ def _simular_media_movel(df_comp: pd.DataFrame,
       capital                 — valor dos pools restantes (estoque a custo)
       avg_compra_final / avg_gasto_final / units_final
       avg_por_venda           — {índice df_vend: (avg_compra, avg_gasto)}
+      fator_por_venda         — {índice df_vend: cabeças que saíram / cabeças da venda}
+                                (< 1 só se a venda tiver mais cabeças que o rebanho)
+      custo_por_venda         — {índice df_vend: custo total que saiu nessa venda}
+      perdas_eventos          — [(data, custo)] de cada morte/perda
+      snapshots               — com `cortes` (datas crescentes): [(units, pool_c, pool_g)]
+                                do rebanho ao fim de cada corte (eventos com data <= corte)
 
     Conservação: custo_vendidos + perdas + capital == total gasto (compras + gastos).
     """
@@ -388,6 +404,11 @@ def _simular_media_movel(df_comp: pd.DataFrame,
     cab_mortes = 0.0
     perdas_por_membro = {m: 0.0 for m in MEMBROS}
     avg_por_venda: dict = {}
+    fator_por_venda: dict = {}
+    custo_por_venda: dict = {}
+    perdas_eventos: list = []
+    cortes = list(cortes or [])
+    snapshots: list = []
 
     def _ratear_perda_tercos(valor_perda: float):
         n = len(MEMBROS)
@@ -398,6 +419,9 @@ def _simular_media_movel(df_comp: pd.DataFrame,
             perdas_por_membro[m] += base
 
     for data, _prio, tipo, qtd, valor, vidx, perda_de in eventos:
+        # Fecha os cortes que ficaram para trás antes de aplicar este evento.
+        while len(snapshots) < len(cortes) and data > cortes[len(snapshots)]:
+            snapshots.append((units, pool_c, pool_g))
         if tipo == "compra":
             pool_c += valor
             units  += qtd
@@ -419,6 +443,7 @@ def _simular_media_movel(df_comp: pd.DataFrame,
             perda_c += pc
             perda_g += pg
             cab_mortes += removido
+            perdas_eventos.append((data, pc + pg))
             if perda_de in perdas_por_membro:
                 perdas_por_membro[perda_de] += pc + pg
             else:
@@ -435,6 +460,11 @@ def _simular_media_movel(df_comp: pd.DataFrame,
             units  -= removido
             cogs_c += cc
             cogs_g += cg
+            fator_por_venda[vidx] = (removido / qtd) if qtd > 0 else 0.0
+            custo_por_venda[vidx] = cc + cg
+
+    while len(snapshots) < len(cortes):
+        snapshots.append((units, pool_c, pool_g))
 
     return {
         "custo_vendidos":        cogs_c + cogs_g,
@@ -450,6 +480,10 @@ def _simular_media_movel(df_comp: pd.DataFrame,
         "avg_gasto_final":       pool_g / units if units > 0 else 0.0,
         "units_final":           units,
         "avg_por_venda":         avg_por_venda,
+        "fator_por_venda":       fator_por_venda,
+        "custo_por_venda":       custo_por_venda,
+        "perdas_eventos":        perdas_eventos,
+        "snapshots":             snapshots,
     }
 
 
@@ -608,7 +642,8 @@ def custo_medio_movel_venda(df_comp: pd.DataFrame, df_gast: pd.DataFrame,
 def calcular_resultado_membro(membro: str, df_vend: pd.DataFrame,
                                df_comp: pd.DataFrame, df_gast: pd.DataFrame,
                                df_man: pd.DataFrame | None = None,
-                               *, _avg_por_venda=None, _perda_membro=None) -> dict:
+                               *, _avg_por_venda=None, _perda_membro=None,
+                               _fator_por_venda=None) -> dict:
     """
     Resultado líquido de um membro pela MÉDIA MÓVEL PERPÉTUA (v4.0).
 
@@ -628,12 +663,14 @@ def calcular_resultado_membro(membro: str, df_vend: pd.DataFrame,
 
     # Simulação (avg por venda + perdas por membro). Reusa a pré-computada se dada.
     if _avg_por_venda is not None and _perda_membro is not None:
-        avg_por_venda = _avg_por_venda
-        perda_membro  = _perda_membro
+        avg_por_venda   = _avg_por_venda
+        perda_membro    = _perda_membro
+        fator_por_venda = _fator_por_venda or {}
     else:
-        _sim          = _simular_media_movel(df_comp, df_gast, df_vend, df_man)
-        avg_por_venda = _sim["avg_por_venda"]
-        perda_membro  = _sim["perdas_por_membro"].get(membro, 0.0)
+        _sim            = _simular_media_movel(df_comp, df_gast, df_vend, df_man)
+        avg_por_venda   = _sim["avg_por_venda"]
+        perda_membro    = _sim["perdas_por_membro"].get(membro, 0.0)
+        fator_por_venda = _sim["fator_por_venda"]
 
     resultado = {
         "membro":            membro,
@@ -658,18 +695,23 @@ def calcular_resultado_membro(membro: str, df_vend: pd.DataFrame,
         qtd_m = int(_num(venda.get(col_qtd)))
         val_m = _num(venda.get(col_val))
         cotas = [int(_num(venda.get(f"Qtd {m}"))) for m in MEMBROS]
-        if sum(cotas) == 0 and membro in MEMBROS:
-            # Venda sem cotas (ex.: importada): rateio em terços, igual ao
-            # calcular_estoque_por_membro — senão o custo dela não ia para
-            # ninguém e a soma dos membros não fechava com o COGS global.
-            total = int(_num(venda.get("Qtd Cabeças")))
-            qtd_m = dividir_cotas(total)[MEMBROS.index(membro)]
+        total = int(_num(venda.get("Qtd Cabeças")))
+        if membro in MEMBROS and sum(cotas) != total:
+            # Cotas ausentes (venda importada → terços) ou que não somam o total
+            # (planilha editada à mão): ajusta igual ao calcular_estoque_por_membro.
+            # Senão parte do custo não ia para ninguém (ou ia em dobro) e a soma
+            # dos membros não fechava com o COGS global.
+            qtd_m = dividir_cotas(total, *cotas)[MEMBROS.index(membro)]
             val_m = _num(venda.get("Valor Total (R$)")) * qtd_m / total if total > 0 else 0.0
         if qtd_m <= 0:
             continue
 
         data_v = venda.get("Data")
         cmp_v, gpcab_v = avg_por_venda.get(vidx, (0.0, 0.0))
+        # Venda maior que o rebanho da época: só as cabeças que existiam têm custo
+        # (o motor global faz o mesmo) — mantém a invariante 2.
+        fator = fator_por_venda.get(vidx, 1.0)
+        cmp_v, gpcab_v = cmp_v * fator, gpcab_v * fator
 
         custo_comp_m  = qtd_m * cmp_v
         custo_gast_m  = qtd_m * gpcab_v
@@ -726,6 +768,7 @@ def calcular_todos_membros(df_vend, df_comp, df_gast,
             m, df_vend, df_comp, df_gast, df_man,
             _avg_por_venda=avg_por_venda,
             _perda_membro=perdas_por_membro.get(m, 0.0),
+            _fator_por_venda=sim["fator_por_venda"],
         )
         for m in MEMBROS
     }
@@ -881,59 +924,28 @@ def calcular_estoque_por_membro(df_comp: pd.DataFrame, df_vend: pd.DataFrame,
     """
     Estoque atual de cabeças por membro.
 
-    Compras: se tiver colunas Qtd Mae/Deyvid/Nilson usa elas;
-             senão divide igualmente (arredondando o resto para Nilson).
-    Vendas:  subtrai o que cada um já vendeu.
-             BUG CORRIGIDO v3.1: vendas importadas com Qtd Mae/Deyvid/Nilson = 0
-             (soma zero) agora caem no fallback de terços, evitando sobresaldo
-             fantasma de estoque para todos os membros.
+    Compras: usa as colunas Qtd Mae/Deyvid/Nilson (ajustadas para somar o total);
+             sem elas divide igualmente (arredondando o resto para Nilson).
+    Vendas:  subtrai o que cada um já vendeu, com o mesmo ajuste.
     Manejo:  mortes ("Perda De") e nascimentos ("Nascimento De") vão para o dono
              informado; sem dono, são divididos em terços.
     """
     resultado = {m: 0 for m in ["Mae", "Deyvid", "Nilson"]}
 
-    # Compras
-    if not df_comp.empty:
-        for _, row in df_comp.iterrows():
-            total = int(_num(row.get("Qtd Cabeças")))
-            mae    = int(_num(row.get("Qtd Mae")))
-            deyvid = int(_num(row.get("Qtd Deyvid")))
-            nilson = int(_num(row.get("Qtd Nilson")))
-            if "Qtd Mae" in row and pd.notna(row.get("Qtd Mae")) and (mae + deyvid + nilson) > 0:
-                resultado["Mae"]    += mae
-                resultado["Deyvid"] += deyvid
-                resultado["Nilson"] += nilson
-            else:
-                # Fallback: divisão em terços (resto vai para Nilson)
-                base  = total // 3
-                resto = total - base * 3
-                resultado["Mae"]    += base
-                resultado["Deyvid"] += base
-                resultado["Nilson"] += base + resto
-
-    # Vendas (subtrair)
-    # BUG CORRIGIDO: registros importados com soma zero agora usam fallback de terços
-    if not df_vend.empty:
-        for _, row in df_vend.iterrows():
-            total  = int(_num(row.get("Qtd Cabeças")))
-            mae    = int(_num(row.get("Qtd Mae")))
-            deyvid = int(_num(row.get("Qtd Deyvid")))
-            nilson = int(_num(row.get("Qtd Nilson")))
-            soma   = mae + deyvid + nilson
-
-            if soma > 0:
-                # Dados individuais presentes
-                resultado["Mae"]    -= mae
-                resultado["Deyvid"] -= deyvid
-                resultado["Nilson"] -= nilson
-            elif total > 0:
-                # Sem dados individuais: fallback proporcional por terços
-                base  = total // 3
-                resto = total - base * 3
-                resultado["Mae"]    -= base
-                resultado["Deyvid"] -= base
-                resultado["Nilson"] -= base + resto
-            # se total == 0, ignora
+    # Compras (+) e vendas (−). dividir_cotas cobre os dois casos antigos: sem cotas
+    # (importado) → terços com o resto p/ Nilson; cotas que não somam o total
+    # (planilha editada à mão) → ajuste proporcional. Antes as cotas eram usadas
+    # cruas e a soma por membro deixava de bater com o estoque global.
+    for df, sinal in ((df_comp, +1), (df_vend, -1)):
+        if df.empty:
+            continue
+        for _, row in df.iterrows():
+            cotas = dividir_cotas(int(_num(row.get("Qtd Cabeças"))),
+                                  int(_num(row.get("Qtd Mae"))),
+                                  int(_num(row.get("Qtd Deyvid"))),
+                                  int(_num(row.get("Qtd Nilson"))))
+            for m, q in zip(("Mae", "Deyvid", "Nilson"), cotas):
+                resultado[m] += sinal * q
 
     # Manejo: mortes e nascimentos tratados SEPARADAMENTE, linha a linha.
     if not df_man.empty and "Tipo" in df_man.columns:
@@ -1036,7 +1048,7 @@ def calcular_fluxo_caixa(df_comp, df_gast, df_vend) -> pd.DataFrame:
 
 def calcular_indicadores_extras(df_comp: pd.DataFrame, df_gast: pd.DataFrame,
                                  df_vend: pd.DataFrame, df_man: pd.DataFrame,
-                                 ctcab: float) -> dict:
+                                 ctcab: float, preco_arroba: float = PRECO_ARROBA_REF) -> dict:
     """
     Indicadores complementares de gestão:
 
@@ -1052,6 +1064,7 @@ def calcular_indicadores_extras(df_comp: pd.DataFrame, df_gast: pd.DataFrame,
         "arrobas_min_cab":       0.0,
         "pct_gasto_sobre_compra": 0.0,
         "ticket_medio_venda":   0.0,
+        "preco_arroba":          preco_arroba,
     }
 
     # TMP
@@ -1076,17 +1089,10 @@ def calcular_indicadores_extras(df_comp: pd.DataFrame, df_gast: pd.DataFrame,
     if resultado["tmp_dias"] > 0 and cab_comp > 0:
         resultado["custo_dia_cab"] = total_custo / (resultado["tmp_dias"] * cab_comp)
 
-    # Arrobas mínimas para cobrir CTCab (1 arroba = 15 kg peso vivo padrão)
-    # Em Minas, @boi gordo = aprox. 15 kg de carcaça ≈ 30 kg vivo, mas usamos convenção local
-    if ctcab > 0:
-        # Referência: 1 arroba ≈ 15 kg peso vivo (convenção mais usada)
-        # Para cobrir CTCab: arrobas = CTCab / preco_arroba — só calculável com preço
-        # Sem preço de arroba, calculamos quantas arrobas equivalem ao CTCab em peso
-        # Esta é a "quantidade mínima" que a cabeça precisa produzir (em arrobas) para
-        # cobrir custos se vendida ao menor preço histórico de arroba, ou usamos
-        # a referência de que 1 arroba de boi gordo = ~R$ 280 (valor indicativo)
-        # Usa PRECO_ARROBA_REF definido no topo do módulo (atualize conforme mercado).
-        resultado["arrobas_min_cab"] = ctcab / PRECO_ARROBA_REF
+    # Arrobas que cada cabeça precisa render, ao preço da arroba configurado,
+    # para cobrir o custo médio (CTCab).
+    if ctcab > 0 and preco_arroba > 0:
+        resultado["arrobas_min_cab"] = ctcab / preco_arroba
 
     # % Gastos sobre compras
     total_comp = float(df_comp["Valor Total (R$)"].sum()) if not df_comp.empty else 0.0
@@ -1101,6 +1107,58 @@ def calcular_indicadores_extras(df_comp: pd.DataFrame, df_gast: pd.DataFrame,
         resultado["ticket_medio_venda"] = tv / cv if cv > 0 else 0.0
 
     return resultado
+
+
+def calcular_resultado_anual(df_comp: pd.DataFrame, df_gast: pd.DataFrame,
+                             df_vend: pd.DataFrame, df_man: pd.DataFrame | None) -> list[dict]:
+    """
+    Comparativo por ano pela MÉDIA MÓVEL (mesmo modelo do painel):
+      resultado = receita das vendas do ano − custo das cabeças vendidas no ano
+                  − perdas por morte no ano
+      caixa     = vendas − compras − gastos pagos no ano (dinheiro que entrou/saiu)
+
+    Antes o "Resultado" anual era o caixa: o ano em que se comprava gado aparecia
+    com prejuízo enorme mesmo com as cabeças ainda no pasto. Somando os anos, o
+    resultado bate com resultado_total do painel (registros sem data ficam de fora).
+    """
+    def _por_ano(df, col="Valor Total (R$)"):
+        if df is None or df.empty or "Data" not in df.columns or col not in df.columns:
+            return {}
+        sub = df[df["Data"].notna()]
+        return pd.to_numeric(sub[col], errors="coerce").fillna(0) \
+                 .groupby(sub["Data"].dt.year).sum().to_dict()
+
+    compras, gastos, vendas = _por_ano(df_comp), _por_ano(df_gast), _por_ano(df_vend)
+
+    sim = _simular_media_movel(df_comp, df_gast, df_vend, df_man)
+    custo_vend: dict = {}
+    if not df_vend.empty and "Data" in df_vend.columns:
+        for vidx, custo in sim["custo_por_venda"].items():
+            d = df_vend.at[vidx, "Data"]
+            if pd.notna(d):
+                custo_vend[d.year] = custo_vend.get(d.year, 0.0) + custo
+    perdas: dict = {}
+    for d, valor in sim["perdas_eventos"]:
+        if pd.notna(d) and d != pd.Timestamp.max:   # Timestamp.max = morte sem data
+            perdas[d.year] = perdas.get(d.year, 0.0) + valor
+
+    anos = sorted(set(compras) | set(gastos) | set(vendas) | set(custo_vend) | set(perdas))
+    out = []
+    for ano in anos:
+        tc, tg, tv = compras.get(ano, 0.0), gastos.get(ano, 0.0), vendas.get(ano, 0.0)
+        cv, pe = custo_vend.get(ano, 0.0), perdas.get(ano, 0.0)
+        resultado = tv - cv - pe
+        base = cv + pe
+        out.append({
+            "ano": int(ano), "compras": float(tc), "gastos": float(tg),
+            "custo": float(tc + tg), "vendas": float(tv),
+            "custo_vendidos": float(cv), "perdas": float(pe),
+            "lucro": float(resultado),
+            "roi": round(resultado / base * 100, 1) if base > 0 else 0,
+            "positivo": resultado >= 0,
+            "caixa": float(tv - tc - tg),
+        })
+    return out
 
 
 def calcular_gasto_por_tipo(df_gast: pd.DataFrame) -> dict:
@@ -1185,27 +1243,35 @@ def calcular_evolucao_rebanho(df_comp: pd.DataFrame, df_gast: pd.DataFrame,
     meses = pd.period_range(min(todas).to_period("M"),
                             max(max(todas), hoje).to_period("M"), freq="M")
 
-    def _qtd_no_mes(df, mes, tipo=None):
+    def _qtd_por_mes(df, tipo=None) -> dict:
+        """{Period: cabeças} — agrupado UMA vez (antes recalculava por mês)."""
         if df is None or df.empty or "Data" not in df.columns:
-            return 0
-        m = df["Data"].notna() & (df["Data"].dt.to_period("M") == mes)
+            return {}
+        m = df["Data"].notna()
         if tipo is not None:
             if "Tipo" not in df.columns:
-                return 0
+                return {}
             m &= df["Tipo"] == tipo
-        return int(pd.to_numeric(df.loc[m, "Qtd Cabeças"], errors="coerce").fillna(0).sum())
+        sub = df.loc[m]
+        qtd = pd.to_numeric(sub["Qtd Cabeças"], errors="coerce").fillna(0)
+        return qtd.groupby(sub["Data"].dt.to_period("M")).sum().to_dict()
 
     vazio_man = df_man if df_man is not None else pd.DataFrame()
+    ent_c, ent_n = _qtd_por_mes(df_comp), _qtd_por_mes(vazio_man, "Nascimento")
+    sai_v, sai_m = _qtd_por_mes(df_vend), _qtd_por_mes(vazio_man, "Morte/Perda")
+
+    # Uma simulação só, com uma "foto" do rebanho no fim de cada mês — mesmo
+    # resultado de simular os dados até cada corte, sem repetir tudo N vezes.
+    cortes = [mes.to_timestamp(how="end") for mes in meses]
+    fotos = _simular_media_movel(df_comp, df_gast, df_vend, vazio_man, cortes=cortes)["snapshots"]
+
     resultado = []
-    for mes in meses:
-        corte = mes.to_timestamp(how="end")
-        sim = _simular_media_movel(_ate(df_comp, corte), _ate(df_gast, corte),
-                                   _ate(df_vend, corte), _ate(vazio_man, corte))
+    for mes, (units, pool_c, pool_g) in zip(meses, fotos):
         resultado.append({
             "label":     mes.strftime("%m/%Y"),
-            "entradas":  _qtd_no_mes(df_comp, mes) + _qtd_no_mes(vazio_man, mes, "Nascimento"),
-            "saidas":    _qtd_no_mes(df_vend, mes) + _qtd_no_mes(vazio_man, mes, "Morte/Perda"),
-            "cabecas":   int(round(sim["units_final"])),
-            "custo_cab": round(sim["avg_compra_final"] + sim["avg_gasto_final"], 2),
+            "entradas":  int(ent_c.get(mes, 0) + ent_n.get(mes, 0)),
+            "saidas":    int(sai_v.get(mes, 0) + sai_m.get(mes, 0)),
+            "cabecas":   int(round(units)),
+            "custo_cab": round((pool_c + pool_g) / units, 2) if units > 0 else 0.0,
         })
     return resultado

@@ -6,6 +6,8 @@ login_bloqueios.json
 login_bloqueios.json.tmp
 whatsapp_estado.json
 .visitas.lock
+.gado.lock
+secret_key.txt
 avisos_pendentes.json
 avisos_*.json
 avisos_pendentes.tmp

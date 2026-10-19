@@ -20,7 +20,7 @@ for _stream in ("stdout", "stderr"):
         pass
 
 ARQUIVO_DADOS = "gado_familia.xlsx"
-VERSAO = "4.5.0"
+VERSAO = "4.5.1"
 NOME_SITIO = "Sítio Santo Antonio"
 FAMILIA = "Geane, Deyvid e Nilson"
 
@@ -49,8 +49,10 @@ SESSAO_MINUTOS = 480        # 8 horas
 MAX_TENTATIVAS_LOGIN = 5
 
 # ── Cache do resumo financeiro ────────────────────────────────────────────────
-# Evita recalcular tudo a cada request. Invalida automaticamente após salvar.
-CACHE_RESUMO_TTL = 30       # segundos
+# Evita recalcular tudo a cada request. Invalida automaticamente após salvar e
+# sempre que o .xlsx muda no disco (extensions._cache_dados); o TTL é só uma rede
+# de segurança.
+CACHE_RESUMO_TTL = 600      # segundos
 
 TIPOS_GASTO = [
     "Remédio/Vacina",

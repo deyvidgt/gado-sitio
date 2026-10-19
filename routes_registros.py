@@ -354,34 +354,48 @@ def _salvar_venda(form, dados, idx=None):
         brincos,
     ]
 
+    import animais
     if brincos:
         # Os animais com brinco saem do cadastro como Vendidos (libera o brinco).
-        import animais
         animais.baixa_por_refs(brincos, "Vendido", data_ts if pd.notna(data_ts) else None)
 
     if idx is None:
         salvar_linha("Vendas", linha)
-    else:
-        df = carregar_aba("Vendas")
-        linha[0] = data_ts  # usar Timestamp para edição no DataFrame
-        _aplicar_updates(df, idx, dict(zip(COLUNAS_VENDAS, linha)))
-        reescrever_aba("Vendas", df)
+        return [], []
+    df = carregar_aba("Vendas")
+    antes = animais.ids_de(df.at[idx, "Brincos"]) if "Brincos" in df.columns else []
+    linha[0] = data_ts  # usar Timestamp para edição no DataFrame
+    _aplicar_updates(df, idx, dict(zip(COLUNAS_VENDAS, linha)))
+    reescrever_aba("Vendas", df)
+    # Brinco tirado da venda na edição: o animal volta a Vivo.
+    tirados = [i for i in antes if i not in animais.ids_de(brincos)]
+    return animais.reverter_baixa(tirados, "Vendido")
 
 
-def _brincos_do_form(form):
+def _brincos_do_form(form, refs_antigas=None):
     """Campo "Brincos" digitado/ditado ('amarelo 21, azul 12') → (form com
-    'brincos_refs' resolvido, erro). Refs ficam no formato 'Amarelo 21 #A0003'."""
+    'brincos_refs' resolvido, erro). Refs ficam no formato 'Amarelo 21 #A0003'.
+    refs_antigas: coluna Brincos do registro sendo editado — esses animais valem
+    mesmo já vendidos/mortos (senão a edição recusava o próprio brinco)."""
     texto = (form.get("brincos") or "").strip()
     novo = dict(form.items())
     novo["brincos_refs"] = ""
     if not texto:
         return novo, None
     import animais
-    refs, erros = animais.resolver_texto(texto)
+    refs, erros = animais.resolver_texto(texto, preferidos=animais.ids_de(refs_antigas))
     if erros:
         return novo, " ".join(erros)
     novo["brincos_refs"] = "; ".join(refs)
     return novo, None
+
+
+def _avisar_animais_revertidos(voltaram, conflitos):
+    if voltaram:
+        flash("Voltaram para o rebanho (Vivo): " + ", ".join(voltaram), "info")
+    if conflitos:
+        flash("Continuam como Vendido porque o brinco já está em outro animal vivo: "
+              + ", ".join(conflitos) + " — ajuste na página Animais.", "warning")
 
 
 def _brincos_legiveis(v) -> str:
@@ -436,6 +450,11 @@ def nova_venda():
             return redirect(url_for("nova_venda"))
         _salvar_venda(form, dados)
         flash("Venda registrada!", "success")
+        if cabecas > r_fin["estoque"]:
+            # Não bloqueia (pode faltar lançar uma compra/nascimento), mas avisa:
+            # cabeça vendida sem ter entrado no rebanho sai com custo zero.
+            flash(f"Atenção: a venda tem {cabecas} cabeças, mas o rebanho registrado tinha "
+                  f"{r_fin['estoque']}. Falta lançar alguma compra ou nascimento?", "warning")
         return redirect(url_for("vendas"))
     return render_template("form_venda.html", modo="nova", row=None, idx=None, r_fin=r_fin,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
@@ -455,14 +474,15 @@ def editar_venda(idx):
         if _int_form(request.form.get("cabecas")) <= 0:
             flash("Informe ao menos 1 cabeça.", "error")
             return redirect(url_for("editar_venda", idx=idx))
-        form, erro = _brincos_do_form(request.form)
+        form, erro = _brincos_do_form(request.form, df.iloc[idx].get("Brincos"))
         if erro:
             flash(erro, "error")
             return redirect(url_for("editar_venda", idx=idx))
         fazer_backup()
         _limpar_backups_antigos()
-        _salvar_venda(form, dados, idx=idx)
+        voltaram, conflitos = _salvar_venda(form, dados, idx=idx)
         flash("Venda atualizada!", "success")
+        _avisar_animais_revertidos(voltaram, conflitos)
         return redirect(url_for("vendas"))
     row = df.iloc[idx].to_dict()
     row["Data"] = fmt_data(row.get("Data"))
@@ -564,7 +584,7 @@ def editar_manejo(idx):
     if request.method == "POST":
         _validar_csrf()
         f = request.form
-        form, erro = _brincos_do_form(f)
+        form, erro = _brincos_do_form(f, df.iloc[idx].get("Brincos"))
         if erro:
             flash(erro, "error")
             return redirect(url_for("editar_manejo", idx=idx))
@@ -616,9 +636,14 @@ def excluir(aba, idx):
     _limpar_backups_antigos()
     df = carregar_aba(aba)
     if not df.empty and idx < len(df):
+        brincos = df.iloc[idx].get("Brincos") if aba == "Vendas" else None
         df = df.drop(df.index[idx]).reset_index(drop=True)
         reescrever_aba(aba, df)
         flash("Registro excluído.", "warning")
+        if brincos is not None:
+            # Venda apagada: os animais dela não foram vendidos — voltam a Vivo.
+            import animais
+            _avisar_animais_revertidos(*animais.reverter_baixa(animais.ids_de(brincos), "Vendido"))
     return redirect(url_for({"Compras": "compras", "Gastos": "gastos",
                               "Vendas": "vendas", "Manejo": "manejo"}.get(aba, "dashboard")))
 

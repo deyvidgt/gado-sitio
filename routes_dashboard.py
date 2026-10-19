@@ -11,12 +11,12 @@ from datetime import datetime, timedelta
 from db import carregar_aba
 from calculos import (
     calcular_todos_membros, calcular_estoque_por_membro,
-    calcular_indicadores_extras, estimar_rebanho_arroba, PRECO_ARROBA_REF,
+    calcular_indicadores_extras, estimar_rebanho_arroba, preco_arroba_config,
 )
 from config import MEMBROS, NOMES_MEMBROS, EMOJIS_MEMBROS, ALERTAS_SAUDE
 from extensions import (
     app, _agora, login_required,
-    _get_dados_cache, _get_resumo_cache,
+    _get_dados_cache, _get_resumo_cache, _get_membros_cache,
     _carregar_usuarios, fmt_brl,
     _gerar_alertas, fmt_data, _ler_sitio_config_disco,
 )
@@ -27,7 +27,7 @@ from extensions import (
 def dashboard():
     dados = _get_dados_cache()
     r = _get_resumo_cache()
-    membros_r      = calcular_todos_membros(dados["Vendas"], dados["Compras"], dados["Gastos"], dados["Manejo"])
+    membros_r      = _get_membros_cache()
     estoque_membro = calcular_estoque_por_membro(dados["Compras"], dados["Vendas"], dados["Manejo"])
     recentes = []
     for _, row in dados["Compras"].tail(3).iterrows():
@@ -49,14 +49,16 @@ def dashboard():
     for rec in recentes:
         rec.pop("_ts", None)
 
+    # Estimativa de valor do rebanho (peso médio, rendimento e @ das Configurações)
+    cfg = _ler_sitio_config_disco()
+    preco_arroba = preco_arroba_config(cfg)
+
     # Indicadores extras de gestão (custo/dia, arrobas mínimas, TMP, % gasto)
     indicadores = calcular_indicadores_extras(
         dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"],
-        r.get("ctcab", 0.0),
+        r.get("ctcab", 0.0), preco_arroba,
     )
 
-    # Estimativa de valor do rebanho (peso médio + rendimento das Configurações)
-    cfg = _ler_sitio_config_disco()
     try:
         peso_medio = float(cfg.get("peso_medio", 0) or 0)
     except (TypeError, ValueError):
@@ -68,12 +70,12 @@ def dashboard():
     rebanho_est = None
     if peso_medio > 0 and r.get("estoque", 0) > 0:
         rebanho_est = estimar_rebanho_arroba(
-            r["estoque"], peso_medio, PRECO_ARROBA_REF, r.get("ctcab", 0.0),
+            r["estoque"], peso_medio, preco_arroba, r.get("ctcab", 0.0),
             rendimento / 100.0,
         )
         rebanho_est["peso_medio"]   = peso_medio
         rebanho_est["rendimento"]   = rendimento
-        rebanho_est["preco_arroba"] = PRECO_ARROBA_REF
+        rebanho_est["preco_arroba"] = preco_arroba
 
     from insumos import previsao_todos
     insumos = previsao_todos(dados["Visitas"], dados["Gastos"], _agora())

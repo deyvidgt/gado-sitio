@@ -14,7 +14,7 @@ from calculos import (
 from config import MEMBROS, NOMES_MEMBROS, EMOJIS_MEMBROS
 from extensions import (
     app, login_required,
-    _get_dados_cache, _get_resumo_cache,
+    _get_dados_cache, _get_resumo_cache, _get_membros_cache,
     _gerar_alertas, _calc_anual,
 )
 
@@ -24,8 +24,7 @@ from extensions import (
 def relatorios():
     dados   = _get_dados_cache()
     r       = _get_resumo_cache()
-    mbr     = calcular_todos_membros(dados["Vendas"], dados["Compras"],
-                                     dados["Gastos"], dados["Manejo"])
+    mbr     = _get_membros_cache()
     gastos_tipo = calcular_gasto_por_tipo(dados["Gastos"])
     anual       = _calc_anual(dados)
     alertas     = _gerar_alertas(dados)
@@ -57,10 +56,8 @@ def relatorio_pdf():
         flash("reportlab não instalado. Execute: pip install reportlab", "error")
         return redirect(url_for("relatorios"))
 
-    dados = _get_dados_cache()
     r     = _get_resumo_cache()
-    mbr   = calcular_todos_membros(dados["Vendas"], dados["Compras"],
-                                    dados["Gastos"], dados["Manejo"])
+    mbr   = _get_membros_cache()
 
     buf    = io.BytesIO()
     doc    = SimpleDocTemplate(buf, pagesize=A4,

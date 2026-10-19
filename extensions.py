@@ -38,7 +38,33 @@ app = Flask(
 )
 
 from config import SECRET_KEY, SESSAO_MINUTOS, CACHE_RESUMO_TTL, VERSAO
-app.secret_key = SECRET_KEY
+
+
+def _chave_secreta() -> str:
+    """
+    Sem GADO_SECRET_KEY, o padrão de config.py está publicado no Git: quem o lesse
+    podia forjar o cookie de sessão ("logado") e entrar sem senha. Agora, sem a
+    variável, gera uma chave aleatória UMA vez e a guarda na pasta de dados.
+    """
+    if os.environ.get("GADO_SECRET_KEY"):
+        return SECRET_KEY
+    try:
+        from db import DATA_DIR
+        caminho = os.path.join(DATA_DIR, "secret_key.txt")
+        if os.path.exists(caminho):
+            with open(caminho, encoding="utf-8") as fh:
+                chave = fh.read().strip()
+            if len(chave) >= 32:
+                return chave
+        chave = _secrets.token_hex(32)
+        with open(caminho, "w", encoding="utf-8") as fh:
+            fh.write(chave)
+        return chave
+    except Exception:
+        return SECRET_KEY
+
+
+app.secret_key = _chave_secreta()
 # Cookie de sessão não vai em POST vindo de outro site (proteção extra das rotas
 # /api/* em JSON, que não usam o token CSRF do formulário).
 app.config.update(SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_HTTPONLY=True)
@@ -66,35 +92,61 @@ def _cache_invalidar():
     with _cache_lock:
         _cache.clear()
 
-def _cache_get(chave):
+def _versao_dados():
+    from db import versao_arquivo
+    return versao_arquivo()
+
+def _cache_get(chave, versao=None):
+    """Valor em cache, se não venceu o TTL e (quando `versao` é dada) se o .xlsx
+    não mudou desde que foi calculado. Sem a checagem de versão, uma gravação feita
+    por OUTRO processo (Task, outro worker) deixava a lista com índices velhos e
+    editar/excluir podia acertar o registro errado."""
     with _cache_lock:
         entry = _cache.get(chave)
-        if entry and (time.time() - entry[0]) < CACHE_RESUMO_TTL:
-            return entry[1]
+        if entry and (time.time() - entry[0]) < CACHE_RESUMO_TTL \
+                and (versao is None or entry[1] == versao):
+            return entry[2]
     return None
 
-def _cache_set(chave, valor):
+def _cache_set(chave, valor, versao=None):
     with _cache_lock:
-        _cache[chave] = (time.time(), valor)
+        _cache[chave] = (time.time(), versao, valor)
+
+def _cache_dados(chave, calcular):
+    """Cache de algo derivado da planilha: recalcula só quando o arquivo muda."""
+    versao = _versao_dados()
+    v = _cache_get(chave, versao)
+    if v is None:
+        v = calcular()
+        _cache_set(chave, v, versao)
+    return v
 
 def _get_dados_cache():
     from db import carregar_todas
-    dados = _cache_get("dados")
-    if dados is None:
-        dados = carregar_todas()
-        _cache_set("dados", dados)
-    return dados
+    return _cache_dados("dados", carregar_todas)
 
 def _get_resumo_cache():
     from calculos import calcular_resumo_financeiro
-    r = _cache_get("resumo")
-    if r is None:
-        dados = _get_dados_cache()
-        r = calcular_resumo_financeiro(
-            dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"]
-        )
-        _cache_set("resumo", r)
-    return r
+    def _calc():
+        d = _get_dados_cache()
+        return calcular_resumo_financeiro(d["Compras"], d["Gastos"], d["Vendas"], d["Manejo"])
+    return _cache_dados("resumo", _calc)
+
+def _get_membros_cache():
+    """Resultado por membro (painel, /api/membros, relatórios e PDF) — antes cada
+    página refazia a simulação inteira."""
+    from calculos import calcular_todos_membros
+    def _calc():
+        d = _get_dados_cache()
+        return calcular_todos_membros(d["Vendas"], d["Compras"], d["Gastos"], d["Manejo"])
+    return _cache_dados("membros", _calc)
+
+def _get_evolucao_cache():
+    from calculos import calcular_evolucao_rebanho
+    def _calc():
+        d = _get_dados_cache()
+        return calcular_evolucao_rebanho(d["Compras"], d["Gastos"], d["Vendas"], d["Manejo"])
+    return _cache_dados("evolucao", _calc)
 
 # Monkey-patch db para invalidar cache em toda escrita
 def _setup_cache_patch():
@@ -337,26 +389,9 @@ def _gerar_alertas(dados):
     return alertas
 
 def _calc_anual(dados):
-    result = []
-    anos = set()
-    for df in dados.values():
-        if not df.empty and "Data" in df.columns:
-            anos |= set(df["Data"].dropna().dt.year.astype(int))
-    for ano in sorted(anos):
-        def soma(df, col="Valor Total (R$)", _ano=ano):
-            if df.empty or "Data" not in df.columns:
-                return 0
-            mask = df["Data"].notna() & (df["Data"].dt.year == _ano)
-            return float(df.loc[mask, col].sum()) if col in df.columns else 0
-        tc = soma(dados["Compras"]); tg = soma(dados["Gastos"]); tv = soma(dados["Vendas"])
-        custo = tc + tg; lucro = tv - custo
-        result.append({
-            "ano": int(ano), "compras": tc, "gastos": tg, "custo": custo,
-            "vendas": tv, "lucro": lucro,
-            "roi": round(lucro / custo * 100, 1) if custo > 0 else 0,
-            "positivo": lucro >= 0,
-        })
-    return result
+    from calculos import calcular_resultado_anual
+    return calcular_resultado_anual(dados["Compras"], dados["Gastos"],
+                                    dados["Vendas"], dados["Manejo"])
 
 def _usuarios_path() -> str:
     """Retorna o caminho correto do usuarios.json, sempre em DATA_DIR."""

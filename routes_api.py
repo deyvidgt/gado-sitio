@@ -17,7 +17,7 @@ from calculos import (
 from config import MEMBROS, NOMES_MEMBROS, ALERTAS_SAUDE
 from extensions import (
     app, _agora, login_required,
-    _get_dados_cache, _get_resumo_cache,
+    _get_dados_cache, _get_resumo_cache, _get_membros_cache, _get_evolucao_cache,
     _safe, fmt_brl, fmt_data, _carregar_usuarios, _salvar_usuarios,
     BASE_DIR,
 )
@@ -40,8 +40,7 @@ def api_fluxo():
 @app.route("/api/membros")
 @login_required
 def api_membros():
-    dados = _get_dados_cache()
-    mbr = calcular_todos_membros(dados["Vendas"], dados["Compras"], dados["Gastos"], dados["Manejo"])
+    mbr = _get_membros_cache()
     return jsonify({"nomes":      [NOMES_MEMBROS[m] for m in MEMBROS],
                     "receitas":   [round(mbr[m]["receita"],    2) for m in MEMBROS],
                     "custos":     [round(mbr[m]["custo_total"], 2) for m in MEMBROS],
@@ -52,9 +51,7 @@ def api_membros():
 @login_required
 def api_rebanho():
     """Evolução mensal do rebanho: entradas, saídas, cabeças e custo médio/cab."""
-    dados = _get_dados_cache()
-    meses = calcular_evolucao_rebanho(dados["Compras"], dados["Gastos"],
-                                      dados["Vendas"], dados["Manejo"])
+    meses = _get_evolucao_cache()
     return jsonify({
         "labels":    [m["label"] for m in meses],
         "entradas":  [m["entradas"] for m in meses],
@@ -124,6 +121,7 @@ def api_chuvas():
 
 
 @app.route("/api/cotacao-scot")
+@login_required
 def api_cotacao_scot():
     try:
         import requests, re
@@ -161,10 +159,69 @@ def api_cotacao_scot():
         return jsonify({"ok": False, "erro": msg})
 
 
+_IMEA_URL = "https://www.imea.com.br/imea-site/indicador-boi"
+_IMEA_INDICADORES = [
+    {"emoji": "🐮", "nome": "Novilha 18M 255kg 8,5@", "kg": 255, "arrobas": 8.5,
+     "chaves": [["NOVILHA", "255"], ["NOVILHA", "18M", "8,5"], ["NOVILHA", "NELORE", "18"]]},
+    {"emoji": "🐄", "nome": "Bezerra 12M 180kg 6@",   "kg": 180, "arrobas": 6.0,
+     "chaves": [["BEZERRA", "180", "6"], ["BEZERRA", "12M", "180"], ["BEZERRA", "NELORE", "12"]]},
+    {"emoji": "🐄", "nome": "Bezerra 8M 150kg 5@",    "kg": 150, "arrobas": 5.0,
+     "chaves": [["BEZERRA", "150", "5"], ["BEZERRA", "8M", "150"], ["BEZERRA", "165"]]},
+]
+# O IMEA publica uma vez por dia: buscar de novo a cada clique só abria outro
+# Chromium (~30 s e muita memória no PythonAnywhere). Sucesso fica 3 h em cache;
+# falha, 5 min (para não martelar o site, mas tentar de novo logo).
+_IMEA_TTL_OK, _IMEA_TTL_ERRO = 3 * 3600, 300
+_imea_lock = threading.Lock()
+_imea_cache: dict = {}   # {"ts", "ttl", "precos", "debug", "erro", "atualizado"}
+
+
+def _precos_imea() -> dict:
+    """Preços do IMEA (com cache). Só um Chromium por vez: quem chega enquanto
+    outro busca espera e reaproveita o resultado."""
+    import time
+    def _valido():
+        c = _imea_cache
+        return c and time.time() - c["ts"] < c["ttl"]
+    if _valido():
+        return _imea_cache
+    with _imea_lock:
+        if _valido():
+            return _imea_cache
+        precos, erro, debug = [None] * len(_IMEA_INDICADORES), None, ""
+        try:
+            html, debug = _fetch_imea_inline()
+        except Exception as e:
+            html, erro, debug = "", f"Não foi possível abrir o navegador: {e}", str(e)
+        if not erro and not html:
+            erro = "O IMEA não respondeu."
+        if html:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html, "html.parser")
+            texto = soup.get_text(" ", strip=True).upper()
+            if not any(k in texto for k in ["NOVILHA", "BEZERRA", "NELORE"]):
+                erro = "Página renderizou mas sem dados. Verifique imea.com.br/imea-site/indicador-boi"
+            else:
+                for i, ind in enumerate(_IMEA_INDICADORES):
+                    for chave in ind["chaves"]:
+                        achado = _buscar_indicador_imea(soup, chave)
+                        if achado and achado.get("preco"):
+                            precos[i] = achado
+                            break
+                if not any(precos):
+                    erro = f"Nenhum indicador encontrado. Debug: {debug}"
+        _imea_cache.clear()
+        _imea_cache.update({
+            "ts": time.time(), "ttl": _IMEA_TTL_ERRO if erro else _IMEA_TTL_OK,
+            "precos": precos, "erro": erro, "debug": debug,
+            "atualizado": _agora().strftime("%d/%m/%Y %H:%M"),
+        })
+        return _imea_cache
+
+
 @app.route("/api/cotacao-imea")
 @login_required
 def api_cotacao_imea():
-    dados = _get_dados_cache()
     r_fin = _get_resumo_cache()
     break_even = round(r_fin["break_even"], 2)
     ctcab      = round(r_fin["ctcab"],      2)
@@ -179,45 +236,20 @@ def api_cotacao_imea():
     except ImportError:
         return _erro("Playwright não instalado. Execute: pip install playwright && python -m playwright install chromium")
 
-    INDICADORES = [
-        {"emoji": "🐮", "nome": "Novilha 18M 255kg 8,5@", "kg": 255, "arrobas": 8.5,
-         "chaves": [["NOVILHA", "255"], ["NOVILHA", "18M", "8,5"], ["NOVILHA", "NELORE", "18"]]},
-        {"emoji": "🐄", "nome": "Bezerra 12M 180kg 6@",   "kg": 180, "arrobas": 6.0,
-         "chaves": [["BEZERRA", "180", "6"], ["BEZERRA", "12M", "180"], ["BEZERRA", "NELORE", "12"]]},
-        {"emoji": "🐄", "nome": "Bezerra 8M 150kg 5@",    "kg": 150, "arrobas": 5.0,
-         "chaves": [["BEZERRA", "150", "5"], ["BEZERRA", "8M", "150"], ["BEZERRA", "165"]]},
-    ]
+    res = _precos_imea()
+    if res["erro"] and not any(res["precos"]):
+        return _erro(res["erro"], res["debug"])
 
-    try:
-        from _imea_playwright import fetch_imea, buscar_indicador
-        html, debug_log = fetch_imea()
-    except ImportError:
-        # fallback inline
-        html, debug_log = _fetch_imea_inline()
-
-    if not html:
-        return _erro("Playwright não retornou HTML.", debug_log)
-
-    from bs4 import BeautifulSoup
-    soup = BeautifulSoup(html, "html.parser")
-    texto = soup.get_text(" ", strip=True).upper()
-    if not any(k in texto for k in ["NOVILHA", "BEZERRA", "NELORE"]):
-        return _erro("Página renderizou mas sem dados. Verifique imea.com.br/imea-site/indicador-boi", debug_log)
-
+    # Comparação com o break-even é refeita a cada pedido (os dados mudam;
+    # só os preços do IMEA vêm do cache).
     cotacoes = []
-    for ind in INDICADORES:
-        achado = None
-        for chave in ind["chaves"]:
-            achado = _buscar_indicador_imea(soup, chave)
-            if achado:
-                break
-        if achado and achado.get("preco"):
+    for ind, achado in zip(_IMEA_INDICADORES, res["precos"]):
+        base = {"emoji": ind["emoji"], "nome": ind["nome"], "kg": ind["kg"], "arrobas": ind["arrobas"]}
+        if achado:
             pc = achado["preco"]
             arrs = ind["arrobas"]
             vs = round(pc - break_even, 2)
-            cotacoes.append({
-                "emoji": ind["emoji"], "nome": ind["nome"],
-                "kg": ind["kg"], "arrobas": arrs,
+            cotacoes.append({**base,
                 "regiao": achado.get("regiao", "Sudeste"),
                 "preco_cab": round(pc, 2),
                 "preco_arroba": round(pc / arrs, 2) if arrs else 0.0,
@@ -227,48 +259,44 @@ def api_cotacao_imea():
                 "vs_breakeven_pct": round(vs / break_even * 100, 1) if break_even else 0.0,
             })
         else:
-            cotacoes.append({
-                "emoji": ind["emoji"], "nome": ind["nome"],
-                "kg": ind["kg"], "arrobas": ind["arrobas"],
+            cotacoes.append({**base,
                 "regiao": "Sudeste", "preco_cab": None, "preco_arroba": None,
                 "variacao": None, "lucra": None, "vs_breakeven": None, "vs_breakeven_pct": None,
             })
 
-    algum_ok = any(c["preco_cab"] is not None for c in cotacoes)
     return jsonify({
-        "ok": algum_ok, "cotacoes": cotacoes,
+        "ok": True, "cotacoes": cotacoes,
         "break_even": break_even, "ctcab": ctcab,
-        "fonte": "IMEA", "url": "https://www.imea.com.br/imea-site/indicador-boi",
-        "atualizado": _agora().strftime("%d/%m/%Y %H:%M"),
+        "fonte": "IMEA", "url": _IMEA_URL,
+        "atualizado": res["atualizado"],
         "referencia": "Região: Sudeste | Fonte: IMEA",
-        "debug": debug_log,
-        "erro": None if algum_ok else f"Nenhum indicador encontrado. Debug: {debug_log}",
+        "debug": res["debug"],
+        "erro": None,
     })
 
 
 def _fetch_imea_inline():
-    """Playwright inline (sem módulo separado)."""
-    import subprocess, sys
+    """Abre a página do IMEA num Chromium headless e devolve (html, log).
+
+    Nunca instala o Chromium aqui: antes, sem o navegador, a própria requisição
+    rodava `playwright install` (até 3 min com a página travada e o worker preso).
+    A instalação é feita uma vez, no console: python -m playwright install chromium
+    """
     from playwright.sync_api import sync_playwright, TimeoutError as PwTimeout
     log = []
-    URL = "https://www.imea.com.br/imea-site/indicador-boi"
-
-    def _launch(p):
-        try:
-            return p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
-        except Exception as e:
-            if "executable" in str(e).lower():
-                subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"],
-                               capture_output=True, timeout=180)
-                return p.chromium.launch(headless=True, args=["--no-sandbox"])
-            raise
 
     with sync_playwright() as p:
-        browser = _launch(p)
+        try:
+            browser = p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
+        except Exception as e:
+            if "executable" in str(e).lower():
+                raise RuntimeError("Chromium não instalado no servidor. No console, rode: "
+                                   "python -m playwright install chromium") from None
+            raise
         ctx = browser.new_context(locale="pt-BR", timezone_id="America/Sao_Paulo")
         page = ctx.new_page()
         try:
-            page.goto(URL, wait_until="networkidle", timeout=40000)
+            page.goto(_IMEA_URL, wait_until="domcontentloaded", timeout=25000)
             for sel in ["table", "mat-table", "tbody tr"]:
                 try:
                     page.wait_for_selector(sel, timeout=8000)
@@ -276,7 +304,7 @@ def _fetch_imea_inline():
                     break
                 except PwTimeout:
                     continue
-            page.wait_for_timeout(2500)
+            page.wait_for_timeout(1500)
             html = page.content()
             log.append(f"{len(html)}chars")
         except Exception as e:

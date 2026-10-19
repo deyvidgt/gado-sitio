@@ -11,7 +11,7 @@ from contextlib import contextmanager
 
 from flask import render_template, request, redirect, url_for, flash, session, jsonify
 from db import carregar_aba, fazer_backup
-from calculos import calcular_estoque
+from calculos import calcular_estoque, calcular_estoque_ate_data
 from config import MEMBROS, NOMES_MEMBROS
 from extensions import (
     app, _agora, _validar_csrf, _gerar_csrf, login_required,
@@ -202,6 +202,20 @@ def _trava_visitas(espera_max: float = 15.0):
 _lock_visitas = threading.Lock()
 
 
+def _estoque_na_data(dados, data) -> int:
+    """Gado esperado no dia da visita. A visita guardada offline pode chegar dias
+    depois — se houve venda/compra no meio, o estoque de HOJE acusava cabeças
+    "faltando" (ou sobrando) que não faltavam no dia."""
+    import pandas as pd
+    hoje = pd.Timestamp(_agora()).normalize()
+    dia = pd.to_datetime(data, dayfirst=not re.match(r"\d{4}-", str(data or "")),
+                         errors="coerce") if data else pd.NaT
+    if pd.isna(dia) or dia.normalize() >= hoje:
+        return calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
+    return calcular_estoque_ate_data(dados["Compras"], dados["Vendas"], dados["Manejo"],
+                                     dia.normalize())
+
+
 def _registrar_visita(f) -> dict:
     with _trava_visitas():
         return _registrar_visita_sem_trava(f)
@@ -215,7 +229,7 @@ def _registrar_visita_sem_trava(f) -> dict:
     confirmação), não grava de novo.
     """
     dados   = _get_dados_cache()
-    estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
+    estoque = _estoque_na_data(dados, f.get("data"))
 
     # Gravado como "id:<código>": um código só de dígitos virava NÚMERO na leitura
     # da planilha (pandas) e a checagem de duplicata falhava.

@@ -188,21 +188,27 @@
 <div class="table-wrap" style="margin-bottom:24px">
   <table>
     <thead>
-      <tr><th>Ano</th><th>Compras</th><th>Gastos</th><th>Custo</th><th>Receita</th><th>Resultado</th><th>ROI</th></tr>
+      <tr><th>Ano</th><th>Compras</th><th>Gastos</th><th>Receita</th><th>Custo das vendidas</th><th>Perdas</th><th>Resultado</th><th>ROI</th><th>Caixa do ano</th></tr>
     </thead>
     <tbody>
       {% for a in anual %}
       <tr>
         <td style="font-weight:600">{{ a.ano }}</td>
         <td>{{ a.compras | brl }}</td><td>{{ a.gastos | brl }}</td>
-        <td>{{ a.custo | brl }}</td><td>{{ a.vendas | brl }}</td>
+        <td>{{ a.vendas | brl }}</td><td>{{ a.custo_vendidos | brl }}</td>
+        <td>{{ a.perdas | brl }}</td>
         <td class="{{ 'pos' if a.positivo else 'neg' }}">{{ a.lucro | brl }}</td>
         <td class="{{ 'pos' if a.positivo else 'neg' }}">{{ a.roi | pct }}</td>
+        <td class="{{ 'pos' if a.caixa >= 0 else 'neg' }}">{{ a.caixa | brl }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+<p style="font-size:12px;color:var(--text-3);margin:-16px 0 24px">
+  Resultado = receita − custo médio das cabeças vendidas no ano − perdas (mesmo cálculo do painel).
+  Caixa = dinheiro que entrou menos o que saiu no ano (compras de gado contam aqui, mesmo com o gado ainda no pasto).
+</p>
 {% endif %}
 
 <!-- Exportar -->

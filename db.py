@@ -17,6 +17,8 @@ IMPORTANTE — onde ficam os dados:
 import os, sys
 import json
 import shutil
+import threading
+from contextlib import contextmanager
 import pandas as pd
 from datetime import datetime
 from openpyxl import Workbook, load_workbook
@@ -92,7 +94,8 @@ def fazer_backup() -> str | None:
     backup_dir = os.path.join(DATA_DIR, "backups")
     os.makedirs(backup_dir, exist_ok=True)
     nome = os.path.join(backup_dir, f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx")
-    shutil.copy(ARQUIVO_PATH, nome)
+    with _trava_escrita():   # nunca copiar no meio de uma gravação
+        shutil.copy(ARQUIVO_PATH, nome)
     return nome
 
 
@@ -222,46 +225,65 @@ def inicializar():
 
     # Arquivo já existe — migrar abas/colunas que faltam SEM apagar dados.
     try:
-        wb = load_workbook(ARQUIVO_PATH)
-        alterado = False
-        for aba, colunas in _SCHEMA_ABAS.items():
-            if aba not in wb.sheetnames:
-                ws = wb.create_sheet(aba)
-                ws.append(colunas)
-                alterado = True
-                print(f"✅ Aba '{aba}' criada no arquivo existente.")
-                continue
-            if _garantir_colunas(wb[aba], colunas):
-                alterado = True
-                print(f"✅ Colunas garantidas em '{aba}'.")
-        if alterado:
-            wb.save(ARQUIVO_PATH)
+        with _trava_escrita():
+            wb = load_workbook(ARQUIVO_PATH)
+            alterado = False
+            for aba, colunas in _SCHEMA_ABAS.items():
+                if aba not in wb.sheetnames:
+                    ws = wb.create_sheet(aba)
+                    ws.append(colunas)
+                    alterado = True
+                    print(f"✅ Aba '{aba}' criada no arquivo existente.")
+                    continue
+                if _garantir_colunas(wb[aba], colunas):
+                    alterado = True
+                    print(f"✅ Colunas garantidas em '{aba}'.")
+            if alterado:
+                _salvar_atomico(wb)
     except Exception as e:
         print(f"⚠️  Não foi possível migrar as abas: {e}")
 
 
 # ── Leitura ───────────────────────────────────────────────────────────────────
 
+def _preparar_df(df: pd.DataFrame) -> pd.DataFrame:
+    if "Data" in df.columns:
+        df["Data"] = pd.to_datetime(
+            df["Data"], dayfirst=True, format="mixed", errors="coerce"
+        )
+    return df.dropna(how="all").reset_index(drop=True)
+
+
 def carregar_aba(aba: str) -> pd.DataFrame:
     """Carrega uma aba do Excel como DataFrame."""
     try:
-        df = pd.read_excel(ARQUIVO_PATH, sheet_name=aba)
-        if "Data" in df.columns:
-            df["Data"] = pd.to_datetime(
-                df["Data"], dayfirst=True, format="mixed", errors="coerce"
-            )
-        df = df.dropna(how="all").reset_index(drop=True)
-        return df
+        return _preparar_df(pd.read_excel(ARQUIVO_PATH, sheet_name=aba))
     except Exception:
         return pd.DataFrame()
 
 
+_ABAS_PRINCIPAIS = ["Compras", "Gastos", "Vendas", "Manejo", "Visitas"]
+
+
 def carregar_todas() -> dict[str, pd.DataFrame]:
-    """Carrega todas as abas de uma vez."""
-    return {
-        aba: carregar_aba(aba)
-        for aba in ["Compras", "Gastos", "Vendas", "Manejo", "Visitas"]
-    }
+    """Carrega todas as abas de uma vez — abre o arquivo UMA vez só (antes eram
+    5 leituras completas do .xlsx a cada recarga do cache)."""
+    try:
+        brutas = pd.read_excel(ARQUIVO_PATH, sheet_name=_ABAS_PRINCIPAIS)
+        return {aba: _preparar_df(brutas[aba]) for aba in _ABAS_PRINCIPAIS}
+    except Exception:
+        # Aba faltando/arquivo estranho: lê uma a uma (aba ausente vira vazia).
+        return {aba: carregar_aba(aba) for aba in _ABAS_PRINCIPAIS}
+
+
+def versao_arquivo():
+    """Assinatura (mtime, tamanho) do .xlsx — muda a cada gravação, inclusive de
+    outro processo (Task do WhatsApp, outro worker do servidor). Usada pelo cache."""
+    try:
+        st = os.stat(ARQUIVO_PATH)
+        return (st.st_mtime_ns, st.st_size)
+    except OSError:
+        return None
 
 
 # ── Escrita ───────────────────────────────────────────────────────────────────
@@ -287,6 +309,51 @@ def _preparar_valor(v):
     return v
 
 
+_trava_thread = threading.RLock()
+
+
+@contextmanager
+def _trava_escrita():
+    """
+    Uma gravação por vez no .xlsx. Cada gravação é "abre → altera → salva o
+    arquivo inteiro": duas ao mesmo tempo (duas pessoas salvando, ou a Task do
+    WhatsApp) faziam a segunda apagar o que a primeira gravou. Lock de thread +
+    trava de arquivo (vale entre processos/workers do servidor).
+    """
+    with _trava_thread:
+        fh = open(os.path.join(DATA_DIR, ".gado.lock"), "a+")
+        try:
+            try:
+                if os.name == "nt":
+                    import msvcrt
+                    fh.seek(0)
+                    msvcrt.locking(fh.fileno(), msvcrt.LK_LOCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+            except (ImportError, OSError):
+                pass   # sem trava de arquivo, ao menos o lock da thread vale
+            yield
+        finally:
+            try:
+                if os.name == "nt":
+                    import msvcrt
+                    fh.seek(0)
+                    msvcrt.locking(fh.fileno(), msvcrt.LK_UNLCK, 1)
+            except (ImportError, OSError):
+                pass
+            fh.close()   # no Linux, fechar já solta o flock
+
+
+def _salvar_atomico(wb):
+    """Salva num arquivo temporário e troca de uma vez: se o processo cair no meio
+    do save (timeout, falta de cota), o .xlsx antigo continua inteiro — antes o
+    arquivo podia ficar truncado/corrompido e o site parava de abrir."""
+    tmp = ARQUIVO_PATH + ".tmp"
+    wb.save(tmp)
+    os.replace(tmp, ARQUIVO_PATH)
+
+
 def salvar_linha(aba: str, linha: list):
     """Adiciona uma linha ao final de uma aba.
 
@@ -294,28 +361,30 @@ def salvar_linha(aba: str, linha: list):
     existam (e na posição certa), para o valor nunca cair numa coluna sem nome —
     não depende da migração do boot ter rodado.
     """
-    wb = load_workbook(ARQUIVO_PATH)
-    ws = wb[aba]
-    if aba in _SCHEMA_ABAS:
-        _garantir_colunas(ws, _SCHEMA_ABAS[aba])
-    ws.append([_preparar_valor(v) for v in linha])
-    wb.save(ARQUIVO_PATH)
+    with _trava_escrita():
+        wb = load_workbook(ARQUIVO_PATH)
+        ws = wb[aba]
+        if aba in _SCHEMA_ABAS:
+            _garantir_colunas(ws, _SCHEMA_ABAS[aba])
+        ws.append([_preparar_valor(v) for v in linha])
+        _salvar_atomico(wb)
 
 
 def reescrever_aba(aba: str, df: pd.DataFrame):
     """Reescreve completamente uma aba a partir de um DataFrame."""
-    wb = load_workbook(ARQUIVO_PATH)
-    ws = wb[aba]
+    with _trava_escrita():
+        wb = load_workbook(ARQUIVO_PATH)
+        ws = wb[aba]
 
-    # Apaga as linhas antigas (não só os valores): antes as linhas ficavam vazias e
-    # o append gravava DEPOIS delas — a aba dobrava de tamanho a cada edição/exclusão.
-    if ws.max_row > 1:
-        ws.delete_rows(2, ws.max_row - 1)
+        # Apaga as linhas antigas (não só os valores): antes as linhas ficavam vazias e
+        # o append gravava DEPOIS delas — a aba dobrava de tamanho a cada edição/exclusão.
+        if ws.max_row > 1:
+            ws.delete_rows(2, ws.max_row - 1)
 
-    for _, row in df.iterrows():
-        ws.append([_preparar_valor(v) for v in row])
+        for _, row in df.iterrows():
+            ws.append([_preparar_valor(v) for v in row])
 
-    wb.save(ARQUIVO_PATH)
+        _salvar_atomico(wb)
 
 
 # ── Utilitários ───────────────────────────────────────────────────────────────

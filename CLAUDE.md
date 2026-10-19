@@ -88,6 +88,12 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
   2. soma dos `custo_total` dos membros == `custo_vendidos` global;
   3. soma das `perdas` dos membros == `perdas` global.
   Se um cálculo novo quebrar qualquer uma, há bug. Rode o smoke test com os dados reais.
+- **Comparativo anual** (`calcular_resultado_anual`): resultado do ano pela média móvel
+  (receita − custo das vendidas − perdas); "caixa" é coluna separada. Soma dos anos ==
+  `resultado_total`.
+- **Cache** (`extensions._cache_dados`): resumo, membros e evolução ficam em cache até o
+  `.xlsx` mudar no disco (`db.versao_arquivo`). Gravação sempre por `salvar_linha`/
+  `reescrever_aba` (trava + save atômico) — nunca `wb.save` direto no arquivo de dados.
 - O snapshot gravado na aba Vendas ao registrar/editar uma venda também usa a média
   móvel (`custo_medio_movel_venda`), ficando coerente com o dashboard. Os indicadores
   CMP/GPCab (`_build_*_timeline`, O(log n)) seguem existindo só como referência.

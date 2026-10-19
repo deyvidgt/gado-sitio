@@ -2,6 +2,47 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
+## [4.5.1] — 2026-10-19
+
+### Corrigido
+- **Editar/excluir podia acertar o registro errado**: a lista vinha de um cache que não
+  via gravações de outro processo (Task do WhatsApp, outro worker). O cache agora confere
+  a versão do `.xlsx` no disco e recarrega quando ele muda.
+- **Gravações simultâneas não se apagam mais**: uma gravação por vez (trava de arquivo) e
+  salvamento atômico — se o servidor cair no meio do save, o `.xlsx` antigo fica inteiro.
+- **Chave de sessão**: sem `GADO_SECRET_KEY`, o site usava a chave publicada no código
+  (dava para forjar login). Agora gera uma aleatória em `<dados>/secret_key.txt`.
+  ⚠️ Na primeira subida todos precisam entrar de novo uma vez.
+- **Comparativo anual** (Relatórios) usava caixa como "Resultado": o ano em que se
+  comprava gado aparecia com prejuízo mesmo com o gado no pasto. Agora o resultado é pela
+  média móvel (receita − custo das vendidas − perdas), e o caixa aparece em coluna própria.
+  A soma dos anos bate com o Resultado Total do painel.
+- Cotas por membro que não somam o total da linha (planilha editada à mão) e venda maior
+  que o rebanho quebravam a soma por membro; agora são ajustadas como no estoque global.
+- Visita enviada offline dias depois usava o estoque de hoje como "gado esperado";
+  agora usa o estoque do dia da visita.
+- `/api/cotacao-scot` exigia login nenhum.
+- "Enviar alertas à família" lento dizia "nenhum WhatsApp configurado".
+
+### Desempenho
+- `carregar_todas` lê o `.xlsx` uma vez só (eram 5 leituras).
+- Resultado por membro e evolução do rebanho entram no cache; a evolução roda **uma**
+  simulação (antes era uma por mês).
+
+- **Editar venda com brincos dava erro** ("Nenhum animal vivo com brinco…"): o animal já
+  estava Vendido. Agora os brincos que a venda já tinha são aceitos (vale também no Manejo).
+- **Excluir uma venda** (ou tirar um brinco dela ao editar) devolve os animais para
+  **Vivo**. Se o brinco já foi reaproveitado em outro animal vivo, avisa e não mexe.
+- **Cotação do IMEA** não instala mais o Chromium durante a requisição (travava até
+  3 min); mostra o comando para instalar. O resultado fica 3 h em cache e só um navegador
+  abre por vez.
+
+### Novo
+- Aviso ao registrar venda com mais cabeças do que o rebanho registrado.
+- **Preço da arroba** em ⚙️ Configurações → Rebanho (antes fixo em R$ 340 no código), com
+  a arroba da última venda como dica. Vale para a estimativa do rebanho e as arrobas
+  mínimas do painel.
+
 ## [4.5.0] — 2026-10-16
 
 ### Novo

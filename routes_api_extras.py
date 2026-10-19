@@ -391,8 +391,10 @@ def api_enviar_alertas_familia():
 
     t = threading.Thread(target=_run, daemon=True)
     t.start()
-    ev.wait(timeout=30)   # aguarda até 30s para dar feedback real
-
+    if not ev.wait(timeout=30):   # aguarda até 30s para dar feedback real
+        # Ainda enviando (CallMeBot lento): antes caía no "nenhum WhatsApp configurado".
+        return jsonify({"ok": True, "enviados": None,
+                        "msg": "Enviando os alertas… pode levar alguns minutos para chegar."})
     if resultado["erro"]:
         return jsonify({"ok": False, "erro": resultado["erro"]})
     if resultado["enviados"] == 0:

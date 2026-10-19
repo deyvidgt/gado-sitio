@@ -412,6 +412,33 @@ def baixa_por_refs(texto_brincos: str, status: str, data=None) -> list[str]:
     return dar_baixa(ids, status, data) if ids else []
 
 
+def reverter_baixa(ids: list[str], status: str = "Vendido") -> tuple[list[str], list[str]]:
+    """Desfaz a baixa (venda excluída, ou brinco tirado ao editar a venda): o animal
+    volta a "Vivo" e a Data Saída é apagada. Só mexe em quem está com `status`.
+    Se o brinco já foi reaproveitado por outro animal vivo, não volta (dois vivos
+    com o mesmo brinco quebrariam a busca por brinco) — vai na lista de conflitos.
+    Retorna (revertidos, conflitos) com as refs legíveis."""
+    if not ids:
+        return [], []
+    df = carregar()
+    feitos, conflitos = [], []
+    for id_ in ids:
+        idx = df.index[df["ID"] == id_]
+        if len(idx) == 0 or df.at[idx[0], "Status"] != status:
+            continue
+        i = idx[0]
+        num = df.at[i, "Brinco Nº"]
+        if pd.notna(num) and brinco_ocupado(df, df.at[i, "Brinco Cor"], int(num), exceto_id=id_) is not None:
+            conflitos.append(ref(df.loc[i]))
+            continue
+        df.at[i, "Status"] = "Vivo"
+        df.at[i, "Data Saída"] = pd.NaT
+        feitos.append(ref(df.loc[i]))
+    if feitos:
+        _gravar(df)
+    return feitos, conflitos
+
+
 # ── Resolver brinco falado/digitado → animal ──────────────────────────────────
 
 def resolver(df: pd.DataFrame, num: int, cor: str | None = None,
@@ -433,10 +460,20 @@ def resolver(df: pd.DataFrame, num: int, cor: str | None = None,
     return m
 
 
-def resolver_texto(texto: str, df: pd.DataFrame | None = None):
+def resolver_texto(texto: str, df: pd.DataFrame | None = None, preferidos=()):
     """'amarelo 21, azul 12, 35' → (refs resolvidas, erros). Usado nos formulários
-    (Manejo/Venda) para o campo "Brincos". Também aceita refs com #ID."""
+    (Manejo/Venda) para o campo "Brincos". Também aceita refs com #ID.
+
+    preferidos: IDs que o registro JÁ tinha (modo edição). Eles são procurados
+    primeiro e valem mesmo já baixados — sem isso, editar uma venda com brincos
+    dava "Nenhum animal vivo com brinco…", porque o animal já estava Vendido."""
     df = carregar() if df is None else df
+    if preferidos:
+        # Os já citados contam como "vivos"; empate com um vivo novo que
+        # reaproveitou o mesmo brinco fica com o já citado (ver o laço abaixo).
+        pref = df[df["ID"].isin(list(preferidos))].copy()
+        pref["Status"] = "Vivo"
+        df = pd.concat([pref, df[~df["ID"].isin(list(preferidos))]], ignore_index=True)
     refs, erros = [], []
     if not str(texto or "").strip():
         return refs, erros
@@ -452,6 +489,10 @@ def resolver_texto(texto: str, df: pd.DataFrame | None = None):
     sem_ids = _RE_ID.sub(" ", str(texto))
     for alvo in extrair_brincos(sem_ids):
         m = resolver(df, alvo["num"], alvo.get("cor"))
+        if len(m) > 1 and preferidos:
+            mp = m[m["ID"].isin(list(preferidos))]
+            if len(mp) == 1:
+                m = mp
         pedido = fmt_brinco(alvo.get("cor") or "", alvo["num"]).strip()
         if m.empty:
             erros.append(f"Nenhum animal vivo com brinco {pedido}.")

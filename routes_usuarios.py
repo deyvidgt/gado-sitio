@@ -88,6 +88,23 @@ def _salvar_sitio_config(cfg: dict):
 
 # ── Rotas ─────────────────────────────────────────────────────────────────────
 
+def _arroba_ultima_venda():
+    """(valor, data) da @ da venda mais recente que informou a arroba — dica no formulário."""
+    try:
+        import pandas as pd
+        from extensions import _get_dados_cache, fmt_data
+        v = _get_dados_cache()["Vendas"]
+        if v.empty or "Valor Arroba (R$)" not in v.columns:
+            return None
+        v = v[pd.to_numeric(v["Valor Arroba (R$)"], errors="coerce").fillna(0) > 0]
+        if v.empty:
+            return None
+        ult = v.sort_values("Data", na_position="first").iloc[-1]
+        return float(ult["Valor Arroba (R$)"]), fmt_data(ult["Data"])
+    except Exception:
+        return None
+
+
 @app.route("/configuracoes")
 @login_required
 def configuracoes():
@@ -96,8 +113,11 @@ def configuracoes():
     sitio_config = _carregar_sitio_config()
     alertas_saude = get_alertas_saude()
     import drive
+    from calculos import PRECO_ARROBA_REF
     return render_template("configuracoes.html", usuarios=usuarios,
                            sitio_config=sitio_config, alertas_saude=alertas_saude,
+                           preco_arroba_padrao=PRECO_ARROBA_REF,
+                           arroba_ultima_venda=_arroba_ultima_venda(),
                            drive_configurado=drive.configurado() or drive.cliente() is not None)
 
 
@@ -279,7 +299,7 @@ def _invalidar_cache_sitio():
 @app.route("/configuracoes/rebanho", methods=["POST"])
 @login_required
 def salvar_rebanho_config():
-    """Salva peso médio e rendimento usados na estimativa de valor do rebanho."""
+    """Salva peso médio, rendimento e preço da arroba (estimativa do rebanho)."""
     _validar_csrf()
 
     def _num(v, default):
@@ -290,10 +310,13 @@ def salvar_rebanho_config():
 
     peso = max(0.0, min(_num(request.form.get("peso_medio"), 0.0), 2000.0))
     rend = max(1.0, min(_num(request.form.get("rendimento"), 52.0), 100.0))
+    # Vazio/0 = volta ao padrão do sistema (calculos.PRECO_ARROBA_REF).
+    arroba = max(0.0, min(_num(request.form.get("preco_arroba"), 0.0), 5000.0))
 
     cfg = _carregar_sitio_config()
     cfg["peso_medio"] = round(peso, 1)
     cfg["rendimento"] = round(rend, 1)
+    cfg["preco_arroba"] = round(arroba, 2)
     _salvar_sitio_config(cfg)
     _invalidar_cache_sitio()
     flash("✅ Dados do rebanho salvos! A estimativa aparece no painel.", "success")
