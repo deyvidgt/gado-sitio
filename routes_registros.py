@@ -66,6 +66,14 @@ def _int_form(v, padrao=0) -> int:
         return padrao
 
 
+def _data_form(v):
+    """Data do formulário: "2026-05-10" (campo date do navegador) ou "10/05/2026"
+    (voz/digitado). Passar dayfirst=True numa data ISO enchia o log de avisos."""
+    s = str(v or "").strip()
+    iso = len(s) >= 10 and s[4:5] == "-" and s[7:8] == "-"
+    return pd.to_datetime(s, dayfirst=not iso, errors="coerce")
+
+
 def _aplicar_updates(df, idx, updates):
     """Grava os campos editados na linha `idx`. Converte a coluna para object antes
     de pôr texto numa coluna lida como float (ex.: "Perda De" toda vazia) — o pandas
@@ -166,7 +174,7 @@ def editar_compra(idx):
         val_cab = round(valor / cabecas, 2) if cabecas > 0 else 0
         fazer_backup()
         _limpar_backups_antigos()
-        updates = {"Data": pd.to_datetime(data, dayfirst=True, errors="coerce"),
+        updates = {"Data": _data_form(data),
                    "Qtd Cabeças": cabecas, "Valor Total (R$)": valor,
                    "Valor/Cabeça (R$)": val_cab, "Qtd Mae": qtd_mae,
                    "Qtd Deyvid": qtd_deyvid, "Qtd Nilson": qtd_nilson,
@@ -278,7 +286,7 @@ def editar_gasto(idx):
         fazer_backup()
         _limpar_backups_antigos()
         produto, sacos = _insumo_do_form(f)
-        updates = {"Data": pd.to_datetime(data, dayfirst=True, errors="coerce"),
+        updates = {"Data": _data_form(data),
                    "Tipo": tipo, "Descrição": desc,
                    "Valor Total (R$)": valor, "Qtd Cabeças": cab,
                    "Valor/Cabeça (R$)": v_cab, "Registrado Por": membro,
@@ -325,7 +333,7 @@ def _salvar_venda(form, dados, idx=None):
     # Custo por cabeça no momento da venda — MÉDIA MÓVEL (v4.0), coerente com o
     # que o dashboard/relatórios recomputam. A venda entra na simulação posicionada
     # pela sua data; o idx (modo edição) evita duplicá-la.
-    data_ts = pd.to_datetime(data, dayfirst=True, errors="coerce")
+    data_ts = _data_form(data)
     cmp_v, gpcab_v = custo_medio_movel_venda(
         dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"],
         data_ts, cabecas, idx=idx,
@@ -592,7 +600,7 @@ def editar_manejo(idx):
         _limpar_backups_antigos()
         updates = {
             "Brincos":     form["brincos_refs"],
-            "Data":        pd.to_datetime(f.get("data",""), dayfirst=True, errors="coerce"),
+            "Data":        _data_form(f.get("data", "")),
             "Tipo":        f.get("tipo",""),
             "Qtd Cabeças": _int_form(f.get("cabecas")),
             "Descrição":   f.get("descricao","").strip(),
