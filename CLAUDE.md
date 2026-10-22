@@ -122,6 +122,12 @@ python -m pytest          # ~5 s; roda numa CÓPIA temporária dos dados
 - `test_backup.py`: backup diário e limpeza usam a pasta de dados, não a do código.
 - **Rode antes de todo `git push`.** Mexeu em finanças → os testes de invariante têm que passar.
 
+## Changelog e specs
+
+- `CHANGELOG.md` (Keep a Changelog, em português): toda mudança visível entra em
+  **[Não lançado]**; ao fechar versão vira `## [x.y.z] — AAAA-MM-DD` no commit `vX.Y.Z: …`.
+- Designs de mudanças maiores ficam em `docs/superpowers/specs/AAAA-MM-DD-<tema>-design.md`.
+
 ## Backup
 
 - `backup_automatico.py` (Task diária no PythonAnywhere) grava em `~/gado-dados/backups/`
