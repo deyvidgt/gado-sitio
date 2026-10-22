@@ -140,7 +140,7 @@ lançamentos), rebanho só com cabeças, sem custo médio, capital e resultado p
 - Fila antiga (só `msg`) continua sendo enviada.
 - `resumo_semana` com datas fixas: conta só os 7 dias; "Semana sem registros"; versão sem R$.
 - Semanal não contém "nenhum registro ainda" nem "Resultado realizado".
-- Brucelose: 226 dias → semanal; 230 dias (≤15 para 240) → urgente.
+- Brucelose: 200 dias (faltam 40) → semanal; 230 dias (faltam 10, ≤ 15) → urgente.
 - `montar_resumo_mensal(com_valores=False)` não contém "R$".
 - `python -m pytest` completo passando; `alertas_whatsapp.py --teste --semanal` e
   `resumo_mensal.py --teste` conferidos à mão.

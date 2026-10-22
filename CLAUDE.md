@@ -126,7 +126,18 @@ python -m pytest          # ~5 s; roda numa CÓPIA temporária dos dados
 
 - `CHANGELOG.md` (Keep a Changelog, em português): toda mudança visível entra em
   **[Não lançado]**; ao fechar versão vira `## [x.y.z] — AAAA-MM-DD` no commit `vX.Y.Z: …`.
-- Designs de mudanças maiores ficam em `docs/superpowers/specs/AAAA-MM-DD-<tema>-design.md`.
+- Designs de mudanças maiores ficam em `docs/superpowers/specs/AAAA-MM-DD-<tema>-design.md`
+  e o plano de implementação em `docs/superpowers/plans/AAAA-MM-DD-<tema>.md`.
+
+**O que há em `docs/`:**
+
+| Arquivo | O que é |
+|---|---|
+| `FOTOS_DRIVE.md` | Como autorizar o Google Drive (`configurar_drive.py`) e o que fazer quando o envio de fotos para |
+| `superpowers/specs/2026-10-16-fotos-animais-design.md` | Design das fotos dos animais (v4.4, entregue) |
+| `superpowers/plans/2026-10-16-fotos-animais.md` | Plano de implementação das fotos (v4.4, concluído) |
+| `superpowers/specs/2026-10-22-whatsapp-notificacoes-design.md` | Design das notificações WhatsApp: preferências por pessoa, aviso de Morte/Nascimento, resumo semanal (em andamento) |
+| `client_secret_*.json` | Credencial OAuth do app do Drive — **fora do Git** (`.gitignore`), nunca commitar |
 
 ## Backup
 
