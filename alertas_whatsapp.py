@@ -460,25 +460,58 @@ def montar_mensagem(alertas):
 
 # ── Enviar para toda a família ────────────────────────────────────────────────
 
-def enviar_para_familia(msg: str, excluir_usuario: str = "") -> int:
+TIPOS_RECEBER = ("urgentes", "semanal", "visita", "eventos", "mensal", "valores")
+
+# Login (minúsculo, chave do usuarios.json) -> membro de config.MEMBROS. Mesmo mapa de
+# routes_animais._membro_logado: quem registra loga como "geane" mas o aviso traz "Mae".
+_LOGIN_MEMBRO = {"geane": "Mae", "mae": "Mae", "deyvid": "Deyvid", "nilson": "Nilson"}
+
+
+def _chave_pessoa(nome: str) -> str:
+    n = (nome or "").strip().lower()
+    return _LOGIN_MEMBRO.get(n, n).lower()
+
+
+def receber_de(cfg_whatsapp: dict) -> dict:
+    """As 6 preferências de recebimento; o que não foi definido vale True, para quem
+    nunca mexeu continuar recebendo tudo."""
+    guardado = (cfg_whatsapp or {}).get("receber") or {}
+    return {t: bool(guardado.get(t, True)) for t in TIPOS_RECEBER}
+
+
+def quer_receber(cfg_whatsapp: dict, tipo: str | None) -> bool:
+    """alertas_ativos=False desliga tudo; com tipo=None só ele é considerado."""
+    if not (cfg_whatsapp or {}).get("alertas_ativos", True):
+        return False
+    if tipo is None:
+        return True
+    return receber_de(cfg_whatsapp).get(tipo, True)
+
+
+def enviar_para_familia(msg: str, excluir_usuario: str = "", tipo: str | None = None,
+                        msg_sem_valores: str | None = None) -> int:
     """
     Envia msg para todos os usuários com WhatsApp configurado.
-    excluir_usuario: pular esse usuário (ex: quem acabou de registrar).
+    excluir_usuario: pular essa pessoa (membro ou login; ex: quem acabou de registrar).
+    tipo: categoria do aviso, filtrada pelas preferências de cada um (None = sem filtro).
+    msg_sem_valores: texto alternativo para quem desligou "valores".
     Retorna número de envios bem-sucedidos.
     """
     usuarios = carregar_usuarios()
+    excluir = _chave_pessoa(excluir_usuario) if excluir_usuario else ""
     enviados = 0
     for nome, info in usuarios.items():
-        if excluir_usuario and nome == excluir_usuario:
+        if excluir and _chave_pessoa(nome) == excluir:
             continue
         cfg      = info.get("whatsapp", {})
         telefone = cfg.get("telefone", "").strip()
         apikey   = cfg.get("apikey",   "").strip()
-        ativo    = cfg.get("alertas_ativos", True)
-        if not telefone or not apikey or not ativo:
+        if not telefone or not apikey or not quer_receber(cfg, tipo):
             continue
-        ok = enviar_whatsapp(telefone, apikey, msg)
-        if ok:
+        texto = msg
+        if tipo is not None and msg_sem_valores is not None and not receber_de(cfg)["valores"]:
+            texto = msg_sem_valores
+        if enviar_whatsapp(telefone, apikey, texto):
             enviados += 1
     return enviados
 
@@ -494,13 +527,16 @@ def _pendentes_path() -> Path:
     return Path(DATA_DIR) / "avisos_pendentes.json"
 
 
-def guardar_aviso_pendente(msg: str) -> None:
+def guardar_aviso_pendente(msg: str, tipo: str = "visita", excluir: str = "",
+                           msg_sem_valores: str | None = None) -> None:
     caminho = _pendentes_path()
     try:
         fila = json.loads(caminho.read_text(encoding="utf-8")) if caminho.exists() else []
     except Exception:
         fila = []
-    fila.append({"msg": msg, "criado": datetime.now().isoformat(timespec="seconds")})
+    fila.append({"msg": msg, "tipo": tipo, "excluir": excluir,
+                 "msg_sem_valores": msg_sem_valores,
+                 "criado": datetime.now().isoformat(timespec="seconds")})
     tmp = caminho.with_suffix(".tmp")
     tmp.write_text(json.dumps(fila, ensure_ascii=False, indent=2), encoding="utf-8")
     os.replace(tmp, caminho)
@@ -524,7 +560,11 @@ def enviar_avisos_pendentes() -> int:
     total = 0
     for item in fila:
         try:
-            total += enviar_para_familia(item["msg"])
+            # Item gravado antes desta versão não tem "tipo": era sempre aviso de visita.
+            total += enviar_para_familia(
+                item["msg"], tipo=item.get("tipo") or "visita",
+                excluir_usuario=item.get("excluir") or "",
+                msg_sem_valores=item.get("msg_sem_valores"))
         except Exception as e:
             logging.error(f"Erro ao enviar aviso pendente: {e}")
     try:

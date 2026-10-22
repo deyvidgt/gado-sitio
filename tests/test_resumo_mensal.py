@@ -49,7 +49,7 @@ def test_fora_do_dia_1_nao_faz_nada(monkeypatch):
             return cls(2026, 10, 15)
     monkeypatch.setattr(rm, "datetime", Dia15)
     chamado = []
-    monkeypatch.setattr("alertas_whatsapp.enviar_para_familia", lambda msg: chamado.append(msg) or 3)
+    monkeypatch.setattr("alertas_whatsapp.enviar_para_familia", lambda msg, **kw: chamado.append(msg) or 3)
     assert rm.main([]) == 0
     assert chamado == []
 
@@ -61,7 +61,7 @@ def test_dia_1_envia_para_familia(monkeypatch):
             return cls(2026, 10, 1)
     monkeypatch.setattr(rm, "datetime", Dia1)
     enviados = []
-    monkeypatch.setattr("alertas_whatsapp.enviar_para_familia", lambda msg: enviados.append(msg) or 2)
+    monkeypatch.setattr("alertas_whatsapp.enviar_para_familia", lambda msg, **kw: enviados.append(msg) or 2)
     assert rm.main([]) == 0
     assert len(enviados) == 1 and "Resumo de Setembro/2026" in enviados[0]
 

@@ -60,7 +60,7 @@ def _post_visita(cliente, **extra):
 
 def test_api_visita_grava_e_nao_duplica_reenvio(cliente, dados_restaurados, monkeypatch):
     import alertas_whatsapp
-    monkeypatch.setattr(alertas_whatsapp, "enviar_para_familia", lambda msg: 0)
+    monkeypatch.setattr(alertas_whatsapp, "enviar_para_familia", lambda msg, **kw: 0)
     n = len(db.carregar_aba("Visitas"))
     r1 = _post_visita(cliente)
     assert r1.status_code == 200 and r1.get_json()["ok"] and not r1.get_json()["duplicada"]
@@ -106,7 +106,7 @@ def test_aviso_de_visita_roda_depois_da_resposta(cliente, dados_restaurados, mon
     """Sem thread: o envio roda ao fechar a resposta (call_on_close)."""
     import alertas_whatsapp
     chamadas = []
-    monkeypatch.setattr(alertas_whatsapp, "enviar_para_familia", lambda msg: chamadas.append(msg) or 1)
+    monkeypatch.setattr(alertas_whatsapp, "enviar_para_familia", lambda msg, **kw: chamadas.append(msg) or 1)
     r = _post_visita(cliente, id_envio="ffffeeeeddddcccc")
     assert r.status_code == 200 and chamadas == []   # ainda não: só depois da resposta
     r.close()
@@ -120,7 +120,7 @@ def test_aviso_nao_se_perde_se_a_conexao_cair(cliente, dados_restaurados, monkey
     outra aba volta 'duplicada' e é ele que entrega o aviso guardado."""
     import alertas_whatsapp
     chamadas = []
-    monkeypatch.setattr(alertas_whatsapp, "enviar_para_familia", lambda msg: chamadas.append(msg) or 1)
+    monkeypatch.setattr(alertas_whatsapp, "enviar_para_familia", lambda msg, **kw: chamadas.append(msg) or 1)
     _post_visita(cliente, id_envio="9999888877776666")          # resposta nunca fechada
     assert fila_avisos_vazia.exists() and chamadas == []
     r2 = _post_visita(cliente, id_envio="9999888877776666")
@@ -171,7 +171,7 @@ def test_dia_comum_sem_urgencia_nao_envia(monkeypatch):
     enviados = []
     monkeypatch.setattr(aw, "montar_itens", lambda hoje=None: [
         {"chave": "y", "texto": "info", "urgente": False, "repetir": 3}])
-    monkeypatch.setattr(aw, "enviar_para_familia", lambda msg: enviados.append(msg) or 1)
+    monkeypatch.setattr(aw, "enviar_para_familia", lambda msg, **kw: enviados.append(msg) or 1)
     monkeypatch.setattr(aw, "_agora_br", lambda: datetime(2026, 10, 7))   # quarta
     aw.main([])
     assert enviados == []
@@ -185,7 +185,7 @@ def test_mesma_visita_enviada_ao_mesmo_tempo_grava_uma_vez(flask_app, dados_rest
     """Duas abas reenviando a mesma visita juntas: a trava faz só uma gravar."""
     import threading
     import alertas_whatsapp
-    monkeypatch.setattr(alertas_whatsapp, "enviar_para_familia", lambda msg: 0)
+    monkeypatch.setattr(alertas_whatsapp, "enviar_para_familia", lambda msg, **kw: 0)
     n = len(db.carregar_aba("Visitas"))
     resultados = []
 
