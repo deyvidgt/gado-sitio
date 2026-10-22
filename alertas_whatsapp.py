@@ -25,6 +25,8 @@ import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import pandas as pd
+
 # ── Configuração ──────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent
 sys.path.insert(0, str(BASE_DIR))
@@ -454,9 +456,77 @@ def montar_msg_urgente(itens: list[dict], hoje: datetime | None = None,
     return "\n".join(linhas)
 
 
+def _soma(df, col) -> float:
+    """Soma segura de uma coluna (texto/NaN viram 0), no padrão de resumo_mensal."""
+    if df is None or df.empty or col not in df.columns:
+        return 0.0
+    return float(pd.to_numeric(df[col], errors="coerce").fillna(0).sum())
+
+
+def _da_semana(df, hoje: datetime):
+    """Linhas de (hoje-7 dias, hoje], comparando só a data. Sem data (NaT) fica de fora."""
+    if df is None or df.empty or "Data" not in df.columns:
+        return df.iloc[0:0] if df is not None else pd.DataFrame()
+    datas = pd.to_datetime(df["Data"], errors="coerce", dayfirst=True).dt.normalize()
+    fim = pd.Timestamp(hoje).normalize()
+    return df[(datas > fim - pd.Timedelta(days=7)) & (datas <= fim)]
+
+
+def resumo_semana(dados: dict, hoje: datetime) -> list[dict]:
+    """O que aconteceu nos últimos 7 dias, uma linha por assunto (só se houver
+    registro). Cada linha traz o texto com e sem R$ para quem desligou "valores"."""
+    def aba(nome):
+        return _da_semana(dados.get(nome), hoje)
+
+    linhas: list[dict] = []
+
+    def add(com, sem=None):
+        linhas.append({"texto": com, "texto_sem_valores": sem or com})
+
+    vis = aba("Visitas")
+    if len(vis):
+        nomes = []
+        for n in vis.get("Responsável", []):
+            n = str(n).strip()
+            if n and n.lower() != "nan" and n not in nomes:
+                nomes.append(n)
+        t = f"🏡 Visitas: {len(vis)}" + (f" ({', '.join(nomes)})" if nomes else "")
+        chuva = _soma(vis, "Chuva mm")
+        if chuva > 0:
+            t += f" · 🌧️ chuva {chuva:g} mm"
+        add(t)
+
+    gas = aba("Gastos")
+    if len(gas):
+        base = f"🧾 Gastos: {len(gas)} lançamentos"
+        add(f"{base} — {fmt_r(_soma(gas, 'Valor Total (R$)'))}", base)
+
+    for nome, emoji, rotulo in (("Compras", "🛒", "Compras"), ("Vendas", "💰", "Vendas")):
+        df = aba(nome)
+        if len(df):
+            base = f"{emoji} {rotulo}: {int(_soma(df, 'Qtd Cabeças'))} cab."
+            add(f"{base} — {fmt_r(_soma(df, 'Valor Total (R$)'))}", base)
+
+    man = aba("Manejo")
+    if len(man):
+        tipos = man["Tipo"].astype(str).str.strip()
+        especiais = ("Nascimento", "Morte/Perda")
+        por_tipo = {}
+        for t in tipos[~tipos.isin(especiais)].unique():
+            if t and t.lower() != "nan":
+                por_tipo[t] = int(_soma(man[tipos == t], "Qtd Cabeças"))
+        if por_tipo:
+            add("💉 Manejos: " + ", ".join(f"{t} ({q} cab.)" for t, q in por_tipo.items()))
+        nasc = int(_soma(man[tipos == "Nascimento"], "Qtd Cabeças"))
+        mortes = int(_soma(man[tipos == "Morte/Perda"], "Qtd Cabeças"))
+        partes = ([f"🍼 Nascimentos: {nasc}"] if nasc else []) +                  ([f"⚰️ Mortes/perdas: {mortes}"] if mortes else [])
+        if partes:
+            add(" · ".join(partes))
+    return linhas
+
+
 def montar_msg_semanal(itens: list[dict], hoje: datetime | None = None,
-                       com_valores: bool = True, semana: dict | None = None) -> str:
-    # `semana` (resumo da semana) é preenchido na próxima etapa; ignorado por ora.
+                       com_valores: bool = True, semana: list[dict] | None = None) -> str:
     hoje = hoje or _agora_br()
     itens = _sem_valores(itens, com_valores)
     urg = [it["texto"] for it in itens if it["urgente"]]
@@ -464,6 +534,9 @@ def montar_msg_semanal(itens: list[dict], hoje: datetime | None = None,
     linhas = ["🐄 *Sítio Santo Antonio*", f"📅 *Resumo semanal — {hoje:%d/%m/%Y}*", ""]
     if urg:
         linhas += ["*⚠️ Atenção*"] + urg + [""]
+    if semana is not None:   # None = quem chamou não calculou a semana
+        chave = "texto" if com_valores else "texto_sem_valores"
+        linhas += ["📆 *Na semana*"] + ([x[chave] for x in semana] or ["Semana sem registros."]) + [""]
     linhas += resto or ["✅ Nada pendente."]
     linhas += ["", "_Sistema de Gestão de Gado_"]
     return "\n".join(linhas)
@@ -624,7 +697,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if semanal or hoje.weekday() == DIA_RESUMO_SEMANAL:
         tipo, enviar_itens = "semanal", itens
-        msg, msg_sv = (montar_msg_semanal(itens, hoje), montar_msg_semanal(itens, hoje, com_valores=False))
+        # Lê o .xlsx de novo só no caminho semanal; se falhar, o resumo sai sem a seção.
+        try:
+            semana = resumo_semana(carregar_todas(), hoje)
+        except Exception as e:
+            logging.error(f"Falha no resumo da semana: {e}")
+            semana = None
+        msg = montar_msg_semanal(itens, hoje, semana=semana)
+        msg_sv = montar_msg_semanal(itens, hoje, com_valores=False, semana=semana)
     else:
         enviar_itens = urgentes_a_enviar(itens, hoje, estado)
         if not enviar_itens:
