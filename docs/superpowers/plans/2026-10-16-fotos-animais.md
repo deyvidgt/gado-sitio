@@ -1,5 +1,8 @@
 # Fotos e histórico dos animais (Google Drive) — Implementation Plan
 
+> **Status: ✅ concluído em 16/10/2026** (v4.4, commit `f0b3cd7`). As caixas abaixo não foram
+> marcadas durante a execução; o histórico real está no Git e no `CHANGELOG.md` [4.4.0].
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Linha do tempo de fotos por animal com brinco, com os arquivos na pasta do Google Drive da família, envio pelo celular (inclusive offline) e exibição privada pelo site.

@@ -1,6 +1,12 @@
 # Fotos e histórico dos animais (Google Drive) — Design
 
-**Data:** 2026-10-16 · **Versão alvo:** v4.4 · **Status:** aguardando revisão
+**Data:** 2026-10-16 · **Versão alvo:** v4.4 · **Status:** ✅ entregue em 16/10/2026 (v4.4,
+commit `f0b3cd7`; correções em `44734a2`). Guia de operação: `docs/FOTOS_DRIVE.md`.
+
+> Pendências adiadas da revisão (decisão do usuário): regex de ID sem `$`, foto HEIC não
+> exibível no navegador, Pillow fora do `requirements.txt`, `limpar_cache` sem try/except,
+> "Enviado Em" vira datetime se o `.xlsx` for salvo no Excel, sem nova tentativa em 401,
+> teste do Drive a cada execução dos alertas.
 
 ## 1. Objetivo
 
