@@ -334,6 +334,42 @@
       <span style="font-size:12px;color:var(--text-3)">— desmarque para pausar sem apagar a configuração</span>
     </div>
 
+    <div style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--text-2);margin-bottom:8px">📱 O que você quer receber</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-2)">
+          <input type="checkbox" id="cfg-wpp-rec-urgentes" checked
+                 style="width:16px;height:16px;accent-color:var(--green-600)">
+          🚨 Alertas urgentes (diário)
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-2)">
+          <input type="checkbox" id="cfg-wpp-rec-semanal" checked
+                 style="width:16px;height:16px;accent-color:var(--green-600)">
+          📅 Resumo semanal (segunda)
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-2)">
+          <input type="checkbox" id="cfg-wpp-rec-visita" checked
+                 style="width:16px;height:16px;accent-color:var(--green-600)">
+          🏡 Aviso de visita
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-2)">
+          <input type="checkbox" id="cfg-wpp-rec-eventos" checked
+                 style="width:16px;height:16px;accent-color:var(--green-600)">
+          🐄 Morte / Nascimento
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-2)">
+          <input type="checkbox" id="cfg-wpp-rec-mensal" checked
+                 style="width:16px;height:16px;accent-color:var(--green-600)">
+          📊 Resumo mensal (dia 1º)
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-2)">
+          <input type="checkbox" id="cfg-wpp-rec-valores" checked
+                 style="width:16px;height:16px;accent-color:var(--green-600)">
+          💰 Mostrar valores em R$
+        </label>
+      </div>
+    </div>
+
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button onclick="salvarCfgWpp()" class="btn btn-primary">💾 Salvar</button>
       <button onclick="toggleCfgWppForm()" class="btn btn-outline">Cancelar</button>
@@ -662,6 +698,11 @@
 {% block scripts %}
 <script>
 // ── WhatsApp — Configurações ──────────────────────────────────────────────────
+// Tipos de aviso e rótulos curtos (para a coluna "Recebe" da tabela)
+const WPP_TIPOS = ["urgentes","semanal","visita","eventos","mensal","valores"];
+const WPP_CURTO = {urgentes:"urgentes", semanal:"semanal", visita:"visita",
+                   eventos:"morte/nasc.", mensal:"mensal", valores:"R$"};
+
 async function carregarTodosWpp() {
   try {
     const d = await fetch("/api/config-whatsapp-todos", {credentials:"same-origin"}).then(r => r.json());
@@ -680,11 +721,17 @@ async function carregarTodosWpp() {
       const bot = u.bot_number
         ? `<span style="font-family:monospace">${esc(u.bot_number)}</span>`
         : `<span style="color:var(--text-3)">—</span>`;
+      const rec = u.receber || {};
+      const desl = WPP_TIPOS.filter(t => rec[t] === false).map(t => "sem " + WPP_CURTO[t]);
+      const recebe = desl.length
+        ? `<span style="color:#c87000">${esc(desl.join(", "))}</span>`
+        : `<span style="color:var(--text-3)">Tudo</span>`;
       return `<tr>
         <td style="padding:8px 12px;font-weight:600;color:var(--text)">${u.usuario.charAt(0).toUpperCase()+u.usuario.slice(1)}</td>
         <td style="padding:8px 12px">${tel}</td>
         <td style="padding:8px 12px">${bot}</td>
         <td style="padding:8px 12px">${status}</td>
+        <td style="padding:8px 12px">${recebe}</td>
       </tr>`;
     }).join("");
 
@@ -695,6 +742,7 @@ async function carregarTodosWpp() {
           <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-3);letter-spacing:.4px">Telefone</th>
           <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-3);letter-spacing:.4px">Nº do Bot</th>
           <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-3);letter-spacing:.4px">Status</th>
+          <th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-3);letter-spacing:.4px">Recebe</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -725,6 +773,9 @@ async function carregarCfgWpp() {
       document.getElementById("cfg-wpp-bot").value      = d.bot_number || "";
       document.getElementById("cfg-wpp-apikey").value   = "";
       document.getElementById("cfg-wpp-ativo").checked  = d.alertas_ativos;
+      WPP_TIPOS.forEach(t => {
+        document.getElementById("cfg-wpp-rec-" + t).checked = (d.receber || {})[t] !== false;
+      });
     } else {
       elCadastrado.style.display = "none";
       elVazio.style.display      = "block";
@@ -774,7 +825,9 @@ async function salvarCfgWpp() {
   }
 
   // key pode ser vazia = manter a que já está salva no servidor
-  const body = { telefone: tel, bot_number: bot, alertas_ativos: ativ };
+  const receber = {};
+  WPP_TIPOS.forEach(t => { receber[t] = document.getElementById("cfg-wpp-rec-" + t).checked; });
+  const body = { telefone: tel, bot_number: bot, alertas_ativos: ativ, receber };
   if (key) body.apikey = key;
 
   let r;

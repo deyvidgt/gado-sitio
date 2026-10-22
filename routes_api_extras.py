@@ -9,6 +9,7 @@ from datetime import timedelta
 from flask import request, jsonify, session
 from db import carregar_aba, get_alertas_saude
 from saude import ultima_data, brucelose_proxima
+from alertas_whatsapp import TIPOS_RECEBER, receber_de
 from extensions import app, _agora, login_required, _safe, _carregar_usuarios, _salvar_usuarios
 
 
@@ -211,6 +212,7 @@ def api_config_whatsapp_todos():
             "bot_number": wpp.get("bot_number", ""),
             "configurado": bool(wpp.get("apikey", "").strip() and wpp.get("telefone", "").strip()),
             "alertas_ativos": wpp.get("alertas_ativos", True),
+            "receber":    receber_de(wpp),
         })
     return jsonify({"ok": True, "usuarios": resultado})
 
@@ -228,6 +230,7 @@ def api_config_whatsapp():
             "bot_number":        cfg.get("bot_number", "+34644663262"),
             "apikey_configurada": bool(cfg.get("apikey", "").strip()),
             "alertas_ativos":    cfg.get("alertas_ativos", True),
+            "receber":           receber_de(cfg),
         })
 
     data = request.get_json(silent=True) or {}
@@ -248,12 +251,23 @@ def api_config_whatsapp():
     if not key_salva:
         return jsonify({"ok": False, "erro": "API Key obrigatória na primeira configuração."})
 
+    # Só as 6 chaves conhecidas, como bool; sem "receber" no corpo, mantém o salvo
+    # (este dicionário é recriado do zero, então senão a escolha se perderia).
+    if isinstance(data.get("receber"), dict):
+        receber = {t: bool(data["receber"].get(t, True)) for t in TIPOS_RECEBER}
+    else:
+        receber = receber_de(cfg_atual)
+        if "receber" not in cfg_atual:
+            receber = None
+
     usuarios[usuario]["whatsapp"] = {
         "telefone":      tel,
         "apikey":        key_salva,
         "bot_number":    bot_num or cfg_atual.get("bot_number", "+34644663262"),
         "alertas_ativos": bool(data.get("alertas_ativos", True)),
     }
+    if receber is not None:
+        usuarios[usuario]["whatsapp"]["receber"] = receber
     _salvar_usuarios(usuarios)
     return jsonify({"ok": True, "msg": "Configuração salva!"})
 

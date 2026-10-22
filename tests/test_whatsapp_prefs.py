@@ -85,3 +85,51 @@ def test_fila_guarda_tipo_e_excluir(monkeypatch, dados_restaurados):
     monkeypatch.setattr(aw, "enviar_para_familia", lambda msg, **kw: chamadas.append((msg, kw)) or 1)
     aw.enviar_avisos_pendentes()
     assert chamadas[0][1] == {"tipo": "eventos", "excluir_usuario": "Deyvid", "msg_sem_valores": "s"}
+
+
+# ── API de preferências ──────────────────────────────────────────────────────
+@pytest.fixture
+def usuarios_restaurados():
+    """Guarda o usuarios.json da pasta de teste e o restaura no fim."""
+    import os
+    import shutil
+    from extensions import _usuarios_path
+    arq = _usuarios_path()
+    existia = os.path.exists(arq)
+    copia = arq + ".antes_do_teste"
+    if existia:
+        shutil.copy2(arq, copia)
+    yield
+    if existia:
+        shutil.move(copia, arq)
+    elif os.path.exists(arq):
+        os.remove(arq)
+
+
+def test_api_grava_e_devolve_receber(cliente, usuarios_restaurados):
+    r = cliente.post("/api/config-whatsapp", json={
+        "telefone": "5534999", "apikey": "k", "bot_number": "+34644663262",
+        "receber": {"semanal": False, "xyz": True}})
+    assert r.get_json()["ok"] is True
+    d = cliente.get("/api/config-whatsapp").get_json()
+    assert d["receber"]["semanal"] is False
+    assert d["receber"]["visita"] is True
+    assert "xyz" not in d["receber"]
+    assert set(d["receber"]) == set(TIPOS)
+    todos = cliente.get("/api/config-whatsapp-todos").get_json()["usuarios"]
+    meu = next(u for u in todos if u["usuario"] == "deyvid")
+    assert meu["receber"]["semanal"] is False
+
+
+def test_api_post_sem_receber_mantem(cliente, usuarios_restaurados):
+    base = {"telefone": "5534999", "apikey": "k", "bot_number": "+34644663262"}
+    cliente.post("/api/config-whatsapp", json={**base, "receber": {"semanal": False}})
+    cliente.post("/api/config-whatsapp", json=base)
+    d = cliente.get("/api/config-whatsapp").get_json()
+    assert d["receber"]["semanal"] is False
+
+
+def test_pagina_tem_as_seis_caixinhas(cliente):
+    html = cliente.get("/configuracoes").get_data(as_text=True)
+    for t in TIPOS:
+        assert f'id="cfg-wpp-rec-{t}"' in html
