@@ -133,3 +133,9 @@ def test_pagina_tem_as_seis_caixinhas(cliente):
     html = cliente.get("/configuracoes").get_data(as_text=True)
     for t in TIPOS:
         assert f'id="cfg-wpp-rec-{t}"' in html
+
+
+def test_tabela_de_todos_rola_na_horizontal(cliente):
+    # 5 colunas estouram a tela do celular se a tabela não tiver wrapper com scroll
+    html = cliente.get("/configuracoes").get_data(as_text=True)
+    assert 'overflow-x:auto' in html.split("async function carregarTodosWpp")[1].split("async function carregarCfgWpp")[0]
