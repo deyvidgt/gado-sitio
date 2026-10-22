@@ -247,6 +247,8 @@ def montar_msg_nova_visita(row: dict, estoque_esperado: int) -> str:
 DIA_RESUMO_SEMANAL = 0          # 0 = segunda-feira
 REPETIR_URGENTE_DIAS = 3
 DIAS_SEM_VISITA_URGENTE = 14
+BRUCELOSE_URGENTE_DIAS = 15     # faltando tantos dias para fechar a janela (240 d), vira urgente
+BRUCELOSE_FIM_JANELA_DIAS = 240
 
 
 def _agora_br() -> datetime:
@@ -263,8 +265,10 @@ def montar_itens(hoje: datetime | None = None) -> list[dict]:
     hoje = hoje or _agora_br()
     itens = []
 
-    def item(chave, texto, urgente=False, repetir=REPETIR_URGENTE_DIAS):
-        itens.append({"chave": chave, "texto": texto, "urgente": urgente, "repetir": repetir})
+    def item(chave, texto, urgente=False, repetir=REPETIR_URGENTE_DIAS, valores=False):
+        # valores=True: linha com R$, que some para quem desligou "valores"
+        itens.append({"chave": chave, "texto": texto, "urgente": urgente,
+                      "repetir": repetir, "valores": valores})
 
     try:
         dados  = carregar_todas()
@@ -281,8 +285,7 @@ def montar_itens(hoje: datetime | None = None) -> list[dict]:
     for tipo, intervalo in get_alertas_saude().items():
         ult = ultima_data(df_m, tipo)
         if ult is None:
-            item(f"saude:{tipo}:sem", f"📋 {tipo}: nenhum registro ainda.")
-            continue
+            continue   # "nenhum registro ainda" toda semana era ruído
         prevista = ult.to_pydatetime() + timedelta(days=intervalo)
         faltam = (prevista - hoje_d).days
         if faltam < 0:
@@ -349,11 +352,25 @@ def montar_itens(hoje: datetime | None = None) -> list[dict]:
             r = calcular_resumo_financeiro(df_c, df_g, df_v, df_m)
             item("fin:resumo",
                  f"💰 Rebanho: {r['estoque']} cab. · custo médio {fmt_r(r['ctcab'])}/cab. · "
-                 f"break-even {fmt_r(r['break_even'])}/cab.")
-            if r["resultado_realizado"] < 0:
-                item("fin:negativo", f"📉 Resultado realizado: {fmt_r(r['resultado_realizado'])}")
+                 f"break-even {fmt_r(r['break_even'])}/cab.", valores=True)
     except Exception as e:
         logging.error(f"Erro no resumo financeiro: {e}")
+
+    # ── 4b) Brucelose por animal: fêmeas na janela de 3 a 8 meses ────────────
+    try:
+        import animais
+        df_an = animais.carregar()
+        for b in animais.janela_brucelose(df_an, df_m, hoje):
+            a = b["animal"]
+            nome = animais.fmt_brinco(a["Brinco Cor"], a["Brinco Nº"])
+            if b["situacao"] == "na janela":
+                faltam = BRUCELOSE_FIM_JANELA_DIAS - (hoje - a["Nascimento"]).days
+                item(f"brucelose:{a['ID']}", f"💉 Brucelose: {nome} — {b['msg']}",
+                     urgente=faltam <= BRUCELOSE_URGENTE_DIAS)
+            else:
+                item(f"brucelose:{a['ID']}", f"🗓️ Brucelose: {nome} {b['msg']}")
+    except Exception as e:
+        logging.error(f"Erro na brucelose por animal: {e}")
 
     # ── 5) Fotos: Drive parou de aceitar (token revogado, pasta sumiu…) ───────
     # As fotos ficam guardadas nos celulares; o aviso é para alguém consertar.
@@ -421,16 +438,27 @@ def _marcar_enviados(itens: list[dict], hoje: datetime, estado: dict) -> dict:
 
 # ── Mensagens ─────────────────────────────────────────────────────────────────
 
-def montar_msg_urgente(itens: list[dict], hoje: datetime | None = None) -> str:
+def _sem_valores(itens: list[dict], com_valores: bool) -> list[dict]:
+    """Tira as linhas com R$ para quem desligou "valores". Item sem a chave
+    (ex.: lista montada por outro código) conta como sem valores."""
+    return itens if com_valores else [it for it in itens if not it.get("valores", False)]
+
+
+def montar_msg_urgente(itens: list[dict], hoje: datetime | None = None,
+                       com_valores: bool = True) -> str:
     hoje = hoje or _agora_br()
+    itens = _sem_valores(itens, com_valores)
     linhas = ["🐄 *Sítio Santo Antonio*", f"🚨 *Alertas — {hoje:%d/%m/%Y}*", ""]
     linhas += [it["texto"] for it in itens]
     linhas += ["", "_Resumo completo toda segunda-feira._"]
     return "\n".join(linhas)
 
 
-def montar_msg_semanal(itens: list[dict], hoje: datetime | None = None) -> str:
+def montar_msg_semanal(itens: list[dict], hoje: datetime | None = None,
+                       com_valores: bool = True, semana: dict | None = None) -> str:
+    # `semana` (resumo da semana) é preenchido na próxima etapa; ignorado por ora.
     hoje = hoje or _agora_br()
+    itens = _sem_valores(itens, com_valores)
     urg = [it["texto"] for it in itens if it["urgente"]]
     resto = [it["texto"] for it in itens if not it["urgente"]]
     linhas = ["🐄 *Sítio Santo Antonio*", f"📅 *Resumo semanal — {hoje:%d/%m/%Y}*", ""]
@@ -595,7 +623,8 @@ def main(argv: list[str] | None = None) -> int:
     estado = _ler_estado()
 
     if semanal or hoje.weekday() == DIA_RESUMO_SEMANAL:
-        msg, enviar_itens = montar_msg_semanal(itens, hoje), itens
+        tipo, enviar_itens = "semanal", itens
+        msg, msg_sv = (montar_msg_semanal(itens, hoje), montar_msg_semanal(itens, hoje, com_valores=False))
     else:
         enviar_itens = urgentes_a_enviar(itens, hoje, estado)
         if not enviar_itens:
@@ -603,13 +632,16 @@ def main(argv: list[str] | None = None) -> int:
             if teste:
                 print("(nenhum alerta urgente novo hoje — nada seria enviado)")
             return 0
-        msg = montar_msg_urgente(enviar_itens, hoje)
+        tipo = "urgentes"
+        msg, msg_sv = (montar_msg_urgente(enviar_itens, hoje), montar_msg_urgente(enviar_itens, hoje, com_valores=False))
 
     if teste:
         print(msg)
+        print("\n--- sem valores ---")
+        print(msg_sv)
         return 0
 
-    enviados = enviar_para_familia(msg)
+    enviados = enviar_para_familia(msg, tipo=tipo, msg_sem_valores=msg_sv)
     logging.info(f"Concluído: {enviados} mensagem(s) enviada(s)")
     if enviados:
         _gravar_estado(_marcar_enviados(enviar_itens, hoje, estado))
