@@ -570,8 +570,14 @@ def novo_manejo():
         salvar_linha("Manejo", [f.get("data") or _agora().strftime("%d/%m/%Y"), f.get("tipo"), _int_form(f.get("cabecas")),
                                 f.get("descricao", "").strip(), f.get("responsavel", ""),
                                 perda_de, produto, nasc_de, form["brincos_refs"]])
+        from alertas_whatsapp import avisar_manejo
+        from routes_visitas import _enviar_avisos_depois
+        from routes_animais import _membro_logado
+        avisar_manejo(f.get("tipo", ""), _int_form(f.get("cabecas")), form["brincos_refs"],
+                      perda_de or nasc_de, f.get("descricao", ""),
+                      registrado_por=_membro_logado() or f.get("responsavel", ""))
         flash(f"Manejo registrado! ({f.get('tipo')})", "success")
-        return redirect(url_for("manejo"))
+        return _enviar_avisos_depois(redirect(url_for("manejo")))
     return render_template("form_manejo.html", estoque=estoque, TIPOS=TIPOS_MANEJO,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            TIPOS_COM_PRODUTO=TIPOS_COM_PRODUTO,

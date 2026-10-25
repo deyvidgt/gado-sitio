@@ -90,17 +90,6 @@ def test_api_csrf_entrega_token_da_sessao(cliente):
     assert cliente.get("/api/csrf").get_json()["csrf_token"] == "abc"
 
 
-@pytest.fixture
-def fila_avisos_vazia():
-    import alertas_whatsapp
-    caminho = alertas_whatsapp._pendentes_path()
-    if caminho.exists():
-        caminho.unlink()
-    yield caminho
-    if caminho.exists():
-        caminho.unlink()
-
-
 def test_aviso_de_visita_roda_depois_da_resposta(cliente, dados_restaurados, monkeypatch,
                                                   fila_avisos_vazia):
     """Sem thread: o envio roda ao fechar a resposta (call_on_close)."""

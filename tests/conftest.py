@@ -71,3 +71,23 @@ def dados_restaurados():
     yield
     shutil.move(copia, arq)
     _cache_invalidar()
+
+
+@pytest.fixture
+def fila_avisos_vazia():
+    import alertas_whatsapp
+    caminho = alertas_whatsapp._pendentes_path()
+    if caminho.exists():
+        caminho.unlink()
+    yield caminho
+    if caminho.exists():
+        caminho.unlink()
+
+
+@pytest.fixture(autouse=True)
+def _whatsapp_nunca_envia(monkeypatch):
+    """O usuarios.json copiado tem os telefones reais: nenhum teste pode mandar
+    mensagem de verdade (morte/nascimento agora avisam na hora). Quem quer conferir
+    o envio sobrescreve com o próprio monkeypatch."""
+    import alertas_whatsapp
+    monkeypatch.setattr(alertas_whatsapp, "enviar_whatsapp", lambda *a, **k: True)

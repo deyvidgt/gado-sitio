@@ -17,6 +17,7 @@ from calculos import calcular_estoque, calcular_estoque_por_membro
 from config import (MEMBROS, NOMES_MEMBROS, CORES_BRINCO, CATEGORIAS_ANIMAL,
                     ORIGENS_ANIMAL, COLUNAS_MANEJO, TIPOS_COM_PRODUTO, TIPOS_FOTO)
 from db import fazer_backup
+from routes_visitas import _enviar_avisos_depois
 from extensions import (app, _agora, _validar_csrf, login_required, _get_dados_cache,
                         salvar_linha, fmt_data, _limpar_backups_antigos, _ler_sitio_config_disco)
 
@@ -141,9 +142,9 @@ def novo_animal():
         extra = " e o Nascimento no Manejo" if reg["Origem"] == "Nascimento" else ""
         flash(f"🏷️ {A.fmt_brinco(reg['Brinco Cor'], reg['Brinco Nº'])} cadastrado{extra}!", "success")
         if f.get("outro"):
-            return redirect(url_for("novo_animal", dono=reg["Dono"], categoria=reg["Categoria"],
-                                    origem=reg["Origem"], raca=reg["Raça"]))
-        return redirect(url_for("ficha_animal", id_=reg["ID"]))
+            return _enviar_avisos_depois(redirect(url_for("novo_animal", dono=reg["Dono"], categoria=reg["Categoria"],
+                                    origem=reg["Origem"], raca=reg["Raça"])))
+        return _enviar_avisos_depois(redirect(url_for("ficha_animal", id_=reg["ID"])))
     return render_template("form_animal.html", modo="novo", row=None, form=request.args,
                            **_ctx_templates())
 
@@ -197,7 +198,7 @@ def brincar_compra(idx):
             for av in reg["avisos"]:
                 flash(av, "warning")
         flash(f"🏷️ {len(feitos)} animal(is) com brinco cadastrados!", "success")
-        return redirect(url_for("animais"))
+        return _enviar_avisos_depois(redirect(url_for("animais")))
 
     # Sugestão: uma linha por cabeça, na divisão da compra, nº seguido por cor.
     df = A.carregar()
@@ -329,7 +330,7 @@ def baixa_animal(id_):
         flash("Baixa por morte registrada" + (" (e a Morte/Perda no Manejo)." if f.get("registrar_morte") else "."), "success")
     else:
         flash("Marcado como vendido. Lembre de registrar o valor em Nova Venda.", "success")
-    return redirect(url_for("ficha_animal", id_=id_))
+    return _enviar_avisos_depois(redirect(url_for("ficha_animal", id_=id_)))
 
 
 @app.route("/animais/<id_>/excluir", methods=["POST"])
@@ -411,7 +412,7 @@ def api_voz_executar():
         msg, url = _executar(resp["payload"])
     except ValueError as e:
         return jsonify({"ok": False, "erro": str(e)}), 400
-    return jsonify({"ok": True, "msg": msg, "url": url})
+    return _enviar_avisos_depois(jsonify({"ok": True, "msg": msg, "url": url}))
 
 
 def _executar(p: dict):
@@ -426,6 +427,10 @@ def _executar(p: dict):
     if acao == "manejo":
         linha = p["linha"]
         salvar_linha("Manejo", [linha.get(c, "") for c in COLUNAS_MANEJO])
+        from alertas_whatsapp import avisar_manejo
+        avisar_manejo(linha["Tipo"], linha["Qtd Cabeças"], linha.get("Brincos", ""),
+                      linha.get("Perda De") or linha.get("Nascimento De", ""),
+                      linha.get("Descrição", ""), registrado_por=membro)
         return f"🩺 {linha['Tipo']} registrado ({linha['Qtd Cabeças']} cab.).", url_for("manejo")
     if acao == "morte":
         fazer_backup_seguro()

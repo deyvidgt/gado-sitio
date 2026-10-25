@@ -643,6 +643,41 @@ def guardar_aviso_pendente(msg: str, tipo: str = "visita", excluir: str = "",
     os.replace(tmp, caminho)
 
 
+def avisar_manejo(tipo: str, qtd: int, brincos: str = "", de: str = "", descricao: str = "",
+                  registrado_por: str = "") -> bool:
+    """Põe na fila o aviso de Morte/Perda ou Nascimento (tipo "eventos"); quem
+    registrou não recebe. Nunca levanta: o registro já foi gravado, o aviso é extra."""
+    if tipo not in ("Nascimento", "Morte/Perda"):
+        return False
+    try:
+        from config import NOMES_MEMBROS
+        rotulos = ", ".join(b.split(" #")[0].strip() for b in
+                            str(brincos or "").replace(";", ",").split(",") if b.strip())
+        quem = NOMES_MEMBROS.get(de, de) if de else ""
+        sufixo_brincos = f" — {rotulos}" if rotulos else ""
+        rodape = f"\n_registrado por {NOMES_MEMBROS.get(registrado_por, registrado_por)}_" if registrado_por else ""
+        if tipo == "Nascimento":
+            msg = f"🍼 *Nasceu* {qtd} bezerro(s){sufixo_brincos}" + (f" · de {quem}" if quem else "") + rodape
+            guardar_aviso_pendente(msg, tipo="eventos", excluir=registrado_por, msg_sem_valores=msg)
+            return True
+        corpo = (f"🚨 *Morte/Perda:* {qtd} cab.{sufixo_brincos}"
+                 + (f" · perda de {quem}" if quem else " · rateada entre os três")
+                 + (f"\n{descricao.strip()}" if str(descricao or "").strip() else ""))
+        valor = ""
+        try:
+            d = carregar_todas()
+            r = calcular_resumo_financeiro(d["Compras"], d["Gastos"], d["Vendas"], d["Manejo"])
+            valor = f"\n💸 ~{fmt_r(r['ctcab'])}/cab. (custo médio atual)"
+        except Exception as e:
+            logging.error(f"Aviso de perda sem valor: {e}")
+        guardar_aviso_pendente(corpo + valor + rodape, tipo="eventos", excluir=registrado_por,
+                               msg_sem_valores=corpo + rodape)
+        return True
+    except Exception as e:
+        logging.error(f"Erro ao guardar aviso de {tipo}: {e}")
+        return False
+
+
 def enviar_avisos_pendentes() -> int:
     """Envia e esvazia a fila. Quem consegue renomear o arquivo primeiro é o único
     que envia (os.replace é atômico) — dois processos nunca mandam o mesmo aviso."""

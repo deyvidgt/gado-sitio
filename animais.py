@@ -333,6 +333,9 @@ def cadastrar(lista: list[dict], registrado_por: str = "", responsavel: str = ""
             db.salvar_linha("Manejo", _linha_manejo(
                 data, "Nascimento", 1, desc.strip(), responsavel or registrado_por,
                 nasc_de=reg["Dono"], brincos=ref(reg)))
+            from alertas_whatsapp import avisar_manejo
+            avisar_manejo("Nascimento", 1, ref(reg), reg["Dono"], desc.strip(),
+                          registrado_por=registrado_por or responsavel)
     return [dict(reg, avisos=av) for reg, av in prontos]
 
 
@@ -399,10 +402,13 @@ def dar_baixa(ids: list[str], status: str, data=None, responsavel: str = "",
         return []
     _gravar(df)
     if status == "Morto" and registrar_morte:
+        from alertas_whatsapp import avisar_manejo
         for dono, refs in por_dono.items():
             db.salvar_linha("Manejo", _linha_manejo(
                 data_ts, "Morte/Perda", len(refs), motivo or "Baixa pelo cadastro de animais",
                 responsavel, perda_de=dono, brincos="; ".join(refs)))
+            avisar_manejo("Morte/Perda", len(refs), "; ".join(refs), dono, motivo,
+                          registrado_por=responsavel)
     return feitos
 
 
