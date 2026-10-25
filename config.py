@@ -128,6 +128,8 @@ COLUNAS_MANEJO = [
     "Nascimento De",
     # NOVO v4.3: em quais animais (brincos) o manejo foi feito — mesmo formato de Vendas.
     "Brincos",
+    # NOVO v4.6: peso de cada animal na Pesagem ("Amarelo 21 #A0003: 320 kg; …") — pesagem.py.
+    "Pesos",
 ]
 
 # Tipos de manejo em que o formulário pergunta qual remédio/produto foi usado.

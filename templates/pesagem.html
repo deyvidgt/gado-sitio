@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Pesagem — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Pesagem ⚖️{% endblock %}
+
+{% block content %}
+<style>
+  .pes-lista { display:flex; flex-direction:column; gap:10px; }
+  .pes-item { display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:var(--surface);
+              border-radius:var(--radius); box-shadow:var(--shadow); padding:12px 14px; }
+  .pes-item .quem { flex:1 1 180px; min-width:0; }
+  .pes-item .quem b { display:flex; align-items:center; gap:8px; }
+  .pes-item .bol { width:14px; height:14px; border-radius:50%; border:1.5px solid rgba(0,0,0,.25); flex:none; }
+  .pes-item input { width:120px; font-size:20px; text-align:right; padding:8px 10px; }
+  .pes-item .ganho { min-width:110px; font-size:13px; }
+  .muted { color:var(--text-3); font-size:12px; }
+  .pos { color:var(--green-700); font-weight:600; }
+  .neg { color:var(--danger); font-weight:600; }
+  .pes-barra { position:sticky; bottom:0; background:var(--surface); padding:12px 0; margin-top:14px;
+               display:flex; gap:10px; align-items:center; flex-wrap:wrap; border-top:1px solid var(--cream-dk); }
+</style>
+
+<div class="section-head">
+  <h2>{% if so_id and rows %}Pesar {{ rows[0].brinco }}{% else %}Pesar o rebanho{% endif %}</h2>
+  {% if n_pesados %}<span class="muted">Peso médio dos {{ n_pesados }} já pesados: <b>{{ '%.0f' % peso_medio }} kg</b></span>{% endif %}
+</div>
+
+{% if not rows %}
+  <p class="muted">Nenhum animal vivo com brinco. <a href="{{ url_for('novo_animal') }}">Cadastre os animais</a> para pesar um por um.</p>
+{% else %}
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="so_id" value="{{ so_id }}">
+  <div class="form-grid" style="margin-bottom:14px">
+    <div class="form-group"><label>Data</label><input type="date" name="data" value="{{ hoje }}" required></div>
+    <div class="form-group"><label>Observação (opcional)</label>
+      <input type="text" name="obs" maxlength="160" placeholder="ex: balança do vizinho, em jejum"></div>
+  </div>
+  <p class="muted" style="margin-bottom:10px">Digite só o peso de quem passou na balança — os vazios ficam de fora.</p>
+
+  <div class="pes-lista">
+    {% for r in rows %}
+    <div class="pes-item">
+      <div class="quem">
+        <b><span class="bol" style="background:{{ r.hex }}"></span>
+          <a href="{{ url_for('ficha_animal', id_=r.id) }}">{{ r.brinco }}</a></b>
+        <span class="muted">{{ r.categoria or 'Animal' }} · {{ NOMES.get(r.dono, r.dono) }}
+          {% if r.peso %}· último {{ '%.0f' % r.peso.kg }} kg em {{ r.peso.data|data_br }}{% else %}· nunca pesado{% endif %}</span>
+      </div>
+      <input type="text" name="peso_{{ r.id }}" inputmode="decimal" placeholder="kg" autocomplete="off"
+             aria-label="Peso de {{ r.brinco }} em kg"
+             data-ultimo="{{ r.peso.kg if r.peso else '' }}"
+             data-dias="{{ ((now_date - r.peso.data).days) if r.peso else '' }}"
+             {{ 'autofocus' if so_id }}>
+      <span class="ganho muted" aria-live="polite"></span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="pes-barra">
+    <button class="btn btn-primary">⚖️ Salvar pesagem</button>
+    {% if so_id %}<a href="{{ url_for('ficha_animal', id_=so_id) }}" class="btn btn-outline">Cancelar</a>
+    {% else %}<a href="{{ url_for('animais') }}" class="btn btn-outline">← Animais</a>{% endif %}
+    <span class="muted" id="pes-contagem"></span>
+  </div>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const campos = document.querySelectorAll(".pes-item input");
+  const cont = document.getElementById("pes-contagem");
+  function atualizar() {
+    let n = 0;
+    campos.forEach(inp => {
+      const kg = parseFloat(inp.value.replace(",", "."));
+      const out = inp.nextElementSibling;
+      out.textContent = ""; out.className = "ganho muted";
+      if (!kg) return;
+      n++;
+      const ult = parseFloat(inp.dataset.ultimo), dias = parseInt(inp.dataset.dias, 10);
+      if (!ult) return;
+      const dif = kg - ult;
+      out.className = "ganho " + (dif >= 0 ? "pos" : "neg");
+      out.textContent = (dif >= 0 ? "+" : "") + dif.toFixed(1).replace(".", ",") + " kg" +
+        (dias > 0 ? " · " + (dif / dias).toFixed(2).replace(".", ",") + " kg/dia" : "");
+    });
+    if (cont) cont.textContent = n ? n + " pesado(s)" : "";
+  }
+  campos.forEach(i => i.addEventListener("input", atualizar));
+  // Enter pula para o próximo animal em vez de enviar (balança: digita e segue).
+  campos.forEach((inp, k) => inp.addEventListener("keydown", e => {
+    if (e.key === "Enter" && campos[k + 1]) { e.preventDefault(); campos[k + 1].focus(); }
+  }));
+})();
+</script>
+{% endblock %}

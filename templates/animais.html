@@ -33,6 +33,7 @@
   <h2>Rebanho com brinco <span class="muted">({{ total_vivos }} vivos)</span></h2>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <a href="{{ url_for('voz') }}" class="btn btn-outline">🎤 Comando de voz</a>
+    <a href="{{ url_for('pesagem') }}" class="btn btn-outline">⚖️ Pesagem</a>
     <a href="{{ url_for('novo_animal') }}" class="btn btn-primary">+ Cadastrar animal</a>
   </div>
 </div>
@@ -77,7 +78,7 @@
   <table class="tab-animais">
     <thead><tr>
       <th>Brinco</th><th>Dono</th><th>Categoria</th><th class="col-opc">Raça / Pelagem</th>
-      <th class="col-opc">Idade</th><th class="col-opc">Origem</th>{% if status != 'Vivo' %}<th>Situação</th>{% endif %}
+      <th class="col-opc">Idade</th><th>Peso</th><th class="col-opc">Origem</th>{% if status != 'Vivo' %}<th>Situação</th>{% endif %}
     </tr></thead>
     <tbody>
     {% for r in rows %}
@@ -88,6 +89,7 @@
         <td class="col-opc">{{ r.raca or '—' }}{% if r.pelagem %} · {{ r.pelagem }}{% endif %}
           {% if r.sinais %}<div class="muted">{{ r.sinais }}</div>{% endif %}</td>
         <td class="col-opc">{{ r.idade or '—' }}</td>
+        <td>{% if r.peso %}{{ '%.0f' % r.peso.kg }} kg{% if r.peso.gmd is not none %}<br><span class="muted">{{ '%.2f' % r.peso.gmd }} kg/dia</span>{% endif %}{% else %}—{% endif %}</td>
         <td class="col-opc">{{ r.origem }}</td>
         {% if status != 'Vivo' %}<td>{{ r.status }}{% if r.saida %} <span class="muted">{{ r.saida }}</span>{% endif %}</td>{% endif %}
       </tr>

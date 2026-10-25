@@ -67,6 +67,12 @@ def dashboard():
         rendimento = float(cfg.get("rendimento", 52) or 52)
     except (TypeError, ValueError):
         rendimento = 52.0
+    peso_pesado = False
+    if peso_medio <= 0:
+        # Sem peso médio nas Configurações: usa o último peso dos animais pesados.
+        import animais, pesagem
+        peso_medio = round(pesagem.peso_medio_vivos(animais.carregar(), dados["Manejo"])[0], 1)
+        peso_pesado = peso_medio > 0
     rebanho_est = None
     if peso_medio > 0 and r.get("estoque", 0) > 0:
         rebanho_est = estimar_rebanho_arroba(
@@ -74,6 +80,7 @@ def dashboard():
             rendimento / 100.0,
         )
         rebanho_est["peso_medio"]   = peso_medio
+        rebanho_est["peso_pesado"]  = peso_pesado
         rebanho_est["rendimento"]   = rendimento
         rebanho_est["preco_arroba"] = preco_arroba
 

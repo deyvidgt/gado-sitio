@@ -1156,6 +1156,10 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
                 "Data": data_iso, "Tipo": tipo, "Qtd Cabeças": qtd, "Descrição": desc,
                 "Responsável": membro, "Perda De": perda_de, "Produto": produto,
                 "Brincos": "; ".join(refs)}}
+            if tipo == "Pesagem" and refs:
+                from pesagem import fmt_pesos
+                pares = [(r, p) for r, p in zip(refs, intencao.get("pesos") or []) if p]
+                out["payload"]["linha"]["Pesos"] = fmt_pesos(pares)
         out["url_form"] = "/manejo/novo?" + urlencode({
             "prefill": 1, "tipo": tipo, "cabecas": qtd, "produto": produto, "descricao": desc,
             "brincos": ", ".join(r.split(" #")[0] for r in refs), "data": data_iso,

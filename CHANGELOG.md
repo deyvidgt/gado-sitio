@@ -4,6 +4,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado
+- **Pesagem por animal e GMD**: página **⚖️ Pesagem** (Animais) para pesar o rebanho no
+  curral — um campo por brinco, mostra o ganho na hora. A ficha do animal ganhou o cartão
+  **Peso**: último peso, @ estimadas, GMD do último período e desde a 1ª pesagem, e o
+  gráfico do peso ao longo do tempo. A lista de animais mostra o último peso.
+- Coluna **Pesos** no fim da aba Manejo (`"Amarelo 21 #A0003: 320 kg; …"`); a pesagem por
+  voz também grava nela. Pesagens antigas da voz (peso só na descrição) são lidas.
+- Painel: sem peso médio nas Configurações, a estimativa do rebanho usa a média pesada.
+
 ### Corrigido
 - Datas dos formulários de edição (compra, gasto, venda, manejo): a data ISO do campo
   `date` do navegador é lida sem `dayfirst` — o log não enche mais de avisos do pandas.

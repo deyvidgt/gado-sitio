@@ -287,10 +287,10 @@ def normalizar(dados: dict, df: pd.DataFrame, reservados_num=None, exceto_id=Non
 
 
 def _linha_manejo(data, tipo, qtd, desc, responsavel, perda_de="", produto="",
-                  nasc_de="", brincos="") -> list:
+                  nasc_de="", brincos="", pesos="") -> list:
     vals = {"Data": data, "Tipo": tipo, "Qtd Cabeças": qtd, "Descrição": desc,
             "Responsável": responsavel, "Perda De": perda_de, "Produto": produto,
-            "Nascimento De": nasc_de, "Brincos": brincos}
+            "Nascimento De": nasc_de, "Brincos": brincos, "Pesos": pesos}
     return [vals.get(c, "") for c in COLUNAS_MANEJO]
 
 

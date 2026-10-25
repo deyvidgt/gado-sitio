@@ -27,6 +27,10 @@
   .foto-item .est { position:absolute; right:4px; top:4px; font-size:14px; }
   .foto-item.pendente { opacity:.6; cursor:default; }
   .foto-form { display:none; margin-top:12px; padding:12px; border-radius:10px; background:var(--surface-2); }
+  .peso-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  .peso-kpis div { display:flex; flex-direction:column; gap:2px; }
+  .peso-kpis b { font-size:20px; }
+  .pos { color:var(--green-700); } .neg { color:var(--danger); }
   .visor { position:fixed; inset:0; background:rgba(0,0,0,.88); display:none; flex-direction:column; align-items:center; justify-content:center; z-index:1000; padding:16px; }
   .visor img { max-width:100%; max-height:70vh; border-radius:10px; }
   .visor .info { color:#fff; margin:10px 0; font-size:13.5px; text-align:center; }
@@ -54,6 +58,7 @@
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     <a href="{{ url_for('editar_animal', id_=a.id) }}" class="btn btn-outline btn-sm">✏️ Editar</a>
     {% if a.status == 'Vivo' %}
+    <a href="{{ url_for('pesagem', id=a.id) }}" class="btn btn-outline btn-sm">⚖️ Pesar</a>
     <a href="{{ url_for('novo_manejo', prefill=1, brincos=a.brinco, cabecas=1) }}" class="btn btn-primary btn-sm">🩺 Manejo neste animal</a>
     {% endif %}
   </div>
@@ -91,6 +96,28 @@
       <p class="muted">Nada registrado neste brinco ainda. Vacinas, vermífugos e pesagens com o brinco aparecem aqui.</p>
     {% endif %}
   </div>
+</div>
+
+<div class="card" id="peso" style="margin-top:20px">
+  <div class="card-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <span>⚖️ Peso</span>
+    {% if a.status == 'Vivo' %}<a href="{{ url_for('pesagem', id=a.id) }}" class="btn btn-primary btn-sm" style="margin-left:auto">⚖️ Pesar agora</a>{% endif %}
+  </div>
+  {% if peso %}
+  <div class="peso-kpis">
+    <div><span class="muted">Último peso</span><b>{{ '%.1f' % peso.kg }} kg</b><span class="muted">{{ peso.data|data_br }}</span></div>
+    <div><span class="muted">Arrobas (carcaça)</span><b>{{ '%.1f' % peso.arrobas }} @</b><span class="muted">rend. das Configurações</span></div>
+    <div><span class="muted">GMD último período</span>
+      {% if peso.gmd is not none %}<b class="{{ 'pos' if peso.gmd >= 0 else 'neg' }}">{{ '%.2f' % peso.gmd }} kg/dia</b><span class="muted">em {{ peso.dias }} dias</span>
+      {% else %}<b>—</b><span class="muted">precisa de 2 pesagens</span>{% endif %}</div>
+    <div><span class="muted">GMD desde a 1ª</span>
+      {% if peso.gmd_total is not none %}<b class="{{ 'pos' if peso.gmd_total >= 0 else 'neg' }}">{{ '%.2f' % peso.gmd_total }} kg/dia</b><span class="muted">{{ peso.n }} pesagens</span>
+      {% else %}<b>—</b><span class="muted">{{ peso.n }} pesagem</span>{% endif %}</div>
+  </div>
+  {% if pesos|length > 1 %}<div style="position:relative;height:220px;margin-top:14px"><canvas id="chartPeso" aria-label="Peso ao longo do tempo"></canvas></div>{% endif %}
+  {% else %}
+    <p class="muted">Ainda não foi pesado. Pese de tempos em tempos (a cada 3 meses) para ver o ganho por dia.</p>
+  {% endif %}
 </div>
 
 <div class="card" id="fotos" style="margin-top:20px" data-animal="{{ a.id }}">
@@ -300,6 +327,21 @@
   }
   mostrarPendentes();
   document.addEventListener("fotos:atualizadas", () => location.reload());
+})();
+
+(function () {
+  const el = document.getElementById("chartPeso");
+  if (!el || !window.Chart) return;
+  new Chart(el, {
+    type: "line",
+    data: {
+      labels: {{ pesos|map(attribute=0)|map('data_br')|list|tojson }},
+      datasets: [{ label: "Peso (kg)", data: {{ pesos|map(attribute=1)|list|tojson }},
+                   borderColor: "#2e7d4f", backgroundColor: "rgba(46,125,79,.12)", fill: true, tension: .2 }]
+    },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false } },
+               scales: { y: { title: { display: true, text: "kg" } } } }
+  });
 })();
 
 (function () {

@@ -12,12 +12,13 @@ import animais as A
 import comando_voz as V
 import drive
 import fotos as F
+import pesagem as P
 from calculos import calcular_estoque, calcular_estoque_por_membro
 from config import (MEMBROS, NOMES_MEMBROS, CORES_BRINCO, CATEGORIAS_ANIMAL,
                     ORIGENS_ANIMAL, COLUNAS_MANEJO, TIPOS_COM_PRODUTO, TIPOS_FOTO)
 from db import fazer_backup
 from extensions import (app, _agora, _validar_csrf, login_required, _get_dados_cache,
-                        salvar_linha, fmt_data, _limpar_backups_antigos)
+                        salvar_linha, fmt_data, _limpar_backups_antigos, _ler_sitio_config_disco)
 
 
 def fazer_backup_seguro():
@@ -61,6 +62,14 @@ def _mae_do_form(txt: str) -> str:
     return refs[0] if len(refs) == 1 and not erros else txt
 
 
+def _rendimento() -> float:
+    """Rendimento de carcaça das Configurações (52% se não tiver)."""
+    try:
+        return float(_ler_sitio_config_disco().get("rendimento", 52) or 52) / 100.0
+    except (TypeError, ValueError):
+        return 0.52
+
+
 def _linha_animal(a, hoje):
     return {"id": a["ID"], "cor": a["Brinco Cor"], "num": a["Brinco Nº"],
             "brinco": A.fmt_brinco(a["Brinco Cor"], a["Brinco Nº"]),
@@ -87,7 +96,10 @@ def animais():
     lista = lista.sort_values(["Brinco Cor", "Brinco Nº"], na_position="last")
     est_m = calcular_estoque_por_membro(dados["Compras"], dados["Vendas"], dados["Manejo"])
     proximos = {m: A.proximo_numero(df, c) for m, c in A.cores_brinco().items()}
-    return render_template("animais.html", rows=[_linha_animal(a, hoje) for _, a in lista.iterrows()],
+    pesos = P.todas(dados["Manejo"])
+    rows = [{**_linha_animal(a, hoje), "peso": P.resumo(pesos.get(a["ID"], []))}
+            for _, a in lista.iterrows()]
+    return render_template("animais.html", rows=rows,
                            status=status, total_vivos=len(A.vivos(df)),
                            conferencia=A.conferencia(df, est_m),
                            brucelose=[{**_linha_animal(b["animal"], hoje), "msg": b["msg"],
@@ -204,6 +216,43 @@ def brincar_compra(idx):
                            ref_compra=ref_compra, **_ctx_templates())
 
 
+@app.route("/animais/pesagem", methods=["GET", "POST"])
+@login_required
+def pesagem():
+    """Pesagem no curral: um campo de peso por animal vivo; grava uma linha
+    Pesagem no Manejo. ?id=A0003 mostra só esse animal (botão da ficha)."""
+    df = A.carregar()
+    if request.method == "POST":
+        _validar_csrf()
+        f = request.form
+        ids = [k[5:] for k in f if k.startswith("peso_")]
+        try:
+            pares = P.validar({i: f.get(f"peso_{i}") for i in ids}, df)
+        except ValueError as e:
+            flash(str(e), "error")
+            return redirect(url_for("pesagem", id=f.get("so_id") or None))
+        P.registrar(pares, f.get("data"), responsavel=_membro_logado(),
+                    obs=f.get("obs", "").strip())
+        flash(f"⚖️ Pesagem de {len(pares)} animal(is) registrada!", "success")
+        if len(pares) == 1:
+            return redirect(url_for("ficha_animal", id_=A.ids_de(pares[0][0])[0]))
+        return redirect(url_for("pesagem"))
+    dados = _get_dados_cache()
+    vivos = A.vivos(df).sort_values(["Brinco Cor", "Brinco Nº"], na_position="last")
+    so_id = request.args.get("id", "")
+    if so_id:
+        vivos = vivos[vivos["ID"] == so_id]
+    hoje = _agora()
+    rend = _rendimento()
+    pesos = P.todas(dados["Manejo"])
+    rows = [{**_linha_animal(a, hoje), "peso": P.resumo(pesos.get(a["ID"], []), rend)}
+            for _, a in vivos.iterrows()]
+    medio, n = P.peso_medio_vivos(df, dados["Manejo"])
+    return render_template("pesagem.html", rows=rows, so_id=so_id, peso_medio=medio,
+                           n_pesados=n, rendimento=rend,
+                           now_date=pd.Timestamp(hoje).normalize(), **_ctx_templates())
+
+
 @app.route("/animais/<id_>")
 @login_required
 def ficha_animal(id_):
@@ -216,11 +265,13 @@ def ficha_animal(id_):
     hoje = _agora()
     filhos = df[df["Mãe"].astype(str).str.contains(f"#{id_}", regex=False)]
     mae_id = (A.ids_de(a["Mãe"]) or [None])[0]
+    hist_peso = P.todas(dados["Manejo"]).get(id_, [])
     return render_template("ficha_animal.html", a=_linha_animal(a, hoje), raw=a,
                            nascimento=fmt_data(a["Nascimento"]) if pd.notna(a["Nascimento"]) else "",
                            mae_txt=A._RE_ID.sub("", a["Mãe"]).strip(), mae_id=mae_id,
                            filhos=[_linha_animal(x, hoje) for _, x in filhos.iterrows()],
                            historico=A.historico(id_, dados["Manejo"], dados["Vendas"]),
+                           pesos=hist_peso, peso=P.resumo(hist_peso, _rendimento()),
                            fotos=F.listar(id_), fotos_ativas=drive.configurado() or drive.cliente() is not None,
                            TIPOS_FOTO=TIPOS_FOTO, **_ctx_templates())
 
