@@ -17,10 +17,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - Datas dos formulários de edição (compra, gasto, venda, manejo): a data ISO do campo
   `date` do navegador é lida sem `dayfirst` — o log não enche mais de avisos do pandas.
 
-### Planejado
-- **WhatsApp** (design em `docs/superpowers/specs/2026-10-22-whatsapp-notificacoes-design.md`):
-  cada membro escolhe o que recebe; aviso na hora de Morte/Perda e Nascimento; resumo
-  semanal com "Na semana" e sem linhas repetidas; brucelose por animal.
+### Novo
+- **WhatsApp — cada um escolhe o que recebe** (Configurações → WhatsApp): urgentes,
+  resumo semanal, visita, morte/nascimento e resumo mensal, um a um.
+- **Sem valores**: quem desmarca "Mostrar valores em R$" recebe as mensagens só com
+  cabeças e contagens (semanal, mensal e aviso de perda).
+- **Aviso na hora de Morte/Perda e Nascimento** — pelo formulário de Manejo, pela baixa
+  do animal, pelo cadastro de nascimento e pela voz. Quem registrou não recebe.
+- **Resumo semanal** com a seção "Na semana" (o que aconteceu) e sem linhas repetidas.
+- **Brucelose por animal** nos alertas: cada bezerra na janela de 3 a 8 meses aparece.
+- Pendente: trocar o print `p-config-2.png` da Ajuda pelo com as caixinhas novas.
 
 ## [4.5.1] — 2026-10-19
 

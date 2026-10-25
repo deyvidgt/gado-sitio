@@ -47,7 +47,7 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 | `calculos.py` | **Motor financeiro** (CMP, GPCab, CTCab, resultado por membro, resumo) |
 | `routes_*.py` | Rotas por área (registros, visitas, relatórios, api, usuários, auth…) |
 | `relatorios.py` / `exportar.py` | Geração de relatórios e exportação |
-| `alertas_whatsapp.py` | Notificações via CallMeBot: Task diária só com urgentes (sem repetir), resumo semanal na segunda; fila de avisos de visita (`avisos_pendentes.json`) |
+| `alertas_whatsapp.py` | Notificações via CallMeBot: Task diária só com urgentes (sem repetir), resumo semanal na segunda com "Na semana"; preferências por pessoa (`receber` em `usuarios.json`: urgentes/semanal/visita/eventos/mensal/valores); fila de avisos (`avisos_pendentes.json`) de visita e de Morte/Nascimento (`avisar_manejo`). Testes nunca enviam (fixture autouse no `conftest`) |
 | `saude.py` | Calendário sanitário (Triângulo Mineiro): vacina por tipo, campanha de brucelose, vermifugação 5-7-9 — fonte única p/ painel, calendário e WhatsApp |
 | `backup_automatico.py` | Backup diário (Task do PythonAnywhere) |
 | `resumo_mensal.py` | Resumo do mês no WhatsApp no dia 1º (Task diária; `--teste` só mostra) |
@@ -137,7 +137,8 @@ python -m pytest          # ~5 s; roda numa CÓPIA temporária dos dados
 | `FOTOS_DRIVE.md` | Como autorizar o Google Drive (`configurar_drive.py`) e o que fazer quando o envio de fotos para |
 | `superpowers/specs/2026-10-16-fotos-animais-design.md` | Design das fotos dos animais (v4.4, entregue) |
 | `superpowers/plans/2026-10-16-fotos-animais.md` | Plano de implementação das fotos (v4.4, concluído) |
-| `superpowers/specs/2026-10-22-whatsapp-notificacoes-design.md` | Design das notificações WhatsApp: preferências por pessoa, aviso de Morte/Nascimento, resumo semanal (em andamento) |
+| `superpowers/specs/2026-10-22-whatsapp-notificacoes-design.md` | Design das notificações WhatsApp: preferências por pessoa, aviso de Morte/Nascimento, resumo semanal (entregue) |
+| `superpowers/plans/2026-10-22-whatsapp-notificacoes.md` | Plano de implementação do WhatsApp (concluído) |
 | `superpowers/specs/2026-10-25-varios-sitios-design.md` | Design de vários sítios (cada parente com o seu): donos por sítio, pasta por sítio, seletor — proposta |
 | `client_secret_*.json` | Credencial OAuth do app do Drive — **fora do Git** (`.gitignore`), nunca commitar |
 
