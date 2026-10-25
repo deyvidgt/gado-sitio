@@ -1,6 +1,6 @@
 # Vários sítios (cada parente com o seu) — design
 
-**Status:** proposta, aguardando aprovação · **Data:** 2026-10-25 · **Versão alvo:** 5.0
+**Status:** perguntas respondidas, falta aprovar · **Data:** 2026-10-25 · **Versão alvo:** 5.0
 
 ## Objetivo
 
@@ -48,6 +48,10 @@ Só exige o passo 1 abaixo; não tem seletor e cada parente mantém o seu servid
    Testes: invariantes com 2 e 4 donos, além dos dados reais.
 2. **Pasta por requisição + seletor de sítio + acesso por usuário.**
 3. **Tasks multi-sítio** (backup, WhatsApp, resumo mensal) e página de criar sítio.
+4. **Painel "Família"** — soma dos sítios: rebanho, capital, resultado e cabeças por
+   sítio, lado a lado e no total. Cada número vem do motor do próprio sítio
+   (`calcular_resumo_financeiro` por pasta), então as invariantes valem por sítio e a
+   soma bate. Só leitura: lançar continua sendo dentro de cada sítio.
 
 ## Riscos
 
@@ -56,7 +60,10 @@ Só exige o passo 1 abaixo; não tem seletor e cada parente mantém o seu servid
 - Plano grátis do PythonAnywhere: um site só (ok para esta proposta) e espaço em disco
   dividido entre os sítios (fotos ficam no Drive de cada um).
 
-## Perguntas em aberto
+## Decisões (respondidas em 2026-10-25)
 
-- Os parentes terão **donos/sócios** como aqui, ou é um dono só por sítio?
-- Alguém (você) precisa ver **todos os sítios somados**, ou cada um só o seu?
+- **Vários sócios por sítio, como aqui** → a fase 1 (donos configuráveis, rateio em
+  partes iguais e colunas por dono geradas) é obrigatória e vem primeiro.
+- **Todos da família veem os sítios somados** → entra a fase 4 (painel "Família").
+  Qualquer usuário com acesso a pelo menos um sítio vê o total consolidado e o resumo
+  de cada sítio; os lançamentos e as fichas continuam só para quem é do sítio.
