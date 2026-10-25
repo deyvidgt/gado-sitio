@@ -60,10 +60,27 @@ def test_dia_1_envia_para_familia(monkeypatch):
         def now(cls, tz=None):
             return cls(2026, 10, 1)
     monkeypatch.setattr(rm, "datetime", Dia1)
-    enviados = []
-    monkeypatch.setattr("alertas_whatsapp.enviar_para_familia", lambda msg, **kw: enviados.append(msg) or 2)
+    enviados, kws = [], []
+    monkeypatch.setattr("alertas_whatsapp.enviar_para_familia",
+                        lambda msg, **kw: enviados.append(msg) or kws.append(kw) or 2)
     assert rm.main([]) == 0
     assert len(enviados) == 1 and "Resumo de Setembro/2026" in enviados[0]
+    assert kws[0]["tipo"] == "mensal" and "R$" not in kws[0]["msg_sem_valores"]
+
+
+def test_mensal_sem_valores():
+    g = gastos(("2025-03-05", 500.0), ("2025-03-20", 1_500.0))
+    g["Tipo"] = ["Sal/Proteínado", "Remédio/Vacina"]
+    dados = {
+        "Compras": compras(("2025-03-01", 10, 20_000.0, 4, 3, 3)),
+        "Gastos": g,
+        "Vendas": vendas(("2025-03-25", {"Mae": (2, 6_000.0)})),
+        "Manejo": manejo(("2025-03-02", "Nascimento", 1, None)),
+    }
+    msg = rm.montar_resumo_mensal(dados, 2025, 3, com_valores=False)
+    assert "R$" not in msg and "cabeças" in msg
+    assert "🛒 Compras: 10 cab" in msg and "🧾 Gastos: 2 lançamentos" in msg
+    assert "Resultado acumulado" not in msg and "Custo médio" not in msg
 
 
 @pytest.mark.skipif(not TEM_DADOS_REAIS, reason="sem gado_familia.xlsx para copiar")

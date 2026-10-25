@@ -63,8 +63,9 @@ def _soma(df: pd.DataFrame, col: str) -> float:
     return float(pd.to_numeric(df[col], errors="coerce").fillna(0).sum())
 
 
-def montar_resumo_mensal(dados: dict, ano: int, mes: int) -> str:
-    """Monta o texto do resumo de um mês. Não envia nada (fácil de testar)."""
+def montar_resumo_mensal(dados: dict, ano: int, mes: int, com_valores: bool = True) -> str:
+    """Monta o texto do resumo de um mês. Não envia nada (fácil de testar).
+    com_valores=False: só cabeças e contagens, para quem desmarcou "valores"."""
     comp = _do_mes(dados["Compras"], ano, mes)
     gast = _do_mes(dados["Gastos"], ano, mes)
     vend = _do_mes(dados["Vendas"], ano, mes)
@@ -85,13 +86,16 @@ def montar_resumo_mensal(dados: dict, ano: int, mes: int) -> str:
     teve_algo = False
     if not comp.empty:
         teve_algo = True
-        linhas.append(f"🛒 Compras: {int(_soma(comp, 'Qtd Cabeças'))} cab — "
-                      f"{fmt_r(_soma(comp, 'Valor Total (R$)'))}")
+        linhas.append(f"🛒 Compras: {int(_soma(comp, 'Qtd Cabeças'))} cab"
+                      + (f" — {fmt_r(_soma(comp, 'Valor Total (R$)'))}" if com_valores else ""))
     if not vend.empty:
         teve_algo = True
-        linhas.append(f"💰 Vendas: {int(_soma(vend, 'Qtd Cabeças'))} cab — "
-                      f"{fmt_r(_soma(vend, 'Valor Total (R$)'))}")
-    if not gast.empty:
+        linhas.append(f"💰 Vendas: {int(_soma(vend, 'Qtd Cabeças'))} cab"
+                      + (f" — {fmt_r(_soma(vend, 'Valor Total (R$)'))}" if com_valores else ""))
+    if not gast.empty and not com_valores:
+        teve_algo = True
+        linhas.append(f"🧾 Gastos: {len(gast)} lançamentos")
+    elif not gast.empty:
         teve_algo = True
         linha = f"🧾 Gastos: {fmt_r(_soma(gast, 'Valor Total (R$)'))}"
         if "Tipo" in gast.columns and gast["Tipo"].notna().any():
@@ -120,12 +124,12 @@ def montar_resumo_mensal(dados: dict, ano: int, mes: int) -> str:
         "*Rebanho no fim do mês*",
         f"🐄 {estoque} cabeças",
     ]
-    if estoque > 0:
+    if estoque > 0 and com_valores:
         linhas.append(f"💵 Custo médio: {fmt_r(resumo['ctcab'])}/cab")
         linhas.append(f"📦 Capital no rebanho: {fmt_r(resumo['capital_imobilizado'])}")
 
     membros = calcular_todos_membros(v_, c_, g_, m_)
-    if any(membros[m]["cabecas"] or membros[m]["perdas"] for m in MEMBROS):
+    if com_valores and any(membros[m]["cabecas"] or membros[m]["perdas"] for m in MEMBROS):
         linhas += ["", "*Resultado acumulado por dono*"]
         for m in MEMBROS:
             r = membros[m]
@@ -146,15 +150,19 @@ def main(argv: list[str]) -> int:
 
     from db import carregar_todas
     ano, mes = mes_anterior(hoje)
-    msg = montar_resumo_mensal(carregar_todas(), ano, mes)
+    dados = carregar_todas()
+    msg = montar_resumo_mensal(dados, ano, mes)
+    msg_sv = montar_resumo_mensal(dados, ano, mes, com_valores=False)
 
     if teste:
         print(msg)
+        print("\n── versão sem valores ──\n")
+        print(msg_sv)
         return 0
 
     # Importa aqui: o módulo configura o log do WhatsApp ao ser carregado.
     from alertas_whatsapp import enviar_para_familia
-    enviados = enviar_para_familia(msg)
+    enviados = enviar_para_familia(msg, tipo="mensal", msg_sem_valores=msg_sv)
     logging.info(f"Resumo mensal {mes:02d}/{ano}: {enviados} mensagem(ns) enviada(s)")
     print(f"Resumo de {mes:02d}/{ano} enviado para {enviados} pessoa(s).")
     return 0 if enviados > 0 else 1
