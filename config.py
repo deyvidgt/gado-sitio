@@ -196,6 +196,8 @@ COLUNAS_MANEJO = [
     "Brincos",
     # NOVO v4.6: peso de cada animal na Pesagem ("Amarelo 21 #A0003: 320 kg; …") — pesagem.py.
     "Pesos",
+    # NOVO v5.2: para qual pasto (ID P01…) foi a "Movimentação de Pasto" — pastos.py.
+    "Pasto",
 ]
 
 # Tipos de manejo em que o formulário pergunta qual remédio/produto foi usado.
@@ -240,6 +242,8 @@ COLUNAS_FOTOS = [
     "ID Foto", "Animal", "Data", "Tipo", "Legenda", "Principal",
     "Drive ID", "Enviado Por", "Enviado Em", "ID Envio",
 ]
+# v5.2 — Pastos desenhados no mapa (pastos.py). Contorno = GeoJSON do polígono.
+COLUNAS_PASTOS = ["ID", "Nome", "Área (ha)", "Contorno", "Cor", "Ativo", "Observações", "Criado Por"]
 TIPOS_FOTO = ["Perfil", "Evolução", "Ocorrência"]
 # Pasta "Sítio Santo Antonio" no Drive do Nilson (pode ser trocada no drive_token.json).
 DRIVE_PASTA_PADRAO = "1hVTxC--URXg1j3rylOYyRt1nSuC_vbUt"

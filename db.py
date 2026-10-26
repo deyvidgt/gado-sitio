@@ -36,6 +36,7 @@ from config import (
     ARQUIVO_DADOS,
     COLUNAS_COMPRAS, COLUNAS_GASTOS,
     COLUNAS_VENDAS, COLUNAS_MANEJO, COLUNAS_VISITAS, COLUNAS_ANIMAIS, COLUNAS_FOTOS,
+    COLUNAS_PASTOS,
 )
 
 # Mapa aba → colunas esperadas, usado para migrar colunas novas sem perder dados.
@@ -47,6 +48,7 @@ _SCHEMA_ABAS = {
     "Visitas": COLUNAS_VISITAS,
     "Animais": COLUNAS_ANIMAIS,   # v4.3 — criada sozinha no arquivo existente
     "Fotos":   COLUNAS_FOTOS,     # v4.4
+    "Pastos":  COLUNAS_PASTOS,    # v5.2
 }
 
 # Caminho completo do arquivo de dados
@@ -222,6 +224,7 @@ def inicializar():
         ws_ani.append(COLUNAS_ANIMAIS)
 
         wb.create_sheet("Fotos").append(COLUNAS_FOTOS)
+        wb.create_sheet("Pastos").append(COLUNAS_PASTOS)
 
         wb.create_sheet("Resumo")
         wb.save(ARQUIVO_PATH)
