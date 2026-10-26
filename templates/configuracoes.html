@@ -108,6 +108,7 @@
             <div style="font-size:11px;color:var(--text-3)">{{ info.criado }}</div>
           </div>
         </div>
+        {% if e_admin %}
         <div style="display:flex;gap:8px">
           <!-- Resetar senha -->
           <button onclick="abrirReset('{{ u }}')"
@@ -132,10 +133,13 @@
           </button>
           {% endif %}
         </div>
+        {% endif %}
       </div>
       {% endfor %}
+      {% if not e_admin %}<p style="font-size:12px;color:var(--text-3);margin-top:10px">Só o administrador cria usuários e redefine senhas.</p>{% endif %}
     </div>
 
+    {% if e_admin %}
     <!-- Adicionar novo usuário -->
     <div class="card">
       <div class="card-title">➕ Adicionar Usuário</div>
@@ -182,6 +186,7 @@
         </button>
       </form>
     </div>
+    {% endif %}
   </div>
 </div>
 

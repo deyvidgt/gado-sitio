@@ -148,3 +148,50 @@ def test_aviso_so_para_quem_tem_acesso(cliente, dois_sitios, monkeypatch, fila_a
     r.close()
     assert [t for t, _ in enviados] == ["3"]        # só o João: Deyvid registrou, Nilson não é do sítio
     assert "Ana" in enviados[0][1]
+
+
+# ── Fase 3 / Task 1: administradores e privacidade ────────────────────────────
+
+def test_admin_padrao(dois_sitios):
+    # sem "admins": quem tem acesso ao 1º sítio (Santo Antonio)
+    assert sitios.e_admin("deyvid") and sitios.e_admin("nilson")
+    assert not sitios.e_admin("joao") and not sitios.e_admin("fulano")
+    cfg = json.load(open(os.path.join(db.RAIZ, "sitios.json"), encoding="utf-8"))
+    cfg["admins"] = ["deyvid"]
+    json.dump(cfg, open(os.path.join(db.RAIZ, "sitios.json"), "w", encoding="utf-8"))
+    assert sitios.e_admin("Deyvid") and not sitios.e_admin("nilson")
+
+
+def test_sem_sitios_json_todo_mundo_admin():
+    assert sitios.e_admin("qualquer")
+
+
+def test_nao_admin_nao_gerencia_usuarios(cliente, dois_sitios):
+    from routes_usuarios import _carregar_usuarios_local
+    antes = json.dumps(_carregar_usuarios_local(), sort_keys=True)
+    _logar(cliente, "joao")
+    for url, dados in (("/configuracoes/resetar-senha", {"usuario": "deyvid", "senha_nova": "1234"}),
+                       ("/configuracoes/adicionar-usuario", {"usuario": "intruso", "senha": "1234"}),
+                       ("/configuracoes/excluir-usuario", {"usuario": "nilson"})):
+        assert cliente.post(url, data={"csrf_token": "tok", **dados}).status_code == 403, url
+    assert json.dumps(_carregar_usuarios_local(), sort_keys=True) == antes
+
+
+def test_lista_so_do_sitio(cliente, dois_sitios, monkeypatch):
+    import routes_api_extras
+    todos = {"deyvid": {}, "nilson": {}, "joao": {}, "ana": {}}
+    monkeypatch.setattr(routes_api_extras, "_carregar_usuarios", lambda: todos)
+    _logar(cliente, "joao")
+    nomes = [u["usuario"] for u in cliente.get("/api/config-whatsapp-todos").get_json()["usuarios"]]
+    assert sorted(nomes) == ["deyvid", "joao"]   # Deyvid também é do sítio; Nilson e Ana não
+    _logar(cliente, "deyvid", sitio="santo-antonio")
+    nomes = [u["usuario"] for u in cliente.get("/api/config-whatsapp-todos").get_json()["usuarios"]]
+    assert sorted(nomes) == ["ana", "deyvid", "joao", "nilson"]   # admin vê todos
+
+
+def test_tela_sem_gestao_para_nao_admin(cliente, dois_sitios):
+    _logar(cliente, "joao")
+    p = cliente.get("/configuracoes").get_data(as_text=True)
+    assert "Criar Usuário" not in p and "Só o administrador" in p
+    _logar(cliente, "deyvid")
+    assert "Criar Usuário" in cliente.get("/configuracoes").get_data(as_text=True)

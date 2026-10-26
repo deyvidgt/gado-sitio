@@ -39,7 +39,8 @@ def carregar() -> dict:
     sit = cfg.get("sitios") if isinstance(cfg.get("sitios"), dict) else {}
     if not sit:
         return {"sitios": {PADRAO: {"nome": config.NOME_SITIO, "pasta": ""}}, "acesso": None}
-    return {"sitios": sit, "acesso": cfg.get("acesso") if isinstance(cfg.get("acesso"), dict) else {}}
+    return {"sitios": sit, "acesso": cfg.get("acesso") if isinstance(cfg.get("acesso"), dict) else {},
+            "admins": cfg.get("admins") if isinstance(cfg.get("admins"), list) else None}
 
 
 def pasta(slug: str) -> str:
@@ -65,6 +66,23 @@ def sitios_do_usuario(login: str) -> list[str]:
 
 def tem_acesso(login: str, slug: str) -> bool:
     return slug in sitios_do_usuario(login)
+
+
+def e_admin(login: str) -> bool:
+    """Quem gerencia usuários e sítios. Sem sitios.json: todos (como sempre foi).
+    Sem "admins": quem tem acesso ao 1º sítio — ninguém de fora vira admin por esquecimento."""
+    cfg = carregar()
+    if cfg["acesso"] is None:
+        return True
+    login = str(login or "").strip().lower()
+    if cfg["admins"] is not None:
+        return login in {str(a).strip().lower() for a in cfg["admins"]}
+    return tem_acesso(login, next(iter(cfg["sitios"])))
+
+
+def logins_do_sitio(slug: str, logins) -> list:
+    """Dos `logins`, os que têm acesso ao sítio (o que um não-admin pode ver)."""
+    return [l for l in logins if tem_acesso(l, slug)]
 
 
 def nome(slug: str) -> str:

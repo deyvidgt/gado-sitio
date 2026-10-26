@@ -201,8 +201,10 @@ def api_calendario_manejo():
 @app.route("/api/config-whatsapp-todos")
 @login_required
 def api_config_whatsapp_todos():
-    """Retorna a config de WhatsApp de todos os usuários (sem expor as keys)."""
-    todos = _carregar_usuarios()
+    """Retorna a config de WhatsApp dos usuários (sem expor as keys). Não-admin vê só
+    quem tem acesso ao sítio atual — telefone de um sítio não aparece no outro."""
+    from routes_usuarios import _usuarios_visiveis
+    todos = _usuarios_visiveis(_carregar_usuarios())
     resultado = []
     for u, info in todos.items():
         wpp = info.get("whatsapp", {})

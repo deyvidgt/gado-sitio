@@ -105,11 +105,30 @@ def _arroba_ultima_venda():
         return None
 
 
+def _so_admin():
+    """Gestão de usuários/sítios é do administrador (com vários sítios, um parente
+    não pode redefinir a senha de quem é de outro sítio)."""
+    import sitios
+    from flask import abort
+    if not sitios.e_admin(session.get("usuario")):
+        abort(403)
+
+
+def _usuarios_visiveis(todos: dict) -> dict:
+    """Admin vê todos; os outros, só quem tem acesso ao sítio atual."""
+    import sitios
+    if sitios.e_admin(session.get("usuario")):
+        return todos
+    deixar = set(sitios.logins_do_sitio(sitios.atual(), todos))
+    return {u: i for u, i in todos.items() if u in deixar}
+
+
 @app.route("/configuracoes")
 @login_required
 def configuracoes():
     from db import get_alertas_saude
-    usuarios     = _carregar_usuarios_local()
+    import sitios
+    usuarios     = _usuarios_visiveis(_carregar_usuarios_local())
     sitio_config = _carregar_sitio_config()
     alertas_saude = get_alertas_saude()
     import drive
@@ -118,7 +137,8 @@ def configuracoes():
                            sitio_config=sitio_config, alertas_saude=alertas_saude,
                            preco_arroba_padrao=PRECO_ARROBA_REF,
                            arroba_ultima_venda=_arroba_ultima_venda(),
-                           drive_configurado=drive.configurado() or drive.cliente() is not None)
+                           drive_configurado=drive.configurado() or drive.cliente() is not None,
+                           e_admin=sitios.e_admin(session.get("usuario")))
 
 
 @app.route("/configuracoes/testar-drive", methods=["POST"])
@@ -166,6 +186,7 @@ def trocar_senha():
 @login_required
 def adicionar_usuario():
     _validar_csrf()
+    _so_admin()
     import re
     novo_user = request.form.get("usuario", "").strip().lower()
     senha     = request.form.get("senha",   "").strip()
@@ -195,6 +216,7 @@ def adicionar_usuario():
 @login_required
 def excluir_usuario():
     _validar_csrf()
+    _so_admin()
     alvo = request.form.get("usuario", "").strip().lower()
     if alvo == session["usuario"]:
         flash("Você não pode excluir sua própria conta.", "error")
@@ -215,6 +237,7 @@ def excluir_usuario():
 @login_required
 def resetar_senha():
     _validar_csrf()
+    _so_admin()
     alvo  = request.form.get("usuario",    "").strip().lower()
     senha = request.form.get("senha_nova", "").strip()
 
