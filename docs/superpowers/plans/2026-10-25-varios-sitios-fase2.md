@@ -36,20 +36,20 @@
 
 **Interfaces:** `sitios.PADRAO = "santo-antonio"`; `carregar() -> dict`; `pasta(slug) -> str` (ValueError se inválido/desconhecido); `sitios_do_usuario(login) -> list[str]`; `tem_acesso(login, slug) -> bool`; `nome(slug) -> str`; `ativar(slug) -> None`; `atual() -> str`.
 
-- [ ] Testes `test_sem_sitios_json_um_sitio_so`, `test_slug_invalido`, `test_acesso_por_login`, `test_ativar_troca_pasta_e_donos`; falhar; implementar; PASS; commit `Fase 2: sitios.json, pasta por sitio e arquivos da familia na raiz`.
+- [x] Testes `test_sem_sitios_json_um_sitio_so`, `test_slug_invalido`, `test_acesso_por_login`, `test_ativar_troca_pasta_e_donos`; falhar; implementar; PASS; commit `Fase 2: sitios.json, pasta por sitio e arquivos da familia na raiz`.
 
 ### Task 2: Pedido dentro do sítio + seletor
 
 **Files:** Modify `extensions.py` (`before_request`/`teardown_request` com trava; cache por pasta; context processor `sitios_menu`), `routes_auth.py` (rota `POST /sitio/trocar`), `templates/base.html` (seletor quando há 2+ sítios).
 
-- [ ] Testes `test_trocar_sitio_mostra_outros_dados`, `test_sem_acesso_nao_troca`, `test_sessao_forjada_nao_abre_sitio_alheio`, `test_usuario_sem_sitio_403`, `test_erro_no_pedido_solta_a_trava`; implementar; PASS; commit `Fase 2: cada pedido entra no sitio do usuario; seletor no topo`.
+- [x] Testes `test_trocar_sitio_mostra_outros_dados`, `test_sem_acesso_nao_troca`, `test_sessao_forjada_nao_abre_sitio_alheio`, `test_usuario_sem_sitio_403`, `test_erro_no_pedido_solta_a_trava`; implementar; PASS; commit `Fase 2: cada pedido entra no sitio do usuario; seletor no topo`.
 
 ### Task 3: WhatsApp por sítio
 
 **Files:** Modify `alertas_whatsapp.py` (item da fila guarda `sitio`; `enviar_para_familia(..., sitio=None)` filtra por `tem_acesso`), `routes_visitas._enviar_avisos_depois` (envia dentro da trava, no sítio guardado).
 
-- [ ] Teste `test_aviso_so_para_quem_tem_acesso`; implementar; PASS; commit `Fase 2: avisos do WhatsApp so para quem e do sitio`.
+- [x] Teste `test_aviso_so_para_quem_tem_acesso`; implementar; PASS; commit `Fase 2: avisos do WhatsApp so para quem e do sitio`.
 
 ### Task 4: Documentação
 
-- [ ] CHANGELOG, CLAUDE.md (`sitios.py`, `sitios.json`, o que fica na raiz × no sítio, "um pedido por vez por processo"), spec (fase 2 entregue); PASS; commit `Docs: fase 2 dos varios sitios`.
+- [x] CHANGELOG, CLAUDE.md (`sitios.py`, `sitios.json`, o que fica na raiz × no sítio, "um pedido por vez por processo"), spec (fase 2 entregue); PASS; commit `Docs: fase 2 dos varios sitios`.

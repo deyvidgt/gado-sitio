@@ -1,6 +1,6 @@
 # Vários sítios (cada parente com o seu) — design
 
-**Status:** aprovado em 2026-10-25 · fase 1 entregue · **Data:** 2026-10-25 · **Versão alvo:** 5.0
+**Status:** aprovado em 2026-10-25 · fases 1 e 2 entregues · **Data:** 2026-10-25 · **Versão alvo:** 5.0
 
 ## Objetivo
 
@@ -52,6 +52,26 @@ Só exige o passo 1 abaixo; não tem seletor e cada parente mantém o seu servid
    sítio, lado a lado e no total. Cada número vem do motor do próprio sítio
    (`calcular_resumo_financeiro` por pasta), então as invariantes valem por sítio e a
    soma bate. Só leitura: lançar continua sendo dentro de cada sítio.
+
+## Como criar um sítio hoje (até a tela da fase 3)
+
+1. Criar `~/gado-dados/sitios/joao/sitio_config.json`:
+   ```json
+   {"nome": "Sítio do João",
+    "membros": [
+      {"chave": "Joao", "nome": "João", "emoji": "👨", "cor": "Verde", "logins": ["joao"]},
+      {"chave": "Ana",  "nome": "Ana",  "emoji": "👩", "cor": "Rosa",  "logins": ["ana"]}]}
+   ```
+2. Criar `~/gado-dados/sitios.json` (o Santo Antonio é a própria raiz, `"pasta": ""`;
+   **todo login que deve entrar precisa estar em `acesso`**):
+   ```json
+   {"sitios": {"santo-antonio": {"nome": "Sítio Santo Antonio", "pasta": ""},
+               "joao": {"nome": "Sítio do João", "pasta": "sitios/joao"}},
+    "acesso": {"geane": ["santo-antonio"], "deyvid": ["santo-antonio", "joao"],
+               "nilson": ["santo-antonio"], "joao": ["joao"], "ana": ["joao"]}}
+   ```
+3. Criar os logins novos (Configurações → Usuários) e recarregar o site. A planilha do
+   sítio novo nasce sozinha no primeiro acesso.
 
 ## Riscos
 

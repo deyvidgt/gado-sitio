@@ -18,8 +18,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   terços" virou "em partes iguais" (resto para o último dono, igual a antes). Um arquivo
   com colunas de outros donos é recusado ao iniciar (trocar donos só em sítio novo).
 
+- **Vários sítios — fase 2: pasta por sítio, seletor e acesso.** Com `sitios.json` na
+  pasta de dados, cada sítio tem a sua pasta (planilha, configurações, backups, fotos) e
+  cada login só entra nos sítios dele; quem tem mais de um troca no seletor do topo.
+  Usuários, senhas e a chave de sessão continuam na pasta principal. Aviso de WhatsApp
+  de um sítio só vai para quem é dele. Sem `sitios.json`, tudo igual a antes.
+
 ### Planejado
-- Vários sítios, fases 2 a 4 (pasta por sítio, seletor, painel da família).
+- Vários sítios, fases 3 e 4 (Tasks por sítio, tela de criar sítio, painel da família).
+- Leite: produção por vaca/ordenha, lactação e secagem, entregas e preço do litro
+  (liga só no sítio que tiver leite); reprodução (cobertura, prenhez, alerta de parto).
 - Peso estimado por foto (com medida de referência) e por fita no peito.
 - Lotes e pastos com mapa de satélite (área em ha, lotação UA/ha).
 - Simulador Boi Gordo, calendário de eventos, reprodução, painel de lote e de sanidade.

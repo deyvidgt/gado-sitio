@@ -40,6 +40,19 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 - Ao testar algo que grava, **teste numa cópia** do `.xlsx` (ex.: `GADO_DATA_DIR=/tmp/...`),
   nunca no arquivo real.
 
+## Vários sítios (v5.0)
+
+- **Raiz** (`db.RAIZ`, ~/gado-dados/): `usuarios.json`, `secret_key.txt`,
+  `login_bloqueios.json`, `sitios.json` — da família toda.
+- **Pasta do sítio** (`db.DATA_DIR`, a raiz para o Santo Antonio, `sitios/<slug>/` para os
+  outros): planilha, `sitio_config.json` (com `membros`), backups, fotos, Drive, filas.
+- Cada pedido entra no sítio da sessão (conferido contra o acesso do login) no
+  `before_request` de `extensions.py`, com uma trava: **um pedido por vez por processo**.
+  Código novo que roda fora do pedido (call_on_close, thread) tem que guardar o slug e
+  fazer `sitios.ativar(slug)` dentro de `extensions._trava_sitio` (ver
+  `routes_visitas._enviar_avisos_depois`). Nunca `from db import DATA_DIR` no topo do módulo.
+- Cache separado por pasta (`extensions._chave_cache`).
+
 ## Arquitetura
 
 | Arquivo | Papel |
@@ -47,6 +60,7 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 | `app.py` | Ponto de entrada; importa `extensions.app` e registra todas as rotas |
 | `extensions.py` | App Flask, sessão, CSRF, cache de dados/resumo, helpers (`fmt_brl`, `fmt_data`, `parse_valor`) |
 | `config.py` | Constantes: colunas das abas, tipos, cores, secret key. **Donos** (`MEMBROS`, nomes, emojis, cores, `LOGIN_MEMBRO`) vêm de `"membros"` no `sitio_config.json` (padrão: Geane/Deyvid/Nilson); as colunas por dono de Compras/Vendas são geradas deles (`colunas_compras`/`colunas_vendas`). `aplicar_membros` troca no lugar |
+| `sitios.py` | Vários sítios (v5.0 fase 2): `<raiz>/sitios.json` (`sitios` → nome/pasta, `acesso` → login → slugs); `ativar(slug)` aponta `db.DATA_DIR`/`ARQUIVO_PATH` e os donos para o sítio. Sem o arquivo: um sítio só (a raiz) e todos entram |
 | `pasta_dados.py` | `_resolver_data_dir()` (GADO_DATA_DIR → ~/gado-dados → .exe → script); separado do `db` porque o `config` precisa dele |
 | `db.py` | Leitura/escrita/backup do Excel e **migração de colunas** |
 | `calculos.py` | **Motor financeiro** (CMP, GPCab, CTCab, resultado por membro, resumo) |
@@ -146,6 +160,7 @@ python -m pytest          # ~5 s; roda numa CÓPIA temporária dos dados
 | `superpowers/plans/2026-10-22-whatsapp-notificacoes.md` | Plano de implementação do WhatsApp (concluído) |
 | `superpowers/specs/2026-10-25-varios-sitios-design.md` | Design de vários sítios (cada parente com o seu): donos por sítio, pasta por sítio, seletor, painel da família — aprovado; fase 1 entregue |
 | `superpowers/plans/2026-10-25-varios-sitios-fase1.md` | Plano da fase 1 (donos configuráveis) — concluído |
+| `superpowers/plans/2026-10-25-varios-sitios-fase2.md` | Plano da fase 2 (pasta por sítio, seletor, acesso) — concluído |
 | `client_secret_*.json` | Credencial OAuth do app do Drive — **fora do Git** (`.gitignore`), nunca commitar |
 
 ## Backup
