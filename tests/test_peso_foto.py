@@ -96,3 +96,47 @@ def test_registrar_e_ultima_estimativa(um_animal):
     est = F.ultima_estimativa(um_animal, man)
     assert est["bruto"] == pytest.approx(bruto, abs=0.5) and est["fator"] == 1.0
     assert est["faixa_pct"] == 15
+
+
+# ── Task 2: tela e ficha ──────────────────────────────────────────────────────
+
+def _csrf(cliente):
+    with cliente.session_transaction() as s:
+        s["csrf_token"] = "tok"
+
+
+def test_pagina_peso_foto_abre(cliente, um_animal):
+    p = cliente.get(f"/animais/{um_animal}/peso-foto").get_data(as_text=True)
+    assert "canvas" in p and 'data-fator="1.0"' in p and "não para negociar" in p
+
+
+def test_salvar_estimativa(cliente, um_animal):
+    _csrf(cliente)
+    r = cliente.post(f"/animais/{um_animal}/peso-foto", data={
+        "csrf_token": "tok", "data": "2026-10-01", "comprimento": "160", "profundidade": "70",
+        "referencia": "100"})
+    assert r.status_code == 302 and r.headers["Location"].endswith(f"/animais/{um_animal}#peso")
+    assert db.carregar_aba("Manejo").iloc[-1]["Tipo"] == "Peso Estimado"
+
+
+def test_salvar_estimativa_absurda(cliente, um_animal):
+    _csrf(cliente)
+    antes = len(db.carregar_aba("Manejo"))
+    cliente.post(f"/animais/{um_animal}/peso-foto", data={
+        "csrf_token": "tok", "comprimento": "900", "profundidade": "70", "referencia": "100"})
+    assert len(db.carregar_aba("Manejo")) == antes
+
+
+def test_animal_nao_vivo(cliente, um_animal):
+    A.dar_baixa([um_animal], "Vendido")
+    _cache_invalidar()
+    assert cliente.get(f"/animais/{um_animal}/peso-foto").status_code == 302
+    with pytest.raises(ValueError):
+        F.registrar(um_animal, 160, 70, 100)
+
+
+def test_ficha_mostra_estimativa(cliente, um_animal):
+    F.registrar(um_animal, 160, 70, 100, "2026-10-01")
+    _cache_invalidar()
+    p = cliente.get(f"/animais/{um_animal}").get_data(as_text=True)
+    assert "Estimado por foto" in p and "±15%" in p and "peso-foto" in p

@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Peso por foto — {{ a.brinco }}{% endblock %}
+{% block page_title %}Peso por foto 📷{% endblock %}
+
+{% block content %}
+<style>
+  .pf-passos { display:flex; flex-direction:column; gap:6px; margin:10px 0; font-size:13.5px; }
+  .pf-passo { padding:8px 12px; border-radius:10px; background:var(--surface-2); border:1.5px solid transparent; }
+  .pf-passo.agora { border-color:var(--green-700); background:var(--green-50); font-weight:600; }
+  .pf-passo.feito { opacity:.65; }
+  .pf-passo .bol { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px; vertical-align:-1px; }
+  #pf-tela { width:100%; touch-action:none; border-radius:12px; background:#111; display:none; cursor:crosshair; }
+  .pf-res { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-top:14px; }
+  .pf-res div { display:flex; flex-direction:column; gap:2px; }
+  .pf-res b { font-size:20px; }
+  .muted { color:var(--text-3); font-size:12px; }
+  .aviso-pf { background:var(--gold-lt); border:1px solid var(--gold); border-radius:var(--radius); padding:12px 16px; font-size:13px; }
+</style>
+
+<div class="section-head"><h2>{{ a.brinco }} · {{ a.categoria or 'Animal' }}</h2>
+  <a href="{{ url_for('ficha_animal', id_=a.id) }}" class="btn btn-outline btn-sm">← Ficha</a></div>
+
+<div class="aviso-pf">
+  ⚠️ <b>É uma estimativa</b>: erro de uns {{ 10 if n_pares >= 3 else 15 }}%
+  {% if n_pares >= 3 %}(calibrada com {{ n_pares }} pesagens de balança deste sítio){% else %}— melhora sozinha
+  quando houver 3 animais com foto e balança no mesmo período{% endif %}.
+  Serve para acompanhar o ganho e decidir a venda, não para negociar.
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="card-title">Como tirar a foto</div>
+  <ul style="font-size:13.5px;margin-left:18px;line-height:1.6">
+    <li>O animal <b>de lado</b>, parado e reto; você a uns <b>4 metros</b>, com o celular na altura do meio dele.</li>
+    <li>Uma <b>referência de tamanho conhecido</b> no mesmo plano do animal: uma vara de 1 m encostada nele, ou a tábua da cerca já medida.</li>
+    <li>Depois toque nos pontos. Dá para <b>arrastar</b> cada ponto para acertar.</li>
+  </ul>
+  <label class="btn btn-primary" style="cursor:pointer;margin-top:10px">📷 Tirar / escolher foto
+    <input type="file" id="pf-arquivo" accept="image/*" capture="environment" hidden></label>
+</div>
+
+<div class="card" style="margin-top:16px" id="pf-medir" data-fator="{{ fator }}"
+     data-perimetro="{{ PF.FATOR_PERIMETRO }}" data-schaeffer="{{ PF.CONST_SCHAEFFER }}">
+  <div class="pf-passos" id="pf-passos">
+    <div class="pf-passo" data-par="0"><span class="bol" style="background:#f4c430"></span>1. As <b>duas pontas da referência</b></div>
+    <div class="pf-passo" data-par="1"><span class="bol" style="background:#4fc3f7"></span>2. <b>Ponta do ombro</b> e <b>ponta da nádega</b> (comprimento)</div>
+    <div class="pf-passo" data-par="2"><span class="bol" style="background:#ef5350"></span>3. <b>Lombo logo atrás da paleta</b> e <b>embaixo do peito</b>, na mesma linha reta (profundidade)</div>
+  </div>
+  <canvas id="pf-tela" aria-label="Foto do animal para marcar os pontos"></canvas>
+  <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+    <button type="button" class="btn btn-outline btn-sm" id="pf-desfazer">↶ Desfazer ponto</button>
+    <button type="button" class="btn btn-outline btn-sm" id="pf-limpar">Recomeçar</button>
+  </div>
+
+  <form method="post" style="margin-top:14px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <div class="form-group"><label>Tamanho da referência (cm)</label>
+        <input type="text" name="referencia" id="pf-ref" inputmode="decimal" value="100" required></div>
+      <div class="form-group"><label>Data</label><input type="date" name="data" value="{{ hoje }}"></div>
+      <div class="form-group"><label>Comprimento ombro→nádega (cm)</label>
+        <input type="text" name="comprimento" id="pf-comp" inputmode="decimal" required placeholder="sai da foto"></div>
+      <div class="form-group"><label>Profundidade do peito (cm)</label>
+        <input type="text" name="profundidade" id="pf-prof" inputmode="decimal" required placeholder="sai da foto"></div>
+    </div>
+    <p class="muted" style="margin-top:6px">Mediu com fita métrica? Digite as duas medidas direto, sem foto.</p>
+    <div class="pf-res" aria-live="polite">
+      <div><span class="muted">Perímetro do peito</span><b id="pf-perim">—</b></div>
+      <div><span class="muted">Peso estimado</span><b id="pf-peso">—</b><span class="muted" id="pf-faixa"></span></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:14px">💾 Salvar estimativa</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const caixa = document.getElementById("pf-medir");
+  const FATOR = parseFloat(caixa.dataset.fator), K_PER = parseFloat(caixa.dataset.perimetro),
+        K_SCH = parseFloat(caixa.dataset.schaeffer);
+  const FAIXA = {{ 10 if n_pares >= 3 else 15 }};
+  const CORES = ["#f4c430", "#4fc3f7", "#ef5350"];
+  const tela = document.getElementById("pf-tela"), ctx = tela.getContext("2d");
+  const inComp = document.getElementById("pf-comp"), inProf = document.getElementById("pf-prof"),
+        inRef = document.getElementById("pf-ref");
+  let img = null, pontos = [], arrastando = -1;
+
+  const num = v => parseFloat(String(v).replace(",", "."));
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  function calcular() {
+    const comp = num(inComp.value), prof = num(inProf.value);
+    if (!(comp > 0 && prof > 0)) { pf("—", "—", ""); return; }
+    const perim = K_PER * prof, kg = perim * perim * comp / K_SCH * FATOR;
+    pf(perim.toFixed(0) + " cm", "~" + kg.toFixed(0) + " kg",
+       "entre " + (kg * (1 - FAIXA / 100)).toFixed(0) + " e " + (kg * (1 + FAIXA / 100)).toFixed(0) + " kg");
+  }
+  function pf(p, k, f) {
+    document.getElementById("pf-perim").textContent = p;
+    document.getElementById("pf-peso").textContent = k;
+    document.getElementById("pf-faixa").textContent = f;
+  }
+
+  // Pontos guardados em coordenadas da imagem original: as contas só usam razões.
+  function medidas() {
+    if (pontos.length < 2) return;
+    const ref = dist(pontos[0], pontos[1]), cm = num(inRef.value);
+    if (!(ref > 0 && cm > 0)) return;
+    if (pontos.length >= 4) inComp.value = (dist(pontos[2], pontos[3]) / ref * cm).toFixed(1).replace(".", ",");
+    if (pontos.length >= 6) inProf.value = (dist(pontos[4], pontos[5]) / ref * cm).toFixed(1).replace(".", ",");
+  }
+
+  // px da foto por px da tela: ponto e área de toque no tamanho do dedo, não da foto
+  const escala = () => tela.width / (tela.getBoundingClientRect().width || tela.width);
+
+  function desenhar() {
+    if (!img) return;
+    ctx.drawImage(img, 0, 0, tela.width, tela.height);
+    const r = 9 * escala(), esp = 3 * escala();
+    pontos.forEach((p, i) => {
+      const cor = CORES[Math.floor(i / 2)];
+      if (i % 2 === 1) {
+        const q = pontos[i - 1];
+        ctx.strokeStyle = cor; ctx.lineWidth = esp;
+        ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      }
+      ctx.fillStyle = cor; ctx.strokeStyle = "#000"; ctx.lineWidth = esp / 2;
+      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.fill(); ctx.stroke();
+    });
+    const par = Math.min(Math.floor(pontos.length / 2), 3);
+    document.querySelectorAll(".pf-passo").forEach((el, i) => {
+      el.classList.toggle("feito", i < par);
+      el.classList.toggle("agora", i === par);
+    });
+  }
+
+  function ponto(e) {
+    const b = tela.getBoundingClientRect();
+    return { x: (e.clientX - b.left) * tela.width / b.width, y: (e.clientY - b.top) * tela.height / b.height };
+  }
+  tela.addEventListener("pointerdown", e => {
+    const p = ponto(e), raio = 28 * escala();
+    arrastando = pontos.findIndex(q => dist(p, q) < raio);
+    if (arrastando < 0 && pontos.length < 6) { pontos.push(p); arrastando = pontos.length - 1; }
+    tela.setPointerCapture(e.pointerId);
+    medidas(); desenhar(); calcular();
+  });
+  tela.addEventListener("pointermove", e => {
+    if (arrastando < 0) return;
+    pontos[arrastando] = ponto(e); medidas(); desenhar(); calcular();
+  });
+  tela.addEventListener("pointerup", () => arrastando = -1);
+
+  document.getElementById("pf-arquivo").addEventListener("change", ev => {
+    const arq = ev.target.files[0];
+    if (!arq) return;
+    const im = new Image();
+    im.onload = () => {
+      // até 1600 px de largura: preciso o bastante e leve no celular
+      const esc = Math.min(1, 1600 / im.naturalWidth);
+      tela.width = Math.round(im.naturalWidth * esc); tela.height = Math.round(im.naturalHeight * esc);
+      img = im; pontos = []; tela.style.display = "block"; desenhar();
+      tela.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+    im.src = URL.createObjectURL(arq);
+  });
+  document.getElementById("pf-desfazer").onclick = () => { pontos.pop(); desenhar(); };
+  document.getElementById("pf-limpar").onclick = () => { pontos = []; desenhar(); };
+  [inComp, inProf].forEach(i => i.addEventListener("input", calcular));
+  inRef.addEventListener("input", () => { medidas(); calcular(); });
+})();
+</script>
+{% endblock %}

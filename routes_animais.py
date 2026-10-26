@@ -13,6 +13,7 @@ import comando_voz as V
 import drive
 import fotos as F
 import pesagem as P
+import peso_foto as PF
 from calculos import calcular_estoque, calcular_estoque_por_membro
 from config import (LOGIN_MEMBRO, MEMBROS, NOMES_MEMBROS, CORES_BRINCO, CATEGORIAS_ANIMAL,
                     ORIGENS_ANIMAL, COLUNAS_MANEJO, TIPOS_COM_PRODUTO, TIPOS_FOTO)
@@ -254,6 +255,34 @@ def pesagem():
                            now_date=pd.Timestamp(hoje).normalize(), **_ctx_templates())
 
 
+@app.route("/animais/<id_>/peso-foto", methods=["GET", "POST"])
+@login_required
+def peso_foto(id_):
+    """Peso estimado pela foto de lado: a tela mede, o servidor valida e calcula."""
+    a = A.por_id(A.carregar(), id_)
+    if a is None:
+        flash("Animal não encontrado.", "error")
+        return redirect(url_for("animais"))
+    if a["Status"] != "Vivo":
+        flash("Só dá para estimar o peso de um animal vivo.", "warning")
+        return redirect(url_for("ficha_animal", id_=id_))
+    dados = _get_dados_cache()
+    fator, n_pares = PF.fator_calibracao(dados["Manejo"])
+    if request.method == "POST":
+        _validar_csrf()
+        f = request.form
+        try:
+            bruto = PF.registrar(id_, f.get("comprimento"), f.get("profundidade"),
+                                 f.get("referencia"), f.get("data"), responsavel=_membro_logado())
+        except ValueError as e:
+            flash(str(e), "error")
+            return redirect(url_for("peso_foto", id_=id_))
+        flash(f"📷 Peso estimado: ~{bruto * fator:.0f} kg (estimativa, não é balança).", "success")
+        return redirect(url_for("ficha_animal", id_=id_) + "#peso")
+    return render_template("peso_foto.html", a=_linha_animal(a, _agora()), fator=fator,
+                           n_pares=n_pares, PF=PF, **_ctx_templates())
+
+
 @app.route("/animais/<id_>")
 @login_required
 def ficha_animal(id_):
@@ -273,6 +302,7 @@ def ficha_animal(id_):
                            filhos=[_linha_animal(x, hoje) for _, x in filhos.iterrows()],
                            historico=A.historico(id_, dados["Manejo"], dados["Vendas"]),
                            pesos=hist_peso, peso=P.resumo(hist_peso, _rendimento()),
+                           estimativa=PF.ultima_estimativa(id_, dados["Manejo"]),
                            fotos=F.listar(id_), fotos_ativas=drive.configurado() or drive.cliente() is not None,
                            TIPOS_FOTO=TIPOS_FOTO, **_ctx_templates())
 
