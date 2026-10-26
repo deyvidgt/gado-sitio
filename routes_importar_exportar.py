@@ -6,7 +6,8 @@ Rotas de importação de Excel antigo, exportação de relatório Excel e backup
 """
 import os
 from flask import render_template, request, redirect, url_for, flash, send_file
-from db import fazer_backup, safe_val, DATA_DIR
+import db
+from db import fazer_backup, safe_val
 from calculos import partes_iguais
 from extensions import (
     app, _agora, _validar_csrf, login_required,
@@ -169,7 +170,7 @@ def backup():
 @login_required
 def listar_backups():
     """Lista backups disponíveis com download e permite forçar novo backup."""
-    backup_dir = os.path.join(DATA_DIR, "backups")
+    backup_dir = os.path.join(db.DATA_DIR, "backups")
     backups = []
     if os.path.exists(backup_dir):
         for nome in sorted(os.listdir(backup_dir), reverse=True):
@@ -193,7 +194,7 @@ def download_backup(nome):
     if not re.match(r'^backup_\d{8}_\d{6}\.xlsx$', nome):
         flash("Nome de backup inválido.", "error")
         return redirect(url_for("listar_backups"))
-    backup_dir = os.path.join(DATA_DIR, "backups")
+    backup_dir = os.path.join(db.DATA_DIR, "backups")
     caminho = os.path.join(backup_dir, nome)
     if not os.path.exists(caminho):
         flash("Backup não encontrado.", "error")
@@ -225,7 +226,7 @@ def excluir_backup(nome):
     if not re.match(r'^backup_\d{8}_\d{6}\.xlsx$', nome):
         flash("Nome de backup inválido.", "error")
         return redirect(url_for("listar_backups"))
-    backup_dir = os.path.join(DATA_DIR, "backups")
+    backup_dir = os.path.join(db.DATA_DIR, "backups")
     caminho = os.path.join(backup_dir, nome)
     if os.path.exists(caminho):
         os.remove(caminho)

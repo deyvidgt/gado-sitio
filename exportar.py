@@ -12,7 +12,8 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 from config import CORES, MEMBROS, NOMES_MEMBROS
-from db import carregar_todas, salvar_linha, safe_val, DATA_DIR
+import db
+from db import carregar_todas, salvar_linha, safe_val
 from ui_helper import ui_ok, ui_aviso, ui_info, ui_titulo, ui_input, fmt_r
 from calculos import (
     partes_iguais,
@@ -30,7 +31,7 @@ def exportar_relatorio_excel() -> str:
     df_m  = dados["Manejo"]
 
     nome_arquivo = f"relatorio_gado_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    nome = os.path.join(DATA_DIR, nome_arquivo)
+    nome = os.path.join(db.DATA_DIR, nome_arquivo)
     wb   = Workbook()
 
     _border   = Border(left=Side(style="thin"), right=Side(style="thin"),

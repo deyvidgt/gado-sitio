@@ -7,7 +7,7 @@ import os
 import json
 import pandas as pd
 from flask import render_template, request, redirect, url_for, flash, session, send_file
-from db import DATA_DIR
+import db
 from config import USUARIOS, MEMBROS, NOMES_MEMBROS
 from extensions import (
     app, _agora, _validar_csrf, login_required,
@@ -18,7 +18,7 @@ from extensions import (
 # ── Helpers locais (lêem/gravam em DATA_DIR, fora do repo Git) ────────────────
 
 def _usuarios_path():
-    return os.path.join(DATA_DIR, "usuarios.json")
+    return os.path.join(db.RAIZ, "usuarios.json")   # da família, não de um sítio
 
 
 def _carregar_usuarios_local():
@@ -63,7 +63,7 @@ SITIO_CONFIG_DEFAULTS = {
 
 
 def _sitio_config_path():
-    return os.path.join(DATA_DIR, "sitio_config.json")
+    return os.path.join(db.DATA_DIR, "sitio_config.json")
 
 
 def _carregar_sitio_config() -> dict:

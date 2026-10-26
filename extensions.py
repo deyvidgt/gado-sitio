@@ -49,8 +49,8 @@ def _chave_secreta() -> str:
     if os.environ.get("GADO_SECRET_KEY"):
         return SECRET_KEY
     try:
-        from db import DATA_DIR
-        caminho = os.path.join(DATA_DIR, "secret_key.txt")
+        from db import RAIZ
+        caminho = os.path.join(RAIZ, "secret_key.txt")
         if os.path.exists(caminho):
             with open(caminho, encoding="utf-8") as fh:
                 chave = fh.read().strip()
@@ -394,9 +394,9 @@ def _calc_anual(dados):
                                     dados["Vendas"], dados["Manejo"])
 
 def _usuarios_path() -> str:
-    """Retorna o caminho correto do usuarios.json, sempre em DATA_DIR."""
+    """Retorna o caminho correto do usuarios.json, sempre na pasta da família."""
     try:
-        from db import DATA_DIR as _DD
+        from db import RAIZ as _DD
         return os.path.join(_DD, "usuarios.json")
     except Exception:
         return os.path.join(BASE_DIR, "usuarios.json")

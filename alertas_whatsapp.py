@@ -64,12 +64,12 @@ def fmt_r(v):
 
 def carregar_usuarios() -> dict:
     """
-    Carrega usuarios.json do DATA_DIR (~/gado-dados/), que é onde o sistema
-    salva as configurações de WhatsApp. Fallback para BASE_DIR em dev local.
+    Carrega usuarios.json da pasta da família (db.RAIZ, ~/gado-dados/), que é onde
+    o sistema salva as configurações de WhatsApp. Fallback para BASE_DIR em dev local.
     """
-    from db import DATA_DIR
+    from db import RAIZ
     candidatos = [
-        Path(DATA_DIR) / "usuarios.json",   # produção: ~/gado-dados/
+        Path(RAIZ) / "usuarios.json",       # produção: ~/gado-dados/
         BASE_DIR / "usuarios.json",         # desenvolvimento local
     ]
     for caminho in candidatos:

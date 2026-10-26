@@ -29,8 +29,8 @@ _bloqueio_lock = threading.Lock()
 
 
 def _bloqueios_path() -> str:
-    from db import DATA_DIR
-    return os.path.join(DATA_DIR, "login_bloqueios.json")
+    from db import RAIZ
+    return os.path.join(RAIZ, "login_bloqueios.json")
 
 
 def _ler_bloqueios() -> dict:

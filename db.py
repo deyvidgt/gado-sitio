@@ -52,6 +52,18 @@ _SCHEMA_ABAS = {
 # Caminho completo do arquivo de dados
 ARQUIVO_PATH = os.path.join(DATA_DIR, ARQUIVO_DADOS)
 
+# Pasta da família: usuários, chave de sessão, bloqueios de login e sitios.json.
+# DATA_DIR/ARQUIVO_PATH apontam para o sítio do pedido (sitios.ativar → usar_pasta).
+RAIZ = DATA_DIR
+
+
+def usar_pasta(pasta: str) -> None:
+    """Passa a ler/gravar os dados do sítio que mora em `pasta`."""
+    global DATA_DIR, ARQUIVO_PATH
+    os.makedirs(pasta, exist_ok=True)
+    DATA_DIR = pasta
+    ARQUIVO_PATH = os.path.join(pasta, ARQUIVO_DADOS)
+
 # Garantir que a pasta de dados existe (cria ~/gado-dados/ se necessário)
 os.makedirs(DATA_DIR, exist_ok=True)
 
