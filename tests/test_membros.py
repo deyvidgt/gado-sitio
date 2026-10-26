@@ -157,8 +157,11 @@ def test_invariantes_com_n_donos(membros_teste, n):
 @pytest.fixture
 def sitio_quatro_donos(membros_teste, tmp_path, monkeypatch):
     """Sítio novo (arquivo vazio em pasta temporária) com os donos A, B, C, D."""
+    import sitios
     from extensions import _cache_invalidar
     membros_teste(4)
+    # o sítio é montado à mão aqui; o pedido não pode voltar para o Santo Antonio
+    monkeypatch.setattr(sitios, "ativar", lambda slug: None)
     monkeypatch.setattr(db, "ARQUIVO_PATH", str(tmp_path / "gado_familia.xlsx"))
     monkeypatch.setattr(db, "DATA_DIR", str(tmp_path))
     db.inicializar()

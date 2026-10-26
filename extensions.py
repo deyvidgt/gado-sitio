@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 from flask import (Flask, session, request, redirect, url_for,
-                   abort, jsonify)
+                   abort, jsonify, g)
 
 try:
     from zoneinfo import ZoneInfo
@@ -76,6 +76,50 @@ def _renovar_sessao():
     app.permanent_session_lifetime = timedelta(minutes=SESSAO_MINUTOS)
 
 
+# ── Sítio do pedido (v5.0 fase 2) ─────────────────────────────────────────────
+# shortcut: um pedido por vez por processo — db.DATA_DIR e os donos (config) são
+# globais e cada pedido aponta para o seu sítio. Para uma família é de sobra; se o
+# site ficar lento com muita gente, trocar os globais por contexto do pedido.
+_trava_sitio = threading.Lock()
+_SEM_DADOS = {None, "static", "favicon", "service_worker", "manifest"}
+
+
+@app.before_request
+def _entrar_no_sitio():
+    if request.endpoint in _SEM_DADOS:
+        return
+    import sitios
+    if not _trava_sitio.acquire(timeout=60):
+        abort(503)
+    g._trava_sitio = True
+    logado = bool(session.get("logado"))
+    permitidos = sitios.sitios_do_usuario(session.get("usuario")) if logado else []
+    if logado and not permitidos and request.endpoint not in ("login", "logout"):
+        abort(403)
+    slug = session.get("sitio")
+    if slug not in permitidos:
+        slug = permitidos[0] if permitidos else next(iter(sitios.carregar()["sitios"]))
+    sitios.ativar(slug)
+    if logado and permitidos:
+        session["sitio"] = slug
+
+
+@app.teardown_request
+def _sair_do_sitio(_exc=None):
+    if g.pop("_trava_sitio", None):
+        _trava_sitio.release()
+
+
+@app.context_processor
+def _inject_sitios():
+    """Seletor do topo: só aparece com 2+ sítios para o usuário."""
+    import sitios
+    if not session.get("logado"):
+        return {"sitios_menu": [], "sitio_atual": sitios.atual()}
+    return {"sitios_menu": [(s, sitios.nome(s)) for s in sitios.sitios_do_usuario(session.get("usuario"))],
+            "sitio_atual": sitios.atual()}
+
+
 # ── Timezone ───────────────────────────────────────────────────────────────────
 def _agora() -> datetime:
     """Retorna datetime atual no fuso de Brasília (ou local como fallback)."""
@@ -96,13 +140,17 @@ def _versao_dados():
     from db import versao_arquivo
     return versao_arquivo()
 
+def _chave_cache(chave):
+    import db
+    return (db.DATA_DIR, chave)   # cada sítio com o seu cache
+
 def _cache_get(chave, versao=None):
     """Valor em cache, se não venceu o TTL e (quando `versao` é dada) se o .xlsx
     não mudou desde que foi calculado. Sem a checagem de versão, uma gravação feita
     por OUTRO processo (Task, outro worker) deixava a lista com índices velhos e
     editar/excluir podia acertar o registro errado."""
     with _cache_lock:
-        entry = _cache.get(chave)
+        entry = _cache.get(_chave_cache(chave))
         if entry and (time.time() - entry[0]) < CACHE_RESUMO_TTL \
                 and (versao is None or entry[1] == versao):
             return entry[2]
@@ -110,7 +158,7 @@ def _cache_get(chave, versao=None):
 
 def _cache_set(chave, valor, versao=None):
     with _cache_lock:
-        _cache[chave] = (time.time(), versao, valor)
+        _cache[_chave_cache(chave)] = (time.time(), versao, valor)
 
 def _cache_dados(chave, calcular):
     """Cache de algo derivado da planilha: recalcula só quando o arquivo muda."""
@@ -188,14 +236,13 @@ def _inject_csrf():
 # ── Config do sítio com cache ──────────────────────────────────────────────────
 _SITIO_CFG_DEFAULT = {
     "nome": "Sítio Santo Antonio",
-    "donos": " · ".join(NOMES_MEMBROS[m] for m in MEMBROS),
     "logo": "🐄",
     "logo_tipo": "emoji",
 }
 
 def _cache_invalidar_chave(chave):
     with _cache_lock:
-        _cache.pop(chave, None)
+        _cache.pop(_chave_cache(chave), None)
 
 def invalidar_cache_sitio():
     _cache_invalidar_chave("sitio_config")
@@ -215,10 +262,16 @@ def _ler_sitio_config_disco() -> dict:
                     cfg = json.load(fh)
                     for k, v in _SITIO_CFG_DEFAULT.items():
                         cfg.setdefault(k, v)
+                    cfg.setdefault("donos", _donos_txt())
                     return cfg
             except Exception:
                 pass
-    return dict(_SITIO_CFG_DEFAULT)
+    return {**_SITIO_CFG_DEFAULT, "donos": _donos_txt()}
+
+
+def _donos_txt() -> str:
+    """Donos do sítio do pedido (não os do boot: cada sítio tem os seus)."""
+    return " · ".join(NOMES_MEMBROS[m] for m in MEMBROS)
 
 @app.context_processor
 def _inject_sitio_config():

@@ -359,6 +359,15 @@
       <span class="topbar-title">{% block page_title %}Dashboard{% endblock %}</span>
     </div>
     <div class="topbar-right">
+      {% if sitios_menu|length > 1 %}
+      <form method="post" action="{{ url_for('trocar_sitio') }}" style="margin:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <select name="sitio" aria-label="Trocar de sítio" onchange="this.form.submit()"
+                style="padding:6px 8px;border-radius:8px;border:1px solid var(--bg-2);background:var(--surface);color:inherit;max-width:180px">
+          {% for slug, nome in sitios_menu %}<option value="{{ slug }}" {{ 'selected' if slug == sitio_atual }}>🏡 {{ nome }}</option>{% endfor %}
+        </select>
+      </form>
+      {% endif %}
       <span class="topbar-date" id="now-date"></span>
       {% if request.endpoint != 'voz' %}
       <a href="{{ url_for('voz', ouvir=1) }}" class="btn-theme" id="btn-voz-top" title="Comando de voz"

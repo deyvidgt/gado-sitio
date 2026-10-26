@@ -83,7 +83,7 @@ def ativar(slug: str) -> None:
         cfg = {}
     config.aplicar_membros(config.ler_membros(cfg))
     _atual = slug
-    if p not in _inicializadas:
+    if p not in _inicializadas or not os.path.exists(db.ARQUIVO_PATH):
         db.inicializar()
         _inicializadas.add(p)
 

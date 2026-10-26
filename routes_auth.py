@@ -152,6 +152,21 @@ def login():
                            usuario_digitado=usuario_digitado,
                            tentativas_restantes=tentativas_restantes)
 
+@app.route("/sitio/trocar", methods=["POST"])
+@login_required
+def trocar_sitio():
+    """Seletor do topo. O acesso é conferido aqui e de novo em todo pedido."""
+    import sitios
+    _validar_csrf()
+    slug = request.form.get("sitio", "")
+    if sitios.tem_acesso(session.get("usuario"), slug):
+        session["sitio"] = slug
+        flash(f"Agora em {sitios.nome(slug)}.", "success")
+    else:
+        flash("Você não tem acesso a esse sítio.", "error")
+    return redirect(url_for("dashboard"))   # índices de um sítio não valem no outro
+
+
 @app.route("/logout", methods=["POST"])
 def logout():
     _validar_csrf()

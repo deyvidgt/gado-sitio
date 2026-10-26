@@ -54,7 +54,6 @@ def _verificar_senha(usuario, senha):
 
 SITIO_CONFIG_DEFAULTS = {
     "nome":   "Sítio Santo Antonio",
-    "donos":  " · ".join(NOMES_MEMBROS[m] for m in MEMBROS),
     "logo":   "🐄",        # emoji ou URL de imagem carregada
     "logo_tipo": "emoji",  # "emoji" | "imagem"
     "peso_medio": 0,       # kg peso vivo médio por cabeça (0 = não configurado)
@@ -75,10 +74,11 @@ def _carregar_sitio_config() -> dict:
                 # Garantir que todos os campos existem
                 for k, v in SITIO_CONFIG_DEFAULTS.items():
                     cfg.setdefault(k, v)
+                cfg.setdefault("donos", " · ".join(NOMES_MEMBROS[m] for m in MEMBROS))
                 return cfg
         except Exception:
             pass
-    return dict(SITIO_CONFIG_DEFAULTS)
+    return {**SITIO_CONFIG_DEFAULTS, "donos": " · ".join(NOMES_MEMBROS[m] for m in MEMBROS)}
 
 
 def _salvar_sitio_config(cfg: dict):
