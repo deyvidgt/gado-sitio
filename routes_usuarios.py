@@ -8,7 +8,7 @@ import json
 import pandas as pd
 from flask import render_template, request, redirect, url_for, flash, session, send_file
 from db import DATA_DIR
-from config import USUARIOS
+from config import USUARIOS, MEMBROS, NOMES_MEMBROS
 from extensions import (
     app, _agora, _validar_csrf, login_required,
     _sha256, _hash_bcrypt, _bcrypt_disponivel, _verificar_hash,
@@ -54,7 +54,7 @@ def _verificar_senha(usuario, senha):
 
 SITIO_CONFIG_DEFAULTS = {
     "nome":   "Sítio Santo Antonio",
-    "donos":  "Geane · Deyvid · Nilson",
+    "donos":  " · ".join(NOMES_MEMBROS[m] for m in MEMBROS),
     "logo":   "🐄",        # emoji ou URL de imagem carregada
     "logo_tipo": "emoji",  # "emoji" | "imagem"
     "peso_medio": 0,       # kg peso vivo médio por cabeça (0 = não configurado)

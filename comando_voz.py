@@ -35,7 +35,7 @@ from datetime import datetime, timedelta
 from urllib.parse import urlencode
 
 from config import (
-    CATEGORIAS_ANIMAL, CORES_BRINCO, MEMBROS, NOMES_MEMBROS, TIPOS_COM_PRODUTO,
+    CATEGORIAS_ANIMAL, CORES_BRINCO, LOGIN_MEMBRO, MEMBROS, NOMES_MEMBROS, TIPOS_COM_PRODUTO,
 )
 
 
@@ -77,13 +77,30 @@ for _c in CORES_BRINCO:
 _CORES.update({"amarela": "Amarelo", "vermelha": "Vermelho", "branca": "Branco",
                "preta": "Preto", "roxa": "Roxo"})
 
-# Donos: nomes e como o reconhecimento de voz costuma escrever.
-_DONOS = {"deyvid": "Deyvid", "deivid": "Deyvid", "deivide": "Deyvid", "dayvid": "Deyvid",
+# Donos: nomes e como o reconhecimento de voz costuma escrever (os de sempre);
+# donos de outros sítios entram pelo nome, chave e logins (ver _donos()).
+_APELIDOS = {"deyvid": "Deyvid", "deivid": "Deyvid", "deivide": "Deyvid", "dayvid": "Deyvid",
           "david": "Deyvid", "davi": "Deyvid", "deyvide": "Deyvid", "deyvi": "Deyvid",
           "nilson": "Nilson", "nelson": "Nilson", "nilsom": "Nilson", "nilso": "Nilson",
           "milson": "Nilson",
           "geane": "Mae", "jeane": "Mae", "giane": "Mae", "geani": "Mae", "jane": "Mae",
           "gean": "Mae", "mae": "Mae", "mamae": "Mae"}
+_cache_donos: dict = {}
+
+
+def _donos() -> dict:
+    """{palavra falada: chave do dono} para os donos configurados agora."""
+    chave_cache = tuple((m, NOMES_MEMBROS.get(m)) for m in MEMBROS)
+    if chave_cache not in _cache_donos:
+        d = {k: v for k, v in _APELIDOS.items() if v in MEMBROS}
+        for m in MEMBROS:
+            for palavra in [m, str(NOMES_MEMBROS.get(m) or "").split(" ")[0],
+                            *[l for l, c in LOGIN_MEMBRO.items() if c == m]]:
+                if palavra:
+                    d.setdefault(norm(palavra), m)
+        _cache_donos.clear()
+        _cache_donos[chave_cache] = d
+    return _cache_donos[chave_cache]
 
 _CATEGORIAS = {}
 for _c in CATEGORIAS_ANIMAL:
@@ -327,13 +344,13 @@ def extrair_brincos(texto: str) -> list[dict]:
 
 def _dono(toks, ignorar_marcador=True):
     for i, t in enumerate(toks):
-        if t.n in _DONOS and not t.usado:
+        if t.n in _donos() and not t.usado:
             if ignorar_marcador and _marcador_mae(toks, i):
                 continue
-            dono = _DONOS[t.n]
+            dono = _donos()[t.n]
             # "mãe ou geane": os dois nomes do mesmo dono saem do texto livre
             for x in toks:
-                if _DONOS.get(x.n) == dono:
+                if _donos().get(x.n) == dono:
                     x.usado = True
             return dono
     return None
@@ -343,16 +360,16 @@ def _cotas_por_dono(toks) -> dict:
     """'2 do deyvid 2 do nilson 1 da mãe' / 'deyvid 2' → {membro: qtd}."""
     cotas = {}
     for i, t in enumerate(toks):
-        if t.n not in _DONOS or t.usado:
+        if t.n not in _donos() or t.usado:
             continue
-        membro = _DONOS[t.n]
+        membro = _donos()[t.n]
         # número antes (até 3 tokens: "2 do deyvid", "2 cabeças do deyvid")
         for k in range(i - 1, max(-1, i - 4), -1):
             if _eh_inteiro(toks[k]) and not toks[k].usado and toks[k].v < 1000:
                 cotas[membro] = toks[k].v
                 toks[k].usado = True
                 break
-            if toks[k].n in _DONOS:
+            if toks[k].n in _donos():
                 break
         else:
             k = None
@@ -625,7 +642,7 @@ def _produto_apos_manejo(toks) -> str:
             if _TIPO_VACINA.match(x.n) and not palavras:
                 continue
             if (x.usado or x.v is not None or x.n in _CATEGORIAS or x.n in _CORES
-                    or x.n in _DONOS or x.n in _PARA_PRODUTO or _PALAVRAS_MANEJO.match(x.n)):
+                    or x.n in _donos() or x.n in _PARA_PRODUTO or _PALAVRAS_MANEJO.match(x.n)):
                 break
             palavras.append(x)
         if palavras:
@@ -644,7 +661,7 @@ def _produto_sobra(toks) -> str:
     o produto falado no fim ('… amarelo 01 08 09 dectomax')."""
     resto = [t for t in toks if not t.usado and t.v is None and t.n not in _FILLER
              and t.n not in _NAO_PRODUTO and t.n not in _CATEGORIAS and t.n not in _CORES
-             and t.n not in _DONOS and not _PALAVRAS_MANEJO.match(t.n) and not _TIPO_VACINA.match(t.n)
+             and t.n not in _donos() and not _PALAVRAS_MANEJO.match(t.n) and not _TIPO_VACINA.match(t.n)
              and not re.match(r"^(vacinei|vacinamos|vermifuguei|vermifugamos|registrar|registra|cadastrar|"
                               r"vacinar|vermifugar|vacina|vacinas)$", t.n)]
     if not resto or len(resto) > 4:
@@ -681,8 +698,8 @@ _CONTEINER = re.compile(r"cont[ea]i?ner")
 def _analisar_visita(toks, n):
     campos = {}
     for t in toks:
-        if t.n in _DONOS:            # "visita, deyvid, …" → quem foi
-            campos["responsavel"] = NOMES_MEMBROS[_DONOS[t.n]]
+        if t.n in _donos():            # "visita, deyvid, …" → quem foi
+            campos["responsavel"] = NOMES_MEMBROS[_donos()[t.n]]
             break
     if re.search(r"\b(gado|contagem|contei|contado)\b(\s+\w+){0,3}?\s+(correto|certo|conferido|bateu|completo)\b", n):
         campos["gado_contado"] = "esperado"   # montar() troca pelo estoque do sistema
@@ -1027,7 +1044,7 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
             out["titulo"] = "🐮 Nascimento (sem brinco)"
             out["campos"] += [["Data", data_br], ["Bezerro(a)", animal.get("Categoria") or "—"],
                               ["Quantos", qtd_n],
-                              ["De quem", NOMES_MEMBROS.get(dono, "Dividido entre os três") if dono else "Dividido entre os três"]]
+                              ["De quem", NOMES_MEMBROS.get(dono, "Dividido entre todos") if dono else "Dividido entre todos"]]
             desc = " ".join(x for x in (animal.get("Categoria"), animal.get("Raça"),
                                         animal.get("Pelagem"), animal.get("Sinais")) if x)
             out["payload"] = {"acao": "manejo", "linha": {
@@ -1151,7 +1168,7 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
             perda_de = ""
             if tipo == "Morte/Perda":
                 perda_de = intencao.get("dono") or ""
-                out["campos"].append(["Perda de", NOMES_MEMBROS.get(perda_de, "Dividida entre os três")])
+                out["campos"].append(["Perda de", NOMES_MEMBROS.get(perda_de, "Dividida entre todos")])
             out["payload"] = {"acao": "manejo", "linha": {
                 "Data": data_iso, "Tipo": tipo, "Qtd Cabeças": qtd, "Descrição": desc,
                 "Responsável": membro, "Perda De": perda_de, "Produto": produto,
@@ -1210,8 +1227,8 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
                 out["avisos"].append(f"{len(refs)} brinco(s) para {qtd} cabeça(s) — as outras ficam sem brinco.")
             out["avisos"].append("Os animais com brinco saem como Vendidos (o brinco fica livre).")
         form = {"data": data_iso, "cabecas": qtd or "", "valor": f"{valor:.2f}".replace(".", ",") if valor else "",
-                "qtd_mae": cotas.get("Mae", 0), "qtd_deyvid": cotas.get("Deyvid", 0),
-                "qtd_nilson": cotas.get("Nilson", 0), "descricao": intencao.get("descricao") or ""}
+                **{f"qtd_{m.lower()}": cotas.get(m, 0) for m in MEMBROS},
+                "descricao": intencao.get("descricao") or ""}
         if acao == "venda":
             form["valor_arroba"] = f"{intencao['arroba']:.2f}".replace(".", ",") if intencao.get("arroba") else ""
             form["brincos"] = "; ".join(refs)

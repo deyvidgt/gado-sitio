@@ -51,30 +51,16 @@
         </p>
       </div>
       <div class="member-row" style="margin-bottom:20px">
+        {% for m in MEMBROS %}
         <div class="member-box">
-          <h4>👩 Geane</h4>
+          <h4>{{ NOMES[m] }}</h4>
           <div class="form-group">
             <label>Cabeças</label>
-            <input type="number" name="qtd_mae" id="qtd-mae" min="0" class="qtd-inp"
-                   value="{{ row.get("Qtd Geane", row.get("Qtd Mae", 0)) | int if row and row.get("Qtd Geane") else 0 }}">
+            <input type="number" name="qtd_{{ m|lower }}" id="qtd-{{ m|lower }}" min="0" class="qtd-inp"
+                   value="{{ row['Qtd ' + m] | int if row and row.get('Qtd ' + m) is not none else 0 }}">
           </div>
         </div>
-        <div class="member-box">
-          <h4>👦 Deyvid</h4>
-          <div class="form-group">
-            <label>Cabeças</label>
-            <input type="number" name="qtd_deyvid" id="qtd-deyvid" min="0" class="qtd-inp"
-                   value="{{ row["Qtd Deyvid"] | int if row and row.get("Qtd Deyvid") else 0 }}">
-          </div>
-        </div>
-        <div class="member-box">
-          <h4>👦 Nilson</h4>
-          <div class="form-group">
-            <label>Cabeças</label>
-            <input type="number" name="qtd_nilson" id="qtd-nilson" min="0" class="qtd-inp"
-                   value="{{ row["Qtd Nilson"] | int if row and row.get("Qtd Nilson") else 0 }}">
-          </div>
-        </div>
+        {% endfor %}
       </div>
       <div id="soma-aviso" style="display:none;font-size:12.5px;color:var(--warn);margin-bottom:12px">
         ⚠️ Soma (<span id="soma-val">0</span>) ≠ total (<span id="tot-val">0</span>)

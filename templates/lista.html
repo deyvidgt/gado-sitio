@@ -146,11 +146,7 @@
             {% set v = row.get(col, '') %}
             {# Tratar None, NaN real e a string 'nan' que pode vir do pandas #}
             {% if v is none or v == '' or v|string == 'nan' or v|string == 'NaT' %}—
-            {% elif col in ['Valor Total (R$)', 'Valor/Cabeça (R$)', 'Valor Arroba (R$)',
-                            'Valor Mae (R$)', 'Valor Deyvid (R$)', 'Valor Nilson (R$)',
-                            'Custo Mae (R$)', 'Custo Deyvid (R$)', 'Custo Nilson (R$)',
-                            'Resultado Mae (R$)', 'Resultado Deyvid (R$)', 'Resultado Nilson (R$)',
-                            'CMP no momento (R$)'] %}
+            {% elif col.endswith('(R$)') %}
               {{ v | brl }}
             {% elif v is number and v == v|int %}
               {# Inteiro lido como float pelo pandas (coluna com célula vazia): 7.0 → 7 #}

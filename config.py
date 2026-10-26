@@ -22,7 +22,6 @@ for _stream in ("stdout", "stderr"):
 ARQUIVO_DADOS = "gado_familia.xlsx"
 VERSAO = "4.5.1"
 NOME_SITIO = "Sítio Santo Antonio"
-FAMILIA = "Geane, Deyvid e Nilson"
 
 # ── Donos (sócios) do sítio ─────────────────────────────────────────────────
 # v5.0 fase 1: vêm de "membros" no sitio_config.json da pasta de dados; sem isso,

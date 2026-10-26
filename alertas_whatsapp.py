@@ -563,9 +563,9 @@ def montar_mensagem(alertas):
 
 TIPOS_RECEBER = ("urgentes", "semanal", "visita", "eventos", "mensal", "valores")
 
-# Login (minúsculo, chave do usuarios.json) -> membro de config.MEMBROS. Mesmo mapa de
+# Login (minúsculo, chave do usuarios.json) -> membro: config.LOGIN_MEMBRO, o mesmo de
 # routes_animais._membro_logado: quem registra loga como "geane" mas o aviso traz "Mae".
-_LOGIN_MEMBRO = {"geane": "Mae", "mae": "Mae", "deyvid": "Deyvid", "nilson": "Nilson"}
+from config import LOGIN_MEMBRO as _LOGIN_MEMBRO  # noqa: E402
 
 
 def _chave_pessoa(nome: str) -> str:
@@ -661,7 +661,7 @@ def avisar_manejo(tipo: str, qtd: int, brincos: str = "", de: str = "", descrica
             guardar_aviso_pendente(msg, tipo="eventos", excluir=registrado_por, msg_sem_valores=msg)
             return True
         corpo = (f"🚨 *Morte/Perda:* {qtd} cab.{sufixo_brincos}"
-                 + (f" · perda de {quem}" if quem else " · rateada entre os três")
+                 + (f" · perda de {quem}" if quem else " · rateada entre todos")
                  + (f"\n{descricao.strip()}" if str(descricao or "").strip() else ""))
         valor = ""
         try:

@@ -11,7 +11,7 @@ from calculos import (
     calcular_estoque, calcular_cmp, calcular_gpcab, custo_medio_movel_venda,
     dividir_cotas,
 )
-from config import (TIPOS_GASTO, TIPOS_MANEJO, MEMBROS, NOMES_MEMBROS, COLUNAS_VENDAS,
+from config import (TIPOS_GASTO, TIPOS_MANEJO, MEMBROS, NOMES_MEMBROS, COLUNAS_VENDAS, COLUNAS_COMPRAS,
                     TIPOS_COM_PRODUTO, INSUMOS)
 from extensions import (
     app, _agora, _validar_csrf, login_required,
@@ -104,11 +104,15 @@ def compras():
         d["_idx"] = int(real_idx)
         rows.append(d)
     return render_template("lista.html", titulo="Compras 🛒", secao="compras", aba="Compras",
-                           colunas=["Data","Qtd Cabeças","Valor Total (R$)","Valor/Cabeça (R$)",
-                                    "Qtd Mae","Qtd Deyvid","Qtd Nilson","Descrição","Registrado Por"],
+                           colunas=COLUNAS_COMPRAS,
                            rows=rows, ordem=ordem,
                            anos_disponiveis=_anos_de(df),
                            total_valor=_total_valor(df), total_cabecas=_total_cab(df))
+
+def _cotas_do_form(f, cabecas: int) -> tuple:
+    """Campos qtd_<dono> (qtd_mae, qtd_deyvid…) → cotas ajustadas, na ordem de MEMBROS."""
+    return dividir_cotas(cabecas, *[_int_form(f.get(f"qtd_{m.lower()}")) for m in MEMBROS])
+
 
 def gravar_compra(f) -> int:
     """Grava a compra do formulário (ou do comando de voz). Devolve o índice da
@@ -120,11 +124,9 @@ def gravar_compra(f) -> int:
     membro  = f.get("membro", "")
     if cabecas <= 0:
         raise ValueError("Informe ao menos 1 cabeça.")
-    qtd_mae, qtd_deyvid, qtd_nilson = dividir_cotas(
-        cabecas, _int_form(f.get("qtd_mae")), _int_form(f.get("qtd_deyvid")),
-        _int_form(f.get("qtd_nilson")))
+    cotas = _cotas_do_form(f, cabecas)
     val_cab = round(valor / cabecas, 2) if cabecas > 0 else 0
-    salvar_linha("Compras", [data, cabecas, valor, val_cab, qtd_mae, qtd_deyvid, qtd_nilson, desc, membro])
+    salvar_linha("Compras", [data, cabecas, valor, val_cab, *cotas, desc, membro])
     return len(carregar_aba("Compras")) - 1
 
 
@@ -168,16 +170,14 @@ def editar_compra(idx):
         if cabecas <= 0:
             flash("Informe ao menos 1 cabeça.", "error")
             return redirect(url_for("editar_compra", idx=idx))
-        qtd_mae, qtd_deyvid, qtd_nilson = dividir_cotas(
-            cabecas, _int_form(f.get("qtd_mae")), _int_form(f.get("qtd_deyvid")),
-            _int_form(f.get("qtd_nilson")))
+        cotas = _cotas_do_form(f, cabecas)
         val_cab = round(valor / cabecas, 2) if cabecas > 0 else 0
         fazer_backup()
         _limpar_backups_antigos()
         updates = {"Data": _data_form(data),
                    "Qtd Cabeças": cabecas, "Valor Total (R$)": valor,
-                   "Valor/Cabeça (R$)": val_cab, "Qtd Mae": qtd_mae,
-                   "Qtd Deyvid": qtd_deyvid, "Qtd Nilson": qtd_nilson,
+                   "Valor/Cabeça (R$)": val_cab,
+                   **{f"Qtd {m}": q for m, q in zip(MEMBROS, cotas)},
                    "Descrição": desc, "Registrado Por": membro}
         _aplicar_updates(df, idx, updates)
         reescrever_aba("Compras", df)
@@ -186,8 +186,6 @@ def editar_compra(idx):
     row = df.iloc[idx].to_dict()
     row["Data"] = fmt_data(row.get("Data"))
     row["data_input"] = df.iloc[idx]["Data"].strftime("%Y-%m-%d") if pd.notna(df.iloc[idx]["Data"]) else ""
-    # Fix: coluna correta para o template
-    row["Qtd Geane"] = row.get("Qtd Mae", 0)
     return render_template("form_compra.html", modo="editar", row=row, idx=idx,
                            cmp_atual=calcular_cmp(df), MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            hoje=_agora().strftime("%Y-%m-%d"))
@@ -321,14 +319,12 @@ def _salvar_venda(form, dados, idx=None):
     desc         = form.get("descricao", "").strip()
     brincos      = form.get("brincos_refs", "")   # já resolvido em _brincos_do_form
 
-    q_mae, q_deyvid, q_nilson = dividir_cotas(
-        cabecas, _int_form(form.get("qtd_mae")), _int_form(form.get("qtd_deyvid")),
-        _int_form(form.get("qtd_nilson")))
+    cotas = _cotas_do_form(form, cabecas)
 
     val_cab  = round(valor_total / cabecas, 2) if cabecas > 0 else 0
-    v_mae    = round(q_mae    * val_cab, 2)
-    v_deyvid = round(q_deyvid * val_cab, 2)
-    v_nilson = round(valor_total - v_mae - v_deyvid, 2)
+    # O último dono fica com o centavo que sobra: a soma bate com o valor total.
+    valores  = [round(q * val_cab, 2) for q in cotas[:-1]]
+    valores.append(round(valor_total - sum(valores), 2))
 
     # Custo por cabeça no momento da venda — MÉDIA MÓVEL (v4.0), coerente com o
     # que o dashboard/relatórios recomputam. A venda entra na simulação posicionada
@@ -343,20 +339,13 @@ def _salvar_venda(form, dados, idx=None):
     def custo_m(qtd):        return round(qtd * ctcab_v, 2)
     def result_m(val, qtd):  return round(val - custo_m(qtd), 2)
 
-    c_mae    = custo_m(q_mae)
-    c_deyvid = custo_m(q_deyvid)
-    c_nilson = custo_m(q_nilson)
-    r_mae    = result_m(v_mae,    q_mae)
-    r_deyvid = result_m(v_deyvid, q_deyvid)
-    r_nilson = result_m(v_nilson, q_nilson)
-
-    # Colunas alinhadas com COLUNAS_VENDAS (19 originais + Brincos)
+    # Colunas alinhadas com COLUNAS_VENDAS (Qtd/Valor/Custo/Resultado por dono + Brincos)
     linha = [
         data, cabecas, valor_total, val_cab, valor_arroba,
-        q_mae, q_deyvid, q_nilson,
-        v_mae, v_deyvid, v_nilson,
-        c_mae, c_deyvid, c_nilson,
-        r_mae, r_deyvid, r_nilson,
+        *cotas,
+        *valores,
+        *[custo_m(q) for q in cotas],
+        *[result_m(v, q) for v, q in zip(valores, cotas)],
         round(ctcab_v, 2),
         desc,
         brincos,
@@ -435,8 +424,8 @@ def vendas():
         rows.append(d)
     return render_template("lista.html", titulo="Vendas 🤝", secao="vendas", aba="Vendas",
                            colunas=["Data","Qtd Cabeças","Valor Total (R$)","Valor/Cabeça (R$)",
-                                    "Valor Arroba (R$)","Qtd Mae","Qtd Deyvid","Qtd Nilson",
-                                    "Valor Mae (R$)","Valor Deyvid (R$)","Valor Nilson (R$)","Descrição","Brincos"],
+                                    "Valor Arroba (R$)", *[f"Qtd {m}" for m in MEMBROS],
+                                    *[f"Valor {m} (R$)" for m in MEMBROS], "Descrição","Brincos"],
                            rows=rows, ordem=ordem,
                            anos_disponiveis=_anos_de(df),
                            total_valor=_total_valor(df), total_cabecas=_total_cab(df))

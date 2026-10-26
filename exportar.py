@@ -15,6 +15,7 @@ from config import CORES, MEMBROS, NOMES_MEMBROS
 from db import carregar_todas, salvar_linha, safe_val, DATA_DIR
 from ui_helper import ui_ok, ui_aviso, ui_info, ui_titulo, ui_input, fmt_r
 from calculos import (
+    partes_iguais,
     calcular_resumo_financeiro, calcular_todos_membros, calcular_fluxo_caixa,
 )
 
@@ -217,7 +218,7 @@ def exportar_relatorio_excel() -> str:
 
     aba_dados("🛒 Compras", df_c,
               ["Data", "Qtd Cabeças", "Valor Total (R$)", "Valor/Cabeça (R$)",
-               "Qtd Mae", "Qtd Deyvid", "Qtd Nilson",
+               *[f"Qtd {m}" for m in MEMBROS],
                "Descrição", "Registrado Por"],
               [3, 4], CORES["verde_escuro"])
 
@@ -227,12 +228,12 @@ def exportar_relatorio_excel() -> str:
 
     aba_dados("🤝 Vendas", df_v,
               ["Data", "Qtd Cabeças", "Valor Total (R$)", "Valor/Cabeça (R$)", "Valor Arroba (R$)",
-               "Qtd Geane", "Qtd Deyvid", "Qtd Nilson",
-               "Valor Geane (R$)", "Valor Deyvid (R$)", "Valor Nilson (R$)",
-               "Custo Geane (R$)", "Custo Deyvid (R$)", "Custo Nilson (R$)",
-               "Result. Geane (R$)", "Result. Deyvid (R$)", "Result. Nilson (R$)",
+               *[f"{rot} {NOMES_MEMBROS[m]}{suf}" for rot, suf in
+                 (("Qtd", ""), ("Valor", " (R$)"), ("Custo", " (R$)"), ("Result.", " (R$)"))
+                 for m in MEMBROS],
                "CMP no momento (R$)", "Descrição"],
-              [3, 4, 5, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], CORES["azul_escuro"])
+              # dinheiro: Valor Total, Valor/Cab, Arroba e, depois das Qtd, Valor/Custo/Result. e CMP
+              [3, 4, 5, *range(6 + len(MEMBROS), 7 + 4 * len(MEMBROS))], CORES["azul_escuro"])
 
     # Cabeçalho = colunas reais da aba (Perda De, Produto, Nascimento De…); antes eram
     # só 5 títulos fixos e as colunas novas saíam no Excel sem título.
@@ -294,11 +295,10 @@ def importar_excel_antigo():
             preco_c = safe_val(df, 0, 10)
             if cab_c and preco_c:
                 cab_i = int(cab_c)
-                base  = cab_i // 3
                 salvar_linha("Compras", [
                     f"01/01/{ano}", cab_i, float(preco_c),
                     round(float(preco_c) / cab_i, 2),
-                    base, base, cab_i - base * 2,          # Qtd Mae, Deyvid, Nilson
+                    *partes_iguais(cab_i),                  # Qtd de cada dono
                     f"Nelore/Garrotes - Importado {ano}", "Importação",
                 ])
                 nc += 1

@@ -37,7 +37,7 @@ app = Flask(
     static_folder=os.path.join(BUNDLE_DIR, "static"),
 )
 
-from config import SECRET_KEY, SESSAO_MINUTOS, CACHE_RESUMO_TTL, VERSAO
+from config import SECRET_KEY, SESSAO_MINUTOS, CACHE_RESUMO_TTL, VERSAO, MEMBROS, NOMES_MEMBROS
 
 
 def _chave_secreta() -> str:
@@ -188,7 +188,7 @@ def _inject_csrf():
 # ── Config do sítio com cache ──────────────────────────────────────────────────
 _SITIO_CFG_DEFAULT = {
     "nome": "Sítio Santo Antonio",
-    "donos": "Geane · Deyvid · Nilson",
+    "donos": " · ".join(NOMES_MEMBROS[m] for m in MEMBROS),
     "logo": "🐄",
     "logo_tipo": "emoji",
 }

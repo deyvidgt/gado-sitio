@@ -7,6 +7,7 @@ Rotas de importação de Excel antigo, exportação de relatório Excel e backup
 import os
 from flask import render_template, request, redirect, url_for, flash, send_file
 from db import fazer_backup, safe_val, DATA_DIR
+from calculos import partes_iguais
 from extensions import (
     app, _agora, _validar_csrf, login_required,
     salvar_linha,
@@ -76,11 +77,10 @@ def importar():
             preco_c = safe_val(df, 0, 10)
             if cab_c and preco_c:
                 cab_i = int(cab_c)
-                base  = cab_i // 3
                 salvar_linha("Compras", [
                     f"01/01/{ano}", cab_i, float(preco_c),
                     round(float(preco_c) / cab_i, 2) if cab_i > 0 else 0,
-                    base, base, cab_i - base * 2,
+                    *partes_iguais(cab_i),
                     f"Nelore/Garrotes — Importado {ano}", "Importação",
                 ])
                 nc += 1

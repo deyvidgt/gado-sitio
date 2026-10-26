@@ -14,7 +14,7 @@ import drive
 import fotos as F
 import pesagem as P
 from calculos import calcular_estoque, calcular_estoque_por_membro
-from config import (MEMBROS, NOMES_MEMBROS, CORES_BRINCO, CATEGORIAS_ANIMAL,
+from config import (LOGIN_MEMBRO, MEMBROS, NOMES_MEMBROS, CORES_BRINCO, CATEGORIAS_ANIMAL,
                     ORIGENS_ANIMAL, COLUNAS_MANEJO, TIPOS_COM_PRODUTO, TIPOS_FOTO)
 from db import fazer_backup
 from routes_visitas import _enviar_avisos_depois
@@ -31,7 +31,7 @@ def fazer_backup_seguro():
 def _membro_logado() -> str:
     """Usuário do login → membro (Mae/Deyvid/Nilson) para 'Responsável'/'Registrado Por'."""
     u = str(session.get("usuario") or "").strip().lower()
-    return {"geane": "Mae", "mae": "Mae", "deyvid": "Deyvid", "nilson": "Nilson"}.get(u, "")
+    return LOGIN_MEMBRO.get(u, "")
 
 
 def _ctx_templates():

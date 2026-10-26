@@ -150,3 +150,90 @@ def test_invariantes_com_n_donos(membros_teste, n):
     est = c.calcular_estoque_por_membro(df_c, df_v, df_m)
     assert set(est) == set(config.MEMBROS)
     assert sum(est.values()) == c.calcular_estoque(df_c, df_v, df_m)
+
+
+# ── Task 3: gravação, telas, voz e WhatsApp ───────────────────────────────────
+
+@pytest.fixture
+def sitio_quatro_donos(membros_teste, tmp_path, monkeypatch):
+    """Sítio novo (arquivo vazio em pasta temporária) com os donos A, B, C, D."""
+    from extensions import _cache_invalidar
+    membros_teste(4)
+    monkeypatch.setattr(db, "ARQUIVO_PATH", str(tmp_path / "gado_familia.xlsx"))
+    monkeypatch.setattr(db, "DATA_DIR", str(tmp_path))
+    db.inicializar()
+    _cache_invalidar()
+    yield
+    _cache_invalidar()
+
+
+def test_venda_quatro_donos_grava_colunas(cliente, sitio_quatro_donos):
+    with cliente.session_transaction() as s:
+        s["csrf_token"] = "tok"
+    r = cliente.post("/compras/nova", data={
+        "csrf_token": "tok", "data": "2025-01-10", "cabecas": "10", "valor": "20000",
+        "qtd_a": "1", "qtd_b": "2", "qtd_c": "3", "qtd_d": "4", "membro": "A"})
+    assert r.status_code == 302
+    comp = db.carregar_aba("Compras").iloc[-1]
+    assert [int(comp[f"Qtd {m}"]) for m in "ABCD"] == [1, 2, 3, 4]
+    assert comp["Descrição"] in ("", None) or pd.isna(comp["Descrição"])
+    assert comp["Registrado Por"] == "A"
+
+    r = cliente.post("/vendas/nova", data={
+        "csrf_token": "tok", "data": "2025-03-01", "cabecas": "3", "valor": "10000",
+        "qtd_a": "1", "qtd_b": "1", "qtd_c": "0", "qtd_d": "1", "descricao": "teste 4"})
+    assert r.status_code == 302
+    v = db.carregar_aba("Vendas").iloc[-1]
+    assert [int(v[f"Qtd {m}"]) for m in "ABCD"] == [1, 1, 0, 1]
+    assert sum(float(v[f"Valor {m} (R$)"]) for m in "ABCD") == pytest.approx(10_000.0)
+    assert float(v["Valor C (R$)"]) == 0
+    assert v["Descrição"] == "teste 4"
+    from test_calculos import checar_invariantes
+    d = db.carregar_todas()
+    checar_invariantes(d["Compras"], d["Gastos"], d["Vendas"], d["Manejo"])
+
+
+@pytest.mark.parametrize("url", ["/", "/compras", "/compras/nova", "/vendas", "/vendas/nova",
+                                 "/manejo/novo", "/gastos/novo", "/animais", "/animais/novo",
+                                 "/relatorios", "/configuracoes", "/visitas/nova", "/voz"])
+def test_paginas_com_quatro_donos(cliente, sitio_quatro_donos, url):
+    r = cliente.get(url)
+    assert r.status_code in (200, 302), url
+    if r.status_code == 200 and url.endswith("nova"):
+        assert "Dono D" in r.get_data(as_text=True)
+
+
+def test_login_membro_configurado(membros_teste, cliente):
+    import alertas_whatsapp
+    from routes_animais import _membro_logado
+    membros_teste(3)
+    with cliente.application.test_request_context():
+        from flask import session
+        session["usuario"] = "B"
+        assert _membro_logado() == "B"
+        session["usuario"] = "nd"
+        assert _membro_logado() == ""
+    assert alertas_whatsapp._chave_pessoa("b") == "b"
+
+
+def test_voz_reconhece_dono_configurado(membros_teste):
+    import comando_voz as V
+    from datetime import datetime
+    membros_teste(4)
+    config.NOMES_MEMBROS["D"] = "Joaquim"
+    r = V.analisar("comprei 4 cabeças por 8 mil, 2 do joaquim", datetime(2026, 10, 15))
+    assert r["acao"] == "compra"
+    assert r["cotas"].get("D") == 2
+
+
+def test_pdf_e_exportar_com_quatro_donos(cliente, sitio_quatro_donos):
+    with cliente.session_transaction() as s:
+        s["csrf_token"] = "tok"
+    cliente.post("/compras/nova", data={"csrf_token": "tok", "data": "2025-01-10", "cabecas": "8",
+                                        "valor": "16000", "membro": "A"})
+    cliente.post("/vendas/nova", data={"csrf_token": "tok", "data": "2025-03-01", "cabecas": "4",
+                                       "valor": "10000"})
+    for url in ("/exportar", "/relatorio-pdf"):
+        r = cliente.get(url)
+        assert r.status_code == 200, url
+        assert len(r.data) > 1000

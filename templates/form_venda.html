@@ -89,7 +89,7 @@
 {% block scripts %}
 <script>
 const CTCAB = {{ r_fin.ctcab }};
-const membros = ["mae", "deyvid", "nilson"];
+const membros = {{ MEMBROS|map('lower')|list|tojson }};
 
 function calc() {
   const tot   = parseInt(document.getElementById("tot-cab").value) || 0;
