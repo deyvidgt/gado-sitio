@@ -220,4 +220,5 @@ def total_lotacao(df_pastos, sit: dict, capacidade: float | None = None) -> dict
     ha = sum(float(p["Área (ha)"] or 0) for _, p in ativos(df_pastos).iterrows()) if ids else 0.0
     ua = sum(s["ua"] for p, s in sit.items() if p in ids)
     ua_ha = ua / ha if ha > 0 else None
-    return {"ua": ua, "ha": ha, "ua_ha": ua_ha, "nivel": nivel(ua_ha, capacidade)}
+    return {"ua": ua, "ha": ha, "ua_ha": ua_ha, "nivel": nivel(ua_ha, capacidade),
+            "capacidade": capacidade}

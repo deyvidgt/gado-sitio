@@ -67,31 +67,41 @@
 
 <div class="card" style="margin-top:16px">
   <h3>Pastos</h3>
-  <table class="pastos-tab">
-    <tr><th>Pasto</th><th>Área</th><th>Cabeças</th><th>UA/ha</th><th>Dias</th><th></th></tr>
-    {% for p in pastos %}
-    <tr>
-      <td><span class="bol" style="background:{{ p.cor }}"></span>{{ p.nome }}</td>
-      <td>{{ '%.2f'|format(p.area)|replace('.', ',') }} ha</td>
-      <td>{{ p.cab }}</td>
-      <td>{% if p.ua_ha is not none and p.cab %}<span class="nv{% if p.nivel %} nv-{{ p.nivel }}{% endif %}">{{ '%.2f'|format(p.ua_ha)|replace('.', ',') }}</span>{% if p.estimado %} <span class="muted" title="Algum animal sem peso de balança: usou o peso médio">~</span>{% endif %}{% else %}—{% endif %}</td>
-      <td>{{ p.dias if p.dias is not none and p.cab else '—' }}</td>
-      <td>
-        <details><summary class="muted">editar</summary>
-          <form method="post" action="{{ url_for('editar_pasto', id_=p.id) }}" style="display:flex;gap:6px;margin-top:6px">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <input type="text" name="nome" value="{{ p.nome }}" maxlength="40" required aria-label="Novo nome">
-            <button class="btn btn-outline btn-sm">Renomear</button>
-          </form>
-          <form method="post" action="{{ url_for('excluir_pasto', id_=p.id) }}" style="margin-top:6px">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <button class="btn btn-outline btn-sm">🗑️ Excluir pasto</button>
-          </form>
-        </details>
-      </td>
-    </tr>
-    {% endfor %}
-  </table>
+  {% for p in pastos %}
+  {% set classe = {'atencao': 'aviso', 'excesso': 'ruim'}.get(p.nivel, '') %}
+  {% set pct = (p.ua_ha / capacidade * 100) if (capacidade and p.ua_ha and p.cab) else 0 %}
+  <div class="linha {{ classe }}" style="display:block">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="bol" style="background:{{ p.cor }}"></span>
+      <span class="linha-nome">{{ p.nome }}</span>
+      {% if p.nivel and p.cab %}
+      <span class="badge badge-{{ classe or 'ok' }}" style="margin-left:auto">
+        {{ {'ok': 'Folgado', 'atencao': 'No limite', 'excesso': 'Lotado'}[p.nivel] }}</span>
+      {% endif %}
+    </div>
+    <div class="tri" style="margin:8px 0 6px">
+      <div><b>{{ p.cab }}</b>cabeças</div>
+      <div><b>{{ '%.2f'|format(p.area)|replace('.', ',') }}</b>hectares</div>
+      <div><b>{% if p.ua_ha is not none and p.cab %}{{ '%.2f'|format(p.ua_ha)|replace('.', ',') }}{% if p.estimado %}~{% endif %}{% else %}—{% endif %}</b>UA/ha</div>
+      <div><b>{{ p.dias if p.dias is not none and p.cab else '—' }}</b>dias no pasto</div>
+    </div>
+    {% if pct %}
+    <div class="barra {{ classe }}"><i style="width:{{ [pct, 100]|min|round|int }}%"></i></div>
+    <div class="linha-sub" style="margin-top:3px">{{ pct|round|int }}% da capacidade do sítio</div>
+    {% endif %}
+    <details style="margin-top:6px"><summary class="muted">editar</summary>
+      <form method="post" action="{{ url_for('editar_pasto', id_=p.id) }}" style="display:flex;gap:6px;margin-top:6px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="text" name="nome" value="{{ p.nome }}" maxlength="40" required aria-label="Novo nome">
+        <button class="btn btn-outline btn-sm">Renomear</button>
+      </form>
+      <form method="post" action="{{ url_for('excluir_pasto', id_=p.id) }}" style="margin-top:6px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-outline btn-sm">🗑️ Excluir pasto</button>
+      </form>
+    </details>
+  </div>
+  {% endfor %}
   <p class="muted" style="margin-top:8px">UA = 450 kg de animal. "~" = algum animal sem pesagem de balança (usou o peso médio).</p>
 </div>
 {% endif %}
@@ -131,7 +141,9 @@
 
   const grupo = L.featureGroup().addTo(mapa);
   pastos.forEach(p => {
-    const camada = L.geoJSON(p.geo, { style: { color: p.cor, weight: 2, fillOpacity: .25 } });
+    // Contorno na cor do pasto; o preenchimento mostra a lotação (verde/amarelo/vermelho).
+    const tinta = { ok: "#52a044", atencao: "#e67e22", excesso: "#c0392b" }[p.nivel] || p.cor;
+    const camada = L.geoJSON(p.geo, { style: { color: p.cor, weight: 2, fillColor: tinta, fillOpacity: .35 } });
     let txt = `<b>${p.nome}</b><br>${br(p.area, 1)} ha · ${p.cab} cab`;
     if (p.cab && p.ua_ha != null) txt += `<br>${br(p.ua_ha, 2)} UA/ha${p.estimado ? "~" : ""}`;
     if (p.cab && p.dias != null) txt += ` · ${p.dias} dias`;

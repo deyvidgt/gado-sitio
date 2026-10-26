@@ -167,6 +167,31 @@
     [data-theme="dark"] .badge-gasto  { background:rgba(230,126,34,.18);  color:#f4a84a; }
     [data-theme="dark"] .badge-venda  { background:rgba(41,128,185,.18);  color:#5db3e8; }
     [data-theme="dark"] .badge-manejo { background:rgba(155,89,182,.18);  color:#c39ee8; }
+    /* Semáforo: cor + palavra, nunca só cor (daltonismo e tela no sol) */
+    .badge-ok    { background:rgba(82,160,68,.16);  color:var(--green-600); }
+    .badge-aviso { background:rgba(230,126,34,.16); color:#c87000; }
+    .badge-ruim  { background:rgba(192,57,43,.14);  color:var(--danger); }
+
+    /* Barra de nível (lotação, estoque de insumo) */
+    .barra { height:7px; border-radius:99px; background:var(--bg-2); overflow:hidden; }
+    .barra > i { display:block; height:100%; border-radius:99px; background:var(--green-500); }
+    .barra.aviso > i { background:var(--warn); }
+    .barra.ruim  > i { background:var(--danger); }
+
+    /* Três números numa linha: <div class="tri"><div><b>12</b>cabeças</div>…</div> */
+    .tri { display:flex; gap:16px; flex-wrap:wrap; }
+    .tri > div { font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--text-3); }
+    .tri > div > b { display:block; font-family:'Playfair Display',serif; font-size:21px;
+                     font-weight:700; color:var(--text); text-transform:none; letter-spacing:0; }
+
+    /* Cartão-linha: no celular lê melhor que tabela */
+    .linha { display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--surface);
+             border-left:4px solid var(--green-500); border-radius:8px; box-shadow:var(--shadow); margin-bottom:8px; }
+    .linha.aviso { border-left-color:var(--warn); }
+    .linha.ruim  { border-left-color:var(--danger); }
+    .linha-nome { font-weight:600; font-size:14px; }
+    .linha-sub  { font-size:12px; color:var(--text-3); }
+    .linha-fim  { margin-left:auto; text-align:right; }
 
     /* Forms */
     .form-card { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:32px; max-width:640px; }
@@ -232,6 +257,11 @@
       .member-row { grid-template-columns:1fr; }
       .form-card { max-width:100%; padding:20px; }
       .topbar-date { display:none; }
+      /* Tabela larga no celular: a 1ª coluna fica parada para não perder o nome ao rolar */
+      .table-wrap tbody td:first-child, .table-wrap thead th:first-child {
+        position:sticky; left:0; background:var(--surface); z-index:1;
+      }
+      .table-wrap thead th:first-child { background:var(--green-800); }
     }
     @media (max-width: 480px) { .metrics { grid-template-columns:1fr; } .topbar-title { font-size:16px; } }
 

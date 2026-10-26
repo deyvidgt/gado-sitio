@@ -10,6 +10,9 @@
   .tar-sub { font-size:12px; color:var(--text-3); }
   .tar-atrasada .tar-tit { color:#c62828; }
   .tar-hoje .tar-tit { color:#ef6c00; }
+  /* Fundo creme na linha urgente lê melhor que texto vermelho sozinho */
+  .tar-atrasada { background:rgba(192,57,43,.06); border-radius:8px; padding:10px 12px; }
+  .tar-hoje { background:rgba(230,126,34,.06); border-radius:8px; padding:10px 12px; }
   .tar-acao { margin-left:auto; display:flex; gap:6px; align-items:center; }
 </style>
 
@@ -38,6 +41,13 @@
 
 <div class="card" style="margin-top:16px">
   <h3>A fazer ({{ pendentes|length }})</h3>
+  {% if pendentes %}
+  <div class="tri" style="margin-bottom:14px">
+    <div><b style="color:var(--danger)">{{ pendentes|selectattr('situacao', 'equalto', 'atrasada')|list|length }}</b>atrasadas</div>
+    <div><b style="color:var(--warn)">{{ pendentes|selectattr('situacao', 'equalto', 'hoje')|list|length }}</b>para hoje</div>
+    <div><b>{{ pendentes|selectattr('situacao', 'equalto', 'proxima')|list|length }}</b>próximas</div>
+  </div>
+  {% endif %}
   {% for t in pendentes %}
   <div class="tar tar-{{ t.situacao }}">
     <div>

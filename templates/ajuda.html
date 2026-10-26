@@ -102,10 +102,17 @@
   <li><strong>Resultado por Membro</strong>: lucro ou prejuízo de cada dono (Geane, Deyvid e Nilson) e quantas cabeças cada um tem.</li>
   <li><strong>Valor Estimado do Rebanho</strong> e <strong>Evolução do Rebanho</strong>.</li>
   <li><strong>Agenda de Manejo</strong>: vacinas e vermífugos que estão vencendo ou atrasados.</li>
-  <li><strong>Estoque de Insumos</strong>: quantos sacos de sal, proteinado e ração ainda tem e quando acabam.
+  <li><strong>Estoque de Insumos</strong>: quantos sacos de sal, proteinado e ração ainda tem e quando acabam,
+    com uma <strong>barra de folga</strong> que fica amarela com menos de 15 dias e vermelha com menos de 5.
     O botão <strong>🧮 Comparar preços</strong> põe até 3 marcas lado a lado (preço do saco, kg do saco e quanto
     cada cabeça come por dia) e mostra qual sai mais barato no fim do mês — o saco mais barato nem sempre ganha.
     Essa tela só faz a conta, não salva nada.</li>
+  <li><strong>🌿 Lotação dos Pastos</strong>: a UA/ha do sítio com uma <strong>barra</strong> e a
+    porcentagem da capacidade — verde = folgado, amarelo = no limite, vermelho = lotado.</li>
+  <li><strong>🐄 Rebanho por Categoria</strong>: quantas vacas, novilhas, bezerros, garrotes e touros
+    há hoje, em <strong>barras</strong> do maior para o menor.</li>
+  <li><strong>📋 Tarefas</strong>: o que está atrasado, o que é para hoje e o que vem na semana.</li>
+  <li><strong>🐮 Reprodução</strong>: vacas prenhas, as que esperam o toque e os partos próximos.</li>
   <li><strong>Última Visita</strong>, <strong>Chuvas por Mês</strong>, <strong>Cotações de Mercado</strong> e <strong>Atividade Recente</strong>.</li>
 </ul>
 {{ passo('p-painel-1.png', 'Painel — resumo financeiro e rebanho') }}
@@ -136,7 +143,8 @@
 <p>Tudo o que se faz com o gado: vacinas, vermífugo, pesagem, tratamento, troca de pasto, <strong>nascimento</strong> e <strong>morte</strong>.</p>
 <ol>
   <li>Menu → <strong>🩺 Novo Manejo</strong>.</li>
-  <li>Escolha o <strong>Tipo de Manejo</strong> (Vacina Raiva, Vacina Clostridioses, Vacina Brucelose, Vermifugação, Pesagem, Morte/Perda, Nascimento…).</li>
+  <li>Escolha o <strong>Tipo de Manejo</strong> (Vacina Raiva, Vacina Clostridioses, Vacina Brucelose, Vermifugação,
+    Pesagem, Morte/Perda, Nascimento, Movimentação de Pasto, Cobertura, Diagnóstico de Gestação…).</li>
   <li>Informe a <strong>quantidade de cabeças</strong> e o <strong>responsável</strong>.</li>
   <li>Em vacina e remédio, diga <strong>qual produto</strong> foi usado (o sistema lembra os já usados).</li>
   <li>Se foram animais com brinco, escreva os <strong>brincos</strong> (ex.: <code>amarelo 21, azul 12</code>) — aparece no histórico de cada um.</li>
@@ -264,8 +272,12 @@
     1,0–2,0 em pasto de braquiária) e a UA/ha fica <strong>verde</strong> (sobra pasto),
     <strong>amarela</strong> (perto do limite) ou <strong>vermelha</strong> (gado demais, hora de mover).
     O painel mostra a lotação do sítio todo e o <strong>rebanho por categoria</strong>.</li>
+  <li>Abaixo do mapa, cada pasto é um <strong>cartão</strong> com uma <strong>barra de lotação</strong>
+    ("78% da capacidade") e a etiqueta <strong>Folgado</strong>, <strong>No limite</strong> ou
+    <strong>Lotado</strong>. No mapa, o pasto fica pintado de <strong>verde, amarelo ou vermelho</strong>
+    pela mesma conta — dá para ver de longe de qual pasto é hora de tirar o gado.</li>
   <li>Mover "o rebanho todo" leva também os animais que estavam separados.</li>
-  <li>Renomear ou excluir: na tabela, toque em <em>editar</em>. Excluir só tira do mapa; o histórico fica no Manejo.</li>
+  <li>Renomear ou excluir: no cartão do pasto, toque em <em>editar</em>. Excluir só tira do mapa; o histórico fica no Manejo.</li>
 </ul>
 <a class="voltar" href="#indice">↑ voltar ao índice</a>
 
@@ -279,7 +291,10 @@
     criada sozinha, contando a partir da data dela.</li>
 </ol>
 <ul>
-  <li>Tarefa <strong>atrasada</strong> fica em vermelho e não some até alguém marcar como feita.</li>
+  <li>No alto da lista aparecem três números grandes: <strong>atrasadas</strong>,
+    <strong>para hoje</strong> e <strong>próximas</strong>.</li>
+  <li>Tarefa <strong>atrasada</strong> fica com fundo vermelho claro (a de hoje, alaranjado) e
+    não some até alguém marcar como feita.</li>
   <li>O painel mostra as tarefas dos próximos 7 dias, e o WhatsApp avisa das atrasadas e das de hoje.</li>
   <li>Isso é diferente do calendário de vacinas: ali o sistema calcula sozinho; aqui quem anota é você.</li>
 </ul>

@@ -4,6 +4,26 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ## [Não lançado]
 
+### Melhorado
+- **Telas mais fáceis de ler (v5.3):** inspirado nos aplicativos que a família já conhece,
+  o que antes era só número virou **barra colorida com semáforo**:
+  - **Pastos** deixou de ser tabela e virou um cartão por pasto, com cabeças, hectares,
+    UA/ha e dias numa linha só, a **barra de lotação** ("78% da capacidade") e a etiqueta
+    **Folgado / No limite / Lotado**. No mapa, o **preenchimento de cada pasto agora é
+    verde, amarelo ou vermelho** conforme a lotação — dá para ver de relance de qual
+    pasto é hora de tirar o gado.
+  - **Painel**: a Lotação ganhou barra e a porcentagem da capacidade; o Rebanho por
+    Categoria virou **barras proporcionais** (lê-se melhor que lista ou pizza no celular);
+    o Estoque de Insumos mostra uma **barra de folga** que fica amarela abaixo de 15 dias
+    e vermelha abaixo de 5.
+  - **Tarefas**: contagem grande de **atrasadas / para hoje / próximas** no topo, e a
+    linha da tarefa atrasada (ou de hoje) ganhou **fundo colorido**, que se enxerga melhor
+    no sol do que só o texto vermelho.
+  - **Tabelas no celular**: a primeira coluna agora fica parada ao rolar para o lado, então
+    não se perde mais de qual linha é o número.
+  - O semáforo sempre vem com a **palavra junto da cor** (Folgado/No limite/Lotado), para
+    quem não distingue bem as cores ou está no sol.
+
 ### Adicionado
 - **Lotes com painel econômico (v5.3):** nova aba **📦 Lotes** no menu. Cada compra (e cada
   nascimento) vira um lote e o sistema mostra, por lote: cabeças, **custo por cabeça**

@@ -134,6 +134,12 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 ## Convenções
 
 - Código e UI em **português**; comentários explicam o *porquê*, não o óbvio.
+- **Visual (v5.3):** o CSS fica todo em `templates/base.html`. Antes de escrever estilo novo,
+  reaproveite os blocos prontos: `.metric(s)` (KPI), `.card`, `.badge` (+ `badge-ok/aviso/ruim`
+  = semáforo), `.barra` (+ `.aviso`/`.ruim`, preenchida por `<i style="width:N%">`), `.tri`
+  (três números numa linha, número grande em cima do rótulo) e `.linha` (cartão-linha que
+  substitui tabela no celular). Semáforo **sempre com a palavra junto da cor** (sol forte e
+  daltonismo); número grande, rótulo pequeno — nunca o contrário.
 - Emojis aparecem em logs e na UI — garanta saída UTF-8 (já forçado em `config.py`).
 - Datas no Excel em `dd/mm/aaaa`; leitura com `dayfirst=True`.
 - Ao mexer em finanças, **rode um smoke test** com `gado_familia.xlsx` real (numa cópia)

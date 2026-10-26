@@ -137,6 +137,12 @@
       <div style="font-size:26px;font-weight:700" class="lot-{{ lotacao.nivel or 'sem' }}">
         {{ '%.2f'|format(lotacao.ua_ha)|replace('.', ',') }} UA/ha
       </div>
+      {% if lotacao.capacidade %}
+      {% set classe = {'atencao': 'aviso', 'excesso': 'ruim'}.get(lotacao.nivel, '') %}
+      {% set pct = (lotacao.ua_ha / lotacao.capacidade * 100)|round|int %}
+      <div class="barra {{ classe }}" style="margin:8px 0 4px"><i style="width:{{ [pct, 100]|min }}%"></i></div>
+      <span class="badge badge-{{ classe or 'ok' }}">{{ pct }}% da capacidade</span>
+      {% endif %}
       <p style="font-size:12px;color:var(--text-3);margin-top:6px">
         {{ '%.1f'|format(lotacao.ua)|replace('.', ',') }} UA em {{ '%.1f'|format(lotacao.ha)|replace('.', ',') }} ha
         {% if lotacao.nivel == 'excesso' %}· ⚠️ acima da capacidade
@@ -154,12 +160,21 @@
   <div class="card">
     <div class="card-title">🐄 Rebanho por Categoria</div>
     {% if composicao and composicao.total %}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px">
+      {# Barra horizontal proporcional: lê-se melhor que pizza no celular. #}
+      <div style="font-size:13px">
         {% for nome, n in composicao.categorias.items() %}
-        <div><span class="kv-key">{{ nome }}</span> <b>{{ n }}</b></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+          <span class="kv-key" style="min-width:86px">{{ nome }}</span>
+          <div class="barra" style="flex:1"><i style="width:{{ (n * 100 / composicao.total)|round|int }}%"></i></div>
+          <b style="min-width:26px;text-align:right">{{ n }}</b>
+        </div>
         {% endfor %}
         {% if composicao.sem_cadastro %}
-        <div><span class="kv-key">Sem cadastro</span> <b>{{ composicao.sem_cadastro }}</b></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="kv-key" style="min-width:86px">Sem cadastro</span>
+          <div class="barra" style="flex:1"><i style="width:{{ (composicao.sem_cadastro * 100 / composicao.total)|round|int }}%;background:var(--text-3)"></i></div>
+          <b style="min-width:26px;text-align:right">{{ composicao.sem_cadastro }}</b>
+        </div>
         {% endif %}
       </div>
       <p style="font-size:12px;color:var(--text-3);margin-top:8px">
@@ -314,6 +329,10 @@
             ({{ p.dias_restantes }} dia{{ 's' if p.dias_restantes != 1 else '' }}).<br>
             Compre até <strong>{{ p.comprar_ate.strftime('%d/%m') }}</strong>.
           </div>
+          {# Barra de folga: 30 dias é a escala cheia — vermelho abaixo de 5 dias. #}
+          <div class="barra {{ 'ruim' if p.dias_restantes < 5 else 'aviso' if p.dias_restantes < 15 else '' }}"
+               style="margin-top:6px" title="{{ p.dias_restantes }} dia(s) de folga">
+            <i style="width:{{ [p.dias_restantes * 100 // 30, 100]|min }}%"></i></div>
         {% endif %}
       {% endif %}
     </div>
