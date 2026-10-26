@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Lotes{% endblock %}
+{% block page_title %}Lotes 📦{% endblock %}
+
+{% block content %}
+<style>
+  .lt { border:1px solid var(--border, #ddd); border-radius:10px; padding:12px; margin-bottom:12px; }
+  .lt-top { display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .lt-tit { font-weight:700; }
+  .lt-tag { font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; }
+  .tg-aberto { background:#e3f2fd; color:#1565c0; }
+  .tg-fechado { background:#eeeeee; color:#666; }
+  .lt-res { font-size:20px; font-weight:700; }
+  .pos { color:#2e7d32; } .neg { color:#c62828; }
+  .lt-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:8px; margin-top:10px; }
+  .lt-grid div { font-size:12px; color:var(--text-3); }
+  .lt-grid b { display:block; font-size:15px; color:var(--text-1); }
+  .lt-obs { font-size:12px; color:var(--text-3); margin-top:6px; }
+</style>
+
+<div class="card">
+  <h3>Como ler esta tela</h3>
+  <p style="font-size:13.5px">Cada <strong>compra</strong> (e cada nascimento) é um lote. As vendas
+    e as mortes saem do lote <strong>mais antigo primeiro</strong> (FIFO), e cada gasto é dividido
+    entre os lotes que tinham gado no pasto naquele dia. Serve para responder "aquele caminhão
+    deu lucro?".</p>
+  <p class="lt-obs">⚠️ É uma visão <strong>aproximada</strong>. O resultado oficial do sítio é o do
+    painel, que divide o custo entre todas as cabeças (média móvel) em vez de supor FIFO. Aqui
+    nada é gravado.</p>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="card-title">Todos os lotes</div>
+  <div class="lt-grid">
+    <div><b>{{ totais.lotes }}</b>lotes ({{ totais.abertos }} abertos)</div>
+    <div><b>{{ totais.cab|int }}</b>cabeças entraram</div>
+    <div><b>{{ totais.investido|brl }}</b>investido (compra + gastos)</div>
+    <div><b>{{ totais.receita|brl }}</b>recebido nas vendas</div>
+    <div><b class="{{ 'pos' if totais.resultado >= 0 else 'neg' }}">{{ totais.resultado|brl }}</b>resultado realizado</div>
+    <div><b>{{ totais.parado|brl }}</b>parado no pasto ({{ totais.vivas|int }} cab.)</div>
+  </div>
+</div>
+
+{% if sem_lote.cabecas %}
+<div class="card" style="margin-top:16px">
+  <p class="lt-obs">⚠️ {{ sem_lote.cabecas|int }} cabeça(s) ({{ sem_lote.receita|brl }}) saíram
+    sem lote aberto na data — provavelmente uma venda lançada antes da compra correspondente.
+    Confira as datas em Compras e Vendas.</p>
+</div>
+{% endif %}
+
+<div style="margin-top:16px">
+  {% for l in lotes %}
+  <div class="lt">
+    <div class="lt-top">
+      <div>
+        <span class="lt-tit">{{ l.rotulo }}</span>
+        <span class="lt-tag {{ 'tg-fechado' if l.fechado else 'tg-aberto' }}">{{ 'fechado' if l.fechado else 'aberto' }}</span>
+        {% if l.origem == 'Nascimento' %}<span class="lt-tag tg-aberto">🐣 nascimento</span>{% endif %}
+      </div>
+      <div class="lt-res {{ 'pos' if l.resultado >= 0 else 'neg' }}">
+        {{ l.resultado|brl }}
+        <span style="font-size:11px;font-weight:400;color:var(--text-3)">realizado</span>
+      </div>
+    </div>
+    <div class="lt-grid">
+      <div><b>{{ l.cab|int }}</b>cabeças</div>
+      <div><b>{{ l.custo_cab|brl }}</b>custo por cabeça</div>
+      <div><b>{{ l.vendidas|int }}</b>vendidas{% if l.vendidas %} a {{ l.valor_cab_vendida|brl }}{% endif %}</div>
+      <div><b>{{ l.vivas|int }}</b>no pasto</div>
+      {% if l.mortas %}<div><b class="neg">{{ l.mortas|int }}</b>perdidas</div>{% endif %}
+      <div><b>{{ l.gastos|brl }}</b>gastos do lote</div>
+      <div><b>{{ l.dias }}</b>dias{{ ' até vender' if l.fechado else ' até hoje' }}</div>
+      {% if l.custo_cab_mes %}<div><b>{{ l.custo_cab_mes|brl }}</b>gasto/cab/mês</div>{% endif %}
+      {% if l.vendidas %}<div><b class="{{ 'pos' if l.ganho_cab >= 0 else 'neg' }}">{{ l.ganho_cab|brl }}</b>ganho por cabeça vendida</div>{% endif %}
+    </div>
+    {% if l.descricao %}<div class="lt-obs">{{ l.descricao }}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="card"><p class="lt-obs">Nenhuma compra lançada ainda.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

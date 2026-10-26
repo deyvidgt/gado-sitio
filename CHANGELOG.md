@@ -5,6 +5,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
+- **Lotes com painel econômico (v5.3):** nova aba **📦 Lotes** no menu. Cada compra (e cada
+  nascimento) vira um lote e o sistema mostra, por lote: cabeças, **custo por cabeça**
+  (compra + a parte dos gastos daquele período), quantas foram vendidas e por quanto,
+  quantas ainda estão no pasto, **quanto o lote deu de resultado** e o **ganho por cabeça
+  vendida** — responde "aquele caminhão de bois deu lucro?". As vendas e as mortes saem do
+  lote mais antigo primeiro (FIFO) e os gastos são divididos entre os lotes que tinham gado
+  no pasto naquele dia. Não precisa de brinco cadastrado nem de coluna nova: usa Compras,
+  Gastos, Vendas e Manejo como já estão. É uma visão **aproximada e paralela** — o resultado
+  oficial continua sendo o do painel (média móvel), e esta tela não grava nada.
 - **Reprodução sem sensor (v5.3):** nova aba **🐮 Reprodução** no menu. Anote a **cobertura**
   (monta ou inseminação, com o touro) e depois o **resultado do toque** (Prenha/Vazia); o
   sistema conta os 285 dias de gestação e mostra, por vaca, o **parto previsto**, a partir de

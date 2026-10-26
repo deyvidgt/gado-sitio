@@ -322,6 +322,7 @@
     <a href="{{ url_for('animais') }}"   class="nav-link {% if request.endpoint in ['animais','ficha_animal','editar_animal','pesagem'] %}active{% endif %}"><span class="ico">🐄</span> Animais</a>
     <a href="{{ url_for('pastos') }}"    class="nav-link {% if request.endpoint=='pastos' %}active{% endif %}"><span class="ico">🗺️</span> Pastos</a>
     <a href="{{ url_for('tarefas') }}"   class="nav-link {% if request.endpoint=='tarefas' %}active{% endif %}"><span class="ico">📋</span> Tarefas</a>
+    <a href="{{ url_for('lotes') }}"     class="nav-link {% if request.endpoint=='lotes' %}active{% endif %}"><span class="ico">📦</span> Lotes</a>
     <a href="{{ url_for('reproducao') }}" class="nav-link {% if request.endpoint=='reproducao' %}active{% endif %}"><span class="ico">🐮</span> Reprodução</a>
     <a href="{{ url_for('visitas') }}"   class="nav-link {% if request.endpoint in ['visitas','nova_visita','excluir_visita'] %}active{% endif %}"><span class="ico">🗓️</span> Visitas</a>
     <a href="{{ url_for('relatorios') }}" class="nav-link {% if request.endpoint=='relatorios' %}active{% endif %}"><span class="ico">📈</span> Relatórios</a>
