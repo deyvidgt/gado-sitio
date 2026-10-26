@@ -57,6 +57,9 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
   pessoas para não-admin passa por `_usuarios_visiveis()` (só quem é do sítio atual).
 - **Tasks** (backup, WhatsApp, resumo mensal) fazem `for slug in sitios.cada_sitio()` e
   mandam `sitio=slug` no `enviar_para_familia`; erro num sítio não para os outros.
+- **Painel da Família** (`/familia`, `routes_dashboard.familia`): dentro do pedido entra
+  em cada sítio (`sitios.ativar`) e volta ao do usuário no `finally` — o padrão para
+  qualquer tela que precise ler mais de um sítio.
 
 ## Arquitetura
 
@@ -163,10 +166,11 @@ python -m pytest          # ~5 s; roda numa CÓPIA temporária dos dados
 | `superpowers/plans/2026-10-16-fotos-animais.md` | Plano de implementação das fotos (v4.4, concluído) |
 | `superpowers/specs/2026-10-22-whatsapp-notificacoes-design.md` | Design das notificações WhatsApp: preferências por pessoa, aviso de Morte/Nascimento, resumo semanal (entregue) |
 | `superpowers/plans/2026-10-22-whatsapp-notificacoes.md` | Plano de implementação do WhatsApp (concluído) |
-| `superpowers/specs/2026-10-25-varios-sitios-design.md` | Design de vários sítios (cada parente com o seu): donos por sítio, pasta por sítio, seletor, painel da família — aprovado; fase 1 entregue |
+| `superpowers/specs/2026-10-25-varios-sitios-design.md` | Design de vários sítios (cada parente com o seu): donos por sítio, pasta por sítio, seletor, painel da família — entregue (fases 1–4) |
 | `superpowers/plans/2026-10-25-varios-sitios-fase1.md` | Plano da fase 1 (donos configuráveis) — concluído |
 | `superpowers/plans/2026-10-25-varios-sitios-fase2.md` | Plano da fase 2 (pasta por sítio, seletor, acesso) — concluído |
 | `superpowers/plans/2026-10-25-varios-sitios-fase3.md` | Plano da fase 3 (admin, Tasks por sítio, tela de sítios) — concluído |
+| `superpowers/plans/2026-10-25-varios-sitios-fase4.md` | Plano da fase 4 (painel da Família) — concluído |
 | `client_secret_*.json` | Credencial OAuth do app do Drive — **fora do Git** (`.gitignore`), nunca commitar |
 
 ## Backup

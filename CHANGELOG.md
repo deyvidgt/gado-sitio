@@ -33,8 +33,11 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   login podia, e um parente de outro sítio poderia trocar a senha de quem é do Santo
   Antonio. A lista de usuários e os telefones do WhatsApp só mostram quem é do sítio.
 
+- **Vários sítios — fase 4: painel da Família** (menu 👨‍👩‍👧, aparece com 2+ sítios):
+  cabeças, capital no rebanho, vendas, perdas e resultado de cada sítio, lado a lado e
+  somados. Qualquer pessoa da família vê; os lançamentos continuam dentro de cada sítio.
+
 ### Planejado
-- Vários sítios, fase 4 (painel da família somando os sítios).
 - Leite: produção por vaca/ordenha, lactação e secagem, entregas e preço do litro
   (liga só no sítio que tiver leite); reprodução (cobertura, prenhez, alerta de parto).
 - Peso estimado por foto (com medida de referência) e por fita no peito.

@@ -30,8 +30,8 @@
 
 **Files:** Modify `routes_dashboard.py` (rota `familia`), `extensions.py` (`varios_sitios` no context processor), `templates/base.html` (link); Create `templates/familia.html`; Test `tests/test_sitios.py`.
 
-- [ ] Testes acima; implementar; PASS; commit `Fase 4: painel da familia somando os sitios`.
+- [x] Testes acima; implementar; PASS; commit `Fase 4: painel da familia somando os sitios`.
 
 ### Task 2: Documentação
 
-- [ ] CHANGELOG, CLAUDE.md, Ajuda, spec (fases 1–4 entregues); PASS; commit `Docs: fase 4 dos varios sitios`.
+- [x] CHANGELOG, CLAUDE.md, Ajuda, spec (fases 1–4 entregues); PASS; commit `Docs: fase 4 dos varios sitios`.
