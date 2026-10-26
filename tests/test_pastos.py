@@ -137,3 +137,46 @@ def test_mover_grava_no_manejo(dados_restaurados):
     assert int(m["Qtd Cabeças"]) == 7 and m["Data"] == pd.Timestamp("2026-10-20")
     with pytest.raises(ValueError):
         PA.mover("P99", "2026-10-20", None, 7)
+
+
+# ── Telas ─────────────────────────────────────────────────────────────────────
+
+def _post(cliente, rota, **dados):
+    with cliente.session_transaction() as s:
+        s["csrf_token"] = "tok"
+    return cliente.post(rota, data={"csrf_token": "tok", **dados}, follow_redirects=True)
+
+
+def test_pagina_pastos_abre(cliente):
+    r = cliente.get("/pastos")
+    assert r.status_code == 200 and "leaflet" in r.get_data(as_text=True)
+
+
+def test_criar_pela_tela(cliente, dados_restaurados):
+    r = _post(cliente, "/pastos/novo", nome="Pasto Tela", contorno=json.dumps(_quadrado()))
+    html = r.get_data(as_text=True)
+    assert r.status_code == 200 and "Pasto Tela" in html
+    p = PA.carregar().iloc[-1]
+    assert p["Nome"] == "Pasto Tela" and p["Criado Por"] == "Deyvid"
+    r = _post(cliente, "/pastos/novo", nome="Forjado", contorno='{"type":"Polygon","coordinates":[[[0,200],[1,0],[1,1]]]}')
+    assert "Forjado" not in PA.carregar()["Nome"].tolist()
+
+
+def test_mover_pela_tela(cliente, dados_restaurados):
+    import db
+    id_ = PA.criar("Pasto Mover", json.dumps(_quadrado()))
+    antes = len(db.carregar_aba("Manejo"))
+    _post(cliente, "/pastos/mover", pasto=id_, data="2026-10-20", quem="todos")
+    man = db.carregar_aba("Manejo")
+    assert len(man) == antes + 1 and man.iloc[-1]["Pasto"] == id_
+
+
+def test_mover_brinco_errado(cliente, dados_restaurados):
+    import animais as A
+    import db
+    A._gravar(A.carregar().iloc[0:0])
+    id_ = PA.criar("Pasto Brinco", json.dumps(_quadrado()))
+    antes = len(db.carregar_aba("Manejo"))
+    r = _post(cliente, "/pastos/mover", pasto=id_, quem="brincos", brincos="amarelo 77")
+    assert len(db.carregar_aba("Manejo")) == antes
+    assert r.status_code == 200

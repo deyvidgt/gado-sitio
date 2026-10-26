@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Pastos{% endblock %}
+{% block page_title %}Pastos 🗺️{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+<style>
+  #mapa { height:62vh; min-height:340px; border-radius:12px; }
+  .rotulo-pasto { background:rgba(0,0,0,.65); color:#fff; border:0; border-radius:8px; font-size:12px; line-height:1.3; text-align:center; box-shadow:none; }
+  .rotulo-pasto::before { display:none; }
+  .pastos-tab { width:100%; border-collapse:collapse; font-size:13.5px; }
+  .pastos-tab td, .pastos-tab th { padding:8px 6px; border-bottom:1px solid var(--border, #ddd); text-align:left; }
+  .bol { display:inline-block; width:12px; height:12px; border-radius:50%; vertical-align:-1px; margin-right:4px; }
+  .muted { color:var(--text-3); font-size:12px; }
+  #novo-pasto { display:none; }
+</style>
+
+<div class="card">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+    <button type="button" class="btn btn-outline btn-sm" id="onde-estou">📍 Onde estou</button>
+    <span class="muted" style="align-self:center">Novo pasto: toque no ⬟ do mapa e marque os cantos da cerca; toque no 1º canto para fechar.</span>
+  </div>
+  <div id="mapa" aria-label="Mapa de satélite dos pastos"></div>
+  <p class="muted" style="margin-top:6px">Mapa de satélite precisa de internet.
+    {% if sem_pasto.cab %}<b>{{ sem_pasto.cab }}</b> cabeça(s) ainda sem pasto.{% endif %}</p>
+
+  <form method="post" action="{{ url_for('novo_pasto') }}" id="novo-pasto" style="margin-top:10px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="contorno" id="contorno">
+    <div class="form-grid">
+      <div class="form-group"><label>Nome do pasto</label>
+        <input type="text" name="nome" maxlength="40" required placeholder="Ex.: Pasto da Mina"></div>
+      <div class="form-group"><label>Área (o servidor confere)</label><b id="area-nova">—</b></div>
+    </div>
+    <button class="btn btn-primary">💾 Salvar pasto</button>
+    <button type="button" class="btn btn-outline" id="cancelar-novo">Cancelar</button>
+  </form>
+</div>
+
+{% if pastos %}
+<div class="card" style="margin-top:16px">
+  <h3>🐄 Mover gado</h3>
+  <form method="post" action="{{ url_for('mover_gado') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <div class="form-group"><label>Para o pasto</label>
+        <select name="pasto" required>{% for p in pastos %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}</select></div>
+      <div class="form-group"><label>Data</label><input type="date" name="data" value="{{ hoje }}"></div>
+      <div class="form-group"><label>Quem vai</label>
+        <select name="quem" id="quem"><option value="todos">O rebanho todo</option><option value="brincos">Só alguns brincos</option></select></div>
+      <div class="form-group" id="campo-brincos" style="display:none"><label>Brincos</label>
+        <input type="text" name="brincos" placeholder="amarelo 21, azul 12"></div>
+    </div>
+    <button class="btn btn-primary">Mover</button>
+  </form>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3>Pastos</h3>
+  <table class="pastos-tab">
+    <tr><th>Pasto</th><th>Área</th><th>Cabeças</th><th>UA/ha</th><th>Dias</th><th></th></tr>
+    {% for p in pastos %}
+    <tr>
+      <td><span class="bol" style="background:{{ p.cor }}"></span>{{ p.nome }}</td>
+      <td>{{ '%.2f'|format(p.area)|replace('.', ',') }} ha</td>
+      <td>{{ p.cab }}</td>
+      <td>{% if p.ua_ha is not none and p.cab %}{{ '%.2f'|format(p.ua_ha)|replace('.', ',') }}{% if p.estimado %} <span class="muted" title="Algum animal sem peso de balança: usou o peso médio">~</span>{% endif %}{% else %}—{% endif %}</td>
+      <td>{{ p.dias if p.dias is not none and p.cab else '—' }}</td>
+      <td>
+        <details><summary class="muted">editar</summary>
+          <form method="post" action="{{ url_for('editar_pasto', id_=p.id) }}" style="display:flex;gap:6px;margin-top:6px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="text" name="nome" value="{{ p.nome }}" maxlength="40" required aria-label="Novo nome">
+            <button class="btn btn-outline btn-sm">Renomear</button>
+          </form>
+          <form method="post" action="{{ url_for('excluir_pasto', id_=p.id) }}" style="margin-top:6px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-outline btn-sm">🗑️ Excluir pasto</button>
+          </form>
+        </details>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="muted" style="margin-top:8px">UA = 450 kg de animal. "~" = algum animal sem pesagem de balança (usou o peso médio).</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script>
+(function () {
+  const pastos = {{ pastos|tojson }};
+  const br = (n, d) => n.toFixed(d).replace(".", ",");
+  const mapa = L.map("mapa").setView([-18.92, -48.28], 12);   // Triângulo Mineiro até ter pasto
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 19, attribution: "Imagem © Esri" }).addTo(mapa);
+
+  const grupo = L.featureGroup().addTo(mapa);
+  pastos.forEach(p => {
+    const camada = L.geoJSON(p.geo, { style: { color: p.cor, weight: 2, fillOpacity: .25 } });
+    let txt = `<b>${p.nome}</b><br>${br(p.area, 1)} ha · ${p.cab} cab`;
+    if (p.cab && p.ua_ha != null) txt += `<br>${br(p.ua_ha, 2)} UA/ha${p.estimado ? "~" : ""}`;
+    if (p.cab && p.dias != null) txt += ` · ${p.dias} dias`;
+    camada.bindTooltip(txt, { permanent: true, direction: "center", className: "rotulo-pasto" });
+    camada.addTo(grupo);
+  });
+  if (pastos.length) mapa.fitBounds(grupo.getBounds(), { padding: [20, 20] });
+
+  const desenho = new L.FeatureGroup().addTo(mapa);
+  mapa.addControl(new L.Control.Draw({
+    draw: { polygon: { allowIntersection: false, showArea: true }, polyline: false, rectangle: false,
+            circle: false, marker: false, circlemarker: false },
+    edit: false,
+  }));
+  const form = document.getElementById("novo-pasto");
+  mapa.on(L.Draw.Event.CREATED, e => {
+    desenho.clearLayers();
+    desenho.addLayer(e.layer);
+    document.getElementById("contorno").value = JSON.stringify(e.layer.toGeoJSON());
+    const ha = L.GeometryUtil.geodesicArea(e.layer.getLatLngs()[0]) / 10000;
+    document.getElementById("area-nova").textContent = br(ha, 2) + " ha";
+    form.style.display = "block";
+    form.querySelector("[name=nome]").focus();
+  });
+  document.getElementById("cancelar-novo").onclick = () => { desenho.clearLayers(); form.style.display = "none"; };
+
+  let eu;
+  document.getElementById("onde-estou").onclick = () => mapa.locate({ setView: true, maxZoom: 17 });
+  mapa.on("locationfound", e => { (eu = eu || L.circleMarker(e.latlng, { radius: 8, color: "#fff", fillColor: "#2196f3", fillOpacity: 1 }).addTo(mapa)).setLatLng(e.latlng); });
+  mapa.on("locationerror", () => document.getElementById("onde-estou").textContent = "📍 GPS indisponível");
+
+  const quem = document.getElementById("quem");
+  if (quem) quem.onchange = () => document.getElementById("campo-brincos").style.display = quem.value === "brincos" ? "" : "none";
+})();
+</script>
+{% endblock %}

@@ -55,6 +55,9 @@ from routes_fotos import *      # noqa: F401, F403
 # v4.5 — Ajuda (passo a passo; prints no Google Drive)
 from routes_ajuda import *      # noqa: F401, F403
 
+# v5.2 — Pastos com mapa
+from routes_pastos import *     # noqa: F401, F403
+
 # ── Migração/criação do arquivo de dados ──────────────────────────────────────
 # IMPORTANTE: roda em QUALQUER forma de entrada (wsgi/PythonAnywhere, .exe e dev).
 # Antes só rodava em `python app.py`, então no servidor as colunas novas (ex.: "Perda De",
