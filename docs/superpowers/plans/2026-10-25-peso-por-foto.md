@@ -33,14 +33,14 @@
 
 **Interfaces:** `estimar_bruto(comp_cm, prof_cm) -> float`; `validar(comp_cm, prof_cm, ref_cm) -> tuple[float, float, float]` (ValueError); `fator_calibracao(df_man) -> tuple[float, int]`; `registrar(id_, comp_cm, prof_cm, ref_cm, data, responsavel) -> float` (bruto); `ultima_estimativa(id_, df_man) -> dict | None` (`kg`, `bruto`, `data`, `fator`, `n_pares`, `faixa_pct`).
 
-- [ ] Testes: `test_formula_schaeffer`, `test_medidas_absurdas_recusadas`, `test_calibracao_precisa_de_3_pares`, `test_calibracao_mediana_e_limite`, `test_estimado_fora_do_gmd`; implementar; PASS; commit.
+- [x] Testes: `test_formula_schaeffer`, `test_medidas_absurdas_recusadas`, `test_calibracao_precisa_de_3_pares`, `test_calibracao_mediana_e_limite`, `test_estimado_fora_do_gmd`; implementar; PASS; commit.
 
 ### Task 2: Tela e ficha
 
 **Files:** Create `templates/peso_foto.html`; Modify `routes_animais.py` (GET/POST `/animais/<id_>/peso-foto`), `templates/ficha_animal.html` (botão + linha "estimado por foto" no cartão Peso).
 
-- [ ] Testes: `test_pagina_peso_foto_abre`, `test_salvar_estimativa`, `test_animal_nao_vivo`, `test_ficha_mostra_estimativa`; implementar; PASS; commit.
+- [x] Testes: `test_pagina_peso_foto_abre`, `test_salvar_estimativa`, `test_animal_nao_vivo`, `test_ficha_mostra_estimativa`; implementar; PASS; commit.
 
 ### Task 3: Documentação
 
-- [ ] CHANGELOG, CLAUDE.md, Ajuda (passo a passo de como tirar a foto), spec entregue; PASS; commit.
+- [x] CHANGELOG, CLAUDE.md, Ajuda (passo a passo de como tirar a foto), spec entregue; PASS; commit.

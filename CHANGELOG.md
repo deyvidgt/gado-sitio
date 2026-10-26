@@ -37,10 +37,17 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   cabeças, capital no rebanho, vendas, perdas e resultado de cada sítio, lado a lado e
   somados. Qualquer pessoa da família vê; os lançamentos continuam dentro de cada sítio.
 
+- **Peso estimado por foto** (ficha do animal → 📷 Estimar por foto): foto de lado com uma
+  referência de tamanho conhecido (vara de 1 m); toca e arrasta os pontos — referência,
+  ombro→nádega e profundidade do peito — e sai o peso pela fórmula de Schaeffer, com faixa
+  de erro. Calibra sozinho com as pesagens de balança do sítio (3+ animais com foto e
+  balança a até 15 dias). Fica como "Peso Estimado" no Manejo e não entra no GMD. Também
+  aceita as duas medidas digitadas (fita métrica).
+
 ### Planejado
 - Leite: produção por vaca/ordenha, lactação e secagem, entregas e preço do litro
   (liga só no sítio que tiver leite); reprodução (cobertura, prenhez, alerta de parto).
-- Peso estimado por foto (com medida de referência) e por fita no peito.
+- Peso pela fita no peito (perímetro torácico direto).
 - Lotes e pastos com mapa de satélite (área em ha, lotação UA/ha).
 - Simulador Boi Gordo, calendário de eventos, reprodução, painel de lote e de sanidade.
 
