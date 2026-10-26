@@ -87,26 +87,33 @@ def _num(v) -> float:
     return f if f == f else 0.0
 
 
-def dividir_cotas(cabecas: int, mae: int = 0, deyvid: int = 0, nilson: int = 0) -> tuple[int, int, int]:
+def partes_iguais(qtd: int) -> list[int]:
+    """qtd dividida entre os donos, o resto para o último (com 3: o "resto p/ Nilson")."""
+    n = len(MEMBROS)
+    base = qtd // n
+    return [base] * (n - 1) + [qtd - base * (n - 1)]
+
+
+def dividir_cotas(cabecas: int, *cotas: int) -> tuple[int, ...]:
     """
-    Ajusta as cotas (Mae, Deyvid, Nilson) para somarem `cabecas`.
-    Sem cotas → terços (resto p/ Nilson, igual ao estoque por membro).
+    Ajusta as cotas (uma por dono, na ordem de MEMBROS) para somarem `cabecas`.
+    Sem cotas → partes iguais (resto p/ o último, igual ao estoque por membro).
     Soma diferente → proporcional pelo maior resto, nunca negativa
     (o arredondamento simples podia gerar cota −1, ex.: 3 cab com 5/5/0).
     """
-    cotas = [max(0, int(mae)), max(0, int(deyvid)), max(0, int(nilson))]
+    n = len(MEMBROS)
+    cotas = [max(0, int(q)) for q in (list(cotas) + [0] * n)[:n]]
     soma = sum(cotas)
     if cabecas <= 0:
-        return 0, 0, 0
+        return (0,) * n
     if soma == 0:
-        base = cabecas // 3
-        return base, base, cabecas - base * 2
+        return tuple(partes_iguais(cabecas))
     if soma == cabecas:
         return tuple(cotas)
     exatas = [c * cabecas / soma for c in cotas]
     inteiras = [int(x) for x in exatas]
     falta = cabecas - sum(inteiras)
-    for i in sorted(range(3), key=lambda i: exatas[i] - inteiras[i], reverse=True)[:falta]:
+    for i in sorted(range(n), key=lambda i: exatas[i] - inteiras[i], reverse=True)[:falta]:
         inteiras[i] += 1
     return tuple(inteiras)
 
@@ -924,13 +931,13 @@ def calcular_estoque_por_membro(df_comp: pd.DataFrame, df_vend: pd.DataFrame,
     """
     Estoque atual de cabeças por membro.
 
-    Compras: usa as colunas Qtd Mae/Deyvid/Nilson (ajustadas para somar o total);
-             sem elas divide igualmente (arredondando o resto para Nilson).
+    Compras: usa as colunas "Qtd <dono>" (ajustadas para somar o total);
+             sem elas divide igualmente (arredondando o resto para o último dono).
     Vendas:  subtrai o que cada um já vendeu, com o mesmo ajuste.
     Manejo:  mortes ("Perda De") e nascimentos ("Nascimento De") vão para o dono
-             informado; sem dono, são divididos em terços.
+             informado; sem dono, são divididos em partes iguais.
     """
-    resultado = {m: 0 for m in ["Mae", "Deyvid", "Nilson"]}
+    resultado = {m: 0 for m in MEMBROS}
 
     # Compras (+) e vendas (−). dividir_cotas cobre os dois casos antigos: sem cotas
     # (importado) → terços com o resto p/ Nilson; cotas que não somam o total
@@ -941,22 +948,17 @@ def calcular_estoque_por_membro(df_comp: pd.DataFrame, df_vend: pd.DataFrame,
             continue
         for _, row in df.iterrows():
             cotas = dividir_cotas(int(_num(row.get("Qtd Cabeças"))),
-                                  int(_num(row.get("Qtd Mae"))),
-                                  int(_num(row.get("Qtd Deyvid"))),
-                                  int(_num(row.get("Qtd Nilson"))))
-            for m, q in zip(("Mae", "Deyvid", "Nilson"), cotas):
+                                  *[int(_num(row.get(f"Qtd {m}"))) for m in MEMBROS])
+            for m, q in zip(MEMBROS, cotas):
                 resultado[m] += sinal * q
 
     # Manejo: mortes e nascimentos tratados SEPARADAMENTE, linha a linha.
     if not df_man.empty and "Tipo" in df_man.columns:
         def _ratear_tercos(qtd: int, sinal: int):
-            """Distribui qtd em terços (resto p/ Nilson), somando (sinal=+1)
+            """Distribui qtd em partes iguais (resto p/ o último), somando (sinal=+1)
             ou subtraindo (sinal=-1)."""
-            base  = qtd // 3
-            resto = qtd - base * 3
-            resultado["Mae"]    += sinal * base
-            resultado["Deyvid"] += sinal * base
-            resultado["Nilson"] += sinal * (base + resto)
+            for m, q in zip(MEMBROS, partes_iguais(qtd)):
+                resultado[m] += sinal * q
 
         for _, row in df_man.iterrows():
             tipo = row.get("Tipo")

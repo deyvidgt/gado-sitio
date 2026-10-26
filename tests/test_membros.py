@@ -93,3 +93,60 @@ def test_arquivo_novo_nasce_com_os_donos(membros_teste, tmp_path, monkeypatch):
     cab = [c.value for c in load_workbook(arq)["Compras"][1]]
     assert cab[4:6] == ["Qtd A", "Qtd B"]
     assert os.path.exists(arq)
+
+
+# ── Task 2: contas em partes iguais para qualquer número de donos ────────────
+
+import pandas as pd
+
+import calculos as c
+
+
+def test_partes_iguais_resto_no_ultimo(membros_teste):
+    membros_teste(4)
+    assert c.dividir_cotas(10) == (2, 2, 2, 4)
+    assert c.dividir_cotas(10, 1, 1, 1, 1) == (3, 3, 2, 2)
+    assert c.dividir_cotas(4, 1, 1, 1, 1) == (1, 1, 1, 1)
+    membros_teste(2)
+    assert c.dividir_cotas(5) == (2, 3)
+    assert c.dividir_cotas(5, 4, 1) == (4, 1)
+
+
+def test_padrao_dividir_cotas_igual_a_hoje():
+    assert c.dividir_cotas(10) == (3, 3, 4)
+    assert c.dividir_cotas(3, 5, 5, 0) == (2, 1, 0)
+
+
+def _cenario(chaves):
+    """Compra com cotas, gasto, venda com e sem cotas, morte com e sem dono,
+    nascimento sem dono — com os donos `chaves`."""
+    from test_calculos import _d
+    n = len(chaves)
+    compra = {"Data": _d("2025-01-01"), "Qtd Cabeças": 4 * n + 3, "Valor Total (R$)": 40_000.0,
+              **{f"Qtd {m}": 4 for m in chaves}}
+    compra[f"Qtd {chaves[-1]}"] += 3
+    venda_cotas = {"Data": _d("2025-05-01"), "Qtd Cabeças": n, "Valor Total (R$)": 7_000.0,
+                   **{f"Qtd {m}": 1 for m in chaves},
+                   **{f"Valor {m} (R$)": 7_000.0 / n for m in chaves}}
+    venda_sem = {"Data": _d("2025-06-01"), "Qtd Cabeças": 3, "Valor Total (R$)": 5_000.0}
+    df_c = pd.DataFrame([compra])
+    df_g = pd.DataFrame([{"Data": _d("2025-02-01"), "Valor Total (R$)": 3_000.0}])
+    df_v = pd.DataFrame([venda_cotas, venda_sem])
+    df_m = pd.DataFrame([
+        {"Data": _d("2025-03-01"), "Tipo": "Morte/Perda", "Qtd Cabeças": 1, "Perda De": chaves[0]},
+        {"Data": _d("2025-03-05"), "Tipo": "Morte/Perda", "Qtd Cabeças": 2, "Perda De": None},
+        {"Data": _d("2025-04-01"), "Tipo": "Nascimento", "Qtd Cabeças": 3, "Perda De": None},
+    ])
+    return df_c, df_g, df_v, df_m
+
+
+@pytest.mark.parametrize("n", [2, 3, 4])
+def test_invariantes_com_n_donos(membros_teste, n):
+    from test_calculos import checar_invariantes
+    membros_teste(n)
+    df_c, df_g, df_v, df_m = _cenario(list(config.MEMBROS))
+    resumo, membros = checar_invariantes(df_c, df_g, df_v, df_m)
+    assert set(membros) == set(config.MEMBROS)
+    est = c.calcular_estoque_por_membro(df_c, df_v, df_m)
+    assert set(est) == set(config.MEMBROS)
+    assert sum(est.values()) == c.calcular_estoque(df_c, df_v, df_m)
