@@ -590,19 +590,23 @@ def quer_receber(cfg_whatsapp: dict, tipo: str | None) -> bool:
 
 
 def enviar_para_familia(msg: str, excluir_usuario: str = "", tipo: str | None = None,
-                        msg_sem_valores: str | None = None) -> int:
+                        msg_sem_valores: str | None = None, sitio: str | None = None) -> int:
     """
     Envia msg para todos os usuários com WhatsApp configurado.
     excluir_usuario: pular essa pessoa (membro ou login; ex: quem acabou de registrar).
     tipo: categoria do aviso, filtrada pelas preferências de cada um (None = sem filtro).
     msg_sem_valores: texto alternativo para quem desligou "valores".
+    sitio: aviso de um sítio só vai para quem tem acesso a ele (None = sem filtro).
     Retorna número de envios bem-sucedidos.
     """
+    import sitios
     usuarios = carregar_usuarios()
     excluir = _chave_pessoa(excluir_usuario) if excluir_usuario else ""
     enviados = 0
     for nome, info in usuarios.items():
         if excluir and _chave_pessoa(nome) == excluir:
+            continue
+        if sitio and not sitios.tem_acesso(nome, sitio):
             continue
         cfg      = info.get("whatsapp", {})
         telefone = cfg.get("telefone", "").strip()
@@ -635,8 +639,9 @@ def guardar_aviso_pendente(msg: str, tipo: str = "visita", excluir: str = "",
         fila = json.loads(caminho.read_text(encoding="utf-8")) if caminho.exists() else []
     except Exception:
         fila = []
+    import sitios
     fila.append({"msg": msg, "tipo": tipo, "excluir": excluir,
-                 "msg_sem_valores": msg_sem_valores,
+                 "msg_sem_valores": msg_sem_valores, "sitio": sitios.atual(),
                  "criado": datetime.now().isoformat(timespec="seconds")})
     tmp = caminho.with_suffix(".tmp")
     tmp.write_text(json.dumps(fila, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -649,6 +654,10 @@ def avisar_manejo(tipo: str, qtd: int, brincos: str = "", de: str = "", descrica
     registrou não recebe. Nunca levanta: o registro já foi gravado, o aviso é extra."""
     if tipo not in ("Nascimento", "Morte/Perda"):
         return False
+    # Quem registrou é excluído pelo LOGIN: num sítio em que ele não é dono, o nome
+    # de membro não existe e ele receberia o próprio aviso.
+    from flask import has_request_context, session
+    excluir = (session.get("usuario") if has_request_context() else "") or registrado_por
     try:
         from config import NOMES_MEMBROS
         rotulos = ", ".join(b.split(" #")[0].strip() for b in
@@ -658,7 +667,7 @@ def avisar_manejo(tipo: str, qtd: int, brincos: str = "", de: str = "", descrica
         rodape = f"\n_registrado por {NOMES_MEMBROS.get(registrado_por, registrado_por)}_" if registrado_por else ""
         if tipo == "Nascimento":
             msg = f"🍼 *Nasceu* {qtd} bezerro(s){sufixo_brincos}" + (f" · de {quem}" if quem else "") + rodape
-            guardar_aviso_pendente(msg, tipo="eventos", excluir=registrado_por, msg_sem_valores=msg)
+            guardar_aviso_pendente(msg, tipo="eventos", excluir=excluir, msg_sem_valores=msg)
             return True
         corpo = (f"🚨 *Morte/Perda:* {qtd} cab.{sufixo_brincos}"
                  + (f" · perda de {quem}" if quem else " · rateada entre todos")
@@ -670,7 +679,7 @@ def avisar_manejo(tipo: str, qtd: int, brincos: str = "", de: str = "", descrica
             valor = f"\n💸 ~{fmt_r(r['ctcab'])}/cab. (custo médio atual)"
         except Exception as e:
             logging.error(f"Aviso de perda sem valor: {e}")
-        guardar_aviso_pendente(corpo + valor + rodape, tipo="eventos", excluir=registrado_por,
+        guardar_aviso_pendente(corpo + valor + rodape, tipo="eventos", excluir=excluir,
                                msg_sem_valores=corpo + rodape)
         return True
     except Exception as e:
@@ -700,7 +709,8 @@ def enviar_avisos_pendentes() -> int:
             total += enviar_para_familia(
                 item["msg"], tipo=item.get("tipo") or "visita",
                 excluir_usuario=item.get("excluir") or "",
-                msg_sem_valores=item.get("msg_sem_valores"))
+                msg_sem_valores=item.get("msg_sem_valores"),
+                sitio=item.get("sitio"))   # fila antiga, sem sítio: vai para todos, como antes
         except Exception as e:
             logging.error(f"Erro ao enviar aviso pendente: {e}")
     try:

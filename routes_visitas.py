@@ -102,14 +102,25 @@ def _enviar_avisos_depois(resposta):
     O aviso fica gravado em avisos_pendentes.json até sair — se a conexão cair,
     a próxima requisição de visita (ou a Task diária) envia.
     """
+    import sitios
+    slug = sitios.atual()   # a fila é do sítio deste pedido; o envio roda depois
+
     def _enviar():
+        from extensions import _trava_sitio
+        # Sem esperar muito: se a trava estiver ocupada, o aviso fica na fila e sai
+        # no próximo envio (ou na Task diária).
+        if not _trava_sitio.acquire(timeout=30):
+            return
         try:
+            sitios.ativar(slug)
             from alertas_whatsapp import enviar_avisos_pendentes
             n = enviar_avisos_pendentes()
             if n:
-                app.logger.info(f"Aviso de visita enviado para {n} destinatário(s)")
+                app.logger.info(f"Aviso enviado para {n} destinatário(s)")
         except Exception as e:
-            app.logger.error(f"Erro ao notificar visita via WhatsApp: {e}")
+            app.logger.error(f"Erro ao notificar via WhatsApp: {e}")
+        finally:
+            _trava_sitio.release()
 
     resposta.call_on_close(_enviar)
     return resposta

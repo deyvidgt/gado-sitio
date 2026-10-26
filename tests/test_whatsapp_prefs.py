@@ -84,7 +84,8 @@ def test_fila_guarda_tipo_e_excluir(monkeypatch, dados_restaurados):
     chamadas = []
     monkeypatch.setattr(aw, "enviar_para_familia", lambda msg, **kw: chamadas.append((msg, kw)) or 1)
     aw.enviar_avisos_pendentes()
-    assert chamadas[0][1] == {"tipo": "eventos", "excluir_usuario": "Deyvid", "msg_sem_valores": "s"}
+    assert chamadas[0][1] == {"tipo": "eventos", "excluir_usuario": "Deyvid", "msg_sem_valores": "s",
+                              "sitio": "santo-antonio"}
 
 
 # ── API de preferências ──────────────────────────────────────────────────────

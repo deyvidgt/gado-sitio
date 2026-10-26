@@ -129,3 +129,22 @@ def test_erro_no_pedido_solta_a_trava(cliente, dois_sitios, monkeypatch):
         cliente.application.config["PROPAGATE_EXCEPTIONS"] = None
     assert not extensions._trava_sitio.locked()
     assert cliente.get("/compras").status_code == 200
+
+
+# ── Task 3: WhatsApp por sítio ────────────────────────────────────────────────
+
+def test_aviso_so_para_quem_tem_acesso(cliente, dois_sitios, monkeypatch, fila_avisos_vazia):
+    import alertas_whatsapp as aw
+    wpp = lambda tel: {"whatsapp": {"telefone": tel, "apikey": "k", "alertas_ativos": True}}
+    monkeypatch.setattr(aw, "carregar_usuarios",
+                        lambda: {"deyvid": wpp("1"), "nilson": wpp("2"), "joao": wpp("3")})
+    enviados = []
+    monkeypatch.setattr(aw, "enviar_whatsapp", lambda tel, key, msg: enviados.append((tel, msg)) or True)
+    _logar(cliente, "deyvid", sitio="joao")
+    r = cliente.post("/manejo/novo", data={"csrf_token": "tok", "data": "2026-10-01", "tipo": "Nascimento",
+                                           "cabecas": "1", "nascimento_de": "Ana", "responsavel": "Joao"})
+    assert r.status_code == 302
+    sitios.ativar("santo-antonio")          # outro pedido trocou de sítio antes do envio
+    r.close()
+    assert [t for t, _ in enviados] == ["3"]        # só o João: Deyvid registrou, Nilson não é do sítio
+    assert "Ana" in enviados[0][1]
