@@ -123,6 +123,14 @@
 
     /* Cards */
     .card { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:24px; }
+    .estado-sitio, .acoes-rapidas, .ocorrencias, .modulo-grid, .mobile-card { min-width:0; }
+    .acoes-rapidas { display:flex; gap:8px; flex-wrap:wrap; }
+    .ocorrencias { display:grid; gap:8px; }
+    .modulo-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
+    .status { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; }
+    .mobile-card { background:var(--surface); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); }
+    :focus-visible { outline:3px solid var(--gold); outline-offset:2px; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition:none !important; animation:none !important; scroll-behavior:auto !important; } }
     .card-title { font-family:'Playfair Display',serif; font-size:16px; font-weight:700; color:var(--green-700); margin-bottom:16px; }
     [data-theme="dark"] .card-title { color:var(--green-300); }
 
@@ -327,36 +335,34 @@
     <p>{{ sitio_config.donos if sitio_config else 'Geane · Deyvid · Nilson' }}</p>
   </div>
   <nav>
-    <div class="nav-section">Principal</div>
-    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint=='dashboard' %}active{% endif %}">
-      <span class="ico">🏠</span> Dashboard
-    </a>
-    {% if varios_sitios %}
-    <a href="{{ url_for('familia') }}" class="nav-link {% if request.endpoint=='familia' %}active{% endif %}">
-      <span class="ico">👨‍👩‍👧</span> Família
-    </a>
-    {% endif %}
-    <div class="nav-section">Registrar</div>
-    <a href="{{ url_for('nova_compra') }}"  class="nav-link {% if request.endpoint=='nova_compra'  %}active{% endif %}"><span class="ico">🛒</span> Nova Compra</a>
-    <a href="{{ url_for('novo_gasto') }}"   class="nav-link {% if request.endpoint=='novo_gasto'   %}active{% endif %}"><span class="ico">💸</span> Novo Gasto</a>
-    <a href="{{ url_for('nova_venda') }}"   class="nav-link {% if request.endpoint=='nova_venda'   %}active{% endif %}"><span class="ico">🤝</span> Nova Venda</a>
-    <a href="{{ url_for('novo_manejo') }}"  class="nav-link {% if request.endpoint=='novo_manejo'  %}active{% endif %}"><span class="ico">🩺</span> Novo Manejo</a>
-    <a href="{{ url_for('nova_visita') }}"  class="nav-link {% if request.endpoint=='nova_visita'  %}active{% endif %}"><span class="ico">🌾</span> Visita ao Sítio</a>
-    <a href="{{ url_for('novo_animal') }}"  class="nav-link {% if request.endpoint in ['novo_animal','brincar_compra'] %}active{% endif %}"><span class="ico">🏷️</span> Cadastrar Animal</a>
-    <a href="{{ url_for('voz') }}"          class="nav-link {% if request.endpoint=='voz' %}active{% endif %}"><span class="ico">🎤</span> Comando de Voz</a>
-    <div class="nav-section">Consultas</div>
-    <a href="{{ url_for('compras') }}"   class="nav-link {% if request.endpoint=='compras'   %}active{% endif %}"><span class="ico">📦</span> Compras</a>
-    <a href="{{ url_for('gastos') }}"    class="nav-link {% if request.endpoint=='gastos'    %}active{% endif %}"><span class="ico">📋</span> Gastos</a>
-    <a href="{{ url_for('vendas') }}"    class="nav-link {% if request.endpoint=='vendas'    %}active{% endif %}"><span class="ico">📊</span> Vendas</a>
-    <a href="{{ url_for('manejo') }}"    class="nav-link {% if request.endpoint=='manejo'    %}active{% endif %}"><span class="ico">🌿</span> Manejo</a>
-    <a href="{{ url_for('animais') }}"   class="nav-link {% if request.endpoint in ['animais','ficha_animal','editar_animal','pesagem'] %}active{% endif %}"><span class="ico">🐄</span> Animais</a>
-    <a href="{{ url_for('pastos') }}"    class="nav-link {% if request.endpoint=='pastos' %}active{% endif %}"><span class="ico">🗺️</span> Pastos</a>
-    <a href="{{ url_for('tarefas') }}"   class="nav-link {% if request.endpoint=='tarefas' %}active{% endif %}"><span class="ico">📋</span> Tarefas</a>
-    <a href="{{ url_for('lotes') }}"     class="nav-link {% if request.endpoint=='lotes' %}active{% endif %}"><span class="ico">📦</span> Lotes</a>
+    <div class="nav-section">Visão geral</div>
+    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint=='dashboard' %}active{% endif %}"><span class="ico">🏠</span> Dashboard</a>
+    {% if varios_sitios %}<a href="{{ url_for('familia') }}" class="nav-link {% if request.endpoint=='familia' %}active{% endif %}"><span class="ico">👨‍👩‍👧</span> Família</a>{% endif %}
+    <div class="nav-section">Rebanho</div>
+    <a href="{{ url_for('animais') }}" class="nav-link {% if request.endpoint in ['animais','ficha_animal','editar_animal','pesagem'] %}active{% endif %}"><span class="ico">🐄</span> Animais</a>
+    <a href="{{ url_for('pesagem') }}" class="nav-link {% if request.endpoint=='pesagem' %}active{% endif %}"><span class="ico">⚖️</span> Pesagem</a>
     <a href="{{ url_for('reproducao') }}" class="nav-link {% if request.endpoint=='reproducao' %}active{% endif %}"><span class="ico">🐮</span> Reprodução</a>
-    <a href="{{ url_for('visitas') }}"   class="nav-link {% if request.endpoint in ['visitas','nova_visita','excluir_visita'] %}active{% endif %}"><span class="ico">🗓️</span> Visitas</a>
+    <div class="nav-section">Campo</div>
+    <a href="{{ url_for('pastos') }}" class="nav-link {% if request.endpoint=='pastos' %}active{% endif %}"><span class="ico">🗺️</span> Pastos</a>
+    <a href="{{ url_for('manejo') }}" class="nav-link {% if request.endpoint=='manejo' %}active{% endif %}"><span class="ico">🌿</span> Manejo</a>
+    <a href="{{ url_for('comparar_insumos') }}" class="nav-link {% if request.endpoint=='comparar_insumos' %}active{% endif %}"><span class="ico">🧂</span> Insumos</a>
+    <a href="{{ url_for('visitas') }}" class="nav-link {% if request.endpoint in ['visitas','nova_visita','excluir_visita'] %}active{% endif %}"><span class="ico">🗓️</span> Visitas</a>
+    <a href="{{ url_for('tarefas') }}" class="nav-link {% if request.endpoint=='tarefas' %}active{% endif %}"><span class="ico">📋</span> Tarefas</a>
+    <a href="{{ url_for('calendario_pagina') }}" class="nav-link {% if request.endpoint=='calendario_pagina' %}active{% endif %}"><span class="ico">📅</span> Calendário</a>
+    <div class="nav-section">Financeiro</div>
+    <a href="{{ url_for('compras') }}" class="nav-link {% if request.endpoint=='compras' %}active{% endif %}"><span class="ico">📦</span> Compras</a>
+    <a href="{{ url_for('gastos') }}" class="nav-link {% if request.endpoint=='gastos' %}active{% endif %}"><span class="ico">💸</span> Gastos</a>
+    <a href="{{ url_for('vendas') }}" class="nav-link {% if request.endpoint=='vendas' %}active{% endif %}"><span class="ico">🤝</span> Vendas</a>
+    <a href="{{ url_for('lotes') }}" class="nav-link {% if request.endpoint=='lotes' %}active{% endif %}"><span class="ico">📦</span> Lotes</a>
     <a href="{{ url_for('relatorios') }}" class="nav-link {% if request.endpoint=='relatorios' %}active{% endif %}"><span class="ico">📈</span> Relatórios</a>
     <div class="nav-section">Ferramentas</div>
+    <a href="{{ url_for('nova_compra') }}" class="nav-link {% if request.endpoint=='nova_compra' %}active{% endif %}"><span class="ico">➕</span> Nova compra</a>
+    <a href="{{ url_for('novo_gasto') }}" class="nav-link {% if request.endpoint=='novo_gasto' %}active{% endif %}"><span class="ico">➕</span> Novo gasto</a>
+    <a href="{{ url_for('nova_venda') }}" class="nav-link {% if request.endpoint=='nova_venda' %}active{% endif %}"><span class="ico">➕</span> Nova venda</a>
+    <a href="{{ url_for('novo_animal') }}" class="nav-link {% if request.endpoint in ['novo_animal','brincar_compra'] %}active{% endif %}"><span class="ico">🏷️</span> Cadastrar animal</a>
+    <a href="{{ url_for('novo_manejo') }}" class="nav-link {% if request.endpoint=='novo_manejo' %}active{% endif %}"><span class="ico">🩺</span> Novo manejo</a>
+    <a href="{{ url_for('nova_visita') }}" class="nav-link {% if request.endpoint=='nova_visita' %}active{% endif %}"><span class="ico">🌾</span> Registrar visita</a>
+    <a href="{{ url_for('voz') }}" class="nav-link {% if request.endpoint=='voz' %}active{% endif %}"><span class="ico">🎤</span> Comando de voz</a>
     <a href="{{ url_for('importar') }}"      class="nav-link {% if request.endpoint=='importar'      %}active{% endif %}"><span class="ico">⬆️</span> Importar Excel</a>
     <a href="{{ url_for('exportar') }}"      class="nav-link"><span class="ico">⬇️</span> Exportar Excel</a>
     <a href="{{ url_for('listar_backups') }}" class="nav-link {% if request.endpoint in ['listar_backups','fazer_backup_agora','download_backup','excluir_backup'] %}active{% endif %}"><span class="ico">💾</span> Backups</a>

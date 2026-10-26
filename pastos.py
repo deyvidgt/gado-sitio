@@ -278,6 +278,7 @@ def situacao(df_pastos, df_animais, df_man, estoque: int, peso_medio: float, hoj
     hoje = pd.Timestamp(hoje or pd.Timestamp.now()).normalize()
     peso_padrao = peso_medio if peso_medio and peso_medio > 0 else UA_KG
     rebanho, individual = (None, None), {}
+    ultimas_saidas = {}
     if df_man is not None and not df_man.empty and "Pasto" in df_man.columns:
         movs = df_man[(df_man["Tipo"] == TIPO_MOV) & df_man["Pasto"].apply(A._txt).ne("")]
         movs = movs.assign(_d=pd.to_datetime(movs["Data"], dayfirst=True, errors="coerce"))
@@ -285,8 +286,18 @@ def situacao(df_pastos, df_animais, df_man, estoque: int, peso_medio: float, hoj
             onde = (A._txt(r["Pasto"]), r["_d"].normalize())
             ids = A.ids_de(r.get("Brincos"))
             if ids:
+                for i in ids:
+                    p_ant = individual.get(i, rebanho)[0]
+                    if p_ant and p_ant != onde[0]:
+                        ultimas_saidas[p_ant] = onde[1]
                 individual.update({i: onde for i in ids})
             else:
+                p_ant = rebanho[0]
+                if p_ant and p_ant != onde[0]:
+                    ultimas_saidas[p_ant] = onde[1]
+                for p_ind, _ in individual.values():
+                    if p_ind and p_ind != onde[0]:
+                        ultimas_saidas[p_ind] = onde[1]
                 rebanho, individual = onde, {}
 
     pesos = P.todas(df_man)
@@ -314,6 +325,7 @@ def situacao(df_pastos, df_animais, df_man, estoque: int, peso_medio: float, hoj
         s["ua"] = s.pop("kg") / UA_KG
         chegadas = s.pop("_chegadas")
         s["dias"] = (hoje - max(chegadas, key=chegadas.get)).days if chegadas else None
+        s["descanso"] = (hoje - ultimas_saidas[p]).days if (p in ultimas_saidas and s["cab"] == 0) else None
         a = float(area.get(p) or 0)
         s["ua_ha"] = s["ua"] / a if a > 0 else None
     return out

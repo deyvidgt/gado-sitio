@@ -95,3 +95,47 @@ def test_voz_grava_coluna_pesos(monkeypatch):
     linha = pd.Series({c: r["payload"]["linha"].get(c, "") for c in COLUNAS_MANEJO})
     assert sorted(P.pesos_da_linha(linha).values()) == [280.0, 320.0]
     assert "#A" in linha["Pesos"]
+
+
+def test_faixas_arrobas():
+    # 4 animais vivos: pesos 150 kg (~5.2@), 250 kg (~8.7@), 350 kg (~12.1@), 450 kg (~15.6@)
+    # 1 animal sem peso, 1 vendido (não deve contar)
+    df_animais = pd.DataFrame([
+        {"ID": "A0001", "Status": "Vivo"},
+        {"ID": "A0002", "Status": "Vivo"},
+        {"ID": "A0003", "Status": "Vivo"},
+        {"ID": "A0004", "Status": "Vivo"},
+        {"ID": "A0005", "Status": "Vivo"},
+        {"ID": "A0006", "Status": "Vendido"},
+    ])
+    df_man = pd.DataFrame([
+        {**{c: "" for c in COLUNAS_MANEJO}, "Data": "01/10/2026", "Tipo": "Pesagem",
+         "Pesos": "A 1 #A0001: 150 kg; A 2 #A0002: 250 kg; A 3 #A0003: 350 kg; A 4 #A0004: 450 kg; A 6 #A0006: 500 kg"}
+    ])
+    res = P.faixas_arrobas(df_animais, df_man, rendimento=0.52)
+    assert res["total_pesados"] == 4
+    assert res["sem_peso"] == 1
+    assert res["total_vivos"] == 5
+
+    faixas_map = {f["rotulo"]: f for f in res["faixas"]}
+    assert faixas_map["< 7 @"]["n"] == 1
+    assert faixas_map["7 a 10 @"]["n"] == 1
+    assert faixas_map["10 a 13 @"]["n"] == 1
+    assert faixas_map["> 13 @"]["n"] == 1
+    assert faixas_map["< 7 @"]["pct"] == 20.0
+
+
+def test_curva_evolucao_peso():
+    df_man = pd.DataFrame([
+        {**{c: "" for c in COLUNAS_MANEJO}, "Data": "01/01/2026", "Tipo": "Pesagem",
+         "Pesos": "A 1 #A0001: 300 kg; A 2 #A0002: 320 kg"},
+        {**{c: "" for c in COLUNAS_MANEJO}, "Data": "31/01/2026", "Tipo": "Pesagem",
+         "Pesos": "A 1 #A0001: 330 kg; A 2 #A0002: 350 kg"},
+    ])
+    pontos = P.curva_evolucao_peso(df_man, rendimento=0.52)
+    assert len(pontos) == 2
+    p1, p2 = pontos[0], pontos[1]
+    assert p1["kg"] == 310.0
+    assert p1["gmd"] is None
+    assert p2["kg"] == 340.0
+    assert p2["gmd"] == pytest.approx(1.0, rel=0.01)  # 30 kg em 30 dias

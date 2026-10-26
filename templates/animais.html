@@ -68,10 +68,16 @@
   {% for st, rot in [('Vivo','🐄 Vivos'),('Vendido','🤝 Vendidos'),('Morto','⚰️ Mortos'),('todos','Todos')] %}
     <a href="?status={{ st }}" class="{{ 'on' if status == st }}">{{ rot }}</a>
   {% endfor %}
-  <input type="text" id="busca" placeholder="🔍 Buscar brinco, dono, raça…" oninput="filtrar()"
+  <input type="text" id="busca" placeholder="🔍 Buscar brinco, dono, raça…" value="{{ q }}" oninput="filtrar()"
          style="flex:1;min-width:180px;padding:7px 12px;border:1.5px solid var(--cream-dk);border-radius:8px;
                 font-size:13px;font-family:inherit;background:var(--surface-2);color:var(--text)">
 </div>
+<form method="get" class="acoes-rapidas" style="margin-bottom:14px">
+  <input type="hidden" name="status" value="{{ status }}"><input name="q" value="{{ q }}" placeholder="Busca no servidor">
+  <select name="categoria"><option value="">Todas as categorias</option>{% for c in categorias %}<option {{ 'selected' if c == categoria }}>{{ c }}</option>{% endfor %}</select>
+  <select name="sexo"><option value="">Todos os sexos</option><option value="F" {{ 'selected' if sexo == 'F' }}>Fêmeas</option><option value="M" {{ 'selected' if sexo == 'M' }}>Machos</option></select>
+  <button class="btn btn-outline" type="submit">Filtrar</button>
+</form>
 
 <div class="card" style="padding:0;overflow-x:auto">
   {% if rows %}

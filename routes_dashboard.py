@@ -86,12 +86,21 @@ def dashboard():
 
     from insumos import previsao_todos
     insumos = previsao_todos(dados["Visitas"], dados["Gastos"], _agora())
-
+    extras = _cards_extras(dados, r)
+    alertas = _gerar_alertas(dados)
+    estado_sitio = {"cabecas": r.get("estoque", 0), "peso_medio": peso_medio,
+                     "resultado": r.get("resultado_realizado", 0),
+                     "lotacao": (extras.get("lotacao") or {}).get("ua_ha")}
+    acoes_rapidas = [("⚖️ Nova pesagem", "pesagem"), ("🩺 Novo manejo", "novo_manejo"),
+                     ("🗺️ Mover pasto", "pastos"), ("🛒 Nova compra", "nova_compra"),
+                     ("🌾 Nova visita", "nova_visita")]
+    atencao_agora = alertas + extras.get("repro", [])
     return render_template("dashboard.html", r=r, membros=membros_r, insumos=insumos,
                            estoque_membro=estoque_membro, recentes=recentes[:6],
-                           alertas=_gerar_alertas(dados),
-                           indicadores=indicadores, rebanho_est=rebanho_est,
-                           **_cards_extras(dados, r),
+                           alertas=alertas, indicadores=indicadores, rebanho_est=rebanho_est,
+                           estado_sitio=estado_sitio, acoes_rapidas=acoes_rapidas,
+                           atencao_agora=atencao_agora, ocorrencias=recentes[:6],
+                           tendencia_peso=[], **extras,
                            NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS, MEMBROS=MEMBROS)
 
 

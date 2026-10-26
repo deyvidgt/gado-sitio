@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Calendário — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Calendário operacional{% endblock %}
+{% block content %}
+<div class="section-head">
+  <h2>Agenda do sítio</h2>
+  <div class="acoes-rapidas">
+    <a class="btn btn-outline btn-sm" href="{{ url_for('novo_manejo') }}">+ Manejo</a>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('nova_visita') }}">+ Visita</a>
+  </div>
+</div>
+<div class="card" style="margin-bottom:20px">
+  <form method="get" class="form-grid" style="align-items:end">
+    <div class="form-group"><label>Mostrar</label><select name="tipo">
+      <option value="">Todos os eventos</option>
+      {% for valor, nome in [('saude','Saúde'),('reproducao','Reprodução'),('manejo','Manejo'),('visita','Visitas'),('tarefa','Tarefas')] %}
+      <option value="{{ valor }}" {{ 'selected' if tipo == valor }}>{{ nome }}</option>
+      {% endfor %}
+    </select></div>
+    <button class="btn btn-outline" type="submit">Filtrar</button>
+  </form>
+</div>
+<div class="ocorrencias">
+{% for e in eventos %}
+  <article class="linha {{ 'aviso' if e.status == 'atrasado' }}">
+    <div><b>{{ e.data|data_br }}</b><div class="linha-sub">{{ e.origem }} · {{ e.status }}</div></div>
+    <div><div class="linha-nome">{{ e.titulo }}</div>{% if e.detalhes %}<div class="linha-sub">{{ e.detalhes }}</div>{% endif %}</div>
+  </article>
+{% else %}
+  <div class="card estado-sitio"><b>Nenhum evento encontrado.</b><p class="hint">Registre um manejo, uma visita ou uma tarefa para começar a montar a agenda.</p></div>
+{% endfor %}
+</div>
+{% endblock %}

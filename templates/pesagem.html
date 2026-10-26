@@ -24,6 +24,46 @@
   {% if n_pesados %}<span class="muted">Peso médio dos {{ n_pesados }} já pesados: <b>{{ '%.0f' % peso_medio }} kg</b></span>{% endif %}
 </div>
 
+{% if not so_id and faixas and faixas.total_pesados %}
+<div class="card" style="margin-bottom:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+    <h3 style="margin:0">📊 Rebanho por Faixa de Peso ({{ faixas.total_pesados }} pesados)</h3>
+    <span class="muted">Rendimento de carcaça: {{ '%.0f' % (rendimento * 100) }}%</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:10px;margin-bottom:10px">
+    {% for f in faixas.faixas %}
+    <div style="background:var(--surface,#fff);border:1px solid var(--border,#ddd);border-radius:8px;padding:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <b>{{ f.rotulo }}</b>
+        <span class="badge" style="background:var(--cream-dk,#e8e8e8)">{{ f.n }} cab</span>
+      </div>
+      <div class="muted" style="margin:2px 0 6px">{{ f.sub }}</div>
+      <div class="barra"><i style="width:{{ f.pct|round|int }}%"></i></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px" class="muted">
+        <span>{{ f.pct }}% do lote</span>
+        <span>{% if f.kg_medio %}méd. {{ f.kg_medio }} kg{% else %}—{% endif %}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% if faixas.sem_peso %}
+  <p class="muted" style="margin:0">{{ faixas.sem_peso }} animal(is) vivos ainda sem pesagem de balança.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if not so_id and curva and curva|length >= 2 %}
+<div class="card" style="margin-bottom:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+    <h3 style="margin:0">📈 Curva de Ganho de Peso e GMD Médio</h3>
+    <span class="muted">Evolução do peso médio do lote</span>
+  </div>
+  <div style="position:relative;height:220px;width:100%">
+    <canvas id="chartCurvaPeso"></canvas>
+  </div>
+</div>
+{% endif %}
+
 {% if not rows %}
   <p class="muted">Nenhum animal vivo com brinco. <a href="{{ url_for('novo_animal') }}">Cadastre os animais</a> para pesar um por um.</p>
 {% else %}
@@ -69,6 +109,51 @@
 {% block scripts %}
 <script>
 (function () {
+  const curva = {{ (curva or [])|tojson }};
+  const elChart = document.getElementById("chartCurvaPeso");
+  if (curva && curva.length >= 2 && elChart && typeof Chart !== "undefined") {
+    new Chart(elChart, {
+      type: "line",
+      data: {
+        labels: curva.map(c => c.data_br),
+        datasets: [{
+          label: "Peso médio (kg)",
+          data: curva.map(c => c.kg),
+          borderColor: "#4363d8",
+          backgroundColor: "rgba(67, 99, 216, 0.12)",
+          tension: 0.25,
+          fill: true,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              afterLabel: function(ctx) {
+                const p = curva[ctx.dataIndex];
+                let extra = `${p.arrobas} @ · ${p.n} cab`;
+                if (p.gmd !== null && p.gmd !== undefined) {
+                  extra += ` · GMD: ${p.gmd > 0 ? "+" : ""}${p.gmd} kg/dia`;
+                }
+                return extra;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            title: { display: true, text: "kg" },
+            suggestedMin: Math.min(...curva.map(c => c.kg)) * 0.9,
+          }
+        }
+      }
+    });
+  }
+
   const campos = document.querySelectorAll(".pes-item input");
   const cont = document.getElementById("pes-contagem");
   function atualizar() {

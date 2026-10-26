@@ -94,15 +94,27 @@ def animais():
     df = A.carregar()
     hoje = _agora()
     status = request.args.get("status", "Vivo")
+    busca = request.args.get("q", "").strip().lower()
+    categoria = request.args.get("categoria", "").strip()
+    sexo = request.args.get("sexo", "").strip()
     lista = df if status == "todos" else df[df["Status"] == status]
+    if categoria:
+        lista = lista[lista["Categoria"].astype(str) == categoria]
+    if sexo:
+        lista = lista[lista["Sexo"].astype(str) == sexo]
+    if busca and not lista.empty:
+        texto = lista.astype(str).agg(" ".join, axis=1)
+        lista = lista[texto.str.lower().str.contains(busca, regex=False)]
     lista = lista.sort_values(["Brinco Cor", "Brinco Nº"], na_position="last")
     est_m = calcular_estoque_por_membro(dados["Compras"], dados["Vendas"], dados["Manejo"])
     proximos = {m: A.proximo_numero(df, c) for m, c in A.cores_brinco().items()}
     pesos = P.todas(dados["Manejo"])
     rows = [{**_linha_animal(a, hoje), "peso": P.resumo(pesos.get(a["ID"], []))}
             for _, a in lista.iterrows()]
+    categorias = sorted({str(v) for v in df["Categoria"].dropna() if str(v).strip()})
     return render_template("animais.html", rows=rows,
-                           status=status, total_vivos=len(A.vivos(df)),
+                           status=status, q=busca, categoria=categoria, sexo=sexo,
+                           categorias=categorias, total_vivos=len(A.vivos(df)),
                            conferencia=A.conferencia(df, est_m),
                            brucelose=[{**_linha_animal(b["animal"], hoje), "msg": b["msg"],
                                        "situacao": b["situacao"]}
@@ -250,8 +262,10 @@ def pesagem():
     rows = [{**_linha_animal(a, hoje), "peso": P.resumo(pesos.get(a["ID"], []), rend)}
             for _, a in vivos.iterrows()]
     medio, n = P.peso_medio_vivos(df, dados["Manejo"])
+    faixas = P.faixas_arrobas(df, dados["Manejo"], rend)
+    curva = P.curva_evolucao_peso(dados["Manejo"], rend)
     return render_template("pesagem.html", rows=rows, so_id=so_id, peso_medio=medio,
-                           n_pesados=n, rendimento=rend,
+                           n_pesados=n, rendimento=rend, faixas=faixas, curva=curva,
                            now_date=pd.Timestamp(hoje).normalize(), **_ctx_templates())
 
 

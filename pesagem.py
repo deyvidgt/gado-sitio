@@ -111,6 +111,101 @@ def peso_medio_vivos(df_animais: pd.DataFrame, df_man: pd.DataFrame) -> tuple[fl
     return (sum(pesos) / len(pesos), len(pesos)) if pesos else (0.0, 0)
 
 
+def faixas_arrobas(df_animais: pd.DataFrame, df_man: pd.DataFrame, rendimento: float = 0.52) -> dict:
+    """Agrupa os animais vivos por faixas de arrobas (@ de carcaça)."""
+    hist = todas(df_man)
+    vivos = A.vivos(df_animais)["ID"].tolist() if not df_animais.empty else []
+    faixas_def = [
+        ("< 7 @", "Bezerros / Desmama", 0.0, 7.0),
+        ("7 a 10 @", "Recria", 7.0, 10.0),
+        ("10 a 13 @", "Engorda", 10.0, 13.0),
+        ("> 13 @", "Terminação / Venda", 13.0, 9999.0),
+    ]
+    contagens = {rotulo: {"nome": rotulo, "sub": sub, "n": 0, "kg_soma": 0.0, "arr_soma": 0.0}
+                 for rotulo, sub, _, _ in faixas_def}
+    sem_peso, pesados = 0, 0
+    for i in vivos:
+        if i in hist and hist[i]:
+            kg = hist[i][-1][1]
+            arr = kg * rendimento / 15.0
+            pesados += 1
+            for rotulo, _, f_min, f_max in faixas_def:
+                if f_min <= arr < f_max or (f_max > 100 and arr >= f_min):
+                    c = contagens[rotulo]
+                    c["n"] += 1
+                    c["kg_soma"] += kg
+                    c["arr_soma"] += arr
+                    break
+        else:
+            sem_peso += 1
+
+    total = pesados + sem_peso
+    lista = []
+    for rotulo, _, _, _ in faixas_def:
+        c = contagens[rotulo]
+        n = c["n"]
+        lista.append({
+            "rotulo": c["nome"],
+            "sub": c["sub"],
+            "n": n,
+            "pct": round(n * 100 / total, 1) if total > 0 else 0,
+            "kg_medio": round(c["kg_soma"] / n, 1) if n > 0 else 0,
+            "arr_media": round(c["arr_soma"] / n, 1) if n > 0 else 0,
+        })
+
+    return {
+        "faixas": lista,
+        "total_pesados": pesados,
+        "sem_peso": sem_peso,
+        "total_vivos": total,
+    }
+
+
+def curva_evolucao_peso(df_man: pd.DataFrame, rendimento: float = 0.52) -> list[dict]:
+    """Pontos no tempo com o peso médio do lote em cada pesagem realizada."""
+    if df_man is None or df_man.empty or "Data" not in df_man.columns:
+        return []
+    pesagens = df_man[df_man["Tipo"] == "Pesagem"]
+    if pesagens.empty:
+        return []
+
+    por_data: dict[pd.Timestamp, list[float]] = {}
+    for _, r in pesagens.iterrows():
+        d = pd.to_datetime(r.get("Data"), dayfirst=True, errors="coerce")
+        if pd.isna(d):
+            continue
+        d = d.normalize()
+        pesos_dict = pesos_da_linha(r)
+        if pesos_dict:
+            por_data.setdefault(d, []).extend(pesos_dict.values())
+
+    if not por_data:
+        return []
+
+    datas_ord = sorted(por_data.keys())
+    pontos = []
+    ult_kg, ult_data = None, None
+    for d in datas_ord:
+        kgs = por_data[d]
+        kg_med = round(sum(kgs) / len(kgs), 1)
+        arr_med = round(kg_med * rendimento / 15.0, 1)
+        gmd = None
+        if ult_data is not None and ult_kg is not None:
+            dias = (d - ult_data).days
+            if dias > 0:
+                gmd = round((kg_med - ult_kg) / dias, 3)
+        ult_kg, ult_data = kg_med, d
+        pontos.append({
+            "data": d.strftime("%Y-%m-%d"),
+            "data_br": d.strftime("%d/%m/%Y"),
+            "kg": kg_med,
+            "arrobas": arr_med,
+            "n": len(kgs),
+            "gmd": gmd,
+        })
+    return pontos
+
+
 def validar(pares_txt: dict, df_animais: pd.DataFrame) -> list[tuple[str, float]]:
     """{ID: '320,5'} do formulário → [(ref, kg)]; levanta ValueError com a mensagem."""
     pares = []

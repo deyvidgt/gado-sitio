@@ -96,6 +96,7 @@ def test_rebanho_todo_mais_recente_vence():
     s = PA.situacao(_pastos("P01", "P02"), _animais("A0001"), man, estoque=5, peso_medio=450,
                     hoje=HOJE)
     assert s["P01"]["cab"] == 5 and s["P02"]["cab"] == 0
+    assert s["P02"]["descanso"] == 16
 
 
 def test_vendido_sai_do_pasto():

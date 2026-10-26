@@ -4,6 +4,27 @@
 
 {% block content %}
 
+<section class="estado-sitio card" style="margin-bottom:20px">
+  <div class="section-head" style="margin-bottom:12px"><h2>Estado do sítio</h2><span class="status">● {{ estado_sitio.cabecas }} cabeças no estoque</span></div>
+  <div class="tri">
+    <div><b>{{ estado_sitio.cabecas }}</b>cabeças</div>
+    <div><b>{{ '%.0f'|format(estado_sitio.peso_medio or 0) }} kg</b>peso médio</div>
+    <div><b>{{ r.ctcab|brl }}</b>custo/cabeça</div>
+    <div><b>{{ r.resultado_realizado|brl }}</b>resultado</div>
+    <div><b>{{ '%.2f'|format(estado_sitio.lotacao or 0) }}</b>UA/ha</div>
+  </div>
+</section>
+
+<section class="card" style="margin-bottom:20px">
+  <div class="card-title">Ações rápidas</div>
+  <div class="acoes-rapidas">{% for nome, endpoint in acoes_rapidas %}<a class="btn btn-outline" href="{{ url_for(endpoint) }}">{{ nome }}</a>{% endfor %}</div>
+</section>
+
+<section class="card" style="margin-bottom:20px">
+  <div class="card-title">Atenção agora</div>
+  {% for a in atencao_agora[:6] %}<div class="linha aviso"><span>{{ a.msg if a.msg is defined else a.texto }}</span></div>{% else %}<p class="hint">Nenhum alerta exige ação agora.</p>{% endfor %}
+</section>
+
 <!-- Alertas -->
 {% if alertas %}
 <div style="margin-bottom:20px">
@@ -428,6 +449,17 @@
     Widget: <a href="https://www.noticiasagricolas.com.br" target="_blank" rel="noopener" style="color:var(--green-600)">Notícias Agrícolas</a> · Para referência — preços podem variar.
   </div>
 </div>
+
+<section class="card" style="margin-bottom:24px">
+  <div class="card-title">Ocorrências recentes</div>
+  <div class="ocorrencias">{% for e in ocorrencias %}<div class="linha"><div><b>{{ e.tipo }}</b><div class="linha-sub">{{ e.data }}</div></div><div class="linha-fim">{{ e.desc or 'Registro realizado' }}</div></div>{% else %}<p class="hint">Ainda não há ocorrências registradas.</p>{% endfor %}</div>
+</section>
+
+<section class="card" style="margin-bottom:24px">
+  <div class="card-title">Tendência de peso</div>
+  {% if tendencia_peso %}<p class="hint">{{ tendencia_peso|length }} pontos de pesagem disponíveis.</p>{% else %}<p class="hint">Registre ao menos duas pesagens para acompanhar o ganho médio diário.</p>{% endif %}
+  <a class="btn btn-outline btn-sm" href="{{ url_for('pesagem') }}">Ver pesagens</a>
+</section>
 
 <!-- Fluxo de caixa + Membros -->
 <div class="two-col" style="margin-bottom:24px">

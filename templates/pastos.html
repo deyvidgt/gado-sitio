@@ -99,14 +99,28 @@
       {% if p.nivel and p.cab %}
       <span class="badge badge-{{ classe or 'ok' }}" style="margin-left:auto">
         {{ {'ok': 'Folgado', 'atencao': 'No limite', 'excesso': 'Lotado'}[p.nivel] }}</span>
+      {% elif not p.cab %}
+        {% if p.descanso is not none %}
+          {% if p.descanso >= 25 %}
+          <span class="badge badge-ok" style="margin-left:auto">Descansado ({{ p.descanso }}d)</span>
+          {% else %}
+          <span class="badge badge-aviso" style="margin-left:auto">Em descanso ({{ p.descanso }}d)</span>
+          {% endif %}
+        {% else %}
+          <span class="badge" style="margin-left:auto;background:var(--border,#ddd)">Vazio</span>
+        {% endif %}
       {% endif %}
-      <button type="button" class="btn btn-outline btn-sm btn-ver-mapa" data-pasto="{{ p.id }}" style="{% if not (p.nivel and p.cab) %}margin-left:auto;{% endif %}padding:2px 8px;font-size:12px">🗺️ Ver no mapa</button>
+      <button type="button" class="btn btn-outline btn-sm btn-ver-mapa" data-pasto="{{ p.id }}" style="margin-left:8px;padding:2px 8px;font-size:12px">🗺️ Ver no mapa</button>
     </div>
     <div class="tri" style="margin:8px 0 6px">
       <div><b>{{ p.cab }}</b>cabeças</div>
       <div><b>{{ '%.2f'|format(p.area)|replace('.', ',') }}</b>hectares</div>
       <div><b>{% if p.ua_ha is not none and p.cab %}{{ '%.2f'|format(p.ua_ha)|replace('.', ',') }}{% if p.estimado %}~{% endif %}{% else %}—{% endif %}</b>UA/ha</div>
-      <div><b>{{ p.dias if p.dias is not none and p.cab else '—' }}</b>dias no pasto</div>
+      {% if p.cab %}
+      <div><b>{{ p.dias if p.dias is not none else '—' }}</b>dias no pasto</div>
+      {% else %}
+      <div><b>{{ p.descanso if p.descanso is not none else '—' }}</b>dias descanso</div>
+      {% endif %}
     </div>
     {% if pct %}
     <div class="barra {{ classe }}"><i style="width:{{ [pct, 100]|min|round|int }}%"></i></div>
@@ -171,6 +185,7 @@
     let txt = `<b>${p.nome}</b><br>${br(p.area, 1)} ha · ${p.cab} cab`;
     if (p.cab && p.ua_ha != null) txt += `<br>${br(p.ua_ha, 2)} UA/ha${p.estimado ? "~" : ""}`;
     if (p.cab && p.dias != null) txt += ` · ${p.dias} dias`;
+    if (!p.cab && p.descanso != null) txt += `<br>${p.descanso} dias descanso`;
     camada.bindTooltip(txt, { permanent: true, direction: "center", className: "rotulo-pasto" });
     camada.addTo(grupo);
     camadas[p.id] = camada;
