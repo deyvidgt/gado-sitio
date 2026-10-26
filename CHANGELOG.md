@@ -12,6 +12,17 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - Coluna **Pesos** no fim da aba Manejo (`"Amarelo 21 #A0003: 320 kg; …"`); a pesagem por
   voz também grava nela. Pesagens antigas da voz (peso só na descrição) são lidas.
 - Painel: sem peso médio nas Configurações, a estimativa do rebanho usa a média pesada.
+- **Vários sítios — fase 1: donos configuráveis.** Os sócios vêm de `"membros"` no
+  `sitio_config.json` (chave, nome, emoji, cor do brinco, logins), de 2 a 8. Sem isso,
+  continuam Geane/Deyvid/Nilson e os números do Santo Antonio não mudam. O rateio "em
+  terços" virou "em partes iguais" (resto para o último dono, igual a antes). Um arquivo
+  com colunas de outros donos é recusado ao iniciar (trocar donos só em sítio novo).
+
+### Planejado
+- Vários sítios, fases 2 a 4 (pasta por sítio, seletor, painel da família).
+- Peso estimado por foto (com medida de referência) e por fita no peito.
+- Lotes e pastos com mapa de satélite (área em ha, lotação UA/ha).
+- Simulador Boi Gordo, calendário de eventos, reprodução, painel de lote e de sanidade.
 
 ### Corrigido
 - Datas dos formulários de edição (compra, gasto, venda, manejo): a data ISO do campo

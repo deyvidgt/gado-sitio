@@ -39,8 +39,8 @@
 - Produces (em `config`): `MEMBROS_PADRAO: list[dict]`; `ler_membros(cfg: dict | None) -> list[dict]`; `colunas_compras(chaves: list[str]) -> list[str]`; `colunas_vendas(chaves: list[str]) -> list[str]`; `aplicar_membros(lista: list[dict]) -> None` (troca **no lugar** `MEMBROS`, `NOMES_MEMBROS`, `EMOJIS_MEMBROS`, `CORES_BRINCO_PADRAO`, `LOGIN_MEMBRO`, `COLUNAS_COMPRAS`, `COLUNAS_VENDAS`, para quem importou por nome ver a troca); `LOGIN_MEMBRO: dict[str, str]` (login minúsculo → chave).
 - Test fixture (em `tests/conftest.py`): `membros_teste(n)` → aplica `n` donos `A`,`B`,`C`,`D`… e restaura o padrão no fim.
 
-- [ ] Testes: `test_padrao_igual_ao_de_hoje` (colunas de Compras/Vendas == as listas literais de hoje); `test_quatro_donos_gera_colunas` (`Qtd D` logo depois de `Qtd C`; `Resultado D (R$)` antes de `CMP no momento (R$)`); `test_config_invalida_usa_padrao` (chave com espaço, cor repetida, 1 dono, 9 donos); `test_arquivo_com_outros_donos_recusa`.
-- [ ] Rodar e ver falhar; implementar; `python -m pytest -q` PASS; commit `Fase 1: donos do sitio lidos do sitio_config.json`.
+- [x] Testes: `test_padrao_igual_ao_de_hoje` (colunas de Compras/Vendas == as listas literais de hoje); `test_quatro_donos_gera_colunas` (`Qtd D` logo depois de `Qtd C`; `Resultado D (R$)` antes de `CMP no momento (R$)`); `test_config_invalida_usa_padrao` (chave com espaço, cor repetida, 1 dono, 9 donos); `test_arquivo_com_outros_donos_recusa`.
+- [x] Rodar e ver falhar; implementar; `python -m pytest -q` PASS; commit `Fase 1: donos do sitio lidos do sitio_config.json`.
 
 ### Task 2: Contas em partes iguais
 
@@ -48,16 +48,16 @@
 
 **Interfaces:** `dividir_cotas(cabecas: int, *cotas: int) -> tuple[int, ...]` com `len(MEMBROS)` itens (cotas faltando = 0; os chamadores atuais com 3 posicionais continuam valendo).
 
-- [ ] Testes: `test_partes_iguais_resto_no_ultimo`; `test_invariantes_com_n_donos` parametrizado em 2, 3, 4 (cenário com compra, gasto, venda com cotas, venda sem cotas, morte com e sem "Perda De", nascimento sem dono) usando `checar_invariantes` de `test_calculos.py`; existentes de `dividir_cotas` seguem passando.
-- [ ] Implementar; PASS; smoke: `foto_numeros.py` nos dados reais igual ao de antes; commit `Fase 1: rateio em partes iguais para qualquer numero de donos`.
+- [x] Testes: `test_partes_iguais_resto_no_ultimo`; `test_invariantes_com_n_donos` parametrizado em 2, 3, 4 (cenário com compra, gasto, venda com cotas, venda sem cotas, morte com e sem "Perda De", nascimento sem dono) usando `checar_invariantes` de `test_calculos.py`; existentes de `dividir_cotas` seguem passando.
+- [x] Implementar; PASS; smoke: `foto_numeros.py` nos dados reais igual ao de antes; commit `Fase 1: rateio em partes iguais para qualquer numero de donos`.
 
 ### Task 3: Gravação, telas, voz e WhatsApp
 
 **Files:** Modify `routes_registros.py` (`gravar_compra`, `editar_compra`, `_salvar_venda`, listas), `templates/form_compra.html`, `templates/lista.html`, `exportar.py`, `routes_importar_exportar.py`, `comando_voz.py` (`_DONOS` gerado dos nomes/logins + apelidos atuais; cotas do form; "entre os três"), `alertas_whatsapp.py` e `routes_animais._membro_logado` (usam `config.LOGIN_MEMBRO`), `extensions.py`/`routes_usuarios.py` (`donos` padrão = nomes unidos por " · "), textos "os três" → "todos os donos" em `form_manejo.html`, `ajuda.html`.
 
-- [ ] Testes: `test_venda_quatro_donos_grava_colunas` (arquivo novo em pasta temporária com 4 donos; POST de compra e venda; linhas lidas por nome batem); `test_paginas_com_quatro_donos` (páginas GET principais sem 500); `test_login_membro_configurado`.
-- [ ] Implementar; PASS; commit `Fase 1: formularios, voz e WhatsApp com os donos do sitio`.
+- [x] Testes: `test_venda_quatro_donos_grava_colunas` (arquivo novo em pasta temporária com 4 donos; POST de compra e venda; linhas lidas por nome batem); `test_paginas_com_quatro_donos` (páginas GET principais sem 500); `test_login_membro_configurado`.
+- [x] Implementar; PASS; commit `Fase 1: formularios, voz e WhatsApp com os donos do sitio`.
 
 ### Task 4: Documentação
 
-- [ ] CHANGELOG [Não lançado] (donos configuráveis; "Planejado: peso estimado por foto/fita"), CLAUDE.md (`pasta_dados.py`, `membros` no `sitio_config.json`, regra "trocar donos só em sítio novo"), spec com fase 1 entregue. PASS; commit `Docs: fase 1 dos varios sitios`.
+- [x] CHANGELOG [Não lançado] (donos configuráveis; "Planejado: peso estimado por foto/fita"), CLAUDE.md (`pasta_dados.py`, `membros` no `sitio_config.json`, regra "trocar donos só em sítio novo"), spec com fase 1 entregue. PASS; commit `Docs: fase 1 dos varios sitios`.

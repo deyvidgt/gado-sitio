@@ -1,6 +1,6 @@
 # Vários sítios (cada parente com o seu) — design
 
-**Status:** perguntas respondidas, falta aprovar · **Data:** 2026-10-25 · **Versão alvo:** 5.0
+**Status:** aprovado em 2026-10-25 · fase 1 entregue · **Data:** 2026-10-25 · **Versão alvo:** 5.0
 
 ## Objetivo
 
