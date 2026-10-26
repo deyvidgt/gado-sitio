@@ -5,6 +5,11 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
+- **Comparador de proteinado/ração (v5.3):** nova página **🧮 Comparar preços** (botão no
+  cartão de Insumos do painel). Põe lado a lado até 3 marcas (R$/saco, kg/saco, consumo
+  g/cab/dia) e mostra o **R$/kg**, o **custo por cabeça/dia**, o **gasto do mês** e quanto
+  a mais cada opção custaria — o saco mais barato nem sempre ganha. Mostra também o último
+  preço que a família pagou (vem dos Gastos). Só calcula: nada é gravado na planilha.
 - **Lotação e composição do rebanho (v5.3):** novo campo **Capacidade do pasto (UA/ha)** em
   ⚙️ Configurações → Rebanho (em branco = sem semáforo). Com ele, a coluna UA/ha da página
   **🗺️ Pastos** fica verde (até 70% da capacidade), amarela (70–100%) ou vermelha (acima), e

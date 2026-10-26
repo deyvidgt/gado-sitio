@@ -78,7 +78,7 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 | `saude.py` | Calendário sanitário (Triângulo Mineiro): vacina por tipo, campanha de brucelose, vermifugação 5-7-9 — fonte única p/ painel, calendário e WhatsApp |
 | `backup_automatico.py` | Backup diário (Task do PythonAnywhere) |
 | `resumo_mensal.py` | Resumo do mês no WhatsApp no dia 1º (Task diária; `--teste` só mostra) |
-| `insumos.py` | Estoque de Sal/Proteinado/Ração: sacos em estoque contados nas visitas + compras (Gastos: Produto/Qtd Sacos) → consumo e "acaba em" (painel e WhatsApp) |
+| `insumos.py` | Estoque de Sal/Proteinado/Ração: sacos em estoque contados nas visitas + compras (Gastos: Produto/Qtd Sacos) → consumo e "acaba em" (painel e WhatsApp). Comparador (v5.3): `comparar()` (R$/kg, R$/cab/dia, mês) e `ultimo_preco_saco()`; página `/insumos/comparar` (`routes_insumos.py`) é só cálculo, GET, não grava |
 | `animais.py` | Cadastro individual por brinco (aba `Animais`): cor por dono, nº 01–99 reaproveitado, ID `A0001` liga o histórico (`Brincos` em Manejo/Vendas = "Amarelo 21 #A0003"); baixa, brucelose por animal |
 | `pesagem.py` | Peso por animal (v4.6): coluna `Pesos` da linha "Pesagem" do Manejo (`"Amarelo 21 #A0003: 320 kg"`; legado: peso na Descrição) → último peso, @, GMD; página `/animais/pesagem`. `todas()` só lê balança; `todas(estimados=True)` só as estimativas por foto |
 | `peso_foto.py` | Peso estimado por foto (v5.1): medidas da foto (tela `peso_foto.html`, canvas) → perímetro ≈ 2,6 × peito → Schaeffer; grava "Peso Estimado" no Manejo com o peso **bruto**; `fator_calibracao()` = mediana balança/bruto (≥3 pares a ≤15 dias, 0,7–1,3). Nunca entra no GMD |

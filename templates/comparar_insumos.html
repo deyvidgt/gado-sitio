@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Comparar ração{% endblock %}
+{% block page_title %}Comparar proteinado / ração 🧮{% endblock %}
+
+{% block content %}
+<style>
+  .cmp-tab { width:100%; border-collapse:collapse; font-size:13.5px; }
+  .cmp-tab td, .cmp-tab th { padding:8px 6px; border-bottom:1px solid var(--border, #ddd); text-align:left; }
+  .cmp-melhor { background:rgba(61,122,52,.10); font-weight:600; }
+  .cmp-muted { color:var(--text-3); font-size:12px; }
+</style>
+
+<div class="card">
+  <p class="cmp-muted">O saco mais barato nem sempre é o mais barato no fim do mês:
+    o que vale é quanto cada cabeça come por dia. Preencha o que o vendedor passou
+    e veja o custo real. <b>Nada é salvo</b> — é só uma conta.</p>
+
+  <form method="get">
+    <div class="form-grid">
+      <div class="form-group"><label>Cabeças no rebanho</label>
+        <input type="number" name="cabecas" min="0" value="{{ cabecas }}"></div>
+    </div>
+    <table class="cmp-tab">
+      <tr><th>Marca / fornecedor</th><th>R$ por saco</th><th>kg por saco</th><th>Consumo (g/cab/dia)</th></tr>
+      {% for i in linhas %}
+      <tr>
+        <td><input type="text" name="nome_{{ i }}" maxlength="40" value="{{ opcoes[i].nome }}"
+                   placeholder="Ex.: Proteinado 40 — Casa do Lavrador" style="width:100%"></td>
+        <td><input type="text" name="preco_saco_{{ i }}" inputmode="decimal" style="width:90px"
+                   value="{{ opcoes[i].preco_saco or '' }}" placeholder="120"></td>
+        <td><input type="text" name="kg_saco_{{ i }}" inputmode="decimal" style="width:80px"
+                   value="{{ opcoes[i].kg_saco or '' }}" placeholder="30"></td>
+        <td><input type="text" name="consumo_g_{{ i }}" inputmode="decimal" style="width:90px"
+                   value="{{ opcoes[i].consumo_g or '' }}" placeholder="{{ consumo_padrao }}"></td>
+      </tr>
+      {% endfor %}
+    </table>
+    <button class="btn btn-primary" style="margin-top:10px">🧮 Comparar</button>
+  </form>
+
+  {% if pagos %}
+  <p class="cmp-muted" style="margin-top:10px">Último preço que vocês pagaram:
+    {% for p, u in pagos %}{{ p }}: <b>{{ u[0]|brl }}</b>/saco ({{ u[1]|data_br }}){% if not loop.last %} · {% endif %}{% endfor %}</p>
+  {% endif %}
+</div>
+
+{% if resultado %}
+<div class="card" style="margin-top:16px">
+  <h3>Resultado</h3>
+  <table class="cmp-tab">
+    <tr><th>Marca</th><th>R$/kg</th><th>Por cabeça/dia</th><th>Mês ({{ cabecas }} cab.)</th><th>A mais no mês</th></tr>
+    {% for o in resultado %}
+    <tr {% if o.melhor %}class="cmp-melhor"{% endif %}>
+      <td>{% if o.melhor %}✅ {% endif %}{{ o.nome }}</td>
+      <td>{{ o.custo_kg|brl }}</td>
+      <td>{% if o.custo_cab_dia %}{{ o.custo_cab_dia|brl }}{% else %}—{% endif %}</td>
+      <td>{% if o.custo_mes %}{{ o.custo_mes|brl }}{% else %}—{% endif %}</td>
+      <td>{% if o.diferenca_mes %}+{{ o.diferenca_mes|brl }}{% elif o.melhor %}—{% else %}—{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="cmp-muted" style="margin-top:8px">Mês = 30 dias com o rebanho todo comendo.
+    Se só um lote come o produto, troque o número de cabeças.</p>
+</div>
+{% endif %}
+{% endblock %}

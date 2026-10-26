@@ -259,7 +259,10 @@
 <div class="card" style="margin-bottom:24px" id="card-insumos">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
     <div class="card-title" style="margin-bottom:0">🧂 Estoque de Insumos</div>
-    <a href="{{ url_for('novo_gasto') }}" class="btn btn-outline btn-sm">+ Lançar compra</a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a href="{{ url_for('comparar_insumos') }}" class="btn btn-outline btn-sm">🧮 Comparar preços</a>
+      <a href="{{ url_for('novo_gasto') }}" class="btn btn-outline btn-sm">+ Lançar compra</a>
+    </div>
   </div>
   <div class="insumos-grid">
     {% for p in insumos %}

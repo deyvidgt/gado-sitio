@@ -130,6 +130,46 @@ def previsao_insumo(produto: str, df_vis: pd.DataFrame, df_gast: pd.DataFrame,
     return res
 
 
+def comparar(opcoes: list[dict], cabecas: int = 0) -> list[dict]:
+    """Compara marcas de proteinado/ração pelo que custam de verdade.
+
+    Cada opção: nome, preco_saco, kg_saco, consumo_g (gramas por cabeça/dia).
+    O saco mais barato nem sempre ganha — quem come menos por cabeça pode sair
+    na frente. Linha sem nome, preço ou peso é ignorada. Nada é gravado."""
+    out = []
+    for o in opcoes:
+        nome = str(o.get("nome") or "").strip()
+        preco, kg, g = (_num(o.get(k)) or 0 for k in ("preco_saco", "kg_saco", "consumo_g"))
+        if not nome or preco <= 0 or kg <= 0:
+            continue
+        custo_kg = preco / kg
+        dia = custo_kg * (g / 1000) if g > 0 else None
+        out.append({"nome": nome, "preco_saco": preco, "kg_saco": kg, "consumo_g": g,
+                    "custo_kg": custo_kg, "custo_cab_dia": dia,
+                    "custo_mes": dia * cabecas * 30 if dia and cabecas > 0 else None})
+    # Ordena pelo custo diário por cabeça; sem consumo informado, só pelo R$/kg.
+    out.sort(key=lambda o: (o["custo_cab_dia"] is None, o["custo_cab_dia"] or o["custo_kg"]))
+    for i, o in enumerate(out):
+        o["melhor"] = i == 0
+        o["diferenca_mes"] = (o["custo_mes"] - out[0]["custo_mes"]
+                              if o["custo_mes"] is not None and out[0]["custo_mes"] is not None
+                              else None)
+    return out
+
+
+def ultimo_preco_saco(df_gast, produto: str):
+    """(R$ por saco, data) da última compra lançada deste insumo, ou None.
+    Serve de sugestão no comparador — é o preço que a família pagou mesmo."""
+    if df_gast is None or df_gast.empty or "Produto" not in df_gast.columns:
+        return None
+    g = df_gast[(df_gast["Produto"].astype(str).str.strip() == produto) & df_gast["Data"].notna()]
+    for _, r in g.sort_values("Data").iloc[::-1].iterrows():
+        sacos, total = _num(r.get("Qtd Sacos")), _num(r.get("Valor Total (R$)"))
+        if sacos and sacos > 0 and total and total > 0:
+            return round(total / sacos, 2), r["Data"]
+    return None
+
+
 def previsao_todos(df_vis, df_gast, hoje=None) -> list[dict]:
     return [previsao_insumo(p, df_vis, df_gast, hoje) for p in INSUMOS]
 
