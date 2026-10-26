@@ -55,6 +55,12 @@ except Exception as e:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+def _cabecalho() -> str:
+    """1ª linha das mensagens: o nome do sítio de onde vem (vários sítios, v5.0)."""
+    import sitios
+    return f"🐄 *{sitios.nome(sitios.atual())}*"
+
+
 def fmt_r(v):
     try:
         return f"R$ {float(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -210,7 +216,7 @@ def montar_msg_nova_visita(row: dict, estoque_esperado: int) -> str:
 
     # ── Montagem final ────────────────────────────────────────────────────────
     linhas = [
-        f"🐄 *Sítio Santo Antonio*",
+        _cabecalho(),
         f"🏡 *Nova visita registrada!*",
         f"",
         f"👤 *Quem visitou:* {responsavel}",
@@ -450,7 +456,7 @@ def montar_msg_urgente(itens: list[dict], hoje: datetime | None = None,
                        com_valores: bool = True) -> str:
     hoje = hoje or _agora_br()
     itens = _sem_valores(itens, com_valores)
-    linhas = ["🐄 *Sítio Santo Antonio*", f"🚨 *Alertas — {hoje:%d/%m/%Y}*", ""]
+    linhas = [_cabecalho(), f"🚨 *Alertas — {hoje:%d/%m/%Y}*", ""]
     linhas += [it["texto"] for it in itens]
     linhas += ["", "_Resumo completo toda segunda-feira._"]
     return "\n".join(linhas)
@@ -531,7 +537,7 @@ def montar_msg_semanal(itens: list[dict], hoje: datetime | None = None,
     itens = _sem_valores(itens, com_valores)
     urg = [it["texto"] for it in itens if it["urgente"]]
     resto = [it["texto"] for it in itens if not it["urgente"]]
-    linhas = ["🐄 *Sítio Santo Antonio*", f"📅 *Resumo semanal — {hoje:%d/%m/%Y}*", ""]
+    linhas = [_cabecalho(), f"📅 *Resumo semanal — {hoje:%d/%m/%Y}*", ""]
     if urg:
         linhas += ["*⚠️ Atenção*"] + urg + [""]
     if semana is not None:   # None = quem chamou não calculou a semana
@@ -549,7 +555,7 @@ def montar_alertas() -> list[str]:
 
 def montar_mensagem_alertas(alertas: list[str]) -> str:
     hoje_str = _agora_br().strftime("%d/%m/%Y")
-    linhas = ["🐄 *Sítio Santo Antonio*", f"📅 *Relatório — {hoje_str}*", ""]
+    linhas = [_cabecalho(), f"📅 *Relatório — {hoje_str}*", ""]
     linhas += list(alertas)
     linhas += ["", "_Sistema de Gestão de Gado_"]
     return "\n".join(linhas)
@@ -730,7 +736,21 @@ def main(argv: list[str] | None = None) -> int:
       --teste    mostra a mensagem que seria enviada, sem enviar
       --semanal  força o resumo semanal (ex.: para conferir o formato)
     """
+    import sitios
     argv = sys.argv[1:] if argv is None else argv
+    falhou = False
+    for slug in sitios.cada_sitio():
+        # Um sítio com problema (planilha quebrada) não impede os outros de receber.
+        try:
+            _main_sitio(argv, slug)
+        except Exception as e:
+            logging.error(f"[{slug}] Erro na Task do WhatsApp: {e}")
+            falhou = True
+    return 1 if falhou else 0
+
+
+def _main_sitio(argv: list[str], slug: str) -> int:
+    """A Task diária de um sítio (o ativo)."""
     teste, semanal = "--teste" in argv, "--semanal" in argv
     if not teste:
         n = enviar_avisos_pendentes()   # aviso de visita que ficou para trás
@@ -766,8 +786,8 @@ def main(argv: list[str] | None = None) -> int:
         print(msg_sv)
         return 0
 
-    enviados = enviar_para_familia(msg, tipo=tipo, msg_sem_valores=msg_sv)
-    logging.info(f"Concluído: {enviados} mensagem(s) enviada(s)")
+    enviados = enviar_para_familia(msg, tipo=tipo, msg_sem_valores=msg_sv, sitio=slug)
+    logging.info(f"[{slug}] Concluído: {enviados} mensagem(s) enviada(s)")
     if enviados:
         _gravar_estado(_marcar_enviados(enviar_itens, hoje, estado))
     return 0

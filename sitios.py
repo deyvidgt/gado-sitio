@@ -108,3 +108,15 @@ def ativar(slug: str) -> None:
 
 def atual() -> str:
     return _atual
+
+
+def cada_sitio():
+    """Para as Tasks (processos próprios, sem a trava do site): entra em cada
+    sítio, um por vez, e no fim volta ao primeiro."""
+    lista = list(carregar()["sitios"])
+    try:
+        for slug in lista:
+            ativar(slug)
+            yield slug
+    finally:
+        ativar(lista[0])

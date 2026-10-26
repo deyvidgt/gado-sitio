@@ -195,3 +195,74 @@ def test_tela_sem_gestao_para_nao_admin(cliente, dois_sitios):
     assert "Criar Usuário" not in p and "Só o administrador" in p
     _logar(cliente, "deyvid")
     assert "Criar Usuário" in cliente.get("/configuracoes").get_data(as_text=True)
+
+
+# ── Fase 3 / Task 2: Tasks por sítio ──────────────────────────────────────────
+
+def _capturar_envios(monkeypatch, modulo):
+    chamadas = []
+    monkeypatch.setattr(modulo, "enviar_para_familia",
+                        lambda msg, **kw: chamadas.append((msg, kw)) or 1)
+    return chamadas
+
+
+def test_task_whatsapp_por_sitio(dois_sitios, monkeypatch):
+    import alertas_whatsapp as aw
+    chamadas = _capturar_envios(monkeypatch, aw)
+    assert aw.main(["--semanal"]) == 0
+    assert [kw["sitio"] for _, kw in chamadas] == ["santo-antonio", "joao"]
+    assert chamadas[0][0].startswith("🐄 *Sítio Santo Antonio*")
+    assert chamadas[1][0].startswith("🐄 *Sítio do João*")
+    assert sitios.atual() == "santo-antonio"          # volta ao 1º no fim
+
+
+def test_task_erro_num_sitio_nao_para_os_outros(dois_sitios, monkeypatch):
+    import alertas_whatsapp as aw
+    chamadas = _capturar_envios(monkeypatch, aw)
+    original = aw.montar_itens
+
+    def quebra_no_santo_antonio(*a, **k):
+        if sitios.atual() == "santo-antonio":
+            raise RuntimeError("planilha com problema")
+        return original(*a, **k)
+    monkeypatch.setattr(aw, "montar_itens", quebra_no_santo_antonio)
+    assert aw.main(["--semanal"]) == 1
+    assert [kw["sitio"] for _, kw in chamadas] == ["joao"]
+
+
+def test_resumo_mensal_por_sitio(dois_sitios, monkeypatch):
+    from datetime import datetime
+    import alertas_whatsapp
+    import resumo_mensal as rm
+
+    class Dia1(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 10, 1)
+    monkeypatch.setattr(rm, "datetime", Dia1)
+    chamadas = _capturar_envios(monkeypatch, alertas_whatsapp)
+    rm.main([])
+    assert [kw["sitio"] for _, kw in chamadas] == ["santo-antonio", "joao"]
+    assert "*Sítio do João*" in chamadas[1][0] and "Geane" not in chamadas[1][0]
+
+
+def test_backup_por_sitio(tmp_path):
+    import subprocess
+    import sys
+    from conftest import RAIZ
+    shutil.copy2(db.ARQUIVO_PATH, tmp_path / "gado_familia.xlsx")
+    (tmp_path / "usuarios.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "sitios.json").write_text(json.dumps({
+        "sitios": {"santo-antonio": {"nome": "SA", "pasta": ""},
+                   "joao": {"nome": "J", "pasta": "sitios/joao"}}, "acesso": {}}), encoding="utf-8")
+    (tmp_path / "sitios" / "joao").mkdir(parents=True)
+    shutil.copy2(db.ARQUIVO_PATH, tmp_path / "sitios" / "joao" / "gado_familia.xlsx")
+    env = dict(os.environ, GADO_DATA_DIR=str(tmp_path), PYTHONIOENCODING="utf-8")
+    proc = subprocess.run([sys.executable, os.path.join(RAIZ, "backup_automatico.py")],
+                          env=env, capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 0, proc.stderr
+    raiz = os.listdir(tmp_path / "backups")
+    joao = os.listdir(tmp_path / "sitios" / "joao" / "backups")
+    assert any(n.startswith("backup_") for n in raiz) and any(n.startswith("backup_") for n in joao)
+    assert any(n.startswith("usuarios_") for n in raiz) and any(n.startswith("sitios_") for n in raiz)
+    assert not any(n.startswith("usuarios_") for n in joao)   # da família só na raiz

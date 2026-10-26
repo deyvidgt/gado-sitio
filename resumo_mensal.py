@@ -77,8 +77,9 @@ def montar_resumo_mensal(dados: dict, ano: int, mes: int, com_valores: bool = Tr
         nasc = int(_soma(man[man["Tipo"] == "Nascimento"], "Qtd Cabeças"))
         mortes = int(_soma(man[man["Tipo"] == "Morte/Perda"], "Qtd Cabeças"))
 
+    import sitios
     linhas = [
-        "🐄 *Sítio Santo Antonio*",
+        f"🐄 *{sitios.nome(sitios.atual())}*",
         f"📊 *Resumo de {MESES[mes - 1]}/{ano}*",
         "",
         "*No mês*",
@@ -148,24 +149,34 @@ def main(argv: list[str]) -> int:
     if hoje.day != 1 and not (teste or forcar):
         return 0  # Task diária: só age no dia 1º
 
+    import sitios
     from db import carregar_todas
-    ano, mes = mes_anterior(hoje)
-    dados = carregar_todas()
-    msg = montar_resumo_mensal(dados, ano, mes)
-    msg_sv = montar_resumo_mensal(dados, ano, mes, com_valores=False)
-
-    if teste:
-        print(msg)
-        print("\n── versão sem valores ──\n")
-        print(msg_sv)
-        return 0
-
     # Importa aqui: o módulo configura o log do WhatsApp ao ser carregado.
-    from alertas_whatsapp import enviar_para_familia
-    enviados = enviar_para_familia(msg, tipo="mensal", msg_sem_valores=msg_sv)
-    logging.info(f"Resumo mensal {mes:02d}/{ano}: {enviados} mensagem(ns) enviada(s)")
-    print(f"Resumo de {mes:02d}/{ano} enviado para {enviados} pessoa(s).")
-    return 0 if enviados > 0 else 1
+    import alertas_whatsapp
+    ano, mes = mes_anterior(hoje)
+    total, falhou = 0, False
+    for slug in sitios.cada_sitio():
+        # Um sítio com problema não impede o resumo dos outros.
+        try:
+            dados = carregar_todas()
+            msg = montar_resumo_mensal(dados, ano, mes)
+            msg_sv = montar_resumo_mensal(dados, ano, mes, com_valores=False)
+            if teste:
+                print(msg)
+                print("\n── versão sem valores ──\n")
+                print(msg_sv)
+                continue
+            enviados = alertas_whatsapp.enviar_para_familia(
+                msg, tipo="mensal", msg_sem_valores=msg_sv, sitio=slug)
+            total += enviados
+            logging.info(f"[{slug}] Resumo mensal {mes:02d}/{ano}: {enviados} mensagem(ns) enviada(s)")
+            print(f"[{slug}] Resumo de {mes:02d}/{ano} enviado para {enviados} pessoa(s).")
+        except Exception as e:
+            logging.error(f"[{slug}] Erro no resumo mensal: {e}")
+            falhou = True
+    if teste:
+        return 0
+    return 0 if total > 0 and not falhou else 1
 
 
 if __name__ == "__main__":
