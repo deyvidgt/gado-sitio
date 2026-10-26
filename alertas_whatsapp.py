@@ -312,6 +312,23 @@ def montar_itens(hoje: datetime | None = None) -> list[dict]:
     for i, lemb in enumerate(lembretes_sazonais(df_m, hoje)):
         item(f"campanha:{hoje:%Y%m%d}:{i}", f"🗓️ {lemb['msg']}", urgente=dia_lembrete, repetir=1)
 
+    # ── 1b) Agenda de tarefas: atrasadas e as dos próximos dias ──────────────
+    try:
+        import tarefas as T
+        for t in T.pendentes(T.carregar(), hoje, limite_dias=7):
+            if t["situacao"] == "atrasada":
+                texto = f"⚠️ Tarefa ATRASADA ({-t['dias']} dia(s)): {t['titulo']}"
+            elif t["situacao"] == "hoje":
+                texto = f"📌 Tarefa de hoje: {t['titulo']}"
+            else:
+                texto = f"📋 {t['titulo']} — {t['data']:%d/%m} (em {t['dias']} dia(s))"
+            if t["responsavel"]:
+                texto += f" — {t['responsavel']}"
+            item(f"tarefa:{t['id']}:{t['situacao']}", texto,
+                 urgente=t["situacao"] in ("atrasada", "hoje"), repetir=1)
+    except Exception as e:
+        logging.error(f"Erro nas tarefas: {e}")
+
     # ── 2) Insumos: previsão de estoque ──────────────────────────────────────
     try:
         from insumos import previsao_todos, texto_previsao

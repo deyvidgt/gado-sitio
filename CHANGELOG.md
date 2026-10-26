@@ -5,6 +5,11 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
+- **Agenda de tarefas (v5.3):** nova aba **📋 Tarefas** no menu — anote o que precisa ser
+  feito ("consertar a cerca do fundo"), para quando, quem faz e se repete (semanal a anual).
+  Ao marcar **✅ Feito**, a tarefa que repete já cria a próxima sozinha. Atrasada fica em
+  vermelho e não some. O painel mostra as dos próximos 7 dias e o WhatsApp avisa das
+  atrasadas e das de hoje. Nova aba `Tarefas` no arquivo de dados (criada sozinha).
 - **Comparador de proteinado/ração (v5.3):** nova página **🧮 Comparar preços** (botão no
   cartão de Insumos do painel). Põe lado a lado até 3 marcas (R$/saco, kg/saco, consumo
   g/cab/dia) e mostra o **R$/kg**, o **custo por cabeça/dia**, o **gasto do mês** e quanto

@@ -28,7 +28,7 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 
 ## ⚠️ Dados / banco (LER ANTES DE MEXER)
 
-- Os dados ficam em **`gado_familia.xlsx`** (abas: Compras, Gastos, Vendas, Manejo, Visitas, Animais, Fotos, Pastos).
+- Os dados ficam em **`gado_familia.xlsx`** (abas: Compras, Gastos, Vendas, Manejo, Visitas, Animais, Fotos, Pastos, Tarefas).
 - Em produção o arquivo mora em **`~/gado-dados/`**, **fora do Git**, para o `git pull`
   nunca apagar dados. Resolução do caminho: `db.py: _resolver_data_dir()`
   (ordem: `GADO_DATA_DIR` → `~/gado-dados/` → pasta do .exe → pasta do script).
@@ -83,6 +83,7 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 | `pesagem.py` | Peso por animal (v4.6): coluna `Pesos` da linha "Pesagem" do Manejo (`"Amarelo 21 #A0003: 320 kg"`; legado: peso na Descrição) → último peso, @, GMD; página `/animais/pesagem`. `todas()` só lê balança; `todas(estimados=True)` só as estimativas por foto |
 | `peso_foto.py` | Peso estimado por foto (v5.1): medidas da foto (tela `peso_foto.html`, canvas) → perímetro ≈ 2,6 × peito → Schaeffer; grava "Peso Estimado" no Manejo com o peso **bruto**; `fator_calibracao()` = mediana balança/bruto (≥3 pares a ≤15 dias, 0,7–1,3). Nunca entra no GMD |
 | `pastos.py` / `routes_pastos.py` | Pastos com mapa (v5.2): aba `Pastos` (contorno GeoJSON, área calculada no servidor); "Movimentação de Pasto" no Manejo com o ID na coluna `Pasto` (Brincos vazio = rebanho todo); `situacao()` → cabeças, dias e UA/ha por pasto. Página `/pastos` (Leaflet + Leaflet.draw, satélite Esri). Lotação (v5.3): `nivel()`/`total_lotacao()` comparam a UA/ha com `capacidade_ua_ha` do `sitio_config.json`; `animais.composicao()` dá as cabeças por categoria/sexo (painel e Pastos) |
+| `tarefas.py` / `routes_tarefas.py` | Agenda de tarefas (v5.3): aba `Tarefas` (datas em texto dd/mm/aaaa, `Feito Em` vazio = pendente); `concluir()` cria a próxima quando `Repetir` ≠ Não (`config.REPETICOES_TAREFA`); `pendentes()` → atrasada/hoje/próxima. Página `/tarefas`, cartão no painel e item nos urgentes do WhatsApp. Não mexe nas finanças |
 | `comando_voz.py` | Comando de voz por regras: `analisar(texto)` → intenção; `montar(intenção, ctx)` confere nos dados. Rotas em `routes_animais.py` (`/voz`, `/api/voz/*`) |
 | `static/voz_campos.js` | Prefill de formulário por `?prefill=1&campo=valor` e 🎤 de ditado nos campos de texto |
 | `drive.py` | Cliente mínimo do Google Drive (só `requests`, OAuth com refresh token em `<dados>/drive_token.json`); só opera dentro da pasta raiz |

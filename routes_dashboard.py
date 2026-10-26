@@ -91,8 +91,19 @@ def dashboard():
                            estoque_membro=estoque_membro, recentes=recentes[:6],
                            alertas=_gerar_alertas(dados),
                            indicadores=indicadores, rebanho_est=rebanho_est,
-                           **_lotacao_e_composicao(dados, r),
+                           **_cards_extras(dados, r),
                            NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS, MEMBROS=MEMBROS)
+
+
+def _cards_extras(dados, r) -> dict:
+    """Cards de Lotação, Rebanho e Tarefas. Nenhum deles derruba o painel."""
+    import tarefas as T
+    out = {"tarefas": []}
+    try:
+        out["tarefas"] = T.pendentes(T.carregar(), _agora(), limite_dias=7)
+    except Exception as e:
+        app.logger.error(f"Painel: tarefas falharam: {e}")
+    return {**out, **_lotacao_e_composicao(dados, r)}
 
 
 def _lotacao_e_composicao(dados, r) -> dict:

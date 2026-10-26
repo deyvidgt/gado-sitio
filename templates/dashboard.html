@@ -97,6 +97,25 @@
   {% endfor %}
 </div><!-- /three-col -->
 
+<!-- ═══ TAREFAS DA SEMANA (v5.3) ════════════════════════════════════════════ -->
+<div class="card" style="margin-bottom:24px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div class="card-title" style="margin-bottom:0">📋 Tarefas da semana</div>
+    <a href="{{ url_for('tarefas') }}" class="btn btn-outline btn-sm">Ver todas</a>
+  </div>
+  {% for t in tarefas %}
+  <div style="padding:6px 0;font-size:13.5px">
+    {% if t.situacao == 'atrasada' %}<span style="color:#c62828">⚠️ {{ t.titulo }} — atrasada {{ -t.dias }} dia(s)</span>
+    {% elif t.situacao == 'hoje' %}<span style="color:#ef6c00">📌 {{ t.titulo }} — é hoje</span>
+    {% else %}{{ t.titulo }} — {{ t.data.strftime('%d/%m') }} (em {{ t.dias }} dia(s)){% endif %}
+    {% if t.responsavel %}<span style="color:var(--text-3)"> · {{ t.responsavel }}</span>{% endif %}
+  </div>
+  {% else %}
+  <p style="font-size:13px;color:var(--text-3)">Nada marcado para os próximos 7 dias.
+    <a href="{{ url_for('tarefas') }}" style="color:var(--green-600)">Anotar uma tarefa →</a></p>
+  {% endfor %}
+</div>
+
 <!-- ═══ LOTAÇÃO DOS PASTOS + COMPOSIÇÃO DO REBANHO ══════════════════════════ -->
 <div class="two-col" style="margin-bottom:24px">
 

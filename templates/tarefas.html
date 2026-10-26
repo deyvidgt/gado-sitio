@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Tarefas{% endblock %}
+{% block page_title %}Tarefas do Sítio 📋{% endblock %}
+
+{% block content %}
+<style>
+  .tar { display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--border, #ddd); }
+  .tar:last-child { border-bottom:0; }
+  .tar-tit { font-weight:600; }
+  .tar-sub { font-size:12px; color:var(--text-3); }
+  .tar-atrasada .tar-tit { color:#c62828; }
+  .tar-hoje .tar-tit { color:#ef6c00; }
+  .tar-acao { margin-left:auto; display:flex; gap:6px; align-items:center; }
+</style>
+
+<div class="card">
+  <h3>Anotar uma tarefa</h3>
+  <form method="post" action="{{ url_for('nova_tarefa') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <div class="form-group"><label>O que precisa ser feito</label>
+        <input type="text" name="titulo" maxlength="80" required placeholder="Ex.: Consertar a cerca do fundo"></div>
+      <div class="form-group"><label>Para quando</label>
+        <input type="date" name="data" value="{{ hoje }}" required></div>
+      <div class="form-group"><label>Quem faz</label>
+        <select name="responsavel"><option value="">Qualquer um</option>
+          {% for p in pessoas %}<option>{{ p }}</option>{% endfor %}</select></div>
+      <div class="form-group"><label>Repete</label>
+        <select name="repetir">{% for r in repeticoes %}<option>{{ r }}</option>{% endfor %}</select></div>
+      <div class="form-group"><label>Observações</label>
+        <input type="text" name="obs" maxlength="200" placeholder="Opcional"></div>
+    </div>
+    <button class="btn btn-primary">📋 Anotar</button>
+  </form>
+  <p class="tar-sub" style="margin-top:8px">Tarefa que repete: ao marcar como feita, a próxima
+    já é criada sozinha. Tarefa atrasada não some — fica em vermelho até alguém fazer.</p>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3>A fazer ({{ pendentes|length }})</h3>
+  {% for t in pendentes %}
+  <div class="tar tar-{{ t.situacao }}">
+    <div>
+      <div class="tar-tit">{% if t.situacao == 'atrasada' %}⚠️ {% elif t.situacao == 'hoje' %}📌 {% endif %}{{ t.titulo }}</div>
+      <div class="tar-sub">
+        {{ t.data.strftime('%d/%m/%Y') }}
+        {% if t.situacao == 'atrasada' %}· atrasada {{ -t.dias }} dia(s)
+        {% elif t.situacao == 'hoje' %}· é hoje
+        {% else %}· em {{ t.dias }} dia(s){% endif %}
+        {% if t.responsavel %}· {{ t.responsavel }}{% endif %}
+        {% if t.repetir and t.repetir != 'Não' %}· 🔁 {{ t.repetir }}{% endif %}
+        {% if t.obs %}<br>{{ t.obs }}{% endif %}
+      </div>
+    </div>
+    <div class="tar-acao">
+      <form method="post" action="{{ url_for('concluir_tarefa', id_=t.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-primary btn-sm">✅ Feito</button>
+      </form>
+      <form method="post" action="{{ url_for('excluir_tarefa', id_=t.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-outline btn-sm" title="Apagar">🗑️</button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <p class="tar-sub">Nada pendente. 🎉</p>
+  {% endfor %}
+</div>
+
+{% if feitas %}
+<div class="card" style="margin-top:16px">
+  <h3>Últimas feitas</h3>
+  {% for t in feitas %}
+  <div class="tar"><div>
+    <div>✅ {{ t.titulo }}</div>
+    <div class="tar-sub">{{ t.feito }}{% if t.quem %} · {{ t.quem }}{% endif %}</div>
+  </div></div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

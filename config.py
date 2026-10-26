@@ -244,6 +244,12 @@ COLUNAS_FOTOS = [
 ]
 # v5.2 — Pastos desenhados no mapa (pastos.py). Contorno = GeoJSON do polígono.
 COLUNAS_PASTOS = ["ID", "Nome", "Área (ha)", "Contorno", "Cor", "Ativo", "Observações", "Criado Por"]
+# v5.3 — Agenda de tarefas (tarefas.py). "Feito Em" vazio = ainda pendente.
+COLUNAS_TAREFAS = ["ID", "Data", "Título", "Responsável", "Repetir", "Feito Em",
+                   "Observações", "Criado Por"]
+# Repetição → de quantos em quantos dias a próxima é criada ao concluir.
+REPETICOES_TAREFA = {"Não": 0, "Semanal": 7, "Quinzenal": 14, "Mensal": 30,
+                     "Trimestral": 90, "Semestral": 182, "Anual": 365}
 TIPOS_FOTO = ["Perfil", "Evolução", "Ocorrência"]
 # Pasta "Sítio Santo Antonio" no Drive do Nilson (pode ser trocada no drive_token.json).
 DRIVE_PASTA_PADRAO = "1hVTxC--URXg1j3rylOYyRt1nSuC_vbUt"

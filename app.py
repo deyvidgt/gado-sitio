@@ -61,6 +61,9 @@ from routes_pastos import *     # noqa: F401, F403
 # v5.3 — Comparador de proteinado/ração
 from routes_insumos import *    # noqa: F401, F403
 
+# v5.3 — Agenda de tarefas
+from routes_tarefas import *    # noqa: F401, F403
+
 # ── Migração/criação do arquivo de dados ──────────────────────────────────────
 # IMPORTANTE: roda em QUALQUER forma de entrada (wsgi/PythonAnywhere, .exe e dev).
 # Antes só rodava em `python app.py`, então no servidor as colunas novas (ex.: "Perda De",
