@@ -28,18 +28,29 @@ def _peso_medio(df_animais, df_man) -> float:
         return 0.0
 
 
+def _capacidade_ua_ha() -> float:
+    """UA/ha que o pasto suporta (Configurações → Rebanho). 0 = sem semáforo."""
+    try:
+        return float(_ler_sitio_config_disco().get("capacidade_ua_ha", 0) or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 @app.route("/pastos")
 @login_required
 def pastos():
     dados = _get_dados_cache()
     df_p, df_a = PA.carregar(), A.carregar()
-    sit = PA.situacao(df_p, df_a, dados["Manejo"],
-                      calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"]),
+    estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
+    sit = PA.situacao(df_p, df_a, dados["Manejo"], estoque,
                       _peso_medio(df_a, dados["Manejo"]), hoje=_agora())
+    capacidade = _capacidade_ua_ha()
     lista = [{"id": p["ID"], "nome": p["Nome"], "area": float(p["Área (ha)"]), "cor": p["Cor"],
-              "geo": json.loads(p["Contorno"]), **sit[p["ID"]]}
+              "geo": json.loads(p["Contorno"]), **sit[p["ID"]],
+              "nivel": PA.nivel(sit[p["ID"]]["ua_ha"], capacidade)}
              for _, p in PA.ativos(df_p).iterrows()]
     return render_template("pastos.html", pastos=lista, sem_pasto=sit[None],
+                           capacidade=capacidade, composicao=A.composicao(df_a, estoque),
                            hoje=pd.Timestamp(_agora()).strftime("%Y-%m-%d"))
 
 

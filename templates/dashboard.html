@@ -97,6 +97,52 @@
   {% endfor %}
 </div><!-- /three-col -->
 
+<!-- ═══ LOTAÇÃO DOS PASTOS + COMPOSIÇÃO DO REBANHO ══════════════════════════ -->
+<div class="two-col" style="margin-bottom:24px">
+
+  <div class="card">
+    <div class="card-title">🌿 Lotação dos Pastos</div>
+    {% if lotacao and lotacao.ua_ha is not none %}
+      <div style="font-size:26px;font-weight:700" class="lot-{{ lotacao.nivel or 'sem' }}">
+        {{ '%.2f'|format(lotacao.ua_ha)|replace('.', ',') }} UA/ha
+      </div>
+      <p style="font-size:12px;color:var(--text-3);margin-top:6px">
+        {{ '%.1f'|format(lotacao.ua)|replace('.', ',') }} UA em {{ '%.1f'|format(lotacao.ha)|replace('.', ',') }} ha
+        {% if lotacao.nivel == 'excesso' %}· ⚠️ acima da capacidade
+        {% elif lotacao.nivel == 'atencao' %}· perto do limite
+        {% elif lotacao.nivel == 'ok' %}· folga no pasto{% endif %}
+      </p>
+      <a href="{{ url_for('pastos') }}" style="font-size:13px;color:var(--green-600)">Ver mapa dos pastos →</a>
+    {% else %}
+      <p style="font-size:13px;color:var(--text-3)">Desenhe os pastos em
+        <a href="{{ url_for('pastos') }}" style="color:var(--green-600)">🗺️ Pastos</a>
+        para ver a lotação (UA/ha).</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-title">🐄 Rebanho por Categoria</div>
+    {% if composicao and composicao.total %}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px">
+        {% for nome, n in composicao.categorias.items() %}
+        <div><span class="kv-key">{{ nome }}</span> <b>{{ n }}</b></div>
+        {% endfor %}
+        {% if composicao.sem_cadastro %}
+        <div><span class="kv-key">Sem cadastro</span> <b>{{ composicao.sem_cadastro }}</b></div>
+        {% endif %}
+      </div>
+      <p style="font-size:12px;color:var(--text-3);margin-top:8px">
+        {% for nome, n in composicao.sexos.items() %}{{ nome }}: {{ n }}{% if not loop.last %} · {% endif %}{% endfor %}
+      </p>
+    {% else %}
+      <p style="font-size:13px;color:var(--text-3)">Cadastre os brincos em
+        <a href="{{ url_for('animais') }}" style="color:var(--green-600)">🏷️ Animais</a>
+        para ver a composição do rebanho.</p>
+    {% endif %}
+  </div>
+
+</div>
+
 <!-- ═══ ESTIMATIVA DO REBANHO + INDICADORES DE GESTÃO ═══════════════════════ -->
 <div class="two-col" style="margin-bottom:24px">
 
@@ -535,6 +581,9 @@
   /* widget externo (Notícias Agrícolas) vem com texto #333 fixo */
   [data-theme="dark"] .widget-na, [data-theme="dark"] .widget-na * { color:var(--text) !important; background-color:transparent !important; }
   [data-theme="dark"] .widget-na th { color:var(--text-2) !important; }
+
+  /* ── Semáforo da lotação (UA/ha vs. capacidade das Configurações) ── */
+  .lot-ok { color:var(--green-700); } .lot-atencao { color:#ef6c00; } .lot-excesso { color:#c62828; }
 
   /* ── Estoque de insumos ── */
   .insumos-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:10px; }

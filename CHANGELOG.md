@@ -5,6 +5,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
+- **Lotação e composição do rebanho (v5.3):** novo campo **Capacidade do pasto (UA/ha)** em
+  ⚙️ Configurações → Rebanho (em branco = sem semáforo). Com ele, a coluna UA/ha da página
+  **🗺️ Pastos** fica verde (até 70% da capacidade), amarela (70–100%) ou vermelha (acima), e
+  o painel ganha o cartão **🌿 Lotação dos Pastos** com a UA/ha do sítio todo. Novo cartão
+  **🐄 Rebanho por Categoria** (painel e Pastos) com as cabeças por categoria e por sexo —
+  quem está no estoque mas sem brinco cadastrado aparece como "Sem cadastro".
 - **Pesagem por animal e GMD**: página **⚖️ Pesagem** (Animais) para pesar o rebanho no
   curral — um campo por brinco, mostra o ganho na hora. A ficha do animal ganhou o cartão
   **Peso**: último peso, @ estimadas, GMD do último período e desde a 1ª pesagem, e o

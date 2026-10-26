@@ -14,6 +14,10 @@
   .bol { display:inline-block; width:12px; height:12px; border-radius:50%; vertical-align:-1px; margin-right:4px; }
   .muted { color:var(--text-3); font-size:12px; }
   #novo-pasto { display:none; }
+  .nv { font-weight:700; }
+  .nv-ok { color:#2e7d32; } .nv-atencao { color:#ef6c00; } .nv-excesso { color:#c62828; }
+  .comp li { list-style:none; margin:3px 0; font-size:13.5px; }
+  .comp .barra { display:inline-block; height:9px; border-radius:5px; background:var(--accent, #4363d8); vertical-align:1px; margin-right:5px; }
 </style>
 
 <div class="card">
@@ -23,7 +27,12 @@
   </div>
   <div id="mapa" aria-label="Mapa de satélite dos pastos"></div>
   <p class="muted" style="margin-top:6px">Mapa de satélite precisa de internet.
-    {% if sem_pasto.cab %}<b>{{ sem_pasto.cab }}</b> cabeça(s) ainda sem pasto.{% endif %}</p>
+    {% if sem_pasto.cab %}<b>{{ sem_pasto.cab }}</b> cabeça(s) ainda sem pasto.{% endif %}<br>
+    Lotação:
+    {% if capacidade %}verde até {{ '%.1f'|format(capacidade * 0.7)|replace('.', ',') }} UA/ha,
+      amarelo até {{ '%.1f'|format(capacidade)|replace('.', ',') }}, vermelho acima disso.
+    {% else %}configure a capacidade (UA/ha) em
+      <a href="{{ url_for('configuracoes') }}">Configurações → Rebanho</a> para ver o semáforo.{% endif %}</p>
 
   <form method="post" action="{{ url_for('novo_pasto') }}" id="novo-pasto" style="margin-top:10px">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -65,7 +74,7 @@
       <td><span class="bol" style="background:{{ p.cor }}"></span>{{ p.nome }}</td>
       <td>{{ '%.2f'|format(p.area)|replace('.', ',') }} ha</td>
       <td>{{ p.cab }}</td>
-      <td>{% if p.ua_ha is not none and p.cab %}{{ '%.2f'|format(p.ua_ha)|replace('.', ',') }}{% if p.estimado %} <span class="muted" title="Algum animal sem peso de balança: usou o peso médio">~</span>{% endif %}{% else %}—{% endif %}</td>
+      <td>{% if p.ua_ha is not none and p.cab %}<span class="nv{% if p.nivel %} nv-{{ p.nivel }}{% endif %}">{{ '%.2f'|format(p.ua_ha)|replace('.', ',') }}</span>{% if p.estimado %} <span class="muted" title="Algum animal sem peso de balança: usou o peso médio">~</span>{% endif %}{% else %}—{% endif %}</td>
       <td>{{ p.dias if p.dias is not none and p.cab else '—' }}</td>
       <td>
         <details><summary class="muted">editar</summary>
@@ -86,6 +95,27 @@
   <p class="muted" style="margin-top:8px">UA = 450 kg de animal. "~" = algum animal sem pesagem de balança (usou o peso médio).</p>
 </div>
 {% endif %}
+
+<div class="card" style="margin-top:16px">
+  <h3>🐄 Rebanho ({{ composicao.total }} cabeça(s))</h3>
+  {% if composicao.total %}
+  <div class="form-grid">
+    <ul class="comp">
+      {% for nome, n in composicao.categorias.items() %}
+      <li><span class="barra" style="width:{{ (n * 100 // composicao.total) + 4 }}px"></span>{{ nome }}: <b>{{ n }}</b></li>
+      {% endfor %}
+      {% if composicao.sem_cadastro %}
+      <li><span class="barra" style="width:{{ (composicao.sem_cadastro * 100 // composicao.total) + 4 }}px;background:var(--text-3)"></span>Sem cadastro: <b>{{ composicao.sem_cadastro }}</b></li>
+      {% endif %}
+    </ul>
+    <ul class="comp">
+      {% for nome, n in composicao.sexos.items() %}
+      <li>{{ nome }}: <b>{{ n }}</b></li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% else %}<p class="muted">Nenhuma cabeça no rebanho.</p>{% endif %}
+</div>
 {% endblock %}
 
 {% block scripts %}

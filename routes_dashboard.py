@@ -91,7 +91,25 @@ def dashboard():
                            estoque_membro=estoque_membro, recentes=recentes[:6],
                            alertas=_gerar_alertas(dados),
                            indicadores=indicadores, rebanho_est=rebanho_est,
+                           **_lotacao_e_composicao(dados, r),
                            NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS, MEMBROS=MEMBROS)
+
+
+def _lotacao_e_composicao(dados, r) -> dict:
+    """Cards de Lotação e Rebanho do painel. Pasto quebrado não derruba o painel."""
+    import animais as A
+    import pastos as PA
+    from routes_pastos import _capacidade_ua_ha, _peso_medio
+    try:
+        df_p, df_a = PA.carregar(), A.carregar()
+        estoque = r.get("estoque", 0)
+        sit = PA.situacao(df_p, df_a, dados["Manejo"], estoque,
+                          _peso_medio(df_a, dados["Manejo"]), hoje=_agora())
+        return {"lotacao": PA.total_lotacao(df_p, sit, _capacidade_ua_ha()),
+                "composicao": A.composicao(df_a, estoque)}
+    except Exception as e:
+        app.logger.error(f"Painel: lotação/composição falhou: {e}")
+        return {"lotacao": None, "composicao": None}
 
 
 # ── Painel da Família (v5.0 fase 4): todos os sítios lado a lado e somados ────

@@ -373,7 +373,7 @@ def _invalidar_cache_sitio():
 @app.route("/configuracoes/rebanho", methods=["POST"])
 @login_required
 def salvar_rebanho_config():
-    """Salva peso médio, rendimento e preço da arroba (estimativa do rebanho)."""
+    """Salva peso médio, rendimento, preço da arroba e capacidade de lotação."""
     _validar_csrf()
 
     def _num(v, default):
@@ -386,11 +386,14 @@ def salvar_rebanho_config():
     rend = max(1.0, min(_num(request.form.get("rendimento"), 52.0), 100.0))
     # Vazio/0 = volta ao padrão do sistema (calculos.PRECO_ARROBA_REF).
     arroba = max(0.0, min(_num(request.form.get("preco_arroba"), 0.0), 5000.0))
+    # Vazio/0 = sem semáforo de lotação (pastos.nivel devolve None).
+    capacidade = max(0.0, min(_num(request.form.get("capacidade_ua_ha"), 0.0), 20.0))
 
     cfg = _carregar_sitio_config()
     cfg["peso_medio"] = round(peso, 1)
     cfg["rendimento"] = round(rend, 1)
     cfg["preco_arroba"] = round(arroba, 2)
+    cfg["capacidade_ua_ha"] = round(capacidade, 2)
     _salvar_sitio_config(cfg)
     _invalidar_cache_sitio()
     flash("✅ Dados do rebanho salvos! A estimativa aparece no painel.", "success")

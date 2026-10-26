@@ -139,6 +139,53 @@ def test_mover_grava_no_manejo(dados_restaurados):
         PA.mover("P99", "2026-10-20", None, 7)
 
 
+# ── Lotação e composição do rebanho ───────────────────────────────────────────
+
+@pytest.mark.parametrize("ua_ha, capacidade, esperado", [
+    (1.0, 1.5, "ok"),          # 67%
+    (1.04, 1.5, "ok"),         # 69% — última do verde
+    (1.05, 1.5, "atencao"),    # 70% — começa o amarelo
+    (1.5, 1.5, "atencao"),     # 100% — no limite ainda é amarelo
+    (1.6, 1.5, "excesso"),     # acima da capacidade
+    (0.0, 1.5, "ok"),          # pasto vazio
+    (None, 1.5, None),         # pasto sem área desenhada
+    (1.0, 0, None),            # capacidade não configurada
+    (1.0, None, None),
+])
+def test_nivel_de_lotacao(ua_ha, capacidade, esperado):
+    assert PA.nivel(ua_ha, capacidade) == esperado
+
+
+def test_composicao_do_rebanho():
+    import animais as A
+    df = pd.DataFrame([
+        {"ID": "A0001", "Status": "Vivo",    "Categoria": "Boi",     "Sexo": "M"},
+        {"ID": "A0002", "Status": "Vivo",    "Categoria": "Vaca",    "Sexo": "F"},
+        {"ID": "A0003", "Status": "Vivo",    "Categoria": "Boi",     "Sexo": "M"},
+        {"ID": "A0004", "Status": "Vendido", "Categoria": "Garrote", "Sexo": "M"},
+    ])
+    c = A.composicao(df, estoque=6)
+    # Vendido não conta; 6 cabeças no estoque e 3 cadastradas = 3 sem cadastro.
+    assert c["categorias"] == {"Boi": 2, "Vaca": 1}
+    assert c["sexos"] == {"M": 2, "F": 1}
+    assert c["sem_cadastro"] == 3 and c["total"] == 6
+
+
+def test_composicao_sem_animais_cadastrados():
+    import animais as A
+    c = A.composicao(pd.DataFrame(), estoque=4)
+    assert c["categorias"] == {} and c["sem_cadastro"] == 4 and c["total"] == 4
+
+
+def test_composicao_estoque_menor_que_cadastro():
+    """Estoque desatualizado nunca vira fatia negativa."""
+    import animais as A
+    df = pd.DataFrame([{"ID": "A0001", "Status": "Vivo", "Categoria": "Boi", "Sexo": "M"},
+                       {"ID": "A0002", "Status": "Vivo", "Categoria": "Boi", "Sexo": "M"}])
+    c = A.composicao(df, estoque=1)
+    assert c["sem_cadastro"] == 0 and c["total"] == 2
+
+
 # ── Telas ─────────────────────────────────────────────────────────────────────
 
 def _post(cliente, rota, **dados):
@@ -169,6 +216,27 @@ def test_mover_pela_tela(cliente, dados_restaurados):
     _post(cliente, "/pastos/mover", pasto=id_, data="2026-10-20", quem="todos")
     man = db.carregar_aba("Manejo")
     assert len(man) == antes + 1 and man.iloc[-1]["Pasto"] == id_
+
+
+def test_pagina_pastos_mostra_lotacao_e_composicao(cliente):
+    html = cliente.get("/pastos").get_data(as_text=True)
+    assert "Lotação" in html and "Rebanho" in html
+
+
+def test_dashboard_mostra_lotacao_e_composicao(cliente):
+    html = cliente.get("/").get_data(as_text=True)
+    assert "Lotação" in html and "UA/ha" in html
+
+
+def test_salvar_capacidade_ua_ha(cliente, dados_restaurados):
+    from routes_usuarios import _carregar_sitio_config
+    _post(cliente, "/configuracoes/rebanho", peso_medio="480", rendimento="52",
+          preco_arroba="320", capacidade_ua_ha="2,5")
+    assert _carregar_sitio_config()["capacidade_ua_ha"] == 2.5
+    # Fora da faixa é aparado, não aceito cru.
+    _post(cliente, "/configuracoes/rebanho", peso_medio="480", rendimento="52",
+          preco_arroba="320", capacidade_ua_ha="99")
+    assert _carregar_sitio_config()["capacidade_ua_ha"] == 20.0
 
 
 def test_mover_brinco_errado(cliente, dados_restaurados):

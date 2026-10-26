@@ -614,6 +614,19 @@ document.getElementById("btn-mais-donos").addEventListener("click", function () 
           {% if arroba_ultima_venda %}Última venda: {{ arroba_ultima_venda[0]|brl }}/@ em {{ arroba_ultima_venda[1] }}.{% endif %}
         </div>
       </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#444;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">
+          Capacidade do pasto (UA/ha)
+        </label>
+        <input type="text" name="capacidade_ua_ha" inputmode="decimal"
+               value="{{ sitio_config.capacidade_ua_ha if sitio_config.capacidade_ua_ha else '' }}"
+               placeholder="Ex: 1,5"
+               style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
+               onfocus="this.style.borderColor='#3d7a34'" onblur="this.style.borderColor='#ddd'">
+        <div style="font-size:11px;color:var(--text-3);margin-top:4px">
+          Quantas UA (450 kg) cada hectare aguenta. Em branco = sem semáforo de lotação.
+        </div>
+      </div>
     </div>
     <button type="submit" class="btn btn-primary">💾 Salvar dados do rebanho</button>
   </form>

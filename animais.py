@@ -159,6 +159,22 @@ def por_id(df: pd.DataFrame, id_: str):
     return None if m.empty else m.iloc[0]
 
 
+def composicao(df: pd.DataFrame, estoque: int = 0) -> dict:
+    """Rebanho vivo por categoria e por sexo, para os gráficos.
+
+    "sem_cadastro" são as cabeças do estoque (compras − vendas ± manejo) que
+    ainda não têm brinco cadastrado: aparecem como fatia própria em vez de
+    sumirem do gráfico. Estoque desatualizado não vira fatia negativa."""
+    vv = vivos(df)
+    cat = {k: int(v) for k, v in vv["Categoria"].apply(_txt).value_counts().items()
+           if k} if not vv.empty else {}
+    sexo = {k: int(v) for k, v in vv["Sexo"].apply(_txt).value_counts().items()
+            if k} if not vv.empty else {}
+    return {"categorias": cat, "sexos": sexo,
+            "sem_cadastro": max(0, int(estoque) - len(vv)),
+            "total": max(int(estoque), len(vv))}
+
+
 # ── Brinco ────────────────────────────────────────────────────────────────────
 
 def fmt_brinco(cor, num) -> str:

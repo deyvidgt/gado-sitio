@@ -198,3 +198,26 @@ def situacao(df_pastos, df_animais, df_man, estoque: int, peso_medio: float, hoj
         a = float(area.get(p) or 0)
         s["ua_ha"] = s["ua"] / a if a > 0 else None
     return out
+
+
+def nivel(ua_ha: float | None, capacidade: float | None) -> str | None:
+    """Semáforo da lotação: ok (<70%), atencao (70–100%), excesso (>100%).
+
+    None quando não há como comparar — pasto sem contorno (ua_ha None) ou
+    capacidade não configurada. Sem referência não se pinta nada."""
+    if ua_ha is None or not capacidade or capacidade <= 0:
+        return None
+    pct = ua_ha / capacidade
+    return "ok" if pct < 0.7 else ("atencao" if pct <= 1.0 else "excesso")
+
+
+def total_lotacao(df_pastos, sit: dict, capacidade: float | None = None) -> dict:
+    """Lotação somando os pastos desenhados: {ua, ha, ua_ha, nivel}.
+
+    Só entra pasto ativo com área; o que está "sem pasto" fica de fora porque
+    não tem área para dividir."""
+    ids = set(ativos(df_pastos)["ID"]) if not df_pastos.empty else set()
+    ha = sum(float(p["Área (ha)"] or 0) for _, p in ativos(df_pastos).iterrows()) if ids else 0.0
+    ua = sum(s["ua"] for p, s in sit.items() if p in ids)
+    ua_ha = ua / ha if ha > 0 else None
+    return {"ua": ua, "ha": ha, "ua_ha": ua_ha, "nivel": nivel(ua_ha, capacidade)}
