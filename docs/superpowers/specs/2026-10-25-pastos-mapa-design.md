@@ -1,6 +1,6 @@
 # Pastos com mapa — design
 
-**Status:** em implementação · **Data:** 2026-10-25 · **Versão alvo:** 5.2
+**Status:** entregue · **Data:** 2026-10-25 · **Versão alvo:** 5.2
 
 ## Objetivo
 

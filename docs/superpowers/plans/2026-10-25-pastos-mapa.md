@@ -31,14 +31,14 @@
 
 **Interfaces:** `area_ha(geojson: dict) -> float`; `carregar() -> DataFrame`; `criar(nome, contorno_json, criado_por="") -> str`; `editar(id_, nome=None, contorno_json=None)`; `excluir(id_)`; `mover(pasto_id, data, refs: list[str] | None, qtd: int, responsavel="")` (refs None = rebanho todo); `situacao(df_pastos, df_animais, df_man, estoque, peso_medio) -> dict[id, {cab, ua, ua_ha, dias, estimado}]` + chave `None` (sem pasto).
 
-- [ ] Testes: `test_area_quadrado_de_1km`, `test_contorno_invalido`, `test_criar_e_nome_repetido`, `test_mover_e_situacao`, `test_rebanho_todo_mais_recente_vence`, `test_vendido_sai_do_pasto`, `test_excluir_pasto`, `test_ua_sem_peso`; implementar; PASS; commit.
+- [x] Testes: `test_area_quadrado_de_1km`, `test_contorno_invalido`, `test_criar_e_nome_repetido`, `test_mover_e_situacao`, `test_rebanho_todo_mais_recente_vence`, `test_vendido_sai_do_pasto`, `test_excluir_pasto`, `test_ua_sem_peso`; implementar; PASS; commit.
 
 ### Task 2: Telas
 
 **Files:** Create `routes_pastos.py`, `templates/pastos.html`; Modify `app.py` (importar rotas), `templates/base.html` (menu 🗺️ Pastos).
 
-- [ ] Testes: `test_pagina_pastos_abre`, `test_criar_pela_tela`, `test_mover_pela_tela`, `test_mover_brinco_errado`; teste no navegador (desenhar, salvar, ver rótulo); PASS; commit.
+- [x] Testes: `test_pagina_pastos_abre`, `test_criar_pela_tela`, `test_mover_pela_tela`, `test_mover_brinco_errado`; teste no navegador (desenhar, salvar, ver rótulo); PASS; commit.
 
 ### Task 3: Documentação
 
-- [ ] CHANGELOG, CLAUDE.md, Ajuda, spec entregue; PASS; commit.
+- [x] CHANGELOG, CLAUDE.md, Ajuda, spec entregue; PASS; commit.

@@ -28,7 +28,7 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 
 ## ⚠️ Dados / banco (LER ANTES DE MEXER)
 
-- Os dados ficam em **`gado_familia.xlsx`** (abas: Compras, Gastos, Vendas, Manejo, Visitas, Animais, Fotos).
+- Os dados ficam em **`gado_familia.xlsx`** (abas: Compras, Gastos, Vendas, Manejo, Visitas, Animais, Fotos, Pastos).
 - Em produção o arquivo mora em **`~/gado-dados/`**, **fora do Git**, para o `git pull`
   nunca apagar dados. Resolução do caminho: `db.py: _resolver_data_dir()`
   (ordem: `GADO_DATA_DIR` → `~/gado-dados/` → pasta do .exe → pasta do script).
@@ -82,6 +82,7 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 | `animais.py` | Cadastro individual por brinco (aba `Animais`): cor por dono, nº 01–99 reaproveitado, ID `A0001` liga o histórico (`Brincos` em Manejo/Vendas = "Amarelo 21 #A0003"); baixa, brucelose por animal |
 | `pesagem.py` | Peso por animal (v4.6): coluna `Pesos` da linha "Pesagem" do Manejo (`"Amarelo 21 #A0003: 320 kg"`; legado: peso na Descrição) → último peso, @, GMD; página `/animais/pesagem`. `todas()` só lê balança; `todas(estimados=True)` só as estimativas por foto |
 | `peso_foto.py` | Peso estimado por foto (v5.1): medidas da foto (tela `peso_foto.html`, canvas) → perímetro ≈ 2,6 × peito → Schaeffer; grava "Peso Estimado" no Manejo com o peso **bruto**; `fator_calibracao()` = mediana balança/bruto (≥3 pares a ≤15 dias, 0,7–1,3). Nunca entra no GMD |
+| `pastos.py` / `routes_pastos.py` | Pastos com mapa (v5.2): aba `Pastos` (contorno GeoJSON, área calculada no servidor); "Movimentação de Pasto" no Manejo com o ID na coluna `Pasto` (Brincos vazio = rebanho todo); `situacao()` → cabeças, dias e UA/ha por pasto. Página `/pastos` (Leaflet + Leaflet.draw, satélite Esri) |
 | `comando_voz.py` | Comando de voz por regras: `analisar(texto)` → intenção; `montar(intenção, ctx)` confere nos dados. Rotas em `routes_animais.py` (`/voz`, `/api/voz/*`) |
 | `static/voz_campos.js` | Prefill de formulário por `?prefill=1&campo=valor` e 🎤 de ditado nos campos de texto |
 | `drive.py` | Cliente mínimo do Google Drive (só `requests`, OAuth com refresh token em `<dados>/drive_token.json`); só opera dentro da pasta raiz |
@@ -173,6 +174,7 @@ python -m pytest          # ~5 s; roda numa CÓPIA temporária dos dados
 | `superpowers/plans/2026-10-25-varios-sitios-fase3.md` | Plano da fase 3 (admin, Tasks por sítio, tela de sítios) — concluído |
 | `superpowers/plans/2026-10-25-varios-sitios-fase4.md` | Plano da fase 4 (painel da Família) — concluído |
 | `superpowers/specs/2026-10-25-peso-por-foto-design.md` / `plans/2026-10-25-peso-por-foto.md` | Peso estimado por foto (v5.1) — entregue |
+| `superpowers/specs/2026-10-25-pastos-mapa-design.md` / `plans/2026-10-25-pastos-mapa.md` | Pastos com mapa (v5.2) — entregue |
 | `client_secret_*.json` | Credencial OAuth do app do Drive — **fora do Git** (`.gitignore`), nunca commitar |
 
 ## Backup

@@ -44,6 +44,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   balança a até 15 dias). Fica como "Peso Estimado" no Manejo e não entra no GMD. Também
   aceita as duas medidas digitadas (fita métrica).
 
+- **🗺️ Pastos com mapa**: mapa de satélite com cada pasto desenhado (toque nos cantos da
+  cerca); a área em hectares é calculada pelo contorno. **Mover gado** — o rebanho todo ou
+  só alguns brincos — grava "Movimentação de Pasto" no Manejo, na coluna nova **Pasto** (no
+  fim). Cada pasto mostra cabeças, dias no pasto e lotação (UA/ha; "~" quando algum animal
+  não tem pesagem de balança). Botão 📍 Onde estou (GPS). Precisa de internet para o mapa.
+
 ### Planejado
 - Leite: produção por vaca/ordenha, lactação e secagem, entregas e preço do litro
   (liga só no sítio que tiver leite); reprodução (cobertura, prenhez, alerta de parto).
