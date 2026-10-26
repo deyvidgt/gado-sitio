@@ -8,7 +8,7 @@ import json
 import pandas as pd
 from flask import render_template, request, redirect, url_for, flash, session, send_file
 import db
-from config import USUARIOS, MEMBROS, NOMES_MEMBROS
+from config import USUARIOS, MEMBROS, NOMES_MEMBROS, CORES_BRINCO
 from extensions import (
     app, _agora, _validar_csrf, login_required,
     _sha256, _hash_bcrypt, _bcrypt_disponivel, _verificar_hash,
@@ -138,7 +138,58 @@ def configuracoes():
                            preco_arroba_padrao=PRECO_ARROBA_REF,
                            arroba_ultima_venda=_arroba_ultima_venda(),
                            drive_configurado=drive.configurado() or drive.cliente() is not None,
-                           e_admin=sitios.e_admin(session.get("usuario")))
+                           e_admin=sitios.e_admin(session.get("usuario")),
+                           sitios_lista=[(s, sitios.nome(s)) for s in sitios.carregar()["sitios"]],
+                           acesso_de={u: sitios.sitios_do_usuario(u) for u in usuarios},
+                           CORES_BRINCO=CORES_BRINCO)
+
+
+@app.route("/configuracoes/sitios/criar", methods=["POST"])
+@login_required
+def criar_sitio():
+    import sitios
+    _validar_csrf()
+    _so_admin()
+    f = request.form
+    membros = []
+    for i in range(8):
+        nome = f.get(f"dono_nome_{i}", "").strip()
+        if not nome:
+            continue
+        login = f.get(f"dono_login_{i}", "").strip().lower()
+        membros.append({"chave": sitios.chave_do_nome(nome), "nome": nome, "emoji": "👤",
+                        "cor": f.get(f"dono_cor_{i}", ""), "logins": [login] if login else []})
+    try:
+        slug = sitios.criar(f.get("nome", ""), f.get("slug", "").strip(), membros,
+                            f.getlist("acesso"), list(_carregar_usuarios_local()))
+    except ValueError as e:
+        flash(str(e), "error")
+        return redirect(url_for("configuracoes") + "#sitios")
+    flash(f"🏡 {sitios.nome(slug)} criado! Crie os logins dos donos (se ainda não existem) "
+          "e libere o acesso abaixo.", "success")
+    return redirect(url_for("configuracoes") + "#sitios")
+
+
+@app.route("/configuracoes/sitios/acesso", methods=["POST"])
+@login_required
+def salvar_acesso_sitios():
+    """Caixinhas login|sítio marcadas = quem entra em cada sítio."""
+    import sitios
+    _validar_csrf()
+    _so_admin()
+    todos = list(_carregar_usuarios_local())
+    acesso = {u: [] for u in todos}
+    for par in request.form.getlist("acesso"):
+        login, _, slug = par.partition("|")
+        if login in acesso:
+            acesso[login].append(slug)
+    try:
+        sitios.salvar_acesso(acesso, session.get("usuario"), todos)
+    except ValueError as e:
+        flash(str(e), "error")
+    else:
+        flash("Acessos salvos.", "success")
+    return redirect(url_for("configuracoes") + "#sitios")
 
 
 @app.route("/configuracoes/testar-drive", methods=["POST"])

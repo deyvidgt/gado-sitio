@@ -266,3 +266,86 @@ def test_backup_por_sitio(tmp_path):
     assert any(n.startswith("backup_") for n in raiz) and any(n.startswith("backup_") for n in joao)
     assert any(n.startswith("usuarios_") for n in raiz) and any(n.startswith("sitios_") for n in raiz)
     assert not any(n.startswith("usuarios_") for n in joao)   # da família só na raiz
+
+
+# ── Fase 3 / Task 3: tela de sítios ───────────────────────────────────────────
+
+@pytest.fixture
+def sem_sitios_json(dados_restaurados):
+    """Começa sem sitios.json (como hoje) e limpa o que a tela criar."""
+    raiz = db.RAIZ
+    yield raiz
+    for p in (os.path.join(raiz, "sitios.json"),):
+        if os.path.exists(p):
+            os.remove(p)
+    shutil.rmtree(os.path.join(raiz, "sitios"), ignore_errors=True)
+    sitios.ativar(sitios.PADRAO)
+
+
+def _form_sitio(**extra):
+    dados = {"csrf_token": "tok", "nome": "Sítio do Zé",
+             "dono_nome_0": "Zé", "dono_login_0": "ze", "dono_cor_0": "Verde",
+             "dono_nome_1": "Maria Clara", "dono_login_1": "maria", "dono_cor_1": "Rosa",
+             "acesso": ["deyvid"]}
+    dados.update(extra)
+    return dados
+
+
+def test_criar_primeiro_sitio_mantem_acessos(cliente, sem_sitios_json):
+    from routes_usuarios import _carregar_usuarios_local
+    _logar(cliente, "deyvid")
+    r = cliente.post("/configuracoes/sitios/criar", data=_form_sitio())
+    assert r.status_code == 302
+    for login in _carregar_usuarios_local():
+        assert sitios.tem_acesso(login, "santo-antonio"), login      # ninguém perdeu acesso
+    assert sitios.tem_acesso("deyvid", "sitio-do-ze")
+    assert not sitios.tem_acesso("nilson", "sitio-do-ze")
+    cfg = json.load(open(os.path.join(sitios.pasta("sitio-do-ze"), "sitio_config.json"), encoding="utf-8"))
+    assert cfg["nome"] == "Sítio do Zé"
+    assert [m["chave"] for m in cfg["membros"]] == ["Ze", "MariaClara"]
+    assert cfg["membros"][1]["logins"] == ["maria"]
+
+
+def test_criar_sitio_pela_tela(cliente, dois_sitios):
+    _logar(cliente, "deyvid")
+    cliente.post("/configuracoes/sitios/criar", data=_form_sitio(slug="ze", acesso=["deyvid", "naoexiste"]))
+    assert sitios.sitios_do_usuario("deyvid") == ["santo-antonio", "joao", "ze"]
+    assert sitios.sitios_do_usuario("naoexiste") == []      # login que não existe não entra
+    cliente.post("/sitio/trocar", data={"csrf_token": "tok", "sitio": "ze"})
+    assert "Maria Clara" in cliente.get("/compras/nova").get_data(as_text=True)
+
+
+def test_criar_sitio_invalido_nao_grava(cliente, sem_sitios_json):
+    _logar(cliente, "deyvid")
+    cliente.post("/configuracoes/sitios/criar", data=_form_sitio(dono_cor_1="Verde"))   # cor repetida
+    assert not os.path.exists(os.path.join(sem_sitios_json, "sitios.json"))
+    assert not os.path.exists(os.path.join(sem_sitios_json, "sitios"))
+    cliente.post("/configuracoes/sitios/criar", data=_form_sitio(dono_nome_1="", dono_login_1=""))  # 1 dono só
+    assert not os.path.exists(os.path.join(sem_sitios_json, "sitios.json"))
+
+
+def test_criar_sitio_so_admin(cliente, dois_sitios):
+    _logar(cliente, "joao")
+    assert cliente.post("/configuracoes/sitios/criar", data=_form_sitio()).status_code == 403
+
+
+def test_mudar_acesso(cliente, dois_sitios):
+    _logar(cliente, "deyvid")
+    r = cliente.post("/configuracoes/sitios/acesso", data={
+        "csrf_token": "tok", "acesso": ["deyvid|santo-antonio", "deyvid|joao", "nilson|santo-antonio",
+                                         "nilson|joao", "joao|joao"]})
+    assert r.status_code == 302
+    assert sitios.tem_acesso("nilson", "joao")
+
+
+def test_nao_remove_ultimo_admin(cliente, dois_sitios):
+    _logar(cliente, "deyvid")
+    cliente.post("/configuracoes/sitios/acesso", data={"csrf_token": "tok", "acesso": ["deyvid|joao", "joao|joao"]})
+    assert sitios.tem_acesso("deyvid", "santo-antonio")     # recusado: deyvid deixaria de ser admin
+    assert sitios.e_admin("deyvid")
+
+
+def test_tela_lista_sitios_para_admin(cliente, dois_sitios):
+    _logar(cliente, "deyvid")
+    p = cliente.get("/configuracoes").get_data(as_text=True)
+    assert "🏡 Sítios" in p and "Sítio do João" in p

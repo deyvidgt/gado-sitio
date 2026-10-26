@@ -190,6 +190,77 @@
   </div>
 </div>
 
+{% if e_admin %}
+<!-- ── Sítios da família (v5.0) ──────────────────────────────────────────── -->
+<div class="card" style="margin-top:24px" id="sitios">
+  <div class="card-title">🏡 Sítios</div>
+  <p style="font-size:13px;color:var(--text-3);margin-bottom:12px">
+    Cada sítio tem os seus dados e os seus donos. Marque quem entra em cada um — quem tem mais de um
+    troca no topo da tela. Quem tem acesso a <b>{{ sitios_lista[0][1] }}</b> é administrador.</p>
+
+  <form method="post" action="{{ url_for('salvar_acesso_sitios') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div style="overflow-x:auto">
+      <table style="border-collapse:collapse;font-size:13px;min-width:100%">
+        <thead><tr><th style="text-align:left;padding:6px 8px">Usuário</th>
+          {% for slug, nome in sitios_lista %}<th style="padding:6px 8px;white-space:nowrap">{{ nome }}</th>{% endfor %}</tr></thead>
+        <tbody>
+        {% for u in usuarios %}
+          <tr style="border-top:1px solid var(--cream-dk)"><td style="padding:6px 8px">{{ u.capitalize() }}</td>
+          {% for slug, nome in sitios_lista %}
+            <td style="text-align:center;padding:6px 8px">
+              <input type="checkbox" name="acesso" value="{{ u }}|{{ slug }}" aria-label="{{ u }} em {{ nome }}"
+                     {{ 'checked' if slug in acesso_de[u] }}></td>
+          {% endfor %}</tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <button class="btn btn-primary btn-sm" style="margin-top:10px">💾 Salvar acessos</button>
+  </form>
+
+  <details style="margin-top:18px">
+    <summary style="cursor:pointer;font-weight:600">➕ Criar sítio</summary>
+    <form method="post" action="{{ url_for('criar_sitio') }}" style="margin-top:12px" autocomplete="off">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="form-grid">
+        <div class="form-group"><label>Nome do sítio</label>
+          <input type="text" name="nome" required maxlength="60" placeholder="ex: Sítio do João"></div>
+        <div class="form-group"><label>Endereço (opcional)</label>
+          <input type="text" name="slug" maxlength="40" pattern="[a-z0-9-]{1,40}" placeholder="sai do nome: sitio-do-joao"></div>
+      </div>
+      <p style="font-size:12px;color:var(--text-3);margin:10px 0 6px">Donos (de 2 a 8), cada um com uma cor de brinco.
+        Os donos não mudam depois — confira antes de criar.</p>
+      {% for i in range(8) %}
+      <div class="form-grid" style="margin-bottom:6px{{ ';display:none' if i >= 4 }}" data-dono="{{ i }}">
+        <div class="form-group"><label>Dono {{ i + 1 }}</label>
+          <input type="text" name="dono_nome_{{ i }}" maxlength="40" placeholder="Nome"></div>
+        <div class="form-group"><label>Login dele (opcional)</label>
+          <input type="text" name="dono_login_{{ i }}" maxlength="20" placeholder="ex: joao"></div>
+        <div class="form-group"><label>Cor do brinco</label>
+          <select name="dono_cor_{{ i }}">{% for c in CORES_BRINCO %}<option{{ ' selected' if loop.index0 == i }}>{{ c }}</option>{% endfor %}</select></div>
+      </div>
+      {% endfor %}
+      <button type="button" class="btn btn-outline btn-sm" id="btn-mais-donos">+ mais donos</button>
+      <p style="font-size:12px;color:var(--text-3);margin:12px 0 6px">Quem entra no sítio novo:</p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px">
+        {% for u in usuarios %}
+        <label style="display:flex;gap:6px;align-items:center;font-size:13px;text-transform:none;letter-spacing:0">
+          <input type="checkbox" name="acesso" value="{{ u }}" style="width:auto" {{ 'checked' if u == session.get('usuario') }}> {{ u.capitalize() }}</label>
+        {% endfor %}
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:12px">🏡 Criar sítio</button>
+    </form>
+  </details>
+</div>
+<script>
+document.getElementById("btn-mais-donos").addEventListener("click", function () {
+  document.querySelectorAll("[data-dono]").forEach(el => el.style.display = "");
+  this.remove();
+});
+</script>
+{% endif %}
+
 <!-- ── Modal: Resetar senha de outro usuário ─────────────────────────────── -->
 <div id="modal-reset" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:16px;padding:32px;max-width:360px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
