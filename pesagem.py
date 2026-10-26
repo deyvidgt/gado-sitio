@@ -58,8 +58,12 @@ def pesos_da_linha(row) -> dict:
     return pesos
 
 
-def todas(df_man: pd.DataFrame) -> dict:
-    """{ID: [(data, kg), ...]} em ordem de data (sem data fica de fora)."""
+TIPO_ESTIMADO = "Peso Estimado"   # peso pela foto (peso_foto.py) — nunca entra no GMD
+
+
+def todas(df_man: pd.DataFrame, estimados: bool = False) -> dict:
+    """{ID: [(data, kg), ...]} em ordem de data (sem data fica de fora).
+    Só balança; com estimados=True, só as estimativas por foto (peso bruto)."""
     out: dict[str, list] = {}
     if df_man is None or df_man.empty:
         return out
@@ -67,6 +71,8 @@ def todas(df_man: pd.DataFrame) -> dict:
     if "Pesos" not in cols and "Brincos" not in cols:
         return out
     for _, r in df_man.iterrows():
+        if (r.get("Tipo") == TIPO_ESTIMADO) != estimados:
+            continue
         data = pd.to_datetime(r.get("Data"), dayfirst=True, errors="coerce")
         if pd.isna(data):
             continue
