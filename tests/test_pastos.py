@@ -2,7 +2,9 @@
 """
 Pastos com mapa (v5.2): área pelo contorno, onde cada cabeça está, dias e UA/ha.
 """
+import io
 import json
+import zipfile
 
 import pandas as pd
 import pytest
@@ -248,3 +250,86 @@ def test_mover_brinco_errado(cliente, dados_restaurados):
     r = _post(cliente, "/pastos/mover", pasto=id_, quem="brincos", brincos="amarelo 77")
     assert len(db.carregar_aba("Manejo")) == antes
     assert r.status_code == 200
+
+
+# ── Importação KMZ / KML e controles do mapa ─────────────────────────────────
+
+KML_EXEMPLO = """<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <Placemark>
+      <name>Pasto da Represa</name>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              -48.280,-18.920,0 -48.285,-18.920,0 -48.285,-18.925,0 -48.280,-18.925,0 -48.280,-18.920,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+  </Document>
+</kml>"""
+
+
+def _gerar_kmz(kml_texto=KML_EXEMPLO) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("doc.kml", kml_texto)
+    return buf.getvalue()
+
+
+def test_extrair_poligonos_kmz_e_kml():
+    # KML direto em bytes
+    pols = PA.extrair_poligonos_kmz(KML_EXEMPLO.encode("utf-8"))
+    assert len(pols) == 1
+    assert pols[0][0] == "Pasto da Represa"
+    assert pols[0][1]["type"] == "Polygon"
+
+    # KMZ zipado
+    kmz_bytes = _gerar_kmz()
+    pols_kmz = PA.extrair_poligonos_kmz(kmz_bytes)
+    assert len(pols_kmz) == 1
+    assert pols_kmz[0][0] == "Pasto da Represa"
+
+
+def test_importar_kmz(dados_restaurados):
+    kmz_bytes = _gerar_kmz()
+    criados = PA.importar_kmz(kmz_bytes, "fazenda.kmz", "Deyvid")
+    assert len(criados) == 1
+    pasto_id = criados[0]["id"]
+    assert criados[0]["nome"] == "Pasto da Represa"
+    assert criados[0]["area"] > 0
+
+    # Importar de novo: o nome não conflita, ganha sufixo (2)
+    criados2 = PA.importar_kmz(kmz_bytes, "fazenda.kmz", "Deyvid")
+    assert criados2[0]["nome"] == "Pasto da Represa (2)"
+    assert criados2[0]["id"] != pasto_id
+
+
+def test_importar_kmz_invalido():
+    with pytest.raises(ValueError):
+        PA.importar_kmz(b"conteudo nao xml nem zip")
+
+
+def test_importar_kmz_pela_tela(cliente, dados_restaurados):
+    with cliente.session_transaction() as s:
+        s["csrf_token"] = "tok"
+    kmz_bytes = _gerar_kmz()
+    r = cliente.post("/pastos/importar-kmz", data={
+        "csrf_token": "tok",
+        "arquivo_kmz": (io.BytesIO(kmz_bytes), "meu_mapa.kmz")
+    }, content_type="multipart/form-data", follow_redirects=True)
+    assert r.status_code == 200
+    html = r.get_data(as_text=True)
+    assert "importado(s) com sucesso" in html
+    assert "Pasto da Represa" in html
+
+
+def test_pagina_pastos_tem_controles_mapa(cliente, dados_restaurados):
+    PA.criar("Pasto Teste", json.dumps(_quadrado()))
+    html = cliente.get("/pastos").get_data(as_text=True)
+    assert "Mostrar selecionado" in html
+    assert "Importar KMZ" in html
+    assert "Ver no mapa" in html

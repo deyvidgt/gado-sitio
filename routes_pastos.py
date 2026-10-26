@@ -66,6 +66,34 @@ def novo_pasto():
     return redirect(url_for("pastos"))
 
 
+@app.route("/pastos/importar-kmz", methods=["POST"])
+@login_required
+def importar_kmz():
+    _validar_csrf()
+    arquivo = request.files.get("arquivo_kmz")
+    if not arquivo or not arquivo.filename:
+        flash("Selecione um arquivo .kmz ou .kml para enviar.", "error")
+        return redirect(url_for("pastos"))
+    nome = arquivo.filename.lower()
+    if not (nome.endswith(".kmz") or nome.endswith(".kml")):
+        flash("Formato não suportado. Envie um arquivo .kmz ou .kml.", "error")
+        return redirect(url_for("pastos"))
+    try:
+        conteudo = arquivo.read()
+        if len(conteudo) > 15 * 1024 * 1024:
+            flash("Arquivo muito grande (máximo 15 MB).", "error")
+            return redirect(url_for("pastos"))
+        fazer_backup_seguro()
+        criados = PA.importar_kmz(conteudo, arquivo.filename, _membro_logado())
+        total_ha = sum(p["area"] for p in criados)
+        flash(f"🗺️ {len(criados)} pasto(s) importado(s) com sucesso ({total_ha:.2f} ha no total)!", "success")
+    except ValueError as e:
+        flash(str(e), "error")
+    except Exception as e:
+        flash(f"Erro ao processar arquivo KMZ: {e}", "error")
+    return redirect(url_for("pastos"))
+
+
 @app.route("/pastos/<id_>/editar", methods=["POST"])
 @login_required
 def editar_pasto(id_):

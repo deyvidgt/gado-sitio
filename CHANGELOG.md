@@ -25,6 +25,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
     quem não distingue bem as cores ou está no sol.
 
 ### Adicionado
+- **Importação de mapa KMZ/KML e foco no pasto (v5.3):**
+  - **Upload de arquivo .kmz ou .kml:** botão **📂 Importar KMZ** na tela de pastos; lê arquivos exportados do Google Earth, GPS ou CAR, extrai os polígonos e nomes demarcados e salva os pastos com a área em hectares calculada automaticamente.
+  - **Foco e atalho no mapa:** botão **🎯 Mostrar selecionado** no topo do mapa e atalho **🗺️ Ver no mapa** em cada cartão de pasto para enquadrar e destacar imediatamente a cerca do pasto escolhido.
 - **Lotes com painel econômico (v5.3):** nova aba **📦 Lotes** no menu. Cada compra (e cada
   nascimento) vira um lote e o sistema mostra, por lote: cabeças, **custo por cabeça**
   (compra + a parte dos gastos daquele período), quantas foram vendidas e por quanto,

@@ -10,9 +10,12 @@ Não mexe nas finanças. Design: docs/superpowers/specs/2026-10-25-pastos-mapa-d
 """
 from __future__ import annotations
 
+import io
 import json
 import math
 import re
+import xml.etree.ElementTree as ET
+import zipfile
 
 import pandas as pd
 
@@ -97,6 +100,122 @@ def _nome(nome, df, exceto=None) -> str:
     if nome.lower() in outros["Nome"].str.lower().tolist():
         raise ValueError(f"Já existe um pasto chamado {nome}.")
     return nome
+
+
+def _nome_unico(base_nome: str, nomes_existentes: set[str]) -> str:
+    base = re.sub(r"\s+", " ", str(base_nome or "Pasto")).strip()[:35] or "Pasto"
+    nome = base
+    cont = 2
+    while nome.lower() in nomes_existentes:
+        nome = f"{base} ({cont})"
+        cont += 1
+    nomes_existentes.add(nome.lower())
+    return nome
+
+
+def _parse_coords_kml(texto: str) -> list[list[float]]:
+    texto = re.sub(r"\s*,\s*", ",", texto.strip())
+    pts = []
+    for item in texto.split():
+        partes = item.split(",")
+        if len(partes) >= 2:
+            try:
+                lon, lat = float(partes[0]), float(partes[1])
+                if math.isfinite(lon) and math.isfinite(lat) and -180 <= lon <= 180 and -90 <= lat <= 90:
+                    pts.append([lon, lat])
+            except ValueError:
+                continue
+    return pts
+
+
+def extrair_poligonos_kmz(conteudo: bytes, nome_arquivo: str = "") -> list[tuple[str, dict]]:
+    """Lê bytes de .kmz ou .kml e devolve lista de (nome, geojson_polygon_dict)."""
+    kml_bytes = None
+    if zipfile.is_zipfile(io.BytesIO(conteudo)):
+        with zipfile.ZipFile(io.BytesIO(conteudo)) as zf:
+            kml_nomes = [n for n in zf.namelist() if n.lower().endswith(".kml") and not n.startswith("__MACOSX")]
+            if not kml_nomes:
+                raise ValueError("Arquivo KMZ não contém nenhum arquivo KML interno.")
+            doc = next((n for n in kml_nomes if n.lower().endswith("doc.kml")), kml_nomes[0])
+            kml_bytes = zf.read(doc)
+    else:
+        kml_bytes = conteudo
+
+    try:
+        root = ET.fromstring(kml_bytes)
+    except Exception:
+        try:
+            root = ET.fromstring(kml_bytes.decode("utf-8", errors="replace").encode("utf-8"))
+        except Exception:
+            raise ValueError("Não foi possível ler o KML: arquivo corrompido ou formato inválido.")
+
+    for el in root.iter():
+        el.tag = el.tag.split("}")[-1]
+
+    poligonos = []
+    for pm in root.iter("Placemark"):
+        nome = pm.findtext("name") or ""
+        polys = list(pm.iter("Polygon"))
+        for i, poly in enumerate(polys):
+            coords_txt = poly.findtext(".//outerBoundaryIs//coordinates") or poly.findtext(".//coordinates")
+            if not coords_txt:
+                continue
+            anel = _parse_coords_kml(coords_txt)
+            if len(anel) < PONTOS_MIN:
+                continue
+            if anel[0] != anel[-1]:
+                anel.append(anel[0])
+            geo = {"type": "Polygon", "coordinates": [anel]}
+            subnome = f"{nome} ({i+1})" if len(polys) > 1 and nome else (nome or "Pasto")
+            poligonos.append((subnome, geo))
+
+    if not poligonos:
+        for i, poly in enumerate(root.iter("Polygon")):
+            coords_txt = poly.findtext(".//outerBoundaryIs//coordinates") or poly.findtext(".//coordinates")
+            if not coords_txt:
+                continue
+            anel = _parse_coords_kml(coords_txt)
+            if len(anel) >= PONTOS_MIN:
+                if anel[0] != anel[-1]:
+                    anel.append(anel[0])
+                poligonos.append((f"Pasto {i+1}", {"type": "Polygon", "coordinates": [anel]}))
+
+    if not poligonos:
+        raise ValueError("Nenhum polígono de pasto encontrado dentro do arquivo KMZ/KML.")
+
+    return poligonos
+
+
+def importar_kmz(conteudo: bytes, nome_arquivo: str = "", criado_por: str = "") -> list[dict]:
+    """Importa pastos a partir de arquivo KMZ ou KML. Devolve lista dos pastos criados."""
+    poligonos = extrair_poligonos_kmz(conteudo, nome_arquivo)
+    df = carregar()
+    nomes_existentes = set(ativos(df)["Nome"].str.lower().tolist())
+    nums = [int(i[1:]) for i in df["ID"] if re.fullmatch(r"P\d+", i)]
+    prox_num = max(nums, default=0) + 1
+    total_linhas = len(df)
+
+    linhas_novas = []
+    criados = []
+    for nome_bruto, geo in poligonos:
+        try:
+            geo_limpo, area = validar_contorno(json.dumps(geo))
+        except ValueError:
+            continue
+        nome = _nome_unico(nome_bruto, nomes_existentes)
+        id_ = f"P{prox_num:02d}"
+        prox_num += 1
+        cor = CORES[(total_linhas + len(linhas_novas)) % len(CORES)]
+        linha = [id_, nome, area, json.dumps(geo_limpo), cor, "Sim", "", criado_por]
+        linhas_novas.append(linha)
+        criados.append({"id": id_, "nome": nome, "area": area})
+
+    if not criados:
+        raise ValueError("Nenhum pasto com formato e área válidos encontrado no arquivo.")
+
+    for l in linhas_novas:
+        db.salvar_linha(ABA, l)
+    return criados
 
 
 def criar(nome, contorno_json, criado_por: str = "") -> str:

@@ -21,10 +21,32 @@
 </style>
 
 <div class="card">
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
     <button type="button" class="btn btn-outline btn-sm" id="onde-estou">📍 Onde estou</button>
-    <span class="muted" style="align-self:center">Novo pasto: toque no ⬟ do mapa e marque os cantos da cerca; toque no 1º canto para fechar.</span>
+    {% if pastos %}
+    <select id="sel-foco-pasto" style="font-size:13px;padding:4px 8px;border-radius:6px;border:1px solid var(--border,#ccc)">
+      <option value="">🎯 Escolher pasto...</option>
+      {% for p in pastos %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}
+    </select>
+    <button type="button" class="btn btn-outline btn-sm" id="btn-focar-pasto">🎯 Mostrar selecionado</button>
+    {% endif %}
+    <button type="button" class="btn btn-outline btn-sm" id="btn-abrir-kmz">📂 Importar KMZ</button>
+    <span class="muted" style="align-self:center">Novo pasto: toque no ⬟ do mapa ou importe arquivo .kmz.</span>
   </div>
+
+  <form method="post" action="{{ url_for('importar_kmz') }}" enctype="multipart/form-data" id="form-kmz" style="display:none;margin-bottom:12px;padding:12px;background:var(--bg-2,#f8f9fa);border:1px dashed var(--accent,#4363d8);border-radius:8px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <b>📂 Importar mapa (.kmz ou .kml)</b>
+      <button type="button" class="btn btn-outline btn-sm" id="btn-fechar-kmz" style="padding:1px 6px">✕</button>
+    </div>
+    <p class="muted" style="margin:0 0 8px">Envie um arquivo exportado do Google Earth, GPS de fazenda ou CAR. Os pastos demarcados nele serão salvos automaticamente.</p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input type="file" name="arquivo_kmz" accept=".kmz,.kml" required style="font-size:13px">
+      <button class="btn btn-primary btn-sm">Enviar e importar</button>
+    </div>
+  </form>
+
   <div id="mapa" aria-label="Mapa de satélite dos pastos"></div>
   <p class="muted" style="margin-top:6px">Mapa de satélite precisa de internet.
     {% if sem_pasto.cab %}<b>{{ sem_pasto.cab }}</b> cabeça(s) ainda sem pasto.{% endif %}<br>
@@ -78,6 +100,7 @@
       <span class="badge badge-{{ classe or 'ok' }}" style="margin-left:auto">
         {{ {'ok': 'Folgado', 'atencao': 'No limite', 'excesso': 'Lotado'}[p.nivel] }}</span>
       {% endif %}
+      <button type="button" class="btn btn-outline btn-sm btn-ver-mapa" data-pasto="{{ p.id }}" style="{% if not (p.nivel and p.cab) %}margin-left:auto;{% endif %}padding:2px 8px;font-size:12px">🗺️ Ver no mapa</button>
     </div>
     <div class="tri" style="margin:8px 0 6px">
       <div><b>{{ p.cab }}</b>cabeças</div>
@@ -140,6 +163,7 @@
     { maxZoom: 19, attribution: "Imagem © Esri" }).addTo(mapa);
 
   const grupo = L.featureGroup().addTo(mapa);
+  const camadas = {};
   pastos.forEach(p => {
     // Contorno na cor do pasto; o preenchimento mostra a lotação (verde/amarelo/vermelho).
     const tinta = { ok: "#52a044", atencao: "#e67e22", excesso: "#c0392b" }[p.nivel] || p.cor;
@@ -149,8 +173,46 @@
     if (p.cab && p.dias != null) txt += ` · ${p.dias} dias`;
     camada.bindTooltip(txt, { permanent: true, direction: "center", className: "rotulo-pasto" });
     camada.addTo(grupo);
+    camadas[p.id] = camada;
   });
   if (pastos.length) mapa.fitBounds(grupo.getBounds(), { padding: [20, 20] });
+
+  function focarPasto(id) {
+    const c = camadas[id];
+    if (!c) return;
+    mapa.fitBounds(c.getBounds(), { padding: [40, 40], maxZoom: 17 });
+    c.openTooltip();
+    c.setStyle({ weight: 4, fillOpacity: .6 });
+    setTimeout(() => {
+      const p = pastos.find(x => x.id === id);
+      const tinta = { ok: "#52a044", atencao: "#e67e22", excesso: "#c0392b" }[p ? p.nivel : ""] || (p ? p.cor : "#4363d8");
+      c.setStyle({ weight: 2, fillOpacity: .35, color: p ? p.cor : "#4363d8", fillColor: tinta });
+    }, 1500);
+  }
+
+  const selFoco = document.getElementById("sel-foco-pasto");
+  const btnFoco = document.getElementById("btn-focar-pasto");
+  if (btnFoco && selFoco) {
+    btnFoco.onclick = () => { if (selFoco.value) focarPasto(selFoco.value); };
+    selFoco.onchange = () => { if (selFoco.value) focarPasto(selFoco.value); };
+  }
+
+  document.querySelectorAll(".btn-ver-mapa").forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.getAttribute("data-pasto");
+      if (selFoco) selFoco.value = id;
+      document.getElementById("mapa").scrollIntoView({ behavior: "smooth", block: "center" });
+      focarPasto(id);
+    };
+  });
+
+  const btnAbrirKmz = document.getElementById("btn-abrir-kmz");
+  const formKmz = document.getElementById("form-kmz");
+  const btnFecharKmz = document.getElementById("btn-fechar-kmz");
+  if (btnAbrirKmz && formKmz) {
+    btnAbrirKmz.onclick = () => { formKmz.style.display = formKmz.style.display === "none" ? "block" : "none"; };
+    if (btnFecharKmz) btnFecharKmz.onclick = () => { formKmz.style.display = "none"; };
+  }
 
   const desenho = new L.FeatureGroup().addTo(mapa);
   mapa.addControl(new L.Control.Draw({
