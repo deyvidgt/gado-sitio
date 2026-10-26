@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Reprodução{% endblock %}
+{% block page_title %}Reprodução 🐮{% endblock %}
+
+{% block content %}
+<style>
+  .rep { display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--border, #ddd); }
+  .rep:last-child { border-bottom:0; }
+  .rep-nome { font-weight:600; }
+  .rep-sub { font-size:12px; color:var(--text-3); }
+  .rep-st { margin-left:auto; font-size:12px; font-weight:600; padding:3px 9px; border-radius:12px; white-space:nowrap; }
+  .st-prenha { background:#e8f5e9; color:#2e7d32; }
+  .st-coberta { background:#e3f2fd; color:#1565c0; }
+  .st-vazia { background:#fafafa; color:#777; }
+  .st-pariu { background:#f3e5f5; color:#6a1b9a; }
+  .st-atrasada { background:#fff3e0; color:#ef6c00; }
+  .rep-ind { display:flex; gap:18px; flex-wrap:wrap; }
+  .rep-ind div { font-size:13px; color:var(--text-3); }
+  .rep-ind b { display:block; font-size:20px; color:var(--text-1); }
+</style>
+
+{% if alertas %}
+<div class="card">
+  <h3>Para olhar</h3>
+  {% for a in alertas %}<div class="rep-sub" style="font-size:14px; padding:3px 0">{{ a.texto }}</div>{% endfor %}
+</div>
+{% endif %}
+
+<div class="card" style="margin-top:16px">
+  <h3>Anotar</h3>
+  <form method="post" action="{{ url_for('registrar_reproducao') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <div class="form-group"><label>O que aconteceu</label>
+        <select name="tipo" id="rep-tipo">
+          <option value="cobertura">Cobertura (monta ou inseminação)</option>
+          <option value="diagnostico">Resultado do toque</option>
+        </select></div>
+      <div class="form-group"><label>Vaca (cor e número do brinco)</label>
+        <input type="text" name="vaca" list="rep-vacas" required placeholder="Ex.: Amarelo 21">
+        <datalist id="rep-vacas">{% for v in vacas %}<option>{{ v }}</option>{% endfor %}</datalist></div>
+      <div class="form-group"><label>Data</label>
+        <input type="date" name="data" value="{{ hoje }}" required></div>
+      <div class="form-group" id="rep-touro"><label>Touro / sêmen</label>
+        <input type="text" name="touro" maxlength="60" placeholder="Opcional"></div>
+      <div class="form-group" id="rep-res" style="display:none"><label>Resultado</label>
+        <select name="resultado">{% for r in resultados %}<option>{{ r }}</option>{% endfor %}</select></div>
+    </div>
+    <button class="btn btn-primary">🐮 Anotar</button>
+  </form>
+  <p class="rep-sub" style="margin-top:8px">A gestação é contada em 285 dias. O toque já dá
+    resultado a partir de 35 dias da cobertura. O parto aparece sozinho quando o bezerro
+    for cadastrado com a mãe.</p>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3>Números</h3>
+  <div class="rep-ind">
+    <div><b>{{ ind.prenhas }}</b>prenhas confirmadas</div>
+    <div><b>{{ ind.aguardando_toque }}</b>esperando o toque</div>
+    <div><b>{% if ind.taxa_prenhez is not none %}{{ '%.0f'|format(ind.taxa_prenhez) }}%{% else %}—{% endif %}</b>taxa de prenhez</div>
+    <div><b>{{ ind.iep_dias or '—' }}</b>dias entre partos</div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3>Vacas ({{ situacoes|length }})</h3>
+  {% for v in situacoes %}
+  <div class="rep">
+    <div>
+      <div class="rep-nome">{{ v.nome }}</div>
+      <div class="rep-sub">
+        Coberta em {{ v.coberta_em.strftime('%d/%m/%Y') }}{% if v.touro %} · {{ v.touro }}{% endif %}
+        {% if v.status == 'pariu' %}· pariu em {{ v.pariu_em.strftime('%d/%m/%Y') }}
+        {% elif v.status != 'vazia' %}· parto previsto {{ v.parto_previsto.strftime('%d/%m/%Y') }}
+          ({{ v.dias_de_gestacao }} dias de gestação)<br>
+          Toque a partir de {{ v.diagnostico_a_partir.strftime('%d/%m') }} ·
+          secar em {{ v.secagem_em.strftime('%d/%m/%Y') }}{% endif %}
+      </div>
+    </div>
+    <span class="rep-st st-{{ v.status }}">{{ v.status }}</span>
+  </div>
+  {% else %}
+  <p class="rep-sub">Nenhuma cobertura anotada ainda.</p>
+  {% endfor %}
+</div>
+
+<script>
+  document.getElementById('rep-tipo').addEventListener('change', function () {
+    var toque = this.value === 'diagnostico';
+    document.getElementById('rep-res').style.display = toque ? '' : 'none';
+    document.getElementById('rep-touro').style.display = toque ? 'none' : '';
+  });
+</script>
+{% endblock %}

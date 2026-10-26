@@ -156,6 +156,8 @@ TIPOS_MANEJO = [
     "Nascimento",
     "Tratamento Veterinário",
     "Movimentação de Pasto",
+    "Cobertura",                 # monta ou inseminação (reproducao.py)
+    "Diagnóstico de Gestação",   # resultado do toque: Prenha/Vazia
     "Outro",
 ]
 

@@ -5,6 +5,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
+- **Reprodução sem sensor (v5.3):** nova aba **🐮 Reprodução** no menu. Anote a **cobertura**
+  (monta ou inseminação, com o touro) e depois o **resultado do toque** (Prenha/Vazia); o
+  sistema conta os 285 dias de gestação e mostra, por vaca, o **parto previsto**, a partir de
+  quando dá para fazer o toque (35 dias) e quando **secar** (60 dias antes do parto). O parto
+  é fechado sozinho quando o bezerro é cadastrado com a **mãe**. Números do rebanho de cria:
+  prenhas, taxa de prenhez e dias entre partos (IEP). Painel e WhatsApp avisam de parto
+  chegando, toque atrasado e vaca sem notícia depois do parto previsto. Nenhuma coluna nova:
+  são dois tipos novos de Manejo (**Cobertura** e **Diagnóstico de Gestação**) e não entram
+  nas contas do rebanho.
 - **Agenda de tarefas (v5.3):** nova aba **📋 Tarefas** no menu — anote o que precisa ser
   feito ("consertar a cerca do fundo"), para quando, quem faz e se repete (semanal a anual).
   Ao marcar **✅ Feito**, a tarefa que repete já cria a próxima sozinha. Atrasada fica em

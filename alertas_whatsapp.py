@@ -329,6 +329,16 @@ def montar_itens(hoje: datetime | None = None) -> list[dict]:
     except Exception as e:
         logging.error(f"Erro nas tarefas: {e}")
 
+    # ── 1c) Reprodução: parto chegando e toque atrasado ──────────────────────
+    try:
+        import animais as A
+        import reproducao as R
+        df_an = A.carregar()
+        for a in R.alertas(R.situacao(df_m, df_an, hoje), hoje):
+            item(a["chave"], a["texto"], urgente=a["urgente"], repetir=1)
+    except Exception as e:
+        logging.error(f"Erro na reprodução: {e}")
+
     # ── 2) Insumos: previsão de estoque ──────────────────────────────────────
     try:
         from insumos import previsao_todos, texto_previsao

@@ -116,6 +116,18 @@
   {% endfor %}
 </div>
 
+{% if repro %}
+<div class="card" style="margin-bottom:24px">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="card-title" style="margin-bottom:0">🐮 Reprodução</div>
+    <a href="{{ url_for('reproducao') }}" class="btn btn-outline btn-sm">Ver todas</a>
+  </div>
+  {% for a in repro %}
+  <div style="padding:6px 0;font-size:13.5px{% if a.urgente %};color:#c62828{% endif %}">{{ a.texto }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
 <!-- ═══ LOTAÇÃO DOS PASTOS + COMPOSIÇÃO DO REBANHO ══════════════════════════ -->
 <div class="two-col" style="margin-bottom:24px">
 

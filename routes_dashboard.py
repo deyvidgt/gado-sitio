@@ -96,13 +96,20 @@ def dashboard():
 
 
 def _cards_extras(dados, r) -> dict:
-    """Cards de Lotação, Rebanho e Tarefas. Nenhum deles derruba o painel."""
+    """Cards de Lotação, Rebanho, Tarefas e Reprodução. Nenhum derruba o painel."""
     import tarefas as T
-    out = {"tarefas": []}
+    out = {"tarefas": [], "repro": []}
     try:
         out["tarefas"] = T.pendentes(T.carregar(), _agora(), limite_dias=7)
     except Exception as e:
         app.logger.error(f"Painel: tarefas falharam: {e}")
+    try:
+        import animais as A
+        import reproducao as R
+        out["repro"] = R.alertas(R.situacao(dados["Manejo"], A.carregar(), _agora()),
+                                 _agora())
+    except Exception as e:
+        app.logger.error(f"Painel: reprodução falhou: {e}")
     return {**out, **_lotacao_e_composicao(dados, r)}
 
 
