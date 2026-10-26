@@ -23,9 +23,18 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   cada login só entra nos sítios dele; quem tem mais de um troca no seletor do topo.
   Usuários, senhas e a chave de sessão continuam na pasta principal. Aviso de WhatsApp
   de um sítio só vai para quem é dele. Sem `sitios.json`, tudo igual a antes.
+- **Vários sítios — fase 3: administração.** Configurações → 🏡 Sítios (só administrador):
+  criar sítio com os donos e marcar quem entra em cada um. Backup diário, WhatsApp diário
+  e resumo mensal rodam para cada sítio (a mensagem começa com o nome do sítio).
+
+### Segurança
+- Com vários sítios, só o **administrador** (quem tem acesso ao 1º sítio, ou a lista
+  `"admins"` do `sitios.json`) cria/exclui usuários e redefine senhas — antes qualquer
+  login podia, e um parente de outro sítio poderia trocar a senha de quem é do Santo
+  Antonio. A lista de usuários e os telefones do WhatsApp só mostram quem é do sítio.
 
 ### Planejado
-- Vários sítios, fases 3 e 4 (Tasks por sítio, tela de criar sítio, painel da família).
+- Vários sítios, fase 4 (painel da família somando os sítios).
 - Leite: produção por vaca/ordenha, lactação e secagem, entregas e preço do litro
   (liga só no sítio que tiver leite); reprodução (cobertura, prenhez, alerta de parto).
 - Peso estimado por foto (com medida de referência) e por fita no peito.

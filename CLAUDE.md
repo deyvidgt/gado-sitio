@@ -52,6 +52,11 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
   fazer `sitios.ativar(slug)` dentro de `extensions._trava_sitio` (ver
   `routes_visitas._enviar_avisos_depois`). Nunca `from db import DATA_DIR` no topo do módulo.
 - Cache separado por pasta (`extensions._chave_cache`).
+- **Admin** (`sitios.e_admin`): sem `sitios.json` todos; com ele, `"admins"` ou quem tem
+  acesso ao 1º sítio. Rota que mexe em usuários/sítios chama `_so_admin()`; lista de
+  pessoas para não-admin passa por `_usuarios_visiveis()` (só quem é do sítio atual).
+- **Tasks** (backup, WhatsApp, resumo mensal) fazem `for slug in sitios.cada_sitio()` e
+  mandam `sitio=slug` no `enviar_para_familia`; erro num sítio não para os outros.
 
 ## Arquitetura
 
@@ -161,6 +166,7 @@ python -m pytest          # ~5 s; roda numa CÓPIA temporária dos dados
 | `superpowers/specs/2026-10-25-varios-sitios-design.md` | Design de vários sítios (cada parente com o seu): donos por sítio, pasta por sítio, seletor, painel da família — aprovado; fase 1 entregue |
 | `superpowers/plans/2026-10-25-varios-sitios-fase1.md` | Plano da fase 1 (donos configuráveis) — concluído |
 | `superpowers/plans/2026-10-25-varios-sitios-fase2.md` | Plano da fase 2 (pasta por sítio, seletor, acesso) — concluído |
+| `superpowers/plans/2026-10-25-varios-sitios-fase3.md` | Plano da fase 3 (admin, Tasks por sítio, tela de sítios) — concluído |
 | `client_secret_*.json` | Credencial OAuth do app do Drive — **fora do Git** (`.gitignore`), nunca commitar |
 
 ## Backup

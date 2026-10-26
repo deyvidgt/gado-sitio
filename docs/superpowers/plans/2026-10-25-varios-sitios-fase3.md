@@ -34,20 +34,20 @@
 
 **Files:** Modify `sitios.py` (`e_admin(login) -> bool`, `logins_do_sitio(slug, logins) -> list`), `routes_usuarios.py` (guarda nas 3 rotas; lista filtrada; `e_admin` no template), `routes_api_extras.py` (`/api/config-whatsapp-todos` filtrado), `templates/configuracoes.html` (formulários de gestão só para admin); Test `tests/test_sitios.py`.
 
-- [ ] Testes `test_admin_padrao`, `test_nao_admin_nao_gerencia_usuarios`, `test_lista_so_do_sitio`; implementar; PASS; commit `Fase 3: so administradores gerenciam usuarios; cada sitio ve so os seus`.
+- [x] Testes `test_admin_padrao`, `test_nao_admin_nao_gerencia_usuarios`, `test_lista_so_do_sitio`; implementar; PASS; commit `Fase 3: so administradores gerenciam usuarios; cada sitio ve so os seus`.
 
 ### Task 2: Tasks por sítio
 
 **Files:** Modify `sitios.py` (`cada_sitio()` → itera slugs ativando), `alertas_whatsapp.py` (`main` por sítio; cabeçalho com o nome; `sitio=`), `resumo_mensal.py` (idem; `montar_resumo_mensal(..., nome_sitio=)`), `backup_automatico.py` (laço por sítio); Tests `tests/test_sitios.py`.
 
-- [ ] Testes `test_task_whatsapp_por_sitio`, `test_resumo_mensal_por_sitio`, `test_backup_por_sitio`, `test_task_erro_num_sitio_nao_para_os_outros`; implementar; PASS; commit `Fase 3: backup, WhatsApp e resumo mensal para cada sitio`.
+- [x] Testes `test_task_whatsapp_por_sitio`, `test_resumo_mensal_por_sitio`, `test_backup_por_sitio`, `test_task_erro_num_sitio_nao_para_os_outros`; implementar; PASS; commit `Fase 3: backup, WhatsApp e resumo mensal para cada sitio`.
 
 ### Task 3: Tela de sítios
 
 **Files:** Modify `sitios.py` (`criar(nome, slug, membros, acesso_logins) -> str`, `salvar_acesso(acesso, admins)`), `routes_usuarios.py` (`POST /configuracoes/sitios/criar`, `POST /configuracoes/sitios/acesso`), `templates/configuracoes.html` (seção 🏡 Sítios, só admin).
 
-- [ ] Testes `test_criar_sitio_pela_tela`, `test_criar_primeiro_sitio_mantem_acessos`, `test_criar_sitio_invalido_nao_grava`, `test_mudar_acesso`, `test_nao_remove_ultimo_admin`; implementar; PASS; commit `Fase 3: tela para criar sitio e liberar acesso`.
+- [x] Testes `test_criar_sitio_pela_tela`, `test_criar_primeiro_sitio_mantem_acessos`, `test_criar_sitio_invalido_nao_grava`, `test_mudar_acesso`, `test_nao_remove_ultimo_admin`; implementar; PASS; commit `Fase 3: tela para criar sitio e liberar acesso`.
 
 ### Task 4: Documentação
 
-- [ ] CHANGELOG, CLAUDE.md, Ajuda (seção Configurações → Sítios), spec (fase 3 entregue); PASS; commit `Docs: fase 3 dos varios sitios`.
+- [x] CHANGELOG, CLAUDE.md, Ajuda (seção Configurações → Sítios), spec (fase 3 entregue); PASS; commit `Docs: fase 3 dos varios sitios`.

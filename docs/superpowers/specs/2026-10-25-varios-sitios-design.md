@@ -1,6 +1,6 @@
 # Vários sítios (cada parente com o seu) — design
 
-**Status:** aprovado em 2026-10-25 · fases 1 e 2 entregues · **Data:** 2026-10-25 · **Versão alvo:** 5.0
+**Status:** aprovado em 2026-10-25 · fases 1, 2 e 3 entregues · **Data:** 2026-10-25 · **Versão alvo:** 5.0
 
 ## Objetivo
 
@@ -53,7 +53,14 @@ Só exige o passo 1 abaixo; não tem seletor e cada parente mantém o seu servid
    (`calcular_resumo_financeiro` por pasta), então as invariantes valem por sítio e a
    soma bate. Só leitura: lançar continua sendo dentro de cada sítio.
 
-## Como criar um sítio hoje (até a tela da fase 3)
+## Como criar um sítio
+
+Pela tela: **Configurações → 🏡 Sítios → Criar sítio** (só administrador). Nome, donos
+(2 a 8, cada um com cor de brinco) e quem entra. Na primeira vez, o sistema cria o
+`sitios.json` dando a todos os logins de hoje acesso ao Santo Antonio. Depois, crie os
+logins dos donos novos (Usuários → Adicionar) e marque o acesso deles na tabela.
+
+À mão (o mesmo que a tela grava):
 
 1. Criar `~/gado-dados/sitios/joao/sitio_config.json`:
    ```json
