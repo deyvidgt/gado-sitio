@@ -115,9 +115,10 @@ def _inject_sitios():
     """Seletor do topo: só aparece com 2+ sítios para o usuário."""
     import sitios
     if not session.get("logado"):
-        return {"sitios_menu": [], "sitio_atual": sitios.atual()}
+        return {"sitios_menu": [], "sitio_atual": sitios.atual(), "varios_sitios": False}
     return {"sitios_menu": [(s, sitios.nome(s)) for s in sitios.sitios_do_usuario(session.get("usuario"))],
-            "sitio_atual": sitios.atual()}
+            "sitio_atual": sitios.atual(),
+            "varios_sitios": len(sitios.carregar()["sitios"]) > 1}   # link do painel da Família
 
 
 # ── Timezone ───────────────────────────────────────────────────────────────────

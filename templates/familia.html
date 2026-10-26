@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Família — todos os sítios{% endblock %}
+{% block page_title %}Família 👨‍👩‍👧{% endblock %}
+
+{% block content %}
+<style>
+  table.tab-familia { width:100%; border-collapse:collapse; font-size:13.5px; }
+  table.tab-familia th { text-align:right; font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+                         color:var(--text-3); padding:10px 12px; border-bottom:1.5px solid var(--cream-dk); white-space:nowrap; }
+  table.tab-familia td { text-align:right; padding:10px 12px; border-bottom:1px solid var(--cream-dk); white-space:nowrap; }
+  table.tab-familia th:first-child, table.tab-familia td:first-child { text-align:left; white-space:normal; }
+  table.tab-familia tr.total td { font-weight:700; border-top:2px solid var(--cream-dk); }
+  .muted { color:var(--text-3); font-size:12px; }
+  .pos { color:var(--green-700); } .neg { color:var(--danger); }
+</style>
+
+<p class="muted" style="margin-bottom:16px">Todos os sítios da família, cada um pelas suas próprias contas
+  (média móvel). Só para ver — os lançamentos são feitos dentro de cada sítio.</p>
+
+<div class="metrics" data-total-cab="{{ total.estoque }}">
+  <div class="metric">
+    <div class="metric-icon">🐄</div>
+    <div class="metric-label">Cabeças na família</div>
+    <div class="metric-val">{{ total.estoque }} cab.</div>
+    <div class="metric-sub">{{ linhas|length }} sítio(s)</div>
+  </div>
+  <div class="metric gold">
+    <div class="metric-icon">📦</div>
+    <div class="metric-label">Capital no rebanho</div>
+    <div class="metric-val">{{ total.capital_imobilizado|brl }}</div>
+    <div class="metric-sub">custo do gado que está no pasto</div>
+  </div>
+  <div class="metric">
+    <div class="metric-icon">💰</div>
+    <div class="metric-label">Resultado somado</div>
+    <div class="metric-val {{ 'pos' if total.resultado_total >= 0 else 'neg' }}">{{ total.resultado_total|brl }}</div>
+    <div class="metric-sub">vendas − custo das vendidas − perdas</div>
+  </div>
+</div>
+
+{% if faltou %}
+<div class="alerta-bruc" style="margin:16px 0;padding:12px 16px;border-radius:var(--radius);background:var(--gold-lt);border:1px solid var(--gold)">
+  ⚠️ Algum sítio não pôde ser lido — o total está sem ele.</div>
+{% endif %}
+
+<div class="card" style="margin-top:20px">
+  <div class="card-title">Por sítio</div>
+  <div style="overflow-x:auto">
+    <table class="tab-familia">
+      <thead><tr><th>Sítio</th><th>Cabeças</th><th>Capital</th><th>Vendas</th><th>Perdas</th><th>Resultado</th></tr></thead>
+      <tbody>
+      {% for l in linhas %}
+        <tr>
+          <td><b>{{ l.nome }}</b>{% if l.donos %}<br><span class="muted">{{ l.donos }}</span>{% endif %}</td>
+          {% if l.erro %}
+          <td colspan="5" class="muted" style="text-align:left">não deu para ler este sítio agora</td>
+          {% else %}
+          <td>{{ l.estoque }}</td>
+          <td>{{ l.capital_imobilizado|brl }}</td>
+          <td>{{ l.total_vend|brl }}</td>
+          <td>{{ l.perdas|brl }}</td>
+          <td class="{{ 'pos' if l.resultado_total >= 0 else 'neg' }}">{{ l.resultado_total|brl }}</td>
+          {% endif %}
+        </tr>
+      {% endfor %}
+        <tr class="total"><td>Total</td><td>{{ total.estoque }}</td><td>{{ total.capital_imobilizado|brl }}</td>
+          <td>{{ total.total_vend|brl }}</td><td>{{ total.perdas|brl }}</td>
+          <td class="{{ 'pos' if total.resultado_total >= 0 else 'neg' }}">{{ total.resultado_total|brl }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

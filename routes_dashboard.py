@@ -94,4 +94,38 @@ def dashboard():
                            NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS, MEMBROS=MEMBROS)
 
 
+# ── Painel da Família (v5.0 fase 4): todos os sítios lado a lado e somados ────
+
+CAMPOS_FAMILIA = ("estoque", "capital_imobilizado", "total_vend", "perdas", "resultado_total")
+
+
+@app.route("/familia")
+@login_required
+def familia():
+    """Só leitura. Entra em cada sítio dentro deste pedido (a trava já é nossa) e
+    volta ao sítio do usuário no fim — o resto da página usa os donos dele."""
+    import sitios
+    volta = sitios.atual()
+    linhas = []
+    try:
+        for slug in sitios.carregar()["sitios"]:
+            linha = {"slug": slug, "nome": sitios.nome(slug)}
+            try:
+                sitios.ativar(slug)
+                r = _get_resumo_cache()
+                linha.update({k: r[k] for k in CAMPOS_FAMILIA},
+                             donos=", ".join(NOMES_MEMBROS[m] for m in MEMBROS))
+            except Exception as e:
+                # Um sítio com planilha quebrada não derruba o painel dos outros.
+                app.logger.error(f"Painel da família: erro no sítio {slug}: {e}")
+                linha["erro"] = True
+            linhas.append(linha)
+    finally:
+        sitios.ativar(volta)
+    ok = [l for l in linhas if not l.get("erro")]
+    total = {k: sum(l[k] for l in ok) for k in CAMPOS_FAMILIA}
+    return render_template("familia.html", linhas=linhas, total=total,
+                           faltou=len(ok) < len(linhas))
+
+
 # ══════════════════════════════════════════════════════════════════════════════

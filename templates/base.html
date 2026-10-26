@@ -301,6 +301,11 @@
     <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint=='dashboard' %}active{% endif %}">
       <span class="ico">🏠</span> Dashboard
     </a>
+    {% if varios_sitios %}
+    <a href="{{ url_for('familia') }}" class="nav-link {% if request.endpoint=='familia' %}active{% endif %}">
+      <span class="ico">👨‍👩‍👧</span> Família
+    </a>
+    {% endif %}
     <div class="nav-section">Registrar</div>
     <a href="{{ url_for('nova_compra') }}"  class="nav-link {% if request.endpoint=='nova_compra'  %}active{% endif %}"><span class="ico">🛒</span> Nova Compra</a>
     <a href="{{ url_for('novo_gasto') }}"   class="nav-link {% if request.endpoint=='novo_gasto'   %}active{% endif %}"><span class="ico">💸</span> Novo Gasto</a>
