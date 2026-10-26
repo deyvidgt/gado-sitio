@@ -24,9 +24,92 @@ VERSAO = "4.5.1"
 NOME_SITIO = "Sítio Santo Antonio"
 FAMILIA = "Geane, Deyvid e Nilson"
 
-MEMBROS = ["Mae", "Deyvid", "Nilson"]
-NOMES_MEMBROS = {"Mae": "Geane", "Deyvid": "Deyvid", "Nilson": "Nilson"}
-EMOJIS_MEMBROS = {"Mae": "👩", "Deyvid": "👦", "Nilson": "👦"}
+# ── Donos (sócios) do sítio ─────────────────────────────────────────────────
+# v5.0 fase 1: vêm de "membros" no sitio_config.json da pasta de dados; sem isso,
+# os três de sempre. A chave vira nome de coluna ("Qtd Mae") e de campo ("qtd_mae"),
+# por isso só letras. Trocar os donos só vale para sítio NOVO: um arquivo que já tem
+# as colunas de outros donos é recusado no db.inicializar (senão grava desalinhado).
+CORES_BRINCO = ["Amarelo", "Azul", "Vermelho", "Verde", "Laranja", "Branco",
+                "Rosa", "Roxo", "Preto", "Cinza"]
+MEMBROS_PADRAO = [
+    {"chave": "Mae", "nome": "Geane", "emoji": "👩", "cor": "Vermelho", "logins": ["geane", "mae"]},
+    {"chave": "Deyvid", "nome": "Deyvid", "emoji": "👦", "cor": "Amarelo", "logins": ["deyvid"]},
+    {"chave": "Nilson", "nome": "Nilson", "emoji": "👦", "cor": "Azul", "logins": ["nilson"]},
+]
+MEMBROS_MIN, MEMBROS_MAX = 2, 8
+
+
+def ler_membros(cfg) -> list:
+    """Lista de donos do sitio_config (dict) — inválida ou ausente → MEMBROS_PADRAO."""
+    import logging
+    import re
+    lista = (cfg or {}).get("membros") if isinstance(cfg, dict) else None
+    if lista is None:
+        return MEMBROS_PADRAO
+    try:
+        ok = (isinstance(lista, list) and MEMBROS_MIN <= len(lista) <= MEMBROS_MAX
+              and all(re.fullmatch(r"[A-Za-zÀ-ÿ]+", str(m["chave"])) and m["cor"] in CORES_BRINCO
+                      and str(m.get("nome") or "").strip() for m in lista)
+              and len({m["chave"].lower() for m in lista}) == len(lista)
+              and len({m["cor"] for m in lista}) == len(lista))
+    except (TypeError, KeyError, AttributeError):
+        ok = False
+    if not ok:
+        logging.error("sitio_config.json: 'membros' inválido — usando Geane/Deyvid/Nilson.")
+        return MEMBROS_PADRAO
+    return lista
+
+
+def _ler_sitio_config() -> dict:
+    import json
+    from pasta_dados import _resolver_data_dir
+    try:
+        with open(os.path.join(_resolver_data_dir(), "sitio_config.json"), encoding="utf-8") as f:
+            return json.load(f) or {}
+    except (OSError, ValueError):
+        return {}
+
+
+def colunas_compras(chaves) -> list:
+    return ["Data", "Qtd Cabeças", "Valor Total (R$)", "Valor/Cabeça (R$)",
+            *[f"Qtd {m}" for m in chaves], "Descrição", "Registrado Por"]
+
+
+def colunas_vendas(chaves) -> list:
+    return ["Data", "Qtd Cabeças", "Valor Total (R$)", "Valor/Cabeça (R$)", "Valor Arroba (R$)",
+            *[f"Qtd {m}" for m in chaves], *[f"Valor {m} (R$)" for m in chaves],
+            *[f"Custo {m} (R$)" for m in chaves], *[f"Resultado {m} (R$)" for m in chaves],
+            "CMP no momento (R$)", "Descrição",
+            # NOVO v4.3: brincos dos animais vendidos (ex.: "Amarelo 21 #A0003; Azul 12 #A0007").
+            "Brincos"]
+
+
+MEMBROS: list = []
+NOMES_MEMBROS: dict = {}
+EMOJIS_MEMBROS: dict = {}
+CORES_BRINCO_PADRAO: dict = {}   # cor de brinco de cada dono (ajustável em Animais → Cores)
+LOGIN_MEMBRO: dict = {}          # login (minúsculo) → chave do dono
+COLUNAS_COMPRAS: list = []
+COLUNAS_VENDAS: list = []
+
+
+def aplicar_membros(lista: list) -> None:
+    """Troca os donos NO LUGAR: os módulos que fizeram `from config import MEMBROS`
+    guardam o mesmo objeto e passam a ver os novos."""
+    chaves = [m["chave"] for m in lista]
+    MEMBROS[:] = chaves
+    for d, campo in ((NOMES_MEMBROS, "nome"), (EMOJIS_MEMBROS, "emoji"), (CORES_BRINCO_PADRAO, "cor")):
+        d.clear()
+        d.update({m["chave"]: m.get(campo) or ("🙂" if campo == "emoji" else m["chave"]) for m in lista})
+    LOGIN_MEMBRO.clear()
+    for m in lista:
+        for login in m.get("logins") or [m["chave"]]:
+            LOGIN_MEMBRO[str(login).strip().lower()] = m["chave"]
+    COLUNAS_COMPRAS[:] = colunas_compras(chaves)
+    COLUNAS_VENDAS[:] = colunas_vendas(chaves)
+
+
+aplicar_membros(ler_membros(_ler_sitio_config()))
 
 # ── Segurança ─────────────────────────────────────────────────────────────────
 # Em produção, defina a variável de ambiente GADO_SECRET_KEY com um valor aleatório:
@@ -95,28 +178,12 @@ ALERTAS_SAUDE = {
 # Documentação: https://www.callmebot.com/blog/free-api-whatsapp-messages/
 WHATSAPP_LEMBRETES_HORA = 7   # hora do dia para envio automático (se implementado via cron)
 
-COLUNAS_COMPRAS = [
-    "Data", "Qtd Cabeças", "Valor Total (R$)", "Valor/Cabeça (R$)",
-    "Qtd Mae", "Qtd Deyvid", "Qtd Nilson",
-    "Descrição", "Registrado Por",
-]
 COLUNAS_GASTOS = [
     "Data", "Tipo", "Descrição", "Valor Total (R$)",
     "Qtd Cabeças", "Valor/Cabeça (R$)", "Registrado Por",
     # NOVO v4.2: compra de insumo (Sal/Proteinado/Ração) e quantos sacos — alimenta
     # a previsão de estoque (insumos.py).
     "Produto", "Qtd Sacos",
-]
-COLUNAS_VENDAS = [
-    "Data", "Qtd Cabeças", "Valor Total (R$)", "Valor/Cabeça (R$)",
-    "Valor Arroba (R$)",
-    "Qtd Mae", "Qtd Deyvid", "Qtd Nilson",
-    "Valor Mae (R$)", "Valor Deyvid (R$)", "Valor Nilson (R$)",
-    "Custo Mae (R$)", "Custo Deyvid (R$)", "Custo Nilson (R$)",
-    "Resultado Mae (R$)", "Resultado Deyvid (R$)", "Resultado Nilson (R$)",
-    "CMP no momento (R$)", "Descrição",
-    # NOVO v4.3: brincos dos animais vendidos (ex.: "Amarelo 21 #A0003; Azul 12 #A0007").
-    "Brincos",
 ]
 COLUNAS_MANEJO = [
     "Data", "Tipo", "Qtd Cabeças", "Descrição", "Responsável",
@@ -178,10 +245,6 @@ TIPOS_FOTO = ["Perfil", "Evolução", "Ocorrência"]
 # Pasta "Sítio Santo Antonio" no Drive do Nilson (pode ser trocada no drive_token.json).
 DRIVE_PASTA_PADRAO = "1hVTxC--URXg1j3rylOYyRt1nSuC_vbUt"
 
-# Cada dono tem a sua cor de brinco (ajustável na página Animais → Cores).
-CORES_BRINCO_PADRAO = {"Deyvid": "Amarelo", "Nilson": "Azul", "Mae": "Vermelho"}
-CORES_BRINCO = ["Amarelo", "Azul", "Vermelho", "Verde", "Laranja", "Branco",
-                "Rosa", "Roxo", "Preto", "Cinza"]
 BRINCO_MAX = 99   # numeração 01..99 por cor; depois recomeça do 01
 
 CATEGORIAS_ANIMAL = {   # categoria → sexo

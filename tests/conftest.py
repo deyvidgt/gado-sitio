@@ -91,3 +91,17 @@ def _whatsapp_nunca_envia(monkeypatch):
     o envio sobrescreve com o próprio monkeypatch."""
     import alertas_whatsapp
     monkeypatch.setattr(alertas_whatsapp, "enviar_whatsapp", lambda *a, **k: True)
+
+
+@pytest.fixture
+def membros_teste():
+    """membros_teste(n) troca os donos por A, B, C… (n de 2 a 8) só neste teste e
+    volta ao padrão no fim — para provar as contas com outros números de sócios."""
+    import config
+    cores = [c for c in config.CORES_BRINCO]
+
+    def aplicar(n):
+        config.aplicar_membros([{"chave": chr(65 + i), "nome": f"Dono {chr(65 + i)}", "emoji": "🙂",
+                                 "cor": cores[i], "logins": [chr(97 + i)]} for i in range(n)])
+    yield aplicar
+    config.aplicar_membros(config.MEMBROS_PADRAO)

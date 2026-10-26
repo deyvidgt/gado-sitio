@@ -24,34 +24,8 @@ from datetime import datetime
 from openpyxl import Workbook, load_workbook
 
 
-def _resolver_data_dir() -> str:
-    """
-    Resolve onde ficam os dados, independente de como o programa foi iniciado.
-
-    Prioridade:
-      1. Variável de ambiente GADO_DATA_DIR   (configuração manual)
-      2. ~/gado-dados/                         (padrão PythonAnywhere — fora do Git)
-      3. Pasta do executável (.exe)             (Windows compilado)
-      4. Pasta do script atual                  (desenvolvimento)
-    """
-    # 1) Variável de ambiente explícita (útil para testes e outras hospedagens)
-    if os.environ.get("GADO_DATA_DIR"):
-        pasta = os.path.expanduser(os.environ["GADO_DATA_DIR"])
-        os.makedirs(pasta, exist_ok=True)
-        return pasta
-
-    # 2) ~/gado-dados/ — pasta permanente fora do repositório Git
-    #    Funciona no PythonAnywhere e em qualquer servidor Linux/Mac
-    pasta_permanente = os.path.expanduser("~/gado-dados")
-    if os.path.isdir(pasta_permanente):
-        return pasta_permanente
-
-    # 3) Modo .exe (PyInstaller/Windows)
-    if getattr(sys, "frozen", False):
-        return os.path.dirname(sys.executable)
-
-    # 4) Fallback: pasta do próprio script (desenvolvimento local)
-    return os.path.dirname(os.path.abspath(__file__))
+# Mora em pasta_dados.py (o config também precisa, e config não pode importar db).
+from pasta_dados import _resolver_data_dir  # noqa: E402,F401
 
 
 # DATA_DIR é onde ficam gado_familia.xlsx, usuarios.json e backups/
@@ -189,6 +163,25 @@ def _garantir_colunas(ws, colunas) -> bool:
     return mudou
 
 
+def _conferir_donos_do_arquivo():
+    """As colunas "Qtd <dono>" da aba Compras têm que ser as dos donos configurados.
+    Se não forem (alguém trocou os donos de um sítio que já tem dados), a migração
+    poria as colunas novas no fim e a gravação posicional cairia nas colunas erradas."""
+    from config import MEMBROS
+    wb = load_workbook(ARQUIVO_PATH, read_only=True)
+    try:
+        if "Compras" not in wb.sheetnames:
+            return
+        cab = [str(c.value or "") for c in next(wb["Compras"].iter_rows(max_row=1))]
+    finally:
+        wb.close()
+    no_arquivo = [c[4:] for c in cab if c.startswith("Qtd ") and c != "Qtd Cabeças"]
+    if no_arquivo and no_arquivo != list(MEMBROS):
+        raise RuntimeError(
+            f"Os donos do arquivo ({', '.join(no_arquivo)}) não são os do sitio_config.json "
+            f"({', '.join(MEMBROS)}). Trocar os donos só vale para um sítio novo.")
+
+
 def inicializar():
     """
     Cria o arquivo de dados em DATA_DIR se não existir.
@@ -223,6 +216,7 @@ def inicializar():
         print(f"✅ Arquivo de dados criado: {ARQUIVO_PATH}")
         return
 
+    _conferir_donos_do_arquivo()
     # Arquivo já existe — migrar abas/colunas que faltam SEM apagar dados.
     try:
         with _trava_escrita():
