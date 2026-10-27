@@ -476,11 +476,26 @@
 
   /* Sidebar mobile */
   function toggleSidebar() {
-    document.querySelector(".sidebar").classList.toggle("open");
-    document.getElementById("overlay").classList.toggle("open");
+    const sidebar = document.querySelector(".sidebar");
+    const overlay = document.getElementById("overlay");
+    const isOpen = sidebar.classList.contains("open");
+
+    sidebar.classList.toggle("open");
+    overlay.classList.toggle("open");
+
+    // Auto-close overlay on click (mobile)
+    if (!isOpen) {
+      overlay.addEventListener("click", closeSidebar, { once: true });
+    }
   }
+
+  function closeSidebar() {
+    document.querySelector(".sidebar").classList.remove("open");
+    document.getElementById("overlay").classList.remove("open");
+  }
+
   document.querySelectorAll(".nav-link").forEach(a =>
-    a.addEventListener("click", () => { if (window.innerWidth <= 768) toggleSidebar(); }));
+    a.addEventListener("click", () => { if (window.innerWidth <= 768) closeSidebar(); }));
 
   /* Tema */
   const html   = document.documentElement;
