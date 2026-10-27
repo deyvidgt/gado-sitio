@@ -239,3 +239,102 @@ def registrar(pares: list[tuple[str, float]], data, responsavel: str = "", obs: 
         obs or f"{len(pares)} animal(is) · média {fmt_kg(round(sum(k for _, k in pares) / len(pares), 1))} kg",
         responsavel,
         brincos="; ".join(r for r, _ in pares), pesos=fmt_pesos(pares)))
+
+
+def gmd_por_periodo(hist: list, inicio: pd.Timestamp = None, fim: pd.Timestamp = None) -> list[dict]:
+    """Calcula GMD por período entre pesagens.
+
+    hist: [(data, peso_kg), ...] ordenada por data
+    inicio, fim: filtrar por intervalo de datas
+
+    Retorna: [{"data": ..., "peso_kg": ..., "gmd_g_dia": ..., "dias_desde_primeira": ...}, ...]
+    ou [] se apenas uma pesagem
+    """
+    if not hist or len(hist) < 2:
+        return []
+
+    # Filtrar por intervalo se especificado
+    if inicio or fim:
+        hist = [(d, k) for d, k in hist
+                if (not inicio or d >= inicio) and (not fim or d <= fim)]
+
+    if len(hist) < 2:
+        return []
+
+    pontos = []
+    primeira_data = hist[0][0]
+
+    for i, (data, kg) in enumerate(hist):
+        gmd_g_dia = None
+        if i > 0:
+            dias = (data - hist[i-1][0]).days
+            if dias > 0:
+                kg_ganho = kg - hist[i-1][1]
+                gmd_g_dia = round((kg_ganho / dias) * 1000, 0)
+
+        dias_desde_primeira = (data - primeira_data).days
+        pontos.append({
+            "data": data,
+            "data_br": data.strftime("%d/%m/%Y"),
+            "peso_kg": kg,
+            "gmd_g_dia": gmd_g_dia,
+            "dias_desde_primeira": dias_desde_primeira,
+        })
+
+    return pontos
+
+
+def tendencia_gmd(hist: list, ultimos_dias: int = None) -> dict | None:
+    """Analisa tendência de ganho de peso (aceleração ou desaceleração).
+
+    hist: [(data, peso_kg), ...] ordenada por data
+    ultimos_dias: se fornecido, analisa apenas os últimos N dias
+
+    Retorna: {"dias": ..., "n": ..., "media_g_dia": ..., "tendencia": "acelerando|desacelerando"}
+    """
+    if len(hist) < 2:
+        return None
+
+    # Filtrar pelos últimos N dias se especificado
+    if ultimos_dias:
+        data_limite = hist[-1][0] - pd.Timedelta(days=ultimos_dias)
+        hist_filtrado = [(d, k) for d, k in hist if d >= data_limite]
+        if len(hist_filtrado) < 2:
+            hist_filtrado = hist
+    else:
+        hist_filtrado = hist
+
+    if len(hist_filtrado) < 2:
+        return None
+
+    # Dias totais
+    dias_totais = (hist_filtrado[-1][0] - hist_filtrado[0][0]).days
+    if dias_totais == 0:
+        return None
+
+    # Ganho total em kg
+    kg_total = hist_filtrado[-1][1] - hist_filtrado[0][1]
+    media_g_dia = round((kg_total / dias_totais) * 1000, 0) if dias_totais > 0 else 0
+
+    # Dividir em duas metades para detectar aceleração/desaceleração
+    meio = len(hist_filtrado) // 2
+    primeira_metade = hist_filtrado[:meio+1]
+    segunda_metade = hist_filtrado[meio:]
+
+    # Calcular GMD de cada metade
+    gmd_p = _gmd(primeira_metade[0], primeira_metade[-1]) if len(primeira_metade) >= 2 else None
+    gmd_s = _gmd(segunda_metade[0], segunda_metade[-1]) if len(segunda_metade) >= 2 else None
+
+    tendencia = "estável"
+    if gmd_p is not None and gmd_s is not None:
+        if gmd_s > gmd_p:
+            tendencia = "acelerando"
+        elif gmd_s < gmd_p:
+            tendencia = "desacelerando"
+
+    return {
+        "dias": dias_totais,
+        "n": len(hist_filtrado),
+        "media_g_dia": media_g_dia,
+        "tendencia": tendencia,
+    }
