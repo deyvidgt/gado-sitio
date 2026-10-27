@@ -128,6 +128,8 @@ def ficha_animal_leite(animal_id):
     hoje = _agora().date()
     df_producao = carregar_aba("Leite Produção")
     historico = []
+    lactacao_atual = None  # Dados da lactação atual
+
     if not df_producao.empty:
         registros = df_producao[df_producao.get("Vaca ID", "").astype(str).str.strip() == str(animal_id).strip()]
         for _, registro in registros.iterrows():
@@ -136,6 +138,49 @@ def ficha_animal_leite(animal_id):
             if data is not None and litros is not None:
                 historico.append({"data": data, "litros": litros, "ordenha": registro.get("Ordenha", "")})
         historico.sort(key=lambda item: item["data"], reverse=True)
+
+        # Calcula lactação atual (após último parto)
+        parto = _data(linha.get("Último Parto", ""))
+        if parto and historico:
+            registros_lactacao = [h for h in historico if h["data"] >= parto]
+            if registros_lactacao:
+                dias_lactacao = dias_em_lactacao(parto, hoje) or 1
+                total_litros = sum(h["litros"] for h in registros_lactacao)
+                media_diaria = total_litros / dias_lactacao if dias_lactacao > 0 else 0
+
+                # Persistência = (média últimos 100 dias) / (média primeiros 100 dias) * 100
+                registros_ord = sorted(registros_lactacao, key=lambda x: x["data"])
+                primeiros_100 = [h["litros"] for h in registros_ord[:100]]
+                ultimos_100 = [h["litros"] for h in registros_ord[-100:]]
+                persistencia = 0
+                if primeiros_100 and ultimos_100:
+                    media_primeiros = sum(primeiros_100) / len(primeiros_100)
+                    media_ultimos = sum(ultimos_100) / len(ultimos_100)
+                    persistencia = (media_ultimos / media_primeiros * 100) if media_primeiros > 0 else 0
+
+                # Série diária para gráfico (últimos 90 dias)
+                hoje_dt = pd.Timestamp(hoje)
+                inicio_grafico = hoje_dt - pd.Timedelta(days=90)
+                serie_grafico = {}
+                for h in registros_lactacao:
+                    if h["data"] >= inicio_grafico.date():
+                        data_str = h["data"].isoformat()
+                        if data_str not in serie_grafico:
+                            serie_grafico[data_str] = 0
+                        serie_grafico[data_str] += h["litros"]
+
+                datas_grafico = sorted(serie_grafico.keys())
+                valores_grafico = [serie_grafico[d] for d in datas_grafico]
+
+                lactacao_atual = {
+                    "dias": dias_lactacao,
+                    "total_litros": total_litros,
+                    "media_diaria": media_diaria,
+                    "persistencia": persistencia,
+                    "datas_grafico": datas_grafico,
+                    "valores_grafico": valores_grafico,
+                }
+
     carencias = []
     df_tratamentos = carregar_aba("Leite Tratamentos")
     if not df_tratamentos.empty:
@@ -146,6 +191,7 @@ def ficha_animal_leite(animal_id):
             dias = _numero(tratamento.get("Período de Carência"))
             if inicio and dias and dias > 0 and inicio <= hoje < inicio + timedelta(days=int(dias)):
                 carencias.append({"descricao": tratamento.get("Descrição") or "Tratamento", "fim": inicio + timedelta(days=int(dias))})
+
     parto = linha.get("Último Parto", "")
     return render_template("leite_animal.html", animal={
         "id": animal_id,
@@ -153,7 +199,8 @@ def ficha_animal_leite(animal_id):
         "situacao": linha.get("Situação Leite", "não informado"),
         "parto": parto,
         "dias": dias_em_lactacao(parto, hoje),
-    }, historico=historico, total=sum(item["litros"] for item in historico), carencias=carencias)
+    }, historico=historico, total=sum(item["litros"] for item in historico), carencias=carencias,
+       lactacao_atual=lactacao_atual)
 
 
 @app.route("/leite/alimentacao", methods=["GET", "POST"])

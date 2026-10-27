@@ -1,12 +1,99 @@
 {% extends "base.html" %}
 {% block title %}Ficha leiteira — {{ animal.brinco }}{% endblock %}
 {% block content %}
-<div class="page-head"><div><span class="eyebrow">Acompanhamento individual</span><h2>{{ animal.brinco }}</h2><p class="hint">{{ animal.id }} · {{ animal.situacao }}</p></div><a class="btn btn-outline" href="{{ url_for('animais_leite') }}">Voltar às vacas</a></div>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.css">
+<div class="page-head"><div><span class="eyebrow">Acompanhamento individual</span><h2>{{ animal.brinco }}</h2><p class="hint">{{ animal.id }} · {{ animal.situacao }}</p></div><a class="btn btn-outline" href="{{ url_for('animais_leite') }}">← Voltar às vacas</a></div>
+
+<!-- Histórico de Lactação Atual (v5.9) -->
+{% if lactacao_atual %}
+<div class="card">
+  <h3>📊 Histórico de Lactação</h3>
+  <div class="metrics" style="grid-template-columns:repeat(auto-fit, minmax(140px, 1fr))">
+    <div class="metric">
+      <div class="metric-label">Dias em Lactação</div>
+      <div class="metric-val">{{ lactacao_atual.dias }}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Litros Acumulados</div>
+      <div class="metric-val">{{ lactacao_atual.total_litros|br_num(2) }}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Média da Lactação</div>
+      <div class="metric-val">{{ lactacao_atual.media_diaria|br_num(2) }}</div>
+      <div class="metric-sub">L/dia</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Persistência</div>
+      <div class="metric-val">{{ lactacao_atual.persistencia|br_num(2) }}%</div>
+    </div>
+  </div>
+
+  {% if lactacao_atual.datas_grafico %}
+  <div style="position:relative;height:300px;margin:20px 0">
+    <canvas id="chart-producao"></canvas>
+  </div>
+  {% endif %}
+
+  <p class="muted" style="margin-top:12px;font-size:12px">
+    <b>Persistência:</b> razão entre a produção média dos últimos 100 dias e dos primeiros 100 dias da lactação.
+    Valores acima de 80% indicam boa persistência.
+  </p>
+</div>
+{% endif %}
+
 <div class="metrics">
-  <div class="metric"><div class="metric-label">Produção acumulada</div><div class="metric-val">{{ total|br_num(1) }} L</div><div class="metric-sub">histórico registrado</div></div>
+  <div class="metric"><div class="metric-label">Produção acumulada</div><div class="metric-val">{{ total|br_num(1) }} L</div><div class="metric-sub">histórico total</div></div>
   <div class="metric"><div class="metric-label">Último parto</div><div class="metric-val">{{ animal.parto|data_br }}</div><div class="metric-sub">{{ animal.dias if animal.dias is not none else '—' }} dias em lactação</div></div>
   <div class="metric"><div class="metric-label">Tratamentos em carência</div><div class="metric-val">{{ carencias|length }}</div><div class="metric-sub">consulte antes de enviar o leite</div></div>
 </div>
+
 <div class="card"><h3>Histórico de produção</h3>{% for linha in historico %}<div class="linha"><strong>{{ linha.data|data_br }}</strong><span>{{ linha.litros|br_num(1) }} L{% if linha.ordenha %} · {{ linha.ordenha }}{% endif %}</span></div>{% else %}<p class="hint">Nenhum registro individual para esta vaca.</p>{% endfor %}</div>
+
 {% if carencias %}<div class="card"><h3>Tratamentos em carência</h3>{% for item in carencias %}<div class="linha aviso"><strong>{{ item.descricao }}</strong><span>até {{ item.fim|data_br }}</span></div>{% endfor %}</div>{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+{% if lactacao_atual and lactacao_atual.datas_grafico %}
+(function () {
+  const ctx = document.getElementById('chart-producao');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: {{ lactacao_atual.datas_grafico|tojson }},
+        datasets: [{
+          label: 'Produção Diária (L)',
+          data: {{ lactacao_atual.valores_grafico|tojson }},
+          borderColor: '#3498db',
+          backgroundColor: 'rgba(52, 152, 219, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3,
+          pointBackgroundColor: '#3498db',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, labels: { usePointStyle: true, padding: 15 } },
+          filler: { propagate: true }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { callback: v => v.toLocaleString('pt-BR') }
+          }
+        }
+      }
+    });
+  }
+})();
+{% endif %}
+</script>
 {% endblock %}
