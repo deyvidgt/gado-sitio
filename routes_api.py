@@ -160,6 +160,92 @@ def api_cotacao_scot():
         return jsonify({"ok": False, "erro": msg})
 
 
+def _historico_preco_arroba(dados, dias=30):
+    """Extrai histórico de preço/@ das vendas (últimos N dias)."""
+    from datetime import timedelta, date as date_type
+    hoje = date_type.today()
+    inicio = hoje - timedelta(days=dias)
+
+    df_v = dados.get("Vendas")
+    if df_v is None or df_v.empty:
+        return {}
+
+    precos = {}
+    for _, row in df_v.iterrows():
+        try:
+            data = pd.to_datetime(row.get("Data"), dayfirst=True, errors="coerce")
+            if pd.isna(data) or data.date() < inicio:
+                continue
+            preco_arr = float(str(row.get("Preço /@ (R$)", "") or 0).replace(",", "."))
+            if preco_arr > 0:
+                data_str = data.strftime("%Y-%m-%d")
+                if data_str not in precos or preco_arr > precos[data_str]:
+                    precos[data_str] = preco_arr
+        except Exception:
+            pass
+
+    return dict(sorted(precos.items()))
+
+
+@app.route("/api/cotacao-hoje")
+@login_required
+def api_cotacao_hoje():
+    """Retorna preço/@ atual + histórico 30 dias."""
+    try:
+        dados = _get_dados_cache()
+        historico = _historico_preco_arroba(dados, dias=30)
+
+        # Tenta Scot, se falhar tenta IMEA, se falhar usa média histórica
+        preco_atual = None
+        fonte = "Histórico"
+
+        try:
+            import requests, re
+            from bs4 import BeautifulSoup
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "pt-BR,pt;q=0.9",
+            }
+            r = requests.get("https://www.scotconsultoria.com.br/cotacoes/novilha/",
+                           headers=headers, timeout=5)
+            soup = BeautifulSoup(r.text, "html.parser")
+            for table in soup.find_all("table"):
+                for row_t in table.find_all("tr")[1:]:
+                    cols = row_t.find_all(["td", "th"])
+                    if not cols:
+                        continue
+                    regiao = cols[0].get_text(strip=True)
+                    if "triângulo" in regiao.lower() or "uberlândia" in regiao.lower():
+                        preco_str = " ".join(c.get_text(strip=True) for c in cols[1:3])
+                        nums = re.findall(r"\d{2,3}[.,]\d{2}", preco_str)
+                        if nums:
+                            preco_atual = float(nums[0].replace(",", "."))
+                            fonte = "Scot Consultoria"
+                            break
+                if preco_atual:
+                    break
+        except Exception:
+            pass
+
+        # Fallback: média dos últimos 7 dias
+        if not preco_atual and historico:
+            ultimos_7 = sorted(historico.items())[-7:]
+            preco_atual = sum(p for _, p in ultimos_7) / len(ultimos_7) if ultimos_7 else None
+
+        return jsonify({
+            "ok": True,
+            "preco_atual": preco_atual,
+            "fonte": fonte,
+            "atualizado": _agora().strftime("%d/%m/%Y %H:%M"),
+            "historico": historico,
+            "datas": list(historico.keys()),
+            "precos": list(historico.values()),
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "erro": str(e)}), 500
+
+
 _IMEA_URL = "https://www.imea.com.br/imea-site/indicador-boi"
 _IMEA_INDICADORES = [
     {"emoji": "🐮", "nome": "Novilha 18M 255kg 8,5@", "kg": 255, "arrobas": 8.5,

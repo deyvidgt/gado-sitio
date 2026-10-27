@@ -1277,3 +1277,114 @@ def calcular_evolucao_rebanho(df_comp: pd.DataFrame, df_gast: pd.DataFrame,
             "custo_cab": round((pool_c + pool_g) / units, 2) if units > 0 else 0.0,
         })
     return resultado
+
+
+def fluxo_caixa_mensal(df_comp, df_gast, df_vend, meses=None):
+    """Fluxo de caixa mensal: entrada (vendas) - saída (compras + gastos).
+    
+    Args:
+        df_comp, df_gast, df_vend: abas de dados
+        meses: número de meses para trás (padrão: 12)
+    
+    Returns:
+        [{label, entrada, saida, saldo, saldo_acum}, ...]
+    """
+    import pandas as pd
+    from datetime import date
+    
+    meses = meses or 12
+    hoje = date.today()
+    inicio = pd.Timestamp(year=hoje.year - (1 if meses > 12 else 0), 
+                         month=hoje.month - (meses % 12) or 12, day=1)
+    
+    def _valor_por_mes(df, coluna_valor="Valor Total (R$)"):
+        """Agrupa valores mensais."""
+        if df is None or df.empty or "Data" not in df.columns:
+            return {}
+        m = df["Data"].notna()
+        sub = df.loc[m].copy()
+        sub["Valor"] = pd.to_numeric(sub[coluna_valor], errors="coerce").fillna(0)
+        return sub.groupby(sub["Data"].dt.to_period("M"))["Valor"].sum().to_dict()
+    
+    entrada_vend = _valor_por_mes(df_vend)
+    saida_comp = _valor_por_mes(df_comp)
+    saida_gast = _valor_por_mes(df_gast)
+    
+    # Meses de interesse
+    meses_periodo = pd.period_range(start=inicio, periods=meses, freq='M')
+    
+    resultado = []
+    saldo_acum = 0
+    for mes in meses_periodo:
+        entrada = entrada_vend.get(mes, 0)
+        saida = saida_comp.get(mes, 0) + saida_gast.get(mes, 0)
+        saldo = entrada - saida
+        saldo_acum += saldo
+        
+        resultado.append({
+            "label": mes.strftime("%m/%Y"),
+            "entrada": round(entrada, 2),
+            "saida": round(saida, 2),
+            "saldo": round(saldo, 2),
+            "saldo_acum": round(saldo_acum, 2),
+        })
+    
+    return resultado
+
+
+def comparativo_anual(df_comp, df_gast, df_vend, df_man, df_anim=None):
+    """Compara ano anterior vs ano atual.
+    
+    Returns:
+        {
+            "ano_anterior": {estoque, compras, gastos, vendas, resultado, ...},
+            "ano_atual": {...},
+            "variacao": {estoque_pct, compras_pct, ...}
+        }
+    """
+    import pandas as pd
+    from datetime import date, timedelta
+    
+    hoje = date.today()
+    ano_atual_inicio = pd.Timestamp(year=hoje.year, month=1, day=1)
+    ano_anterior_inicio = pd.Timestamp(year=hoje.year - 1, month=1, day=1)
+    ano_anterior_fim = pd.Timestamp(year=hoje.year - 1, month=12, day=31)
+    
+    def _calcular_ano(ano_inicio, ano_fim):
+        """Calcula métricas para um período."""
+        comp = df_comp[(df_comp["Data"] >= ano_inicio) & (df_comp["Data"] <= ano_fim)] if df_comp is not None else pd.DataFrame()
+        gast = df_gast[(df_gast["Data"] >= ano_inicio) & (df_gast["Data"] <= ano_fim)] if df_gast is not None else pd.DataFrame()
+        vend = df_vend[(df_vend["Data"] >= ano_inicio) & (df_vend["Data"] <= ano_fim)] if df_vend is not None else pd.DataFrame()
+        
+        total_comp = pd.to_numeric(comp.get("Valor Total (R$)", []), errors="coerce").fillna(0).sum() if not comp.empty else 0
+        total_gast = pd.to_numeric(gast.get("Valor Total (R$)", []), errors="coerce").fillna(0).sum() if not gast.empty else 0
+        total_vend = pd.to_numeric(vend.get("Valor Total (R$)", []), errors="coerce").fillna(0).sum() if not vend.empty else 0
+        qtd_comp = pd.to_numeric(comp.get("Qtd Cabeças", []), errors="coerce").fillna(0).sum() if not comp.empty else 0
+        qtd_vend = pd.to_numeric(vend.get("Qtd Cabeças", []), errors="coerce").fillna(0).sum() if not vend.empty else 0
+        
+        return {
+            "total_compras": round(total_comp, 2),
+            "total_gastos": round(total_gast, 2),
+            "total_vendas": round(total_vend, 2),
+            "qtd_compras": int(qtd_comp),
+            "qtd_vendas": int(qtd_vend),
+            "resultado": round(total_vend - total_comp - total_gast, 2),
+        }
+    
+    ano_ant = _calcular_ano(ano_anterior_inicio, ano_anterior_fim)
+    ano_atu = _calcular_ano(ano_atual_inicio, pd.Timestamp(hoje))
+    
+    # Calcula variação percentual
+    def _pct(ant, atu):
+        return round(((atu - ant) / abs(ant) * 100) if ant != 0 else 0, 1)
+    
+    return {
+        "ano_anterior": {**ano_ant, "label": str(hoje.year - 1)},
+        "ano_atual": {**ano_atu, "label": str(hoje.year)},
+        "variacao": {
+            "compras_pct": _pct(ano_ant["total_compras"], ano_atu["total_compras"]),
+            "gastos_pct": _pct(ano_ant["total_gastos"], ano_atu["total_gastos"]),
+            "vendas_pct": _pct(ano_ant["total_vendas"], ano_atu["total_vendas"]),
+            "resultado_pct": _pct(ano_ant["resultado"], ano_atu["resultado"]),
+        }
+    }
