@@ -4,6 +4,19 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ## [Não lançado]
 
+## [5.6.0] — 2026-10-27
+
+### Adicionado (Dashboard, Calendário e Ferramentas — v5.6)
+- **Dashboard com cards clicáveis:** cada cartão (Leite, Corte, Insumos, etc) no painel principal agora é clicável e leva ao detalhe. Alertas aparecem no card (ex: "3 urgentes") e navegam para a página específica.
+- **Calendário visual de eventos:** nova página **🗓️ Calendário** mostra mês inteiro com eventos (partos próximos, vacinação, colchão urgente, tarefas). Cores: 🔴 urgente (≤3 dias), 🟡 aviso (≤7 dias), 🟢 normal. Clique no dia para detalhes.
+- **Gráficos de crescimento (GMD):** página **📈 Crescimento** mostra peso do animal vs tempo com tendência de ganho (g/dia). Status visual: ✅ acelerando, 🟡 normal, 🔴 desacelerando. Útil para diagnosticar problemas de nutrição/saúde.
+- **Notificações push (PWA):** notificações desktop/mobile quando há urgentes (CCS > 400k, colchão < 7 dias, etc). Clique na notificação abre a ficha/página relacionada. Ativa com permissão do navegador.
+- **Ficha condensada (mobile-first):** versão simplificada de `/animais/A0001` para celular. Essencial no topo (peso, lactação, status), abas com Últimas Ações, Histórico e Fotos. Botões de ação (Pesar, Vender) em bottom bar.
+- **Comparativo de vacas:** página POST **📊 Leite → Comparativo** seleciona até 3 vacas e mostra lado-a-lado: produção, custo, receita, margem, status CCS/CPP. Identifica vacas deficitárias rapidamente.
+- **Busca rápida (global):** campo no header busca em tempo real por: animais (brinco/ID), tarefas, registros. Autocomplete com debounce. Atalho: Enter vai para primeiro resultado. `/api/busca?q=termo`.
+- **Previsão do tempo integrada:** card no painel mostra ☀️/🌧️/⛈️ com temperatura e alertas. Página **/tempo** com gráfico 7 dias (temperatura + precipitação) e recomendações por tipo (Leite: mastite em chuva, Corte: calor extremo, etc). Integrado com `saude.py`.
+- **Volumosos (v5.5):** módulo para feno, silo e alimentos volumosos. Entrada com qualidade (Ótima/Boa/Regular/Ruim), consumo diário, alertas quando falta ≤7 dias. Tipos configuráveis por sítio (não fixo). Usa em corte e leite.
+
 ### Corrigido
 - **Lançamento de litros:** o formulário aceitava "12,5" mas o site gravava 12 (interpretava "12,5" como número inteiro). Agora `parse_valor("12,5")` retorna 12.5 e fica redondo na planilha.
 - **Edição e exclusão de ordenhas:** a leitura e a reescrita não compartilhavam a trava de arquivo, então um novo lançamento entre o GET e o POST sumia. Agora `db.alterar_aba()` segura a trava do começo até o `os.replace()`, garantindo que a gravação é atômica.
