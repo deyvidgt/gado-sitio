@@ -4,6 +4,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (v5.7 Sprint 4: Component Library — Phase 4)
+- **Componentes de interface reutilizáveis:** biblioteca completa de 4 componentes Web (Modal, Toast, Accordion, Form Validator) com 100% ARIA accessibility, temas escuro/claro, e suporte a redução de movimento.
+  - **Modal (Phase 1):** diálogos com foco aprisionado, suporte a ESC/clique fora, e métodos estáticos para confirm/alert.
+  - **Toast (Phase 2):** notificações com fila automática, 4 tipos (success/error/warning/info), 300ms slide-in animation.
+  - **Accordion (Phase 3):** seções expansíveis com animação smooth max-height, navegação por teclado (setas/Home/End), single ou multi-open.
+  - **Form Validator (Phase 3):** validação em tempo real com 9 regras (required, email, url, phone, minLength, maxLength, pattern, custom, min/max), submit desabilitado até formulário válido, mensagens de erro com ícones.
+- **Integração completa:** todas as 4 components linkadas em `base.html` na ordem certa (CSS antes de JS, Modal → Toast → Accordion → Form Validator), auto-init via `data-*` atributos.
+- **Testes abrangentes:** 137 testes de componentes (Modal 40, Toast 36, Accordion 43, Form Validator 59) + 32 testes de integração = 169 total.
+
 ## [5.6.0] — 2026-10-27
 
 ### Adicionado (Dashboard, Calendário e Ferramentas — v5.6)
