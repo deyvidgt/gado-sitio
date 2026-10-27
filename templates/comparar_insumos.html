@@ -45,22 +45,64 @@
 </div>
 
 {% if resultado %}
-<div class="card" style="margin-top:16px">
-  <h3>Resultado</h3>
-  <table class="cmp-tab">
-    <tr><th>Marca</th><th>R$/kg</th><th>Por cabeça/dia</th><th>Mês ({{ cabecas }} cab.)</th><th>A mais no mês</th></tr>
+<div class="card" style="margin-top:var(--spacing-2xl)">
+  <h3>📊 Resultado da Comparação</h3>
+
+  <!-- Cards v5.7: Uma por insumo -->
+  <div style="display:grid; gap:var(--spacing-lg); margin-top:var(--spacing-lg)">
     {% for o in resultado %}
-    <tr {% if o.melhor %}class="cmp-melhor"{% endif %}>
-      <td>{% if o.melhor %}✅ {% endif %}{{ o.nome }}</td>
-      <td>{{ o.custo_kg|brl }}</td>
-      <td>{% if o.custo_cab_dia %}{{ o.custo_cab_dia|brl }}{% else %}—{% endif %}</td>
-      <td>{% if o.custo_mes %}{{ o.custo_mes|brl }}{% else %}—{% endif %}</td>
-      <td>{% if o.diferenca_mes %}+{{ o.diferenca_mes|brl }}{% elif o.melhor %}—{% else %}—{% endif %}</td>
-    </tr>
+    <div class="card-status" style="border-left:4px solid {% if o.melhor %}var(--color-success-main){% else %}var(--color-border){% endif %}">
+      <!-- Header: Nome + Badge Melhor -->
+      <div class="card-status-header">
+        <span class="card-status-title">
+          {% if o.melhor %}✅ {% endif %}{{ o.nome }}
+        </span>
+        {% if o.melhor %}
+        <span class="badge badge-success">Melhor opção</span>
+        {% endif %}
+      </div>
+
+      <!-- Tri-coluna: R$/kg, R$/cab/dia, Custo/mês -->
+      <div class="tri-grid">
+        <div class="tri-item">
+          <div class="tri-number">{{ o.custo_kg|brl }}</div>
+          <div class="tri-label">R$/kg</div>
+        </div>
+        <div class="tri-item">
+          <div class="tri-number">
+            {% if o.custo_cab_dia %}{{ o.custo_cab_dia|brl }}{% else %}—{% endif %}
+          </div>
+          <div class="tri-label">R$/cab/dia</div>
+        </div>
+        <div class="tri-item">
+          <div class="tri-number">
+            {% if o.custo_mes %}{{ o.custo_mes|brl }}{% else %}—{% endif %}
+          </div>
+          <div class="tri-label">Mês ({{ cabecas }} cab)</div>
+        </div>
+      </div>
+
+      <!-- Diferença no mês (se não for melhor) -->
+      {% if not o.melhor and o.diferenca_mes %}
+      <div style="margin-top:var(--spacing-md); padding:var(--spacing-md); background:var(--color-warning-bg); border-radius:var(--radius-md)">
+        <div style="font-size:var(--text-label-size); color:var(--color-text-tertiary)">Custo adicional no mês</div>
+        <div style="font-size:var(--text-h3-size); font-weight:700; color:var(--color-warning-main)">+{{ o.diferenca_mes|brl }}</div>
+      </div>
+      {% elif o.melhor %}
+      <div style="margin-top:var(--spacing-md); padding:var(--spacing-md); background:var(--color-success-bg); border-radius:var(--radius-md)">
+        <div style="font-size:var(--text-label-size); color:var(--color-text-tertiary)">Economia potencial</div>
+        <div style="font-size:var(--text-h3-size); font-weight:700; color:var(--color-success-main)">Menor custo</div>
+      </div>
+      {% endif %}
+    </div>
     {% endfor %}
-  </table>
-  <p class="cmp-muted" style="margin-top:8px">Mês = 30 dias com o rebanho todo comendo.
-    Se só um lote come o produto, troque o número de cabeças.</p>
+  </div>
+
+  <p class="cmp-muted" style="margin-top:var(--spacing-2xl)">
+    <strong>Como interpretar:</strong> Mês = 30 dias com o rebanho todo comendo.
+    Se só um lote come o produto, troque o número de cabeças no filtro acima.
+    A métrica mais importante é <strong>R$/cab/dia</strong> — é o que sai do bolso de verdade.
+  </p>
 </div>
 {% endif %}
 {% endblock %}
