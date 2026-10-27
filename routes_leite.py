@@ -291,13 +291,14 @@ def _definicoes_operacao():
             {"nome": "custo", "label": "Custo (R$)", "required": False},
             {"nome": "fornecedor", "label": "Fornecedor", "required": False},
             {"nome": "condicao", "label": "Condição", "required": True},
+            {"nome": "estado", "label": "Estado", "required": False, "opcoes": ["Bom", "Regular", "Ruim"]},
             {"nome": "proxima_troca", "label": "Próxima troca", "required": False},
             {"nome": "observacao", "label": "Observação", "required": False},
             {"nome": "foto_antes", "label": "Foto antes", "required": False},
             {"nome": "foto_depois", "label": "Foto depois", "required": False},
             {"nome": "responsavel", "label": "Responsável", "required": False},
             {"nome": "id_envio", "label": "", "required": False},
-        ], ["local", "material", "quantidade", "unidade", "custo", "fornecedor", "condicao", "proxima_troca", "observacao", "foto_antes", "foto_depois", "responsavel", "id_envio", "criado_em"]),
+        ], ["local", "material", "quantidade", "unidade", "custo", "fornecedor", "condicao", "estado", "proxima_troca", "observacao", "foto_antes", "foto_depois", "responsavel", "id_envio", "criado_em"]),
     }
 
 

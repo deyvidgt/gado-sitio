@@ -145,14 +145,16 @@ def test_mover_grava_no_manejo(dados_restaurados):
 # ── Lotação e composição do rebanho ───────────────────────────────────────────
 
 @pytest.mark.parametrize("ua_ha, capacidade, esperado", [
-    (1.0, 1.5, "ok"),          # 67%
-    (1.04, 1.5, "ok"),         # 69% — última do verde
-    (1.05, 1.5, "atencao"),    # 70% — começa o amarelo
-    (1.5, 1.5, "atencao"),     # 100% — no limite ainda é amarelo
-    (1.6, 1.5, "excesso"),     # acima da capacidade
-    (0.0, 1.5, "ok"),          # pasto vazio
-    (None, 1.5, None),         # pasto sem área desenhada
-    (1.0, 0, None),            # capacidade não configurada
+    (1.0, 1.5, "ideal"),        # 67% — verde
+    (1.04, 1.5, "ideal"),       # 69% — última do ideal
+    (1.05, 1.5, "atencao"),     # 70% — começa o amarelo
+    (1.5, 1.5, "atencao"),      # 100% — no limite ainda é amarelo
+    (1.6, 1.5, "lotado"),       # 107% — acima da capacidade
+    (0.0, 1.5, "baixa"),        # pasto vazio (< 50%)
+    (0.6, 1.5, "baixa"),        # 40% — laranja
+    (0.75, 1.5, "ideal"),       # 50% — transição para verde
+    (None, 1.5, None),          # pasto sem área desenhada
+    (1.0, 0, None),             # capacidade não configurada
     (1.0, None, None),
 ])
 def test_nivel_de_lotacao(ua_ha, capacidade, esperado):

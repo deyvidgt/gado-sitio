@@ -70,6 +70,17 @@ def _colchao_alertas(colchao, referencia):
     if colchao is not None and not colchao.empty:
         for _, linha in colchao.iterrows():
             local = str(linha.get("Local") or "").strip()
+            estado = str(linha.get("Estado") or "").strip().lower()
+
+            # Alerta urgente: Estado = Ruim
+            if estado == "ruim":
+                itens.append(_item(
+                    "colchão", "🛏️ Colchão em estado ruim",
+                    f"Colchão da {local} em estado ruim — substitua com urgência.",
+                    "urgente", "Ir para colchão", "/leite/colchao"
+                ))
+
+            # Revisão: última troca > 180 dias sem próxima troca registrada
             if not local or local in historicos:
                 continue
             data_troca = _data(linha.get("Data"))

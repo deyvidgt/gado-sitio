@@ -285,7 +285,7 @@ COLUNAS_LEITE_CONFORTO = [
 ]
 COLUNAS_LEITE_COLCHAO = [
     "Data", "Local", "Material", "Quantidade", "Unidade", "Custo (R$)",
-    "Fornecedor", "Condição", "Próxima Troca", "Observação", "Foto Antes",
+    "Fornecedor", "Condição", "Estado", "Próxima Troca", "Observação", "Foto Antes",
     "Foto Depois", "Responsável", "ID Envio", "Criado Em",
 ]
 
@@ -325,9 +325,10 @@ OPCOES_VISITA = {
     "conteiner":  ["Cheio", "Meio", "Baixo", "Vazio"],
 }
 
-# v5.9 — Opções do módulo leiteiro (conforto, etc)
+# v5.9 — Opções do módulo leiteiro (conforto, colchão, etc)
 OPCOES_LEITE = {
     "estado_cocho": ["Vazio", "Normal", "Cheio"],
+    "estado_colchao": ["Bom", "Regular", "Ruim"],
 }
 
 # v5.4 — Módulo leiteiro (gestão de leite, ordenha, calculador de ração)
@@ -362,7 +363,7 @@ COLUNAS_LEITE_CONFORTO = [
 ]
 COLUNAS_LEITE_COLCHAO = [
     "Data", "Local", "Material", "Quantidade", "Unidade", "Custo (R$)",
-    "Fornecedor", "Condição", "Próxima Troca", "Observação", "Foto Antes",
+    "Fornecedor", "Condição", "Estado", "Próxima Troca", "Observação", "Foto Antes",
     "Foto Depois", "Responsável", "ID Envio", "Criado Em",
 ]
 

@@ -14,7 +14,7 @@ from calculos import (
     calcular_indicadores_extras, estimar_rebanho_arroba, preco_arroba_config,
 )
 from config import MEMBROS, NOMES_MEMBROS, EMOJIS_MEMBROS, ALERTAS_SAUDE
-import tempo
+import tempo as tempo_mod
 from extensions import (
     app, _agora, login_required,
     _get_dados_cache, _get_resumo_cache, _get_membros_cache,
@@ -258,7 +258,7 @@ def dashboard():
     entrada_saida = _entrada_saida_timeline(dados, dias=90)
 
     # Previsão do tempo (v5.9)
-    tempo_previsao = tempo.previsao()
+    tempo_previsao = tempo_mod.previsao()
 
     return render_template("dashboard.html", r=r, membros=membros_r, insumos=insumos,
                            estoque_membro=estoque_membro, recentes=recentes[:6],

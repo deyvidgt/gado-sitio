@@ -332,14 +332,26 @@ def situacao(df_pastos, df_animais, df_man, estoque: int, peso_medio: float, hoj
 
 
 def nivel(ua_ha: float | None, capacidade: float | None) -> str | None:
-    """Semáforo da lotação: ok (<70%), atencao (70–100%), excesso (>100%).
+    """Semáforo da lotação (v5.9): 4 níveis com cores.
+
+    - baixa: < 50% (laranja) — pasto subutilizado
+    - ideal: 50–70% (verde) — aproveitamento ótimo
+    - atencao: 70–100% (amarelo) — no limite
+    - lotado: > 100% (vermelho) — sobrecarga
 
     None quando não há como comparar — pasto sem contorno (ua_ha None) ou
     capacidade não configurada. Sem referência não se pinta nada."""
     if ua_ha is None or not capacidade or capacidade <= 0:
         return None
     pct = ua_ha / capacidade
-    return "ok" if pct < 0.7 else ("atencao" if pct <= 1.0 else "excesso")
+    if pct < 0.5:
+        return "baixa"
+    elif pct < 0.7:
+        return "ideal"
+    elif pct <= 1.0:
+        return "atencao"
+    else:
+        return "lotado"
 
 
 def total_lotacao(df_pastos, sit: dict, capacidade: float | None = None) -> dict:

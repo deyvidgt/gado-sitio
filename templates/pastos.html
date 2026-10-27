@@ -16,7 +16,11 @@
   .muted { color:var(--text-3); font-size:12px; }
   #novo-pasto { display:none; }
   .nv { font-weight:700; }
-  .nv-ok { color:#2e7d32; } .nv-atencao { color:#ef6c00; } .nv-excesso { color:#c62828; }
+  .nv-baixa { color:#e67e22; } .nv-ideal { color:#27ae60; } .nv-atencao { color:#f39c12; } .nv-lotado { color:#c0392b; }
+  /* Legenda de lotação */
+  .legenda-lotacao { display:flex; gap:16px; flex-wrap:wrap; padding:12px; background:var(--bg-2); border-radius:8px; margin-bottom:12px; }
+  .legenda-item { display:flex; align-items:center; gap:8px; font-size:13px; }
+  .legenda-item .bol { width:16px; height:16px; }
   .comp li { list-style:none; margin:3px 0; font-size:13.5px; }
   .comp .barra { display:inline-block; height:9px; border-radius:5px; background:var(--accent, #4363d8); vertical-align:1px; margin-right:5px; }
 </style>
@@ -50,12 +54,33 @@
   </form>
 
   <div id="mapa" aria-label="Mapa de satélite dos pastos"></div>
+
+  <!-- Legenda de Lotação (v5.9) -->
+  {% if capacidade %}
+  <div class="legenda-lotacao">
+    <div class="legenda-item">
+      <span class="bol" style="background:#e67e22"></span>
+      <span><b>Baixa</b><br><small>&lt; 50%</small></span>
+    </div>
+    <div class="legenda-item">
+      <span class="bol" style="background:#27ae60"></span>
+      <span><b>Ideal</b><br><small>50–70%</small></span>
+    </div>
+    <div class="legenda-item">
+      <span class="bol" style="background:#f39c12"></span>
+      <span><b>Atenção</b><br><small>70–100%</small></span>
+    </div>
+    <div class="legenda-item">
+      <span class="bol" style="background:#c0392b"></span>
+      <span><b>Lotado</b><br><small>&gt; 100%</small></span>
+    </div>
+  </div>
+  {% endif %}
+
   <p class="muted" style="margin-top:6px">Mapa de satélite precisa de internet.
     {% if sem_pasto.cab %}<b>{{ sem_pasto.cab }}</b> cabeça(s) ainda sem pasto.{% endif %}<br>
-    Lotação:
-    {% if capacidade %}verde até {{ '%.1f'|format(capacidade * 0.7)|replace('.', ',') }} UA/ha,
-      amarelo até {{ '%.1f'|format(capacidade)|replace('.', ',') }}, vermelho acima disso.
-    {% else %}configure a capacidade (UA/ha) em
+    {% if capacidade %}Capacidade configurada: <b>{{ '%.1f'|format(capacidade)|replace('.', ',') }} UA/ha</b>
+    {% else %}Configure a capacidade (UA/ha) em
       <a href="{{ url_for('configuracoes') }}">Configurações → Rebanho</a> para ver o semáforo.{% endif %}</p>
 
   <form method="post" action="{{ url_for('novo_pasto') }}" id="novo-pasto" style="margin-top:10px">
@@ -92,7 +117,7 @@
 <div class="card" style="margin-top:16px">
   <h3>Pastos</h3>
   {% for p in pastos %}
-  {% set nivel_badge = {'ok': 'success', 'atencao': 'warning', 'excesso': 'danger'}.get(p.nivel, '') %}
+  {% set nivel_badge = {'baixa': 'info', 'ideal': 'success', 'atencao': 'warning', 'lotado': 'danger'}.get(p.nivel, '') %}
   {% set pct = (p.ua_ha / capacidade * 100) if (capacidade and p.ua_ha and p.cab) else 0 %}
 
   <div class="card-status">
@@ -106,7 +131,7 @@
       </div>
       {% if p.nivel and p.cab %}
       <span class="badge badge-{{ nivel_badge }}">
-        {{ {'ok': 'Folgado', 'atencao': 'No limite', 'excesso': 'Lotado'}[p.nivel] }}</span>
+        {{ {'baixa': 'Subutilizado', 'ideal': 'Ideal', 'atencao': 'No limite', 'lotado': 'Lotado'}[p.nivel] }}</span>
       {% endif %}
     </div>
 
@@ -208,8 +233,8 @@
   const grupo = L.featureGroup().addTo(mapa);
   const camadas = {};
   pastos.forEach(p => {
-    // Contorno na cor do pasto; o preenchimento mostra a lotação (verde/amarelo/vermelho).
-    const tinta = { ok: "#52a044", atencao: "#e67e22", excesso: "#c0392b" }[p.nivel] || p.cor;
+    // Contorno na cor do pasto; o preenchimento mostra a lotação (laranja/verde/amarelo/vermelho).
+    const tinta = { baixa: "#e67e22", ideal: "#27ae60", atencao: "#f39c12", lotado: "#c0392b" }[p.nivel] || p.cor;
     const camada = L.geoJSON(p.geo, { style: { color: p.cor, weight: 2, fillColor: tinta, fillOpacity: .35 } });
     let txt = `<b>${p.nome}</b><br>${br(p.area, 1)} ha · ${p.cab} cab`;
     if (p.cab && p.ua_ha != null) txt += `<br>${br(p.ua_ha, 2)} UA/ha${p.estimado ? "~" : ""}`;
@@ -228,7 +253,7 @@
     c.setStyle({ weight: 4, fillOpacity: .6 });
     setTimeout(() => {
       const p = pastos.find(x => x.id === id);
-      const tinta = { ok: "#52a044", atencao: "#e67e22", excesso: "#c0392b" }[p ? p.nivel : ""] || (p ? p.cor : "#4363d8");
+      const tinta = { baixa: "#e67e22", ideal: "#27ae60", atencao: "#f39c12", lotado: "#c0392b" }[p ? p.nivel : ""] || (p ? p.cor : "#4363d8");
       c.setStyle({ weight: 2, fillOpacity: .35, color: p ? p.cor : "#4363d8", fillColor: tinta });
     }, 1500);
   }
