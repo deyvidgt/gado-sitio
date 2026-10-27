@@ -222,3 +222,35 @@ def tempo():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# v5.7 Sprint 3: Bottom Navigation API Endpoints
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/tarefas/pendentes-count')
+@login_required
+def api_tarefas_pendentes_count():
+    """Retorna número de tarefas pendentes para badge na nav"""
+    try:
+        import tarefas
+        pend = tarefas.pendentes()
+        count = len(pend.get('atrasadas', []))
+        return jsonify({'count': count})
+    except Exception as e:
+        app.logger.debug(f'Error in api_tarefas_pendentes_count: {e}')
+        return jsonify({'count': 0}), 200
+
+
+@app.route('/api/alertas/count')
+@login_required
+def api_alertas_count():
+    """Retorna número de alertas urgentes para badge na nav"""
+    try:
+        import alertas as A
+        alts = A.todos()
+        urgentes = [a for a in alts if a.get('urgencia') == 'urgente']
+        return jsonify({'count': len(urgentes)})
+    except Exception as e:
+        app.logger.debug(f'Error in api_alertas_count: {e}')
+        return jsonify({'count': 0}), 200
+
+
+# ══════════════════════════════════════════════════════════════════════════════

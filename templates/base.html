@@ -678,5 +678,37 @@ function dispensarInstall() {
 <!-- v5.7: Mobile Gestures -->
 <script src="/static/js/gestures.js"></script>
 
+<!-- v5.7 Sprint 3: Bottom Navigation -->
+<nav class="bottom-nav" id="bottom-nav">
+  <a href="{{ url_for('painel') }}" class="nav-item {% if request.endpoint == 'painel' %}active{% endif %}" data-route="painel" title="Painel">
+    <span class="icon">🏠</span>
+    <span class="label">Painel</span>
+  </a>
+
+  <a href="{{ url_for('tarefas') }}" class="nav-item {% if request.endpoint == 'tarefas' %}active{% endif %}" data-route="tarefas" title="Agenda">
+    <span class="icon">🗓️</span>
+    <span class="label">Agenda</span>
+    <span class="nav-badge" id="badge-tarefas" style="display:none;">0</span>
+  </a>
+
+  <a href="{{ url_for('relatorios') }}" class="nav-item {% if request.endpoint == 'relatorios' %}active{% endif %}" data-route="relatorios" title="Relatórios">
+    <span class="icon">📊</span>
+    <span class="label">Relatórios</span>
+  </a>
+
+  <a href="{{ url_for('central_alertas') }}" class="nav-item {% if request.endpoint == 'central_alertas' %}active{% endif %}" data-route="central_alertas" title="Alertas">
+    <span class="icon">🔔</span>
+    <span class="label">Alertas</span>
+    <span class="nav-badge" id="badge-alertas" style="display:none;">0</span>
+  </a>
+
+  <a href="{{ url_for('configuracoes') }}" class="nav-item {% if request.endpoint == 'configuracoes' %}active{% endif %}" data-route="configuracoes" title="Perfil">
+    <span class="icon">👤</span>
+    <span class="label">Perfil</span>
+  </a>
+</nav>
+
+<script src="/static/js/bottom-nav.js"></script>
+
 </body>
 </html>
