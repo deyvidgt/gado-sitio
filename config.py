@@ -281,7 +281,7 @@ COLUNAS_LEITE_TRATAMENTOS = [
 COLUNAS_LEITE_CONFORTO = [
     "Data", "Local", "Sombra", "Água Disponível", "Ventilação",
     "Área de Descanso", "Lotação", "Estresse Térmico", "Descanso Observado",
-    "Observação", "Responsável", "ID Envio", "Criado Em",
+    "Estado do Cocho", "Observação", "Responsável", "ID Envio", "Criado Em",
 ]
 COLUNAS_LEITE_COLCHAO = [
     "Data", "Local", "Material", "Quantidade", "Unidade", "Custo (R$)",
@@ -325,6 +325,11 @@ OPCOES_VISITA = {
     "conteiner":  ["Cheio", "Meio", "Baixo", "Vazio"],
 }
 
+# v5.9 — Opções do módulo leiteiro (conforto, etc)
+OPCOES_LEITE = {
+    "estado_cocho": ["Vazio", "Normal", "Cheio"],
+}
+
 # v5.4 — Módulo leiteiro (gestão de leite, ordenha, calculador de ração)
 COLUNAS_LEITE_PRODUCAO = [
     "Data", "Vaca ID", "Brinco", "Modo Registro", "Ordenha", "Litros",
@@ -353,7 +358,7 @@ COLUNAS_LEITE_TRATAMENTOS = [
 COLUNAS_LEITE_CONFORTO = [
     "Data", "Local", "Sombra", "Água Disponível", "Ventilação",
     "Área de Descanso", "Lotação", "Estresse Térmico", "Descanso Observado",
-    "Observação", "Responsável", "ID Envio", "Criado Em",
+    "Estado do Cocho", "Observação", "Responsável", "ID Envio", "Criado Em",
 ]
 COLUNAS_LEITE_COLCHAO = [
     "Data", "Local", "Material", "Quantidade", "Unidade", "Custo (R$)",

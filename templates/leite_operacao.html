@@ -5,7 +5,20 @@
 <form method="post" class="card form-grid">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <label>Data<input type="date" name="data" value="{{ hoje }}" required></label>
-  {% for campo in campos %}<label>{{ campo.label }}<input name="{{ campo.nome }}" {% if campo.required %}required{% endif %}></label>{% endfor %}
+  {% for campo in campos %}
+    {% if campo.get('opcoes') %}
+      <label>{{ campo.label }}
+        <select name="{{ campo.nome }}" {% if campo.required %}required{% endif %}>
+          <option value="">— Selecione —</option>
+          {% for opcao in campo.opcoes %}
+          <option value="{{ opcao }}">{{ opcao }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    {% else %}
+      <label>{{ campo.label }}<input name="{{ campo.nome }}" {% if campo.required %}required{% endif %}></label>
+    {% endif %}
+  {% endfor %}
   <button class="btn btn-primary" type="submit">Salvar registro</button>
 </form>
 <div class="card"><p>Registros operacionais não alteram automaticamente o resultado financeiro do gado de corte.</p></div>

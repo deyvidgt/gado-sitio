@@ -14,6 +14,7 @@ from calculos import (
     calcular_indicadores_extras, estimar_rebanho_arroba, preco_arroba_config,
 )
 from config import MEMBROS, NOMES_MEMBROS, EMOJIS_MEMBROS, ALERTAS_SAUDE
+import tempo
 from extensions import (
     app, _agora, login_required,
     _get_dados_cache, _get_resumo_cache, _get_membros_cache,
@@ -256,13 +257,16 @@ def dashboard():
     # Gráfico temporal de entrada/saída (v5.8)
     entrada_saida = _entrada_saida_timeline(dados, dias=90)
 
+    # Previsão do tempo (v5.9)
+    tempo_previsao = tempo.previsao()
+
     return render_template("dashboard.html", r=r, membros=membros_r, insumos=insumos,
                            estoque_membro=estoque_membro, recentes=recentes[:6],
                            alertas=alertas, indicadores=indicadores, rebanho_est=rebanho_est,
                            estado_sitio=estado_sitio, acoes_rapidas=acoes_rapidas,
                            atencao_agora=atencao_agora, ocorrencias=recentes[:6],
                            resumo_leite=resumo_leite, tendencia_peso=[], cards=cards,
-                           entrada_saida=entrada_saida, **extras,
+                           entrada_saida=entrada_saida, tempo=tempo_previsao, **extras,
                            NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS, MEMBROS=MEMBROS)
 
 

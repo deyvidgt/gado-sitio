@@ -278,10 +278,11 @@ def _definicoes_operacao():
             {"nome": "lotacao", "label": "Lotação", "required": False},
             {"nome": "estresse", "label": "Estresse térmico", "required": False},
             {"nome": "descanso", "label": "Descanso observado", "required": False},
+            {"nome": "estado_cocho", "label": "Estado do cocho", "required": False, "opcoes": ["Vazio", "Normal", "Cheio"]},
             {"nome": "observacao", "label": "Observação", "required": False},
             {"nome": "responsavel", "label": "Responsável", "required": False},
             {"nome": "id_envio", "label": "", "required": False},
-        ], ["local", "sombra", "agua", "ventilacao", "area_descanso", "lotacao", "estresse", "descanso", "observacao", "responsavel", "id_envio", "criado_em"]),
+        ], ["local", "sombra", "agua", "ventilacao", "area_descanso", "lotacao", "estresse", "descanso", "estado_cocho", "observacao", "responsavel", "id_envio", "criado_em"]),
         "colchao": ("Leite Colchão", "Colchão", [
             {"nome": "local", "label": "Local", "required": True},
             {"nome": "material", "label": "Material", "required": True},
