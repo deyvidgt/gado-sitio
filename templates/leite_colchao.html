@@ -1,1 +1,105 @@
-fatal: path 'templates/leite_colchao.html' exists on disk, but not in 'worktree-agent-a9d11efcaf70f56f8'
+{% extends "base.html" %}
+{% block title %}Colchões — Leite{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">Descanso animal</span><h2>Colchões</h2></div><a class="btn btn-primary" href="{{ url_for('operacao_leite', tipo='colchao') }}">Registrar troca</a></div>
+
+<div class="card">
+  <div class="section-head"><h3>Resumo</h3></div>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+    <div class="tri">
+      <strong class="badge badge-ruim">🔴 {{ colchoes_alertas.urgente }}</strong>
+      <small>Urgente (<= 7 dias)</small>
+    </div>
+    <div class="tri">
+      <strong class="badge badge-aviso">🟡 {{ colchoes_alertas.aviso }}</strong>
+      <small>Em aviso (<= 14 dias)</small>
+    </div>
+    <div class="tri">
+      <strong class="badge badge-ok">✅ {{ colchoes_alertas.ok }}</strong>
+      <small>OK</small>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-head"><h3>Colchão — Lista e status</h3></div>
+  {% if colchoes %}
+    {% for colchao in colchoes %}
+    <div class="linha">
+      <div>
+        <strong>{{ colchao.local }}</strong>
+        <small>
+          {% if colchao.material %}{{ colchao.material }} · {% endif %}
+          {% if colchao.status == 'urgente' %}
+            <span class="badge badge-ruim">🔴 Urgente</span>
+          {% elif colchao.status == 'aviso' %}
+            <span class="badge badge-aviso">🟡 Aviso</span>
+          {% else %}
+            <span class="badge badge-ok">✅ OK</span>
+          {% endif %}
+        </small>
+      </div>
+      <div style="text-align: right;">
+        {% if colchao.proxima_troca %}
+          <strong>{{ colchao.dias_para_troca if colchao.dias_para_troca is not none else '?' }}</strong>
+          <small>dias para troca<br>{{ colchao.proxima_troca.strftime('%d/%m/%Y') }}</small>
+        {% else %}
+          <strong>—</strong>
+          <small>sem próxima troca</small>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p>Nenhum colchão registrado.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="section-head"><h3>Histórico recente</h3></div>
+  <table>
+    <thead>
+      <tr>
+        <th>Local</th>
+        <th>Última troca</th>
+        <th>Material</th>
+        <th>Próxima troca</th>
+        <th>Dias restantes</th>
+        <th style="text-align: center;">Ação</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if colchoes %}
+        {% for colchao in colchoes %}
+        <tr>
+          <td><strong>{{ colchao.local }}</strong></td>
+          <td>{{ colchao.data_troca.strftime('%d/%m/%Y') if colchao.data_troca else '—' }}</td>
+          <td>{{ colchao.material or '—' }}</td>
+          <td>{{ colchao.proxima_troca.strftime('%d/%m/%Y') if colchao.proxima_troca else '—' }}</td>
+          <td>
+            {% if colchao.dias_para_troca is not none %}
+              {{ colchao.dias_para_troca }} dias
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td style="text-align: center;">
+            <a href="{{ url_for('operacao_leite', tipo='colchao') }}" class="btn btn-small">📝 Registrar</a>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="6" style="text-align: center;">Nenhum colchão registrado.</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<div style="margin-top: 2rem; padding: 1rem; background: #f5f5f5; border-radius: 0.5rem; font-size: 0.9rem; color: #666;">
+  <p><strong>💡 Dica:</strong> A vida útil padrão de um colchão é de 180 dias. Se você não informar a data da próxima troca ao registrar, o sistema calcula automaticamente.</p>
+  <p><strong>🔴 Urgente:</strong> Próxima troca dentro de 7 dias ou menos.<br>
+  <strong>🟡 Aviso:</strong> Próxima troca entre 8 e 14 dias.</p>
+</div>
+{% endblock %}
