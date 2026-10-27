@@ -516,6 +516,17 @@ if ("serviceWorker" in navigator) {
       .then(reg => {
         // Verificar atualizações a cada 60 minutos
         setInterval(() => reg.update(), 60 * 60 * 1000);
+
+        // Notificar quando houver novo SW (v5.7)
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'activated') {
+              console.log('App atualizado — recarregando...');
+              setTimeout(() => window.location.reload(), 1000);
+            }
+          });
+        });
       })
       .catch(() => {});  // falha silenciosa — não quebra nada
   });
