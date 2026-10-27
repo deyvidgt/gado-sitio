@@ -11,7 +11,11 @@ import animais as A
 from config import COLUNAS_LEITE_COLCHAO, COLUNAS_LEITE_CONFORTO, COLUNAS_LEITE_TRATAMENTOS
 from db import alterar_aba, carregar_aba, fazer_backup
 from extensions import _agora, _limpar_backups_antigos, _validar_csrf, app, login_required, salvar_linha, parse_valor
+<<<<<<< HEAD
 from leite import _data, _numero, acumulados, contagens_rebanho, dias_em_lactacao, medias_periodo, producao_por_animal, serie_diaria, validar_producao, historico_colchao
+=======
+from leite import _data, _numero, acumulados, contagens_rebanho, dias_em_lactacao, medias_periodo, producao_por_animal, serie_diaria, validar_producao
+>>>>>>> worktree-agent-a8258a78202420083
 
 
 @app.route("/leite")
@@ -24,6 +28,7 @@ def painel_leite():
     acumulado = acumulados(df, hoje)
     medias = medias_periodo(df, hoje.replace(day=1), hoje,
                             animais_lactacao=contagens["vacas_lactacao"])
+<<<<<<< HEAD
 
     # Alertas de colchão: conta urgentes e avisos
     df_colchao = carregar_aba("Leite Colchão")
@@ -37,6 +42,10 @@ def painel_leite():
     return render_template("leite.html", acumulado=acumulado, medias=medias,
                            contagens=contagens, registros=len(df), hoje=hoje,
                            colchoes_alertas=colchoes_alertas)
+=======
+    return render_template("leite.html", acumulado=acumulado, medias=medias,
+                           contagens=contagens, registros=len(df), hoje=hoje)
+>>>>>>> worktree-agent-a8258a78202420083
 
 
 @app.route("/leite/animais")
@@ -140,6 +149,69 @@ def necessidade_leite():
     return redirect(url_for("alimentacao_leite"))
 
 
+<<<<<<< HEAD
+=======
+@app.route("/leite/calculador", methods=["GET", "POST"])
+@login_required
+def calculador_leite():
+    """Calculador de ração com balanceamento simplificado."""
+    from racao import (
+        calcular_necessidades,
+        carregar_ingredientes_ativos,
+        balancear_racao,
+        fazer_comparativo,
+    )
+
+    categorias = ["Lactação", "Seca", "Novilha", "Bezerro"]
+    resultado = None
+    necessidades = None
+    erro = None
+
+    if request.method == "POST":
+        _validar_csrf()
+        f = request.form
+        try:
+            categoria = str(f.get("categoria", "")).strip()
+            peso_kg = float(str(f.get("peso_vivo", "0")).replace(",", "."))
+            producao_litros = 0.0
+
+            if categoria == "Lactação":
+                producao_litros = float(str(f.get("producao_litros", "0")).replace(",", "."))
+
+            if not categoria or categoria not in categorias or peso_kg <= 0:
+                erro = "Categoria ou peso inválido."
+            else:
+                # Calcula necessidades
+                necessidades = calcular_necessidades(categoria, peso_kg, producao_litros)
+
+                # Tenta balancear
+                ingredientes = carregar_ingredientes_ativos()
+                if not ingredientes:
+                    erro = "Nenhum produto cadastrado em 'Leite Alimentação'. Adicione produtos primeiro."
+                else:
+                    sugestao = balancear_racao(necessidades, ingredientes)
+                    if sugestao:
+                        resultado = {
+                            "necessidades": necessidades,
+                            "sugestao": sugestao,
+                            "comparativo": fazer_comparativo(necessidades, sugestao),
+                            "categoria": categoria,
+                            "peso_kg": peso_kg,
+                            "producao_litros": producao_litros,
+                        }
+                    else:
+                        erro = "Não foi possível balancear a ração com os produtos disponíveis."
+        except (ValueError, KeyError) as e:
+            erro = f"Erro no cálculo: {str(e)}"
+
+    return render_template("leite_calculador.html",
+                         categorias=categorias,
+                         resultado=resultado,
+                         erro=erro,
+                         hoje=_agora().strftime("%Y-%m-%d"))
+
+
+>>>>>>> worktree-agent-a8258a78202420083
 def _definicoes_operacao():
     """tipo → (aba, título, campos da tela, nomes de campos para leitura do form)."""
     return {
@@ -195,6 +267,7 @@ def _operacao_leite(tipo, aba, titulo, campos, valores):
         # valores é a lista de colunas após "Data"; cada campo está em valores (pela order).
         # Lê do form pelos nomes dos campos (snake_case).
         linha = [f.get("data", "")] + [f.get(campo["nome"], "") for campo in campos]
+<<<<<<< HEAD
 
         # Validação especial para colchão: se não tem próxima troca, calcula +180 dias
         if tipo == "colchao":
@@ -207,6 +280,8 @@ def _operacao_leite(tipo, aba, titulo, campos, valores):
                     # Índice 8 é "proxima_troca" na ordem de _definicoes_operacao()["colchao"]
                     linha[8] = proxima
 
+=======
+>>>>>>> worktree-agent-a8258a78202420083
         salvar_linha(aba, linha)
         flash(f"{titulo} registrado.", "success")
         return redirect(url_for("operacao_leite", tipo=tipo))
@@ -304,6 +379,7 @@ def relatorios_leite():
                            total=total, por_vaca=producao_por_animal(df, inicio, fim))
 
 
+<<<<<<< HEAD
 @app.route("/leite/colchao")
 @login_required
 def listar_colchao():
@@ -341,6 +417,8 @@ def listar_colchao():
     return render_template("leite_colchao.html", colchoes=colchoes, contadores=contadores, hoje=hoje)
 
 
+=======
+>>>>>>> worktree-agent-a8258a78202420083
 @app.route("/leite/relatorios/exportar")
 @login_required
 def exportar_leite():
