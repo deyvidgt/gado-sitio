@@ -15,6 +15,7 @@ from calculos import (
     calcular_resumo_financeiro, calcular_evolucao_rebanho,
 )
 from config import MEMBROS, NOMES_MEMBROS, ALERTAS_SAUDE
+from busca import buscar_global
 from extensions import (
     app, _agora, login_required,
     _get_dados_cache, _get_resumo_cache, _get_membros_cache, _get_evolucao_cache,
@@ -410,6 +411,16 @@ def api_ultima_visita():
         "chuva_mm":       _safe(row.get("Chuva mm"), 0.0),
         "sugestoes":      _str(row.get("Sugestões")),
     })
+
+
+@app.route("/api/busca")
+@login_required
+def api_busca():
+    """Busca rápida global: GET /api/busca?q=termo&tipo=animal"""
+    q = request.args.get("q", "").strip()
+    tipo = request.args.get("tipo", "").strip() or None
+    resultados = buscar_global(q, tipo)
+    return jsonify({"resultados": resultados})
 
 
 # ══════════════════════════════════════════════════════════════════════════════
