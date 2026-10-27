@@ -31,7 +31,7 @@ class TestBottomNavHTML:
             content = f.read()
 
         # Check for nav items with correct routes
-        assert 'data-route="painel"' in content
+        assert 'data-route="dashboard"' in content
         assert 'data-route="tarefas"' in content
         assert 'data-route="relatorios"' in content
         assert 'data-route="central_alertas"' in content

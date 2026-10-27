@@ -97,3 +97,63 @@ def ultima_estimativa(id_: str, df_man: pd.DataFrame) -> dict | None:
     fator, n = fator_calibracao(df_man)
     return {"kg": bruto * fator, "bruto": bruto, "data": data, "fator": fator,
             "n_pares": n, "faixa_pct": 10 if n >= MIN_PARES else 15}
+
+
+def historico_estimativas(id_: str, df_man: pd.DataFrame, limite_dias: int = 180) -> list[dict]:
+    """Retorna histórico de estimativas do animal (últimos N dias) com calibração aplicada.
+    Útil para gráfico de evolução de peso estimado ao longo do tempo."""
+    estimados = P.todas(df_man, estimados=True).get(id_, [])
+    if not estimados:
+        return []
+
+    fator, _ = fator_calibracao(df_man)
+    agora = pd.Timestamp.now()
+
+    resultado = []
+    for data, bruto in estimados:
+        dias_atras = (agora - data).days
+        if dias_atras <= limite_dias and bruto > 0:
+            resultado.append({
+                "data": data,
+                "bruto": round(bruto, 1),
+                "calibrado": round(bruto * fator, 1),
+                "dias_atras": dias_atras,
+                "fator": fator
+            })
+
+    return sorted(resultado, key=lambda x: x["data"])
+
+
+def comparar_estimativa_vs_balanca(id_: str, df_man: pd.DataFrame) -> dict | None:
+    """Compara a última estimativa com a última pesagem do mesmo animal (se houver).
+    Retorna {'estimativa_kg', 'balanca_kg', 'diferenca_pct', 'dias_diferenca'} ou None."""
+    estimados = P.todas(df_man, estimados=True).get(id_, [])
+    balanca = P.todas(df_man).get(id_, [])
+
+    if not estimados or not balanca:
+        return None
+
+    data_e, bruto = estimados[-1]
+    fator, _ = fator_calibracao(df_man)
+    estimativa_calibrada = bruto * fator
+
+    # Procura a pesagem mais próxima da estimativa (até 30 dias)
+    pares = [(abs((data_b - data_e).days), data_b, kg)
+             for data_b, kg in balanca
+             if abs((data_b - data_e).days) <= 30]
+
+    if not pares:
+        return None
+
+    dias_dif, data_b, kg_balanca = min(pares)
+    dif_pct = round((estimativa_calibrada - kg_balanca) / kg_balanca * 100, 1)
+
+    return {
+        "estimativa_kg": round(estimativa_calibrada, 1),
+        "balanca_kg": round(kg_balanca, 1),
+        "diferenca_pct": dif_pct,
+        "dias_diferenca": dias_dif,
+        "data_estimativa": data_e,
+        "data_balanca": data_b,
+        "precisa_calibracao": abs(dif_pct) > 10  # aviso se erro > 10%
+    }

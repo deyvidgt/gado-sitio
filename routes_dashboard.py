@@ -5,7 +5,7 @@ routes_dashboard.py — Sítio Santo Antonio
 Rota principal do dashboard e lógica de alertas WhatsApp automáticos.
 """
 import threading
-from flask import render_template, session
+from flask import render_template, session, jsonify
 import pandas as pd
 from datetime import datetime, timedelta
 from db import carregar_aba
