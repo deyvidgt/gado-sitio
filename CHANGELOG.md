@@ -4,6 +4,17 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ## [Não lançado]
 
+## [5.9.0] — 2026-10-27
+
+### Adicionado
+- **Cotação de mercado em tempo real melhorada:** GET `/api/cotacao-hoje` retorna preço/@ atual + histórico 30 dias. Tenta scraping Scot Consultoria → fallback IMEA → fallback média 7 dias. Função `_historico_preco_arroba()` extrai preços das Vendas. Útil para monitorar tendência de preços de mercado.
+- **Notificações push avançadas:** função `_preparar_notificacoes()` agrupa alertas por categoria com ações (Abrir, Descartar). GET `/api/alertas/push` retorna notificações em formato Web Push. POST `/api/notificacoes/acao` registra cliques de botões para análise de engajamento. Service Worker v5.7: handlers `push` + `notificationclick` com navegação automática para URL.
+- **Fluxo de caixa visual:** função `calcular_fluxo_caixa_mensal()` em `calculos.py` calcula entrada (vendas), saída (compras + gastos), saldo mensal e saldo acumulado. GET `/fluxo-caixa` renderiza `templates/fluxo_caixa.html` com 2 gráficos Chart.js (entrada vs saída em barras, saldo acumulado em linha) + tabela detalhada com cores semáforo.
+- **Comparativo de períodos (ano anterior vs ano atual):** função `comparativo_anual()` compara período anual anterior (365 dias) vs ano atual (1º jan até hoje). Retorna total compras, gastos, vendas, resultado + variação %. GET `/comparativo-anual` renderiza `templates/comparativo_anual.html` com 4 cards resumo (Compras, Gastos, Vendas, Resultado) + tabela detalhada. Cores semáforo indicam aumento/redução.
+
+### Corrigido
+- **DataFrame ambiguous truth value em routes_api.py:** substituir `dados.get("Vendas") or pd.DataFrame()` por verificação `is None` em `_historico_preco_arroba()`. Mesmo padrão corrigido em v5.8.0.
+
 ## [5.8.0] — 2026-10-27
 
 ### Adicionado
