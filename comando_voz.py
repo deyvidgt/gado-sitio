@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-comando_voz.py — entende frases faladas/digitadas e monta o registro (v4.3)
+comando_voz.py — entende frases faladas/digitadas e monta o registro (v5.8)
 
 Funciona com regras (sem IA paga, sem internet no servidor): o vocabulário do
 sítio é pequeno e fixo. O texto vem do reconhecimento de voz do celular (ou do
@@ -16,11 +16,15 @@ Exemplos que ele entende:
   vermifuguei o rebanho todo com ivermectina
   pesagem amarelo 21 320 quilos, azul 12 280 quilos
   morreu a vaca azul 12 picada de cobra
+  cobri amarelo 21 com o touro simental      (cobertura)
+  amarelo 21 prenha            (diagnóstico de prenhez)
   comprei 5 cabeças por 15 mil, 2 do deyvid 2 do nilson 1 da mãe
   vendi amarelo 21 e azul 12 por 9 mil, arroba a 310
   gastei 350 reais de sal, 10 sacos
   visita contei 38 cabeças, choveu 20 milímetros, sal baixo, proteinado ok
   ficha amarelo 21
+  histórico de peso do amarelo 21          (abre gráfico de evolução)
+  bcs do amarelo 21            (Body Condition Score — nota visual)
 
 Dividido em duas partes:
   • analisar(texto)          → intenção pura (só texto; fácil de testar);
@@ -131,7 +135,14 @@ _FILLER = {"registrar", "registra", "registre", "cadastrar", "cadastra", "cadast
            "novo", "nova", "animal", "que", "eh", "é", "pra", "para", "pro", "na", "no",
            "hoje", "ontem", "anteontem", "foi", "ta", "esta", "com", "ai", "brincado",
            "brincada", "coloquei", "colocar", "botei", "dela", "dele", "gravar", "grava",
-           "grave", "anotar", "anota", "lancar", "lanca", "vaca", "filha", "filho"}
+           "grave", "anotar", "anota", "lancar", "lanca", "vaca", "filha", "filho",
+           # v5.8: reprodução
+           "cobri", "cobriu", "coberta", "coberto", "cobertura", "prenha", "prehna",
+           "vazia", "diagnostico", "diagnosticou", "toque", "soado", "touro", "ia",
+           "inseminacao", "inseminada", "inseminado",
+           # v5.8: peso e bcs
+           "historico", "evolucao", "grafico", "bcs", "escore", "corporal", "condicao",
+           "magra", "magro", "gorda", "gordo", "gordura", "peso"}
 
 
 # ── Tokens ────────────────────────────────────────────────────────────────────
@@ -568,13 +579,15 @@ _GADO = re.compile(r"\b(gado|boi|bois|bezerr\w*|novilh\w*|vaca|vacas|garrote\w*|
 
 _ACOES = [
     ("consulta",   r"\b(quanto|quantos|quantas|quantidade)\b"),
+    ("historico_peso", r"\b(historico|evolu[cs]ao|grafico)\s+(de\s+)?peso\b"),
+    ("bcs",        r"\b(bcs|escore|condi[cs]ao\s+corporal)\b"),
     ("ficha",      r"\b(ficha|quem e|mostrar?|mostra|abrir?|abre|ver|historico)\b"),
     ("visita",     r"\b(vi[sz]ita|vi[sz]itei|fui no sitio|fui ao sitio)\b"),
     ("morte",      r"\b(morreu|morreram|morte|morta|morto|faleceu|perdemos|perdi)\b"),
     ("venda",      r"\b(vendi|vendeu|vendemos|venda|vendido|vendida|vendidos|vendidas)\b"),
     ("gasto",      r"\b(gastei|gastamos|gasto|gastos|paguei|pagamos|despesa)\b"),
     ("manejo",     r"\b(vacin\w*|vermif\w*|pesagem|pesei|pesou|pesamos|pesar|peso|tratamento|"
-                   r"tratei|medicad\w*|medicamento|remedio|pasto)\b"),
+                   r"tratei|medicad\w*|medicamento|remedio|pasto|cobr\w*|diagnos\w*|prenha|vazia)\b"),
     ("nascimento", r"\b(nasceu|nasceram|nascimento|pariu|nascida|nascido)\b"),
     ("compra",     r"\b(comprei|compramos|comprou|compra)\b"),
     ("cadastro",   r"\b(registrar|registra|registre|cadastrar|cadastra|cadastre|gravar|grava|grave|"
@@ -618,6 +631,10 @@ def _tipo_manejo(n: str) -> str | None:
         return "Pesagem"
     if re.search(r"\bpasto\b", n):
         return "Movimentação de Pasto"
+    if re.search(r"\b(cobr|cobri|coberta|cobertura)\b", n):
+        return "Cobertura"
+    if re.search(r"\b(diagnos\w*|prenha|vazia|toque)\b", n):
+        return "Diagnóstico de Gestação"
     if re.search(r"\b(tratamento|tratei|medicad\w*|medicamento|remedio)\b", n):
         return "Tratamento Veterinário"
     return None
@@ -806,6 +823,12 @@ def analisar(texto: str, hoje: datetime | None = None) -> dict:
     if acao == "ficha":
         b = _brincos(toks)
         r["alvos"] = b[:1]
+        return r
+
+    if acao in ("historico_peso", "bcs"):
+        b = _brincos(toks)
+        r["alvos"] = b[:1]
+        r["acao_nav"] = acao  # navegação direta, sem gravação
         return r
 
     if acao in ("cadastro", "nascimento"):
