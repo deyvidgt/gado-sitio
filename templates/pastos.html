@@ -94,6 +94,8 @@
   {% set pct = (p.ua_ha / capacidade * 100) if (capacidade and p.ua_ha and p.cab) else 0 %}
   <div class="linha {{ classe }}" style="display:block">
     <div style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" class="toggle-pasto-visibility" data-pasto="{{ p.id }}"
+             checked title="Mostrar/ocultar no mapa" style="width:20px;height:20px;cursor:pointer">
       <span class="bol" style="background:{{ p.cor }}"></span>
       <span class="linha-nome">{{ p.nome }}</span>
       {% if p.nivel and p.cab %}
@@ -239,6 +241,20 @@
 
   const quem = document.getElementById("quem");
   if (quem) quem.onchange = () => document.getElementById("campo-brincos").style.display = quem.value === "brincos" ? "" : "none";
+
+  // v5.7: Ocultar/mostrar áreas no mapa
+  document.querySelectorAll(".toggle-pasto-visibility").forEach(chk => {
+    chk.onchange = (e) => {
+      const id = e.target.getAttribute("data-pasto");
+      const camada = camadas[id];
+      if (!camada) return;
+      if (e.target.checked) {
+        camada.setStyle({ fillOpacity: 0.35, weight: 2 });
+      } else {
+        camada.setStyle({ fillOpacity: 0, weight: 2, fillColor: "transparent" });
+      }
+    };
+  });
 })();
 </script>
 {% endblock %}
