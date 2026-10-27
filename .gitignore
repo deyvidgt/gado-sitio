@@ -56,3 +56,4 @@ drive_token.json
 client_secret*.json
 cache_fotos/
 fotos_ultimo_id.txt
+exemplos/
