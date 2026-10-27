@@ -273,4 +273,76 @@ async function syncPendingRequests() {
   console.log('[SW] Background sync placeholder');
 }
 
+/**
+ * PUSH: Notificações com ações (v5.9)
+ */
+self.addEventListener('push', (event) => {
+  if (!event.data) {
+    console.log('[SW] Push recebido sem dados');
+    return;
+  }
+
+  try {
+    const data = event.data.json();
+    const options = {
+      body: data.body || 'Nova notificação',
+      icon: '/static/icon-192x192.png',
+      badge: '/static/badge-72x72.png',
+      tag: data.tag || 'notificacao',
+      requireInteraction: data.urgencia === 'urgente',
+      data: { url: data.url || '/', categoria: data.categoria },
+      actions: data.actions || []
+    };
+
+    // Badge com número de itens
+    if (data.badge) {
+      options.badge = data.badge;
+    }
+
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'Gado - Sítio Santo Antonio', options)
+    );
+  } catch (err) {
+    console.error('[SW] Erro ao processar push:', err);
+  }
+});
+
+/**
+ * NOTIFICATION CLICK: Ações nos botões (v5.9)
+ */
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  // Ação dos botões
+  if (event.action) {
+    // POST para /api/notificacoes/acao com {id, acao}
+    fetch('/api/notificacoes/acao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        notification_id: event.notification.tag,
+        action: event.action,
+        timestamp: new Date().toISOString()
+      })
+    }).catch((err) => console.error('[SW] Erro ao registrar ação:', err));
+  }
+
+  // Abrir/focar na URL
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then((clientList) => {
+      // Se já há window aberta, focar nela
+      for (const client of clientList) {
+        if (client.url === url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Senão, abrir nova window
+      if (clients.openWindow) {
+        return clients.openWindow(url);
+      }
+    })
+  );
+});
+
 console.log('[SW] Service Worker v5.7 loaded');
