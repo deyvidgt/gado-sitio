@@ -49,6 +49,25 @@
 </div>
 {% endif %}
 
+<!-- Gráficos de Barras: Custos e Resultados por Lote -->
+{% if lotes %}
+<div class="card" style="margin-top:24px">
+  <h3 style="margin-bottom:16px">Análise Visual por Lote</h3>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
+    <!-- Gráfico 1: Custo por Lote -->
+    <div style="position:relative;height:300px">
+      <canvas id="chart-custo"></canvas>
+    </div>
+
+    <!-- Gráfico 2: Resultado por Lote (Lucro/Prejuízo) -->
+    <div style="position:relative;height:300px">
+      <canvas id="chart-resultado"></canvas>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div style="margin-top:16px">
   {% for l in lotes %}
   <div class="lt">
@@ -80,4 +99,102 @@
   <div class="card"><p class="lt-obs">Nenhuma compra lançada ainda.</p></div>
   {% endfor %}
 </div>
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+{% if lotes %}
+(function () {
+  const lotes = {{ lotes|tojson }};
+  const br = (v) => (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  // Preparar dados
+  const rotulos = lotes.map(l => l.rotulo);
+  const custos = lotes.map(l => l.investido || 0);
+  const resultados = lotes.map(l => l.resultado || 0);
+  const receitas = lotes.map(l => l.receita || 0);
+
+  // Gráfico 1: Custo por Lote (Compra + Gastos)
+  const ctxCusto = document.getElementById('chart-custo');
+  if (ctxCusto) {
+    new Chart(ctxCusto, {
+      type: 'bar',
+      data: {
+        labels: rotulos,
+        datasets: [{
+          label: 'Investimento (compra + gastos)',
+          data: custos,
+          backgroundColor: '#3498db',
+          borderColor: '#2980b9',
+          borderWidth: 1,
+          borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => br(ctx.parsed.x)
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { callback: v => br(v) }
+          }
+        }
+      }
+    });
+  }
+
+  // Gráfico 2: Resultado por Lote (Lucro/Prejuízo com cores)
+  const ctxResultado = document.getElementById('chart-resultado');
+  if (ctxResultado) {
+    const cores = resultados.map(v => v >= 0 ? '#27ae60' : '#c0392b');
+    new Chart(ctxResultado, {
+      type: 'bar',
+      data: {
+        labels: rotulos,
+        datasets: [{
+          label: 'Resultado Realizado',
+          data: resultados,
+          backgroundColor: cores,
+          borderColor: cores.map(c => c === '#27ae60' ? '#1e8449' : '#a93226'),
+          borderWidth: 1,
+          borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => br(ctx.parsed.x),
+              afterLabel: (ctx) => {
+                const idx = ctx.dataIndex;
+                return `Receita: ${br(receitas[idx])}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { callback: v => br(v) }
+          }
+        }
+      }
+    });
+  }
+})();
+{% endif %}
+</script>
+{% endblock %}
+
 {% endblock %}

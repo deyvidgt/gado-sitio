@@ -30,14 +30,20 @@ DIAS_PAR = 15                 # estimativa e balança com até 15 dias de difere
 MIN_PARES = 3
 FATOR_MIN, FATOR_MAX = 0.7, 1.3
 
+# v5.9 — Body Condition Score (BCS 1-9): ajusta peso por condição corporal do animal
+# 1-3: magro (subestima), 4-6: ideal (sem ajuste), 7-9: gordo (sobrestima)
+FATOR_BCS = {
+    1: 0.82, 2: 0.88, 3: 0.94, 4: 0.97, 5: 1.0, 6: 1.03, 7: 1.06, 8: 1.12, 9: 1.18
+}
+
 
 def estimar_bruto(comp_cm: float, prof_cm: float) -> float:
     perimetro = FATOR_PERIMETRO * prof_cm
     return perimetro ** 2 * comp_cm / CONST_SCHAEFFER
 
 
-def validar(comp_cm, prof_cm, ref_cm) -> tuple[float, float, float]:
-    """Medidas do formulário (aceita vírgula) → floats; ValueError com a mensagem."""
+def validar(comp_cm, prof_cm, ref_cm, bcs=None) -> tuple[float, float, float, int | None]:
+    """Medidas do formulário (aceita vírgula) → floats + BCS; ValueError com a mensagem."""
     valores = []
     for nome, v in (("comprimento", comp_cm), ("profundidade", prof_cm), ("referência", ref_cm)):
         try:
@@ -51,7 +57,18 @@ def validar(comp_cm, prof_cm, ref_cm) -> tuple[float, float, float]:
         valores.append(x)
     if valores[1] > valores[0]:
         raise ValueError("O peito saiu mais fundo que o corpo é comprido — confira os toques na foto.")
-    return tuple(valores)
+
+    # Valida BCS (Body Condition Score 1-9)
+    bcs_val = None
+    if bcs is not None:
+        try:
+            bcs_val = int(bcs)
+            if not 1 <= bcs_val <= 9:
+                raise ValueError("BCS deve estar entre 1 e 9.")
+        except (ValueError, TypeError):
+            raise ValueError("BCS inválido. Use um número de 1 a 9.")
+
+    return tuple(valores) + (bcs_val,)
 
 
 def fator_calibracao(df_man: pd.DataFrame) -> tuple[float, int]:
@@ -71,9 +88,9 @@ def fator_calibracao(df_man: pd.DataFrame) -> tuple[float, int]:
     return min(max(statistics.median(razoes), FATOR_MIN), FATOR_MAX), len(razoes)
 
 
-def registrar(id_: str, comp_cm, prof_cm, ref_cm, data=None, responsavel: str = "") -> float:
+def registrar(id_: str, comp_cm, prof_cm, ref_cm, data=None, responsavel: str = "", bcs=None) -> float:
     """Valida, calcula e grava a linha "Peso Estimado". Devolve o peso bruto."""
-    comp, prof, ref = validar(comp_cm, prof_cm, ref_cm)
+    comp, prof, ref, bcs_val = validar(comp_cm, prof_cm, ref_cm, bcs)
     a = A.por_id(A.carregar(), id_)
     if a is None or a["Status"] != "Vivo":
         raise ValueError("Só dá para estimar o peso de um animal vivo.")
@@ -82,6 +99,9 @@ def registrar(id_: str, comp_cm, prof_cm, ref_cm, data=None, responsavel: str = 
     if pd.isna(data_ts):
         data_ts = pd.Timestamp.now().normalize()
     desc = f"Foto: comprimento {comp:g} cm, peito {prof:g} cm, ref. {ref:g} cm"
+    if bcs_val is not None:
+        fator_bcs = FATOR_BCS[bcs_val]
+        desc += f" · BCS {bcs_val} (fator {fator_bcs})"
     db.salvar_linha("Manejo", A._linha_manejo(
         data_ts, P.TIPO_ESTIMADO, 1, desc, responsavel,
         brincos=A.ref(a), pesos=P.fmt_pesos([(A.ref(a), bruto)])))

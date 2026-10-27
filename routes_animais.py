@@ -289,7 +289,8 @@ def peso_foto(id_):
         f = request.form
         try:
             bruto = PF.registrar(id_, f.get("comprimento"), f.get("profundidade"),
-                                 f.get("referencia"), f.get("data"), responsavel=_membro_logado())
+                                 f.get("referencia"), f.get("data"), responsavel=_membro_logado(),
+                                 bcs=f.get("bcs"))
         except ValueError as e:
             flash(str(e), "error")
             return redirect(url_for("peso_foto", id_=id_))

@@ -33,7 +33,7 @@ def test_medidas_absurdas_recusadas(comp, prof, ref):
 
 
 def test_validar_aceita_virgula():
-    assert F.validar("158,5", "71", "100") == (158.5, 71.0, 100.0)
+    assert F.validar("158,5", "71", "100") == (158.5, 71.0, 100.0, None)
 
 
 def _df(*linhas):
@@ -140,3 +140,43 @@ def test_ficha_mostra_estimativa(cliente, um_animal):
     _cache_invalidar()
     p = cliente.get(f"/animais/{um_animal}").get_data(as_text=True)
     assert "Estimado por foto" in p and "±15%" in p and "peso-foto" in p
+
+
+# ── BCS (Body Condition Score) ────────────────────────────────────────────────
+
+def test_bcs_valido():
+    # BCS 1-9 são válidos
+    for bcs in range(1, 10):
+        comp, prof, ref, bcs_val = F.validar(160, 70, 100, bcs)
+        assert bcs_val == bcs
+
+
+def test_bcs_invalido():
+    with pytest.raises(ValueError, match="BCS"):
+        F.validar(160, 70, 100, 0)
+    with pytest.raises(ValueError, match="BCS"):
+        F.validar(160, 70, 100, 10)
+    with pytest.raises(ValueError, match="BCS"):
+        F.validar(160, 70, 100, "abc")
+
+
+def test_bcs_opcional():
+    # Sem BCS deve funcionar
+    comp, prof, ref, bcs_val = F.validar(160, 70, 100, None)
+    assert bcs_val is None
+
+
+def test_bcs_registrado_na_descricao(um_animal):
+    bruto = F.registrar(um_animal, 160, 70, 100, "2026-10-01", "Deyvid", bcs=7)
+    man = db.carregar_aba("Manejo")
+    ult = man.iloc[-1]
+    assert "BCS 7" in ult["Descrição"] and "fator 1.06" in ult["Descrição"]
+
+
+def test_fator_bcs_aplica():
+    # BCS 5 (ideal) tem fator 1.0
+    assert F.FATOR_BCS[5] == 1.0
+    # BCS 1 (muito magro) subestima, fator 0.82
+    assert F.FATOR_BCS[1] == 0.82
+    # BCS 9 (muito gordo) sobrestima, fator 1.18
+    assert F.FATOR_BCS[9] == 1.18
