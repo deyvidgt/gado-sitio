@@ -65,17 +65,34 @@
 
 <section class="card" style="margin-bottom:20px">
   <div class="card-title">Atenção agora</div>
-  {% for a in atencao_agora[:6] %}<div class="linha aviso"><span>{{ a.msg if a.msg is defined else a.texto }}</span></div>{% else %}<p class="hint">Nenhum alerta exige ação agora.</p>{% endfor %}
+  {% for a in atencao_agora[:6] %}
+    {% if a.rota %}
+    <a href="{{ a.rota }}" style="text-decoration:none;color:inherit">
+      <div class="linha aviso" style="cursor:pointer;transition:all .2s"><span>{{ a.msg if a.msg is defined else a.texto }} →</span></div>
+    </a>
+    {% else %}
+    <div class="linha aviso"><span>{{ a.msg if a.msg is defined else a.texto }}</span></div>
+    {% endif %}
+  {% else %}<p class="hint">Nenhum alerta exige ação agora.</p>{% endfor %}
 </section>
 
-<!-- Alertas -->
+<!-- Alertas com atalhos -->
 {% if alertas %}
 <div style="margin-bottom:20px">
   {% for a in alertas %}
+    {% if a.rota %}
+    <a href="{{ a.rota }}" style="text-decoration:none;color:inherit;display:block">
+      <div class="alert-strip {{ a.nivel }}" style="cursor:pointer;transition:all .2s">
+        {% if a.nivel == 'danger' %}🚨{% elif a.nivel == 'warning' %}⚠️{% else %}💡{% endif %}
+        {{ a.msg }} <span style="font-size:12px;color:rgba(255,255,255,.7);margin-left:8px">→</span>
+      </div>
+    </a>
+    {% else %}
     <div class="alert-strip {{ a.nivel }}">
       {% if a.nivel == 'danger' %}🚨{% elif a.nivel == 'warning' %}⚠️{% else %}💡{% endif %}
       {{ a.msg }}
     </div>
+    {% endif %}
   {% endfor %}
 </div>
 {% endif %}

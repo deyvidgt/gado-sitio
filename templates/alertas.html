@@ -21,5 +21,23 @@
     </div>
   {% endif %}
 </div>
-<div class="grid-2">{% for item in alertas %}<div class="card"><span class="badge badge-{{ item.prioridade }}">{{ item.prioridade|capitalize }}</span><h3>{{ item.titulo }}</h3><p>{{ item.detalhe }}</p><small>{{ item.acao }}</small></div>{% else %}<div class="card"><p>Nenhum alerta no momento.</p></div>{% endfor %}</div>
+<div class="grid-2">{% for item in alertas %}
+  {% if item.rota %}
+  <a href="{{ item.rota }}" style="text-decoration:none;color:inherit">
+    <div class="card" style="cursor:pointer;transition:all .2s">
+      <span class="badge badge-{{ item.prioridade or 'aviso' }}">{{ (item.prioridade or 'Aviso')|capitalize }}</span>
+      <h3>{{ item.titulo or item.msg }}</h3>
+      <p>{{ item.detalhe }}</p>
+      <small>{{ item.acao or '→ Ir para' }}</small>
+    </div>
+  </a>
+  {% else %}
+  <div class="card">
+    <span class="badge badge-{{ item.prioridade or 'aviso' }}">{{ (item.prioridade or 'Aviso')|capitalize }}</span>
+    <h3>{{ item.titulo or item.msg }}</h3>
+    <p>{{ item.detalhe }}</p>
+    <small>{{ item.acao or 'Abrir módulo' }}</small>
+  </div>
+  {% endif %}
+{% else %}<div class="card"><p>Nenhum alerta no momento.</p></div>{% endfor %}</div>
 {% endblock %}

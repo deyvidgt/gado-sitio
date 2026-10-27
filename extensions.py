@@ -422,12 +422,14 @@ def _gerar_alertas(dados):
     for tipo, dias in get_alertas_saude().items():
         ultima = ultima_data(df_man, tipo)
         if ultima is None:
-            alertas.append({"nivel": "warning", "msg": f"Nenhum registro de {tipo}."})
+            alertas.append({"nivel": "warning", "msg": f"Nenhum registro de {tipo}.",
+                           "rota": "/manejo/novo"})  # Atalho para registrar manejo
             continue
         d = (hoje - ultima.to_pydatetime()).days
         if d > dias:
             alertas.append({"nivel": "danger",
-                             "msg": f"{tipo} atrasada! Última: {ultima.strftime('%d/%m/%Y')} ({d} dias)"})
+                             "msg": f"{tipo} atrasada! Última: {ultima.strftime('%d/%m/%Y')} ({d} dias)",
+                             "rota": "/manejo/novo"})
     alertas.extend(lembretes_sazonais(df_man, hoje))
     # v4.3: fêmeas com brinco na janela da brucelose (3–8 meses), pelo nascimento.
     try:
@@ -437,17 +439,20 @@ def _gerar_alertas(dados):
                 a = b["animal"]
                 alertas.append({"nivel": "warning",
                                 "msg": f"Brucelose: {a['Categoria'] or 'fêmea'} "
-                                       f"{_A.fmt_brinco(a['Brinco Cor'], a['Brinco Nº'])} {b['msg']}"})
+                                       f"{_A.fmt_brinco(a['Brinco Cor'], a['Brinco Nº'])} {b['msg']}",
+                                "rota": f"/animais/{a.get('ID')}"})  # Atalho para ficha do animal
     except Exception:
         pass
     from calculos import calcular_resumo_financeiro
     r_fin = _get_resumo_cache()
     if r_fin["resultado_realizado"] < 0:
         alertas.append({"nivel": "danger",
-                        "msg": f"Resultado negativo: {fmt_brl(r_fin['resultado_realizado'])}"})
+                        "msg": f"Resultado negativo: {fmt_brl(r_fin['resultado_realizado'])}",
+                        "rota": "/relatorios"})  # Atalho para ver detalhes financeiros
     if r_fin["estoque"] > 0:
         alertas.append({"nivel": "info",
-                        "msg": f"Break-even do estoque: {fmt_brl(r_fin['break_even'])}/cabeça"})
+                        "msg": f"Break-even do estoque: {fmt_brl(r_fin['break_even'])}/cabeça",
+                        "rota": "/vendas"})  # Atalho para registrar venda
     return alertas
 
 def _calc_anual(dados):
