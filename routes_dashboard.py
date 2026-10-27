@@ -22,6 +22,55 @@ from extensions import (
 )
 
 
+def _entrada_saida_timeline(dados, dias=90):
+    """Gráfico de entrada/saída de animais nos últimos N dias.
+
+    Retorna dados para Chart.js com entrada (compra), saída (venda) e saldo diário.
+    """
+    from datetime import date, timedelta
+
+    hoje = _agora().date()
+    inicio = hoje - timedelta(days=dias)
+
+    # Agrupa por data
+    timeline = {}
+
+    # Compras (entrada)
+    df_comp = dados.get("Compras") or pd.DataFrame()
+    for _, row in df_comp.iterrows():
+        try:
+            data = pd.to_datetime(row.get("Data")).date()
+            if data < inicio:
+                continue
+            data_str = data.isoformat()
+            timeline.setdefault(data_str, {"entrada": 0, "saida": 0})
+            timeline[data_str]["entrada"] += int(row.get("Cabeças", 0) or 0)
+        except Exception:
+            pass
+
+    # Vendas (saída)
+    df_vend = dados.get("Vendas") or pd.DataFrame()
+    for _, row in df_vend.iterrows():
+        try:
+            data = pd.to_datetime(row.get("Data")).date()
+            if data < inicio:
+                continue
+            data_str = data.isoformat()
+            timeline.setdefault(data_str, {"entrada": 0, "saida": 0})
+            timeline[data_str]["saida"] += int(row.get("Cabeças", 0) or 0)
+        except Exception:
+            pass
+
+    # Ordena por data
+    datas = sorted(timeline.keys())
+
+    return {
+        "datas": datas,
+        "entrada": [timeline[d]["entrada"] for d in datas],
+        "saida": [timeline[d]["saida"] for d in datas],
+    }
+
+
 @app.route("/")
 @login_required
 def dashboard():
@@ -107,12 +156,16 @@ def dashboard():
     import dashboard
     cards = dashboard.cards_painel(dados, r, extras)
 
+    # Gráfico temporal de entrada/saída (v5.8)
+    entrada_saida = _entrada_saida_timeline(dados, dias=90)
+
     return render_template("dashboard.html", r=r, membros=membros_r, insumos=insumos,
                            estoque_membro=estoque_membro, recentes=recentes[:6],
                            alertas=alertas, indicadores=indicadores, rebanho_est=rebanho_est,
                            estado_sitio=estado_sitio, acoes_rapidas=acoes_rapidas,
                            atencao_agora=atencao_agora, ocorrencias=recentes[:6],
-                           resumo_leite=resumo_leite, tendencia_peso=[], cards=cards, **extras,
+                           resumo_leite=resumo_leite, tendencia_peso=[], cards=cards,
+                           entrada_saida=entrada_saida, **extras,
                            NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS, MEMBROS=MEMBROS)
 
 

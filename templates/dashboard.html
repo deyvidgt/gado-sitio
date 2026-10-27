@@ -58,6 +58,52 @@
   </div>
 </section>
 
+<!-- Gráfico de Entrada/Saída (v5.8) -->
+{% if entrada_saida.datas %}
+<section class="card" style="margin-bottom:20px">
+  <div class="card-title">Fluxo de Animais (últimos 90 dias)</div>
+  <div style="position:relative;height:280px;margin-top:16px">
+    <canvas id="chart-entrada-saida"></canvas>
+  </div>
+</section>
+
+<script>
+  const ctx = document.getElementById('chart-entrada-saida').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: {{ entrada_saida.datas|tojson }},
+      datasets: [
+        {
+          label: 'Entrada (Compras)',
+          data: {{ entrada_saida.entrada|tojson }},
+          backgroundColor: 'rgba(76, 175, 80, 0.7)',
+          borderColor: 'rgba(76, 175, 80, 1)',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+        {
+          label: 'Saída (Vendas)',
+          data: {{ entrada_saida.saida|tojson }},
+          backgroundColor: 'rgba(244, 67, 54, 0.7)',
+          borderColor: 'rgba(244, 67, 54, 1)',
+          borderWidth: 1,
+          borderRadius: 4,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { padding: 15, font: { size: 12 } } } },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1 }, title: { display: true, text: 'Cabeças' } }
+      }
+    }
+  });
+</script>
+{% endif %}
+
 <section class="card" style="margin-bottom:20px">
   <div class="card-title">Ações rápidas</div>
   <div class="acoes-rapidas">{% for nome, endpoint in acoes_rapidas %}<a class="btn btn-outline" href="{{ url_for(endpoint) }}">{{ nome }}</a>{% endfor %}</div>
