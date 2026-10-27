@@ -12,6 +12,7 @@ from config import COLUNAS_LEITE_COLCHAO, COLUNAS_LEITE_CONFORTO, COLUNAS_LEITE_
 from db import alterar_aba, carregar_aba, fazer_backup
 from extensions import _agora, _limpar_backups_antigos, _validar_csrf, app, login_required, salvar_linha, parse_valor
 from leite import _data, _numero, acumulados, contagens_rebanho, dias_em_lactacao, medias_periodo, producao_por_animal, serie_diaria, validar_producao, historico_colchao
+from comparativo import comparar_vacas
 
 
 @app.route("/leite")
@@ -451,3 +452,38 @@ def ordenha_leite():
         flash("Ordenha registrada.", "success")
         return redirect(url_for("painel_leite"))
     return render_template("leite_ordenha.html", hoje=_agora().strftime("%Y-%m-%d"))
+
+
+@app.route("/leite/comparativo", methods=["GET", "POST"])
+@login_required
+def comparativo_leite():
+    animais = A.carregar()
+    vacas_opcoes = []
+    for _, animal in animais.iterrows():
+        id_animal = str(animal.get("ID", "")).strip()
+        brinco = f"{animal.get('Brinco Cor', '')} {animal.get('Brinco Nº', '')}".strip()
+        situacao = animal.get("Situação Leite", "")
+        if id_animal and situacao and situacao.lower() in {"lactação", "lactacao"}:
+            vacas_opcoes.append({"id": id_animal, "brinco": brinco})
+
+    resultado = {}
+    if request.method == "POST":
+        _validar_csrf()
+        f = request.form
+        ids = [str(f.get(f"vaca_{i}", "")).strip() for i in range(1, 4)]
+        ids = [v for v in ids if v]
+        if ids:
+            resultado = comparar_vacas(ids)
+
+    return render_template("leite_comparativo.html", vacas_opcoes=vacas_opcoes, resultado=resultado)
+
+
+@app.route("/api/leite/comparativo")
+@login_required
+def api_comparativo_leite():
+    from flask import jsonify
+    ids = request.args.get("ids", "").split(",")
+    ids = [v.strip() for v in ids if v.strip()]
+    if not ids:
+        return jsonify({"erro": "Nenhuma vaca informada"}), 400
+    return jsonify(comparar_vacas(ids))

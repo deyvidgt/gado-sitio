@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Comparativo de Vacas — Leite{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">Rebanho leiteiro</span><h2>Comparativo de Vacas</h2></div></div>
+
+<div class="card">
+  <h3>Selecione até 3 vacas</h3>
+  <form method="post" style="margin-bottom:20px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+      {% for i in range(1, 4) %}
+      <div>
+        <label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px">Vaca {{ i }}</label>
+        <select name="vaca_{{ i }}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-1)">
+          <option value="">— Selecione —</option>
+          {% for vaca in vacas_opcoes %}
+          <option value="{{ vaca.id }}">{{ vaca.brinco or vaca.id }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="display:flex;gap:8px">
+      <button type="submit" class="btn btn-primary">Comparar</button>
+      <a href="{{ url_for('comparativo_leite') }}" class="btn">Limpar</a>
+    </div>
+  </form>
+
+  {% if resultado %}
+  <div style="margin-top:24px;overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border)">
+          <th style="text-align:left;padding:12px;font-weight:600">Métrica</th>
+          {% for vaca_id in resultado.keys() %}
+          <th style="text-align:center;padding:12px;font-weight:600">{{ vaca_id }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:12px">Produção</td>
+          {% for vaca_id, dados in resultado.items() %}
+          <td style="padding:12px;text-align:center"><strong>{{ dados.producao_litros_dia }} L/dia</strong></td>
+          {% endfor %}
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:12px">Custo/dia</td>
+          {% for vaca_id, dados in resultado.items() %}
+          <td style="padding:12px;text-align:center">R$ {{ "%.2f"|format(dados.custo_diario) }}</td>
+          {% endfor %}
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:12px">Receita/dia</td>
+          {% for vaca_id, dados in resultado.items() %}
+          <td style="padding:12px;text-align:center">R$ {{ "%.2f"|format(dados.receita_diario) }}</td>
+          {% endfor %}
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);background:var(--surface-2)">
+          <td style="padding:12px;font-weight:600">Margem/dia</td>
+          {% for vaca_id, dados in resultado.items() %}
+          <td style="padding:12px;text-align:center">
+            <strong style="{% if dados.margem_diario < 0 %}color:#d32f2f{% elif dados.margem_diario < 10 %}color:#f57c00{% else %}color:#388e3c{% endif %}">
+              R$ {{ "%.2f"|format(dados.margem_diario) }}
+            </strong>
+          </td>
+          {% endfor %}
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:12px">Status CCS</td>
+          {% for vaca_id, dados in resultado.items() %}
+          <td style="padding:12px;text-align:center">
+            {% if dados.ccs_ultimo %}
+              {% set ccs_val = dados.ccs_ultimo|int if dados.ccs_ultimo|string|int else 0 %}
+              <span style="{% if ccs_val < 200000 %}color:#388e3c{% elif ccs_val < 400000 %}color:#f57c00{% else %}color:#d32f2f{% endif %}">
+                {% if ccs_val < 200000 %}✅{% elif ccs_val < 400000 %}🟡{% else %}🔴{% endif %}
+                {{ dados.ccs_ultimo }}
+              </span>
+            {% else %}<span style="color:#999">—</span>{% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:12px">Status CPP</td>
+          {% for vaca_id, dados in resultado.items() %}
+          <td style="padding:12px;text-align:center">
+            {% if dados.cpp_ultimo %}
+              {% set cpp_val = dados.cpp_ultimo|int if dados.cpp_ultimo|string|int else 0 %}
+              <span style="{% if cpp_val < 100000 %}color:#388e3c{% elif cpp_val < 500000 %}color:#f57c00{% else %}color:#d32f2f{% endif %}">
+                {% if cpp_val < 100000 %}✅{% elif cpp_val < 500000 %}🟡{% else %}🔴{% endif %}
+                {{ dados.cpp_ultimo }}
+              </span>
+            {% else %}<span style="color:#999">—</span>{% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% if resultado.values()|list|first.ultimos_eventos %}
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:12px">Últimos Eventos</td>
+          {% for vaca_id, dados in resultado.items() %}
+          <td style="padding:12px;text-align:center;font-size:12px">
+            {% if dados.ultimos_eventos %}
+              {% for evento in dados.ultimos_eventos %}<div>{{ evento }}</div>{% endfor %}
+            {% else %}<span style="color:#999">—</span>{% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:24px;padding:16px;background:var(--surface-2);border-left:4px solid var(--info);border-radius:var(--radius)">
+    <h4 style="margin:0 0 8px 0">Interpretação</h4>
+    <ul style="margin:0;padding-left:20px;font-size:14px">
+      {% for vaca_id, dados in resultado.items() %}
+      <li>
+        <strong>{{ vaca_id }}</strong>:
+        {% if dados.margem_diario < 0 %}
+          Deficitária — verificar saúde e nutrição 🟡
+        {% elif dados.margem_diario < 10 %}
+          Margem baixa — acompanhar produção 📊
+        {% elif dados.producao_litros_dia < 5 %}
+          Verificar cobertura/secagem 📌
+        {% else %}
+          Vaca produtiva ✅
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
