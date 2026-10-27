@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}{{ a.brinco }} — Sítio Santo Antonio{% endblock %}
+{% block page_title %}{{ a.brinco }} 🏷️{% endblock %}
+
+{% block content %}
+<style>
+  .cond-header { display: flex; gap: 16px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+  .cond-brinco { width: 64px; height: 64px; border-radius: 50% 50% 50% 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; border: 3px solid rgba(0,0,0,.2); box-shadow: var(--shadow); flex: none; }
+  .cond-info h2 { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--green-700); margin: 0; }
+  .cond-info .muted { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+
+  .cond-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--bg-2); margin: 20px 0 16px; }
+  .cond-tab { padding: 12px 16px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-3); border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all .18s; white-space: nowrap; }
+  .cond-tab.ativo { color: var(--green-700); border-bottom-color: var(--green-700); }
+
+  .cond-painel { display: none; }
+  .cond-painel.ativo { display: block; }
+
+  .cond-resumo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .cond-campo { display: flex; flex-direction: column; gap: 2px; }
+  .cond-campo .chave { font-size: 11px; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .cond-campo .valor { font-size: 16px; font-weight: 600; color: var(--text); }
+  .cond-campo .sub { font-size: 11px; color: var(--text-3); }
+
+  .cond-acoes { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; }
+  .cond-acao { padding: 10px; border-radius: 8px; border-left: 3px solid var(--bg-2); background: var(--surface-2); font-size: 12px; }
+  .cond-acao .data { color: var(--text-3); font-weight: 600; display: block; }
+  .cond-acao .tipo { display: block; margin-top: 2px; }
+  .cond-acao .detalhe { font-size: 10.5px; color: var(--text-3); margin-top: 2px; }
+
+  .cond-historico { list-style: none; }
+  .cond-historico li { padding: 10px 0; border-bottom: 1px solid var(--bg-2); font-size: 12px; display: flex; gap: 12px; }
+  .cond-historico .d { color: var(--text-3); min-width: 70px; font-weight: 600; }
+
+  .cond-fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+  .cond-foto { position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 1; cursor: pointer; background: var(--bg-2); }
+  .cond-foto img { width: 100%; height: 100%; object-fit: cover; }
+  .cond-foto .tipo { position: absolute; bottom: 4px; left: 4px; font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,.6); color: #fff; }
+
+  .cond-botoes { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--bg-2); padding: 12px 16px; display: flex; gap: 8px; flex-wrap: wrap; z-index: 100; }
+  .cond-botoes .btn { flex: 1; min-width: 140px; font-size: 12px; padding: 10px 12px; }
+
+  @media (max-width: 600px) {
+    .cond-resumo { grid-template-columns: 1fr; }
+    .cond-botoes .btn { flex: 0 1 calc(50% - 4px); }
+  }
+
+  @media (min-width: 769px) {
+    .cond-header { margin-bottom: 30px; }
+    .cond-resumo { grid-template-columns: repeat(3, 1fr); }
+    .cond-botoes { position: relative; bottom: auto; left: auto; right: auto; background: transparent; border: none; margin-top: 20px; padding: 0; }
+    .cond-botoes .btn { flex: 0 1 auto; min-width: auto; }
+  }
+</style>
+
+<div class="cond-header">
+  {% if fotos|first %}
+  <img src="{{ url_for('foto_mini', id_foto=fotos|first.id_foto) }}" alt="{{ a.brinco }}"
+       style="width: 100px; height: 100px; border-radius: 10px; object-fit: cover; box-shadow: var(--shadow); flex: none;">
+  {% endif %}
+  <div class="cond-brinco" style="background: {{ a.hex }}; color: {{ '#222' if a.cor in ['Amarelo','Branco','Rosa','Laranja'] else '#fff' }}">
+    {{ '%02d' % a.num if a.num is not none else '??' }}
+  </div>
+  <div class="cond-info" style="flex: 1;">
+    <h2>{{ a.brinco }}</h2>
+    <div class="muted">#{{ a.id }} · {{ a.categoria or 'Animal' }}</div>
+    <div style="margin-top: 6px;">
+      <span class="badge" style="background: {% if a.status == 'Vivo' %}rgba(82,160,68,.16){% elif a.status == 'Vendido' %}rgba(41,128,185,.15){% else %}rgba(192,57,43,.14){% endif %}; color: {% if a.status == 'Vivo' %}var(--green-600){% elif a.status == 'Vendido' %}var(--info){% else %}var(--danger){% endif %}">{{ a.status }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 140px;">
+  <div class="cond-resumo">
+    <div class="cond-campo">
+      <span class="chave">Nome</span>
+      <span class="valor">{{ a.brinco }}</span>
+    </div>
+    <div class="cond-campo">
+      <span class="chave">Sexo</span>
+      <span class="valor">{{ {'F':'Fêmea','M':'Macho'}.get(a.sexo, '—') }}</span>
+    </div>
+    <div class="cond-campo">
+      <span class="chave">Idade</span>
+      <span class="valor">{{ a.idade or '—' }}</span>
+    </div>
+    {% if peso %}
+    <div class="cond-campo">
+      <span class="chave">Peso atual</span>
+      <span class="valor">{{ '%.0f' % peso.kg }} kg</span>
+      <span class="sub">{{ peso.data|data_br }}</span>
+    </div>
+    <div class="cond-campo">
+      <span class="chave">GMD</span>
+      <span class="valor" style="color: {% if peso.gmd is not none and peso.gmd >= 0 %}var(--green-600){% elif peso.gmd is not none %}var(--danger){% else %}var(--text-3){% endif %}">
+        {% if peso.gmd is not none %}{{ '%.2f' % peso.gmd }} kg/dia{% else %}—{% endif %}
+      </span>
+      {% if peso.gmd is not none %}<span class="sub">em {{ peso.dias }} dias</span>{% endif %}
+    </div>
+    {% else %}
+    <div class="cond-campo">
+      <span class="chave">Peso</span>
+      <span class="valor">—</span>
+      <span class="sub">Não pesado</span>
+    </div>
+    {% endif %}
+    {% if ultimo_parto %}
+    <div class="cond-campo">
+      <span class="chave">Parto</span>
+      <span class="valor">{{ ultimo_parto }}</span>
+    </div>
+    {% endif %}
+    {% if dias_lactacao is defined %}
+    <div class="cond-campo">
+      <span class="chave">Lactação</span>
+      <span class="valor">{{ dias_lactacao }} dias</span>
+    </div>
+    {% endif %}
+    <div class="cond-campo">
+      <span class="chave">Dono</span>
+      <span class="valor">{{ NOMES.get(a.dono, a.dono) }}</span>
+    </div>
+    <div class="cond-campo">
+      <span class="chave">Raça</span>
+      <span class="valor">{{ a.raca or '—' }}</span>
+    </div>
+  </div>
+
+  <div class="cond-tabs">
+    <div class="cond-tab ativo" data-tab="acoes">Últimas ações</div>
+    <div class="cond-tab" data-tab="historico">Histórico</div>
+    <div class="cond-tab" data-tab="fotos">📷 Fotos</div>
+  </div>
+
+  <div class="cond-painel ativo" id="cond-acoes">
+    <div class="cond-acoes">
+      {% if historico|length > 0 %}
+        {% for h in historico|slice(5)|list %}
+        <div class="cond-acao">
+          <span class="data">{{ h.data|data_br }}</span>
+          <span class="tipo">{{ h.tipo }}</span>
+          {% if h.detalhe %}<span class="detalhe">{{ h.detalhe }}</span>{% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted" style="font-size: 12px;">Nada registrado neste brinco.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="cond-painel" id="cond-historico">
+    {% if historico %}
+    <ul class="cond-historico">
+      {% for h in historico %}
+      <li><span class="d">{{ h.data|data_br }}</span><span><b>{{ h.tipo }}</b>{% if h.detalhe %}<br><span class="muted" style="font-size: 10px;">{{ h.detalhe }}</span>{% endif %}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted" style="font-size: 12px;">Nada registrado neste brinco.</p>
+    {% endif %}
+  </div>
+
+  <div class="cond-painel" id="cond-fotos">
+    {% if fotos %}
+    <div class="cond-fotos">
+      {% for f in fotos %}
+      <div class="cond-foto" onclick="abrirFoto('{{ url_for('foto_inteira', id_foto=f.id_foto) }}')" style="cursor: pointer;">
+        <img loading="lazy" src="{{ url_for('foto_mini', id_foto=f.id_foto) }}" alt="{{ f.tipo }}">
+        <span class="tipo">{{ f.tipo }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted" style="font-size: 12px;">Nenhuma foto ainda.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="cond-botoes">
+  <a href="{{ url_for('editar_animal', id_=a.id) }}" class="btn btn-outline btn-sm">✏️ Editar</a>
+  {% if a.status == 'Vivo' %}
+  <a href="{{ url_for('pesagem', id=a.id) }}" class="btn btn-outline btn-sm">⚖️ Pesar</a>
+  <a href="{{ url_for('novo_manejo', prefill=1, brincos=a.brinco, cabecas=1) }}" class="btn btn-primary btn-sm">🩺 Manejo</a>
+  {% endif %}
+  <a href="{{ url_for('animais') }}" class="btn btn-outline btn-sm">← Voltar</a>
+</div>
+
+<div id="visor-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,.88); display: none; align-items: center; justify-content: center; z-index: 200; padding: 16px;">
+  <img id="visor-img" style="max-width: 100%; max-height: 80vh; border-radius: 10px;" alt="">
+  <button onclick="document.getElementById('visor-modal').style.display='none'" style="position: absolute; top: 16px; right: 16px; background: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 18px;">✕</button>
+</div>
+
+<script>
+document.querySelectorAll(".cond-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".cond-tab").forEach(t => t.classList.remove("ativo"));
+    document.querySelectorAll(".cond-painel").forEach(p => p.classList.remove("ativo"));
+    tab.classList.add("ativo");
+    document.getElementById("cond-" + tab.dataset.tab).classList.add("ativo");
+  });
+});
+
+function abrirFoto(url) {
+  const img = document.getElementById("visor-img");
+  img.src = url;
+  document.getElementById("visor-modal").style.display = "flex";
+}
+</script>
+{% endblock %}
