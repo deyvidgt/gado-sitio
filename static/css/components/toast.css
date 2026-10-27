@@ -1,0 +1,131 @@
+/* ────────────────────────────────────────────────────────────────
+   Component: Toast Notifications (v5.7 Sprint 4 Phase 2)
+
+   Features:
+   - Queue system (notifications stack vertically)
+   - Auto-dismiss after duration
+   - 4 types: success, error, warning, info
+   - Smooth animations (slide-in, fade-out)
+   - Dark mode support
+   - ARIA live region for screen readers
+   - Mobile-friendly positioning
+   ──────────────────────────────────────────────────────────────── */
+
+.toast {
+  position: fixed;
+  bottom: 70px;
+  right: var(--spacing-lg, 24px);
+  max-width: 400px;
+  padding: var(--spacing-md, 16px) var(--spacing-lg, 24px);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-lg, 0 4px 12px rgba(0, 0, 0, 0.15));
+  font-size: var(--font-base, 16px);
+  line-height: 1.5;
+  opacity: 0;
+  transform: translateX(400px);
+  transition: all 0.3s ease;
+  z-index: 2000;
+  pointer-events: auto;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Toast Types */
+.toast-success {
+  background: var(--color-success-main, #27ae60);
+  color: white;
+  border-left: 4px solid var(--color-success-dark, #1e8449);
+}
+
+.toast-error {
+  background: var(--color-danger-main, #e74c3c);
+  color: white;
+  border-left: 4px solid var(--color-danger-dark, #c0392b);
+}
+
+.toast-warning {
+  background: var(--color-warning-main, #f39c12);
+  color: white;
+  border-left: 4px solid var(--color-warning-dark, #d68910);
+}
+
+.toast-info {
+  background: var(--color-primary-main, #2c5aa0);
+  color: white;
+  border-left: 4px solid var(--color-primary-dark, #1f3f5c);
+}
+
+/* Dark Mode */
+[data-theme="dark"] .toast {
+  box-shadow: var(--shadow-lg, 0 4px 12px rgba(0, 0, 0, 0.4));
+}
+
+[data-theme="dark"] .toast-success {
+  background: var(--color-success-dark, #1e8449);
+  border-left-color: var(--color-success-main, #27ae60);
+}
+
+[data-theme="dark"] .toast-error {
+  background: var(--color-danger-dark, #c0392b);
+  border-left-color: var(--color-danger-main, #e74c3c);
+}
+
+[data-theme="dark"] .toast-warning {
+  background: var(--color-warning-dark, #d68910);
+  border-left-color: var(--color-warning-main, #f39c12);
+}
+
+[data-theme="dark"] .toast-info {
+  background: var(--color-primary-dark, #1f3f5c);
+  border-left-color: var(--color-primary-main, #2c5aa0);
+}
+
+/* Mobile Positioning */
+@media (max-width: 768px) {
+  .toast {
+    bottom: 70px;
+    right: var(--spacing-md, 16px);
+    left: var(--spacing-md, 16px);
+    max-width: none;
+    border-radius: var(--radius-md, 8px);
+  }
+
+  .toast.visible {
+    transform: translateY(0);
+  }
+
+  .toast:not(.visible) {
+    transform: translateY(120px);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition: opacity 0.2s ease;
+  }
+
+  .toast.visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  .toast:not(.visible) {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+/* Accessibility: ARIA Live Region */
+.toast {
+  position: relative;
+}
+
+.toast[role="status"] {
+  /* ARIA live region */
+}

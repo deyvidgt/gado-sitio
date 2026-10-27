@@ -15,6 +15,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/design-tokens.css">
+  <!-- v5.7 Sprint 4: Component Library -->
+  <link rel="stylesheet" href="/static/css/components/modal.css">
+  <link rel="stylesheet" href="/static/css/components/toast.css">
+  <link rel="stylesheet" href="/static/css/components/accordion.css">
+  <link rel="stylesheet" href="/static/css/components/form-validator.css">
   <link rel="stylesheet" href="/static/css/skeleton.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script defer src="/static/js/lazy-images.js"></script>
@@ -471,11 +476,26 @@
 
   /* Sidebar mobile */
   function toggleSidebar() {
-    document.querySelector(".sidebar").classList.toggle("open");
-    document.getElementById("overlay").classList.toggle("open");
+    const sidebar = document.querySelector(".sidebar");
+    const overlay = document.getElementById("overlay");
+    const isOpen = sidebar.classList.contains("open");
+
+    sidebar.classList.toggle("open");
+    overlay.classList.toggle("open");
+
+    // Auto-close overlay on click (mobile)
+    if (!isOpen) {
+      overlay.addEventListener("click", closeSidebar, { once: true });
+    }
   }
+
+  function closeSidebar() {
+    document.querySelector(".sidebar").classList.remove("open");
+    document.getElementById("overlay").classList.remove("open");
+  }
+
   document.querySelectorAll(".nav-link").forEach(a =>
-    a.addEventListener("click", () => { if (window.innerWidth <= 768) toggleSidebar(); }));
+    a.addEventListener("click", () => { if (window.innerWidth <= 768) closeSidebar(); }));
 
   /* Tema */
   const html   = document.documentElement;
@@ -709,6 +729,12 @@ function dispensarInstall() {
 </nav>
 
 <script src="/static/js/bottom-nav.js"></script>
+
+<!-- v5.7 Sprint 4: Component Library -->
+<script src="/static/js/components/modal.js"></script>
+<script src="/static/js/components/toast.js"></script>
+<script src="/static/js/components/accordion.js"></script>
+<script src="/static/js/components/form-validator.js"></script>
 
 </body>
 </html>

@@ -18,45 +18,10 @@ class Gestures {
   }
 
   init() {
-    this.initDrawer();
+    // Sidebar toggle handled in base.html via toggleSidebar()
     this.initSwipe();
     this.initLongPress();
     this.initScrollBehavior();
-  }
-
-  // ── Drawer Menu Toggle ──────────────────────────────────────────────────
-
-  initDrawer() {
-    const toggle = document.querySelector('.drawer-toggle');
-    const overlay = document.querySelector('.drawer-overlay');
-    const menu = document.querySelector('.drawer-menu');
-
-    if (!toggle || !overlay || !menu) return;
-
-    toggle.addEventListener('click', () => this.toggleDrawer(menu, overlay));
-    overlay.addEventListener('click', () => this.closeDrawer(menu, overlay));
-
-    // Swipe para fechar drawer
-    document.addEventListener('touchstart', (e) => {
-      this.startX = e.touches[0].clientX;
-    });
-
-    document.addEventListener('touchend', (e) => {
-      const endX = e.changedTouches[0].clientX;
-      if (this.startX > 100 && endX < 50 && menu.classList.contains('active')) {
-        this.closeDrawer(menu, overlay);
-      }
-    });
-  }
-
-  toggleDrawer(menu, overlay) {
-    menu.classList.toggle('active');
-    overlay.classList.toggle('active');
-  }
-
-  closeDrawer(menu, overlay) {
-    menu.classList.remove('active');
-    overlay.classList.remove('active');
   }
 
   // ── Swipe para Abas ────────────────────────────────────────────────────
