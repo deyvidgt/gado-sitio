@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Relatório do leite — Sítio Santo Antonio{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><span class="eyebrow">Atividade leiteira</span><h2>Relatório do leite</h2></div>
+  <div class="acoes"><a class="btn" href="{{ url_for('painel_leite') }}">Voltar ao painel</a></div>
+</div>
+<form method="get" class="card">
+  <div class="grid-3">
+    <label>De <input type="date" name="inicio" value="{{ inicio.isoformat() }}"></label>
+    <label>Até <input type="date" name="fim" value="{{ fim.isoformat() }}"></label>
+    <div><button class="btn btn-primary" type="submit">Filtrar</button></div>
+  </div>
+</form>
+<div class="metrics">
+  <div class="metric"><strong>{{ '%.1f'|format(total)|replace('.', ',') }}</strong><span>Litros no período</span></div>
+  <div class="metric"><strong>{{ serie|length }}</strong><span>Dias com registro</span></div>
+</div>
+<div class="card">
+  <h3>Produção por dia</h3>
+  {% if serie %}
+  <table>
+    <thead><tr><th>Data</th><th>Litros</th></tr></thead>
+    <tbody>
+    {% for dia, litros in serie %}
+      <tr><td>{{ dia.strftime('%d/%m/%Y') }}</td><td>{{ '%.1f'|format(litros)|replace('.', ',') }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p><a class="btn" href="{{ url_for('exportar_leite', inicio=inicio.isoformat(), fim=fim.isoformat()) }}">Baixar Excel</a></p>
+  {% else %}
+  <p>Nenhuma ordenha registrada neste período. Os valores não informados não entram como zero.</p>
+  {% endif %}
+</div>
+<div class="card">
+  <h3>Por vaca (registros individuais)</h3>
+  {% if por_vaca %}
+  <table>
+    <thead><tr><th>Vaca ID</th><th>Litros</th></tr></thead>
+    <tbody>
+    {% for vaca, litros in por_vaca.items() %}
+      <tr><td>{{ vaca }}</td><td>{{ '%.1f'|format(litros)|replace('.', ',') }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>Sem registros individuais no período. Registros totais não entram no ranking por vaca.</p>
+  {% endif %}
+</div>
+{% endblock %}

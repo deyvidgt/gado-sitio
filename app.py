@@ -70,6 +70,10 @@ from routes_reproducao import * # noqa: F401, F403
 # v5.3 — Painel econômico por lote
 from routes_lotes import *      # noqa: F401, F403
 
+# v5.4 — Produção leiteira
+from routes_leite import *      # noqa: F401, F403
+from routes_alertas import *    # noqa: F401, F403
+
 # Calendário operacional consolidado (somente leitura)
 from routes_calendario import * # noqa: F401, F403
 

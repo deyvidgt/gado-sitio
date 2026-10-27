@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }} — Leite{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">Atividade leiteira</span><h2>{{ titulo }}</h2></div></div>
+<form method="post" class="card form-grid">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <label>Data<input type="date" name="data" value="{{ hoje }}" required></label>
+  {% for campo in campos %}<label>{{ campo.label }}<input name="{{ campo.nome }}" {% if campo.required %}required{% endif %}></label>{% endfor %}
+  <button class="btn btn-primary" type="submit">Salvar registro</button>
+</form>
+<div class="card"><p>Registros operacionais não alteram automaticamente o resultado financeiro do gado de corte.</p></div>
+{% endblock %}

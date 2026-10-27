@@ -4,6 +4,20 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ## [Não lançado]
 
+### Corrigido
+- **Lançamento de litros:** o formulário aceitava "12,5" mas o site gravava 12 (interpretava "12,5" como número inteiro). Agora `parse_valor("12,5")` retorna 12.5 e fica redondo na planilha.
+- **Edição e exclusão de ordenhas:** a leitura e a reescrita não compartilhavam a trava de arquivo, então um novo lançamento entre o GET e o POST sumia. Agora `db.alterar_aba()` segura a trava do começo até o `os.replace()`, garantindo que a gravação é atômica.
+- **Aviso pandas ao ler datas:** `_data()` em `leite.py` agora especifica o formato ("dd/mm/aaaa" ou "aaaa-mm-dd") em vez de deixar o pandas adivinhar, evitando avisos em ISO + dayfirst.
+- **Timeout da previsão:** `requests.get()` para o Open-Meteo agora é `timeout=(2, 3)` em vez de 5 s — a chamada roda com a trava do sítio segurada (um pedido por vez), então a espera muito longa bloqueia outras requisições.
+
+### Adicionado (módulo leiteiro — v5.4)
+- **Campos de leite no cadastro de animal:** Uso Produtivo (leite/ambos/corte), Situação Leite (lactação/seca) e Último Parto (data). Opcionais; preenchidos ao editar a ficha do animal — quem não mexe no leite deixa em branco.
+- **Números de cabeças no mapa de pastos:** cada pasto agora mostra o número total de cabeças no centro (em contraste automático: branco em fundo escuro, preto em claro). Atualiza ao mover gado.
+- **Alertas de qualidade do leite (CCS/CPP):** painel mostra gráfico dos últimos 7 dias de CCS (Contagem Célula Somática) e CPP (Contagem Padrão em Placa) com cores (verde OK, amarelo aviso, vermelho crítico). Ficha do animal lista últimas 5 ordenhas com status de mastite/higiene. WhatsApp avisa quando CCS > 200k ou CPP > 100k.
+- **Calculador de ração:** nova página **🧮 Leite → Calculador** (GET /leite/calculador). Selecione tipo de animal (Lactação/Seca/Novilha/Bezerro), peso vivo e produção; o sistema calcula necessidades nutricionais (MS, PB, Energia) e sugere combinação de ingredientes da aba Alimentação com score de balanceamento. Orientativo: não substitui nutricionista.
+- **Scores de conforto térmico (1-5):** aba Leite Conforto ganhou 4 campos: Fezes (1-5: seca/normal/mole), Lama na Baia (1-3: pouca/média/muita), Comportamento Predominante (dropdown), Mastite Observada (sim/não/suspeita). Opcionais; ajudam a diagnosticar problemas de ambiente.
+- **Alertas de troca de colchão:** nova página **🛏️ Leite → Colchões** (GET /leite/colchao) com lista e histórico. Cada colchão mostra: Material, Última Troca, Próxima Troca (automaticamente +180 dias se não informada), Dias Restantes e Status (✅ OK / 🟡 Aviso ≤14 dias / 🔴 Urgente ≤7 dias). WhatsApp avisa quando faltam 7 dias. Card no painel resume urgentes e avisos.
+
 ### Melhorado
 - **Telas mais fáceis de ler (v5.3):** inspirado nos aplicativos que a família já conhece,
   o que antes era só número virou **barra colorida com semáforo**:
@@ -25,6 +39,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
     quem não distingue bem as cores ou está no sol.
 
 ### Adicionado
+- **Módulo leiteiro:** painel do leite, lançamento de ordenha (individual ou total, sem somar
+  duas vezes), vacas e ficha com dias em lactação e carência, alimentação e necessidades,
+  tratamentos, conforto e colchão, central de alertas com previsão do tempo, **relatório do
+  leite com Excel** e seção de ajuda. Separado das contas do gado de corte.
 - **Importação de mapa KMZ/KML e foco no pasto (v5.3):**
   - **Upload de arquivo .kmz ou .kml:** botão **📂 Importar KMZ** na tela de pastos; lê arquivos exportados do Google Earth, GPS ou CAR, extrai os polígonos e nomes demarcados e salva os pastos com a área em hectares calculada automaticamente.
   - **Foco e atalho no mapa:** botão **🎯 Mostrar selecionado** no topo do mapa e atalho **🗺️ Ver no mapa** em cada cartão de pasto para enquadrar e destacar imediatamente a cerca do pasto escolhido.

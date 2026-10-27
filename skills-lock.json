@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "claude-automation-recommender": {
+      "source": "anthropics/claude-plugins-official",
+      "sourceType": "github",
+      "skillPath": "plugins/claude-code-setup/skills/claude-automation-recommender/SKILL.md",
+      "computedHash": "bed758b9627ad21cdc8141e9b595b48ede2c785437253778e9857325818606db"
+    }
+  }
+}

@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}Calculador de Ração — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Calculador de Ração 🥗{% endblock %}
+
+{% block content %}
+<div style="max-width:900px">
+
+<!-- Aviso de orientação -->
+<div style="background:var(--surface-3);border-left:4px solid var(--warning);padding:16px;border-radius:var(--radius);margin-bottom:24px;font-size:14px">
+  <strong>⚠️ Cálculo orientativo:</strong> Este balanceamento é uma sugestão aproximada baseada em tabelas Embrapa simplificadas.
+  Não substitui avaliação de um nutricionista. Use como referência para discussão com seu técnico.
+</div>
+
+<!-- Formulário de entrada -->
+<div class="card" style="margin-bottom:24px">
+  <h3>Dados do Animal</h3>
+
+  <form method="post" action="{{ url_for('calculador_leite') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <!-- Categoria -->
+      <div>
+        <label style="display:block;font-weight:500;margin-bottom:6px">Tipo de Animal</label>
+        <select name="categoria" required style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-1)">
+          <option value="">— Selecione —</option>
+          {% for cat in categorias %}
+          <option value="{{ cat }}"
+            {% if resultado and resultado.categoria == cat %}selected{% endif %}>
+            {{ cat }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Peso vivo -->
+      <div>
+        <label style="display:block;font-weight:500;margin-bottom:6px">Peso Vivo (kg)</label>
+        <input type="number" name="peso_vivo" min="100" max="1000" step="0.1"
+               value="{% if resultado %}{{ resultado.peso_kg }}{% else %}500{% endif %}"
+               placeholder="Ex: 500" required
+               style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius)">
+      </div>
+    </div>
+
+    <!-- Produção de leite (aparece só se Lactação) -->
+    <div id="producao-container" style="display:none;margin-bottom:16px">
+      <label style="display:block;font-weight:500;margin-bottom:6px">Produção de Leite (litros/dia)</label>
+      <input type="number" name="producao_litros" min="0" max="100" step="0.1"
+             value="{% if resultado %}{{ resultado.producao_litros }}{% else %}20{% endif %}"
+             placeholder="Ex: 20"
+             style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius)">
+    </div>
+
+    <div style="display:flex;gap:12px">
+      <button type="submit" class="btn btn-primary">Calcular Necessidades</button>
+      <button type="reset" class="btn btn-outline">Limpar</button>
+    </div>
+  </form>
+</div>
+
+<!-- Mensagem de erro -->
+{% if erro %}
+<div style="background:rgba(220,38,38,0.1);border-left:4px solid var(--danger);padding:16px;border-radius:var(--radius);margin-bottom:24px;color:var(--danger);font-size:14px">
+  {{ erro }}
+</div>
+{% endif %}
+
+<!-- Resultado -->
+{% if resultado %}
+<div style="margin-bottom:24px">
+  <h3 style="margin-bottom:16px">Necessidades Calculadas</h3>
+
+  <!-- Cálculo resumido -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
+    <div class="card">
+      <div class="metric">
+        <span class="metric-label">Matéria Seca</span>
+        <div style="font-size:28px;font-weight:bold;color:var(--primary)">{{ resultado.necessidades.ms_kg }} kg</div>
+        <div style="font-size:12px;color:var(--text-3);margin-top:4px">
+          ({{ (resultado.necessidades.ms_kg / resultado.peso_kg * 100)|round(1) }}% do peso)
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="metric">
+        <span class="metric-label">Proteína Bruta</span>
+        <div style="font-size:28px;font-weight:bold;color:var(--primary)">{{ resultado.necessidades.pb_g|int }} g</div>
+        <div style="font-size:12px;color:var(--text-3);margin-top:4px">
+          ({{ resultado.necessidades.proteina_pct_ms }}% da MS)
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="metric">
+        <span class="metric-label">Energia (EM)</span>
+        <div style="font-size:28px;font-weight:bold;color:var(--primary)">{{ resultado.necessidades.energia_mcal }} Mcal</div>
+        <div style="font-size:12px;color:var(--text-3);margin-top:4px">
+          ({{ resultado.necessidades.energia_kcal_kg_ms|int }} kcal/kg MS)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sugestão de ração -->
+<div style="margin-bottom:24px">
+  <h3 style="margin-bottom:16px">Sugestão de Ração Balanceada</h3>
+  <div style="background:var(--surface-2);padding:16px;border-radius:var(--radius);margin-bottom:16px">
+    <div style="font-size:13px;color:var(--text-3);margin-bottom:12px">
+      <strong>Avaliação:</strong> <span style="font-size:14px">Score {{ resultado.sugestao.score }}/100</span>
+      {% if resultado.sugestao.score >= 75 %}
+        <span class="badge badge-ok">✓ Boa</span>
+      {% elif resultado.sugestao.score >= 50 %}
+        <span class="badge badge-aviso">⚠ Regular</span>
+      {% else %}
+        <span class="badge badge-ruim">✗ Ruim</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Tabela de ingredientes -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Ingrediente</th>
+          <th style="text-align:right">Quantidade</th>
+          <th style="text-align:right">Proteína Bruta</th>
+          <th style="text-align:right">Energia</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ing in resultado.sugestao.ingredientes %}
+        <tr>
+          <td><strong>{{ ing.nome }}</strong></td>
+          <td style="text-align:right">{{ ing.kg }} kg</td>
+          <td style="text-align:right;font-size:13px;color:var(--text-3)">{{ ing.pb_g }} g</td>
+          <td style="text-align:right;font-size:13px;color:var(--text-3)">{{ ing.energia_mcal }} Mcal</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="font-weight:bold;border-top:2px solid var(--border)">
+          <td>TOTAL OFERTADO</td>
+          <td style="text-align:right">{{ resultado.sugestao.ms_total_kg }} kg</td>
+          <td style="text-align:right">{{ resultado.sugestao.pb_total_g|int }} g</td>
+          <td style="text-align:right">{{ resultado.sugestao.energia_total_mcal }} Mcal</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- Comparativo Necessário vs. Oferecido -->
+<div style="margin-bottom:24px">
+  <h3 style="margin-bottom:16px">Comparativo: Necessário vs. Oferecido</h3>
+
+  <div style="display:grid;gap:12px">
+    {% for item in resultado.comparativo %}
+    <div style="border:1px solid var(--border);border-radius:var(--radius);padding:14px;background:var(--surface-1)">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+        <div>
+          <div style="font-weight:500;font-size:14px">{{ item.nutriente }}</div>
+          <div style="font-size:12px;color:var(--text-3);margin-top:4px">
+            Necessário: <strong>{{ item.necessario }}</strong>
+            | Oferecido: <strong>{{ item.oferecido }}</strong>
+            (<strong>{{ item.pct|int }}%</strong>)
+          </div>
+        </div>
+        <!-- Badge de status -->
+        {% if item.status == 'ok' %}
+          <span class="badge badge-ok">✓ OK</span>
+        {% elif item.status == 'aviso' %}
+          <span class="badge badge-aviso">⚠ Aviso</span>
+        {% else %}
+          <span class="badge badge-ruim">✗ Crítico</span>
+        {% endif %}
+      </div>
+
+      <!-- Barra de atendimento -->
+      <div style="background:var(--surface-2);height:20px;border-radius:4px;overflow:hidden;position:relative">
+        <div class="barra"
+             style="width:{% if item.pct > 100 %}100{% else %}{{ item.pct|int }}{% endif %}%;background:{% if item.status == 'ok' %}var(--ok){% elif item.status == 'aviso' %}var(--aviso){% else %}var(--danger){% endif %}"
+             title="{{ item.pct|int }}%">
+        </div>
+        <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:white;text-shadow:0 1px 1px rgba(0,0,0,0.3)">
+          {{ item.pct|int }}%
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div style="margin-top:16px;font-size:13px;color:var(--text-3);background:var(--surface-2);padding:12px;border-radius:var(--radius)">
+    <strong>Critério:</strong> 85–115% é considerado OK; 70–130% é aviso; fora desses limites é crítico.
+  </div>
+</div>
+
+<!-- Nota final -->
+<div style="background:var(--surface-2);padding:16px;border-radius:var(--radius);font-size:13px;color:var(--text-3)">
+  <strong>💡 Dica:</strong> Esta sugestão combina ingredientes cadastrados em "Leite → Alimentação"
+  usando um algoritmo simples (força bruta de 1-3 ingredientes). Para rações mais precisas,
+  consulte seu técnico em nutrição animal com os ingredientes disponíveis e análises laboratoriais atualizadas.
+</div>
+
+{% else %}
+
+<!-- Estado vazio -->
+<div style="background:var(--surface-2);padding:48px;text-align:center;border-radius:var(--radius);box-shadow:var(--shadow)">
+  <div style="font-size:40px;margin-bottom:12px">🥗</div>
+  <p style="color:var(--text-3);font-size:15px">Preencha os dados acima e clique em "Calcular" para ver a sugestão de ração.</p>
+</div>
+
+{% endif %}
+
+</div>
+
+<script>
+// Mostra/esconde campo de produção conforme categoria
+document.querySelector('select[name="categoria"]').addEventListener('change', function() {
+  const container = document.getElementById('producao-container');
+  container.style.display = this.value === 'Lactação' ? 'block' : 'none';
+});
+// Inicializa no carregamento
+document.querySelector('select[name="categoria"]').dispatchEvent(new Event('change'));
+</script>
+
+{% endblock %}

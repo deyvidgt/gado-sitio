@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Alertas — Sítio Santo Antonio{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">Acompanhe o que pede atenção</span><h2>Central de alertas</h2></div></div>
+<div class="card">
+  <h3>Previsão do tempo{% if tempo.local %} · {{ tempo.local }}{% endif %}</h3>
+  <p>{{ tempo.mensagem or 'Previsão indisponível' }}</p>
+  {% if tempo.atual %}
+    <div class="tri" style="margin-top:12px">
+      <div><strong>{{ tempo.atual.temperatura|br_num(1) if tempo.atual.temperatura is not none else '—' }} °C</strong><small>Agora</small></div>
+      <div><strong>{{ tempo.atual.umidade if tempo.atual.umidade is not none else '—' }}%</strong><small>Umidade</small></div>
+      <div><strong>{{ tempo.atual.vento_kmh|br_num(1) if tempo.atual.vento_kmh is not none else '—' }} km/h</strong><small>Vento</small></div>
+    </div>
+    <p><strong>{{ tempo.atual.condicao }}</strong></p>
+  {% endif %}
+  {% if tempo.dias %}
+    <div class="linha" style="margin-top:12px">
+      {% for dia in tempo.dias[:3] %}
+        <div><strong>{{ dia.data[8:10] }}/{{ dia.data[5:7] }}</strong> · {{ dia.condicao }} · {{ dia.minima|br_num(0) if dia.minima is defined else '—' }}–{{ dia.maxima|br_num(0) if dia.maxima is defined else '—' }} °C · chuva {{ dia.chuva_probabilidade if dia.chuva_probabilidade is defined else '—' }}%</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+<div class="grid-2">{% for item in alertas %}<div class="card"><span class="badge badge-{{ item.prioridade }}">{{ item.prioridade|capitalize }}</span><h3>{{ item.titulo }}</h3><p>{{ item.detalhe }}</p><small>{{ item.acao }}</small></div>{% else %}<div class="card"><p>Nenhum alerta no momento.</p></div>{% endfor %}</div>
+{% endblock %}

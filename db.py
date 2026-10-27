@@ -36,7 +36,9 @@ from config import (
     ARQUIVO_DADOS,
     COLUNAS_COMPRAS, COLUNAS_GASTOS,
     COLUNAS_VENDAS, COLUNAS_MANEJO, COLUNAS_VISITAS, COLUNAS_ANIMAIS, COLUNAS_FOTOS,
-    COLUNAS_PASTOS, COLUNAS_TAREFAS,
+    COLUNAS_PASTOS, COLUNAS_TAREFAS, COLUNAS_LEITE_PRODUCAO, COLUNAS_LEITE_CONFIG,
+    COLUNAS_LEITE_ALIMENTACAO, COLUNAS_LEITE_NECESSIDADES, COLUNAS_LEITE_TRATAMENTOS,
+    COLUNAS_LEITE_CONFORTO, COLUNAS_LEITE_COLCHAO,
 )
 
 # Mapa aba → colunas esperadas, usado para migrar colunas novas sem perder dados.
@@ -50,6 +52,13 @@ _SCHEMA_ABAS = {
     "Fotos":   COLUNAS_FOTOS,     # v4.4
     "Pastos":  COLUNAS_PASTOS,    # v5.2
     "Tarefas": COLUNAS_TAREFAS,   # v5.3
+    "Leite Produção": COLUNAS_LEITE_PRODUCAO,
+    "Leite Configuração": COLUNAS_LEITE_CONFIG,
+    "Leite Alimentação": COLUNAS_LEITE_ALIMENTACAO,
+    "Leite Necessidades": COLUNAS_LEITE_NECESSIDADES,
+    "Leite Tratamentos": COLUNAS_LEITE_TRATAMENTOS,
+    "Leite Conforto": COLUNAS_LEITE_CONFORTO,
+    "Leite Colchão": COLUNAS_LEITE_COLCHAO,
 }
 
 # Caminho completo do arquivo de dados
@@ -227,6 +236,13 @@ def inicializar():
         wb.create_sheet("Fotos").append(COLUNAS_FOTOS)
         wb.create_sheet("Pastos").append(COLUNAS_PASTOS)
         wb.create_sheet("Tarefas").append(COLUNAS_TAREFAS)
+        wb.create_sheet("Leite Produção").append(COLUNAS_LEITE_PRODUCAO)
+        wb.create_sheet("Leite Configuração").append(COLUNAS_LEITE_CONFIG)
+        wb.create_sheet("Leite Alimentação").append(COLUNAS_LEITE_ALIMENTACAO)
+        wb.create_sheet("Leite Necessidades").append(COLUNAS_LEITE_NECESSIDADES)
+        wb.create_sheet("Leite Tratamentos").append(COLUNAS_LEITE_TRATAMENTOS)
+        wb.create_sheet("Leite Conforto").append(COLUNAS_LEITE_CONFORTO)
+        wb.create_sheet("Leite Colchão").append(COLUNAS_LEITE_COLCHAO)
 
         wb.create_sheet("Resumo")
         wb.save(ARQUIVO_PATH)
@@ -378,6 +394,25 @@ def salvar_linha(aba: str, linha: list):
         if aba in _SCHEMA_ABAS:
             _garantir_colunas(ws, _SCHEMA_ABAS[aba])
         ws.append([_preparar_valor(v) for v in linha])
+        _salvar_atomico(wb)
+
+
+def alterar_aba(aba: str, mudar):
+    """Lê a aba, deixa `mudar(df)` alterá-la e grava — tudo sob a mesma trava.
+    Sem isso, uma gravação feita entre a leitura e a escrita se perdia."""
+    with _trava_escrita():
+        wb = load_workbook(ARQUIVO_PATH)
+        ws = wb[aba]
+        linhas = list(ws.iter_rows(values_only=True))
+        # Valores crus (sem converter datas): a data que não lê como data fica como está.
+        # Linhas vazias saem, como em carregar_aba, para o índice bater com a tela.
+        df = pd.DataFrame(linhas[1:], columns=list(linhas[0])) if linhas else pd.DataFrame()
+        df = df.dropna(how="all").reset_index(drop=True)
+        df = mudar(df)
+        if ws.max_row > 1:
+            ws.delete_rows(2, ws.max_row - 1)
+        for _, row in df.iterrows():
+            ws.append([_preparar_valor(v) for v in row])
         _salvar_atomico(wb)
 
 

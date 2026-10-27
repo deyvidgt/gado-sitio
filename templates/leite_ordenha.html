@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Lançar ordenha — Leite{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">Registro rápido</span><h2>Lançar ordenha</h2></div></div>
+<form method="post" class="card form-grid">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <label>Data<input type="date" name="data" value="{{ hoje }}" required></label>
+  <label>Modo<select name="modo_registro"><option value="individual">Por animal</option><option value="total">Total da ordenha</option></select></label>
+  <label>Vaca ID<input name="vaca_id" placeholder="A0001"></label>
+  <label>Brinco<input name="brinco"></label>
+  <label>Ordenha<input name="ordenha" value="Manhã"></label>
+  <label>Litros<input name="litros" inputmode="decimal" required></label>
+  <label>CCS<input name="ccs"></label>
+  <label>CPP<input name="cpp"></label>
+  <label>ID Envio<input name="id_envio"></label>
+  <div><button class="btn btn-primary" type="submit">Salvar ordenha</button></div>
+</form>
+{% endblock %}

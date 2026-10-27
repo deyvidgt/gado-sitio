@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Vacas leiteiras — Leite{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">Rebanho leiteiro</span><h2>Vacas leiteiras</h2></div><a class="btn btn-primary" href="{{ url_for('ordenha_leite') }}">Lançar ordenha</a></div>
+<div class="card">
+  <div class="section-head"><h3>Animais ativos</h3><span>Dias em lactação</span></div>
+  {% if animais %}
+    {% for animal in animais %}
+    <div class="linha"><div><a href="{{ url_for('ficha_animal_leite', animal_id=animal.id) }}"><strong>{{ animal.brinco or animal.id }}</strong></a><small>{{ animal.id }} · Situação: {{ animal.situacao or 'não informado' }}</small></div><div><strong>{{ animal.dias if animal.dias is not none else 'não informado' }}</strong><small>dias em lactação</small></div></div>
+    {% endfor %}
+  {% else %}<p>Nenhuma vaca leiteira ativa cadastrada.</p>{% endif %}
+</div>
+{% endblock %}

@@ -237,6 +237,8 @@ COLUNAS_ANIMAIS = [
     "ID", "Brinco Cor", "Brinco Nº", "Dono", "Categoria", "Sexo",
     "Raça", "Pelagem", "Sinais", "Nascimento", "Entrada", "Origem",
     "Ref Compra", "Mãe", "Status", "Data Saída", "Observações", "Registrado Por",
+    # NOVO v5.4: módulo leiteiro (leite.py) — "leite"/"ambos"/"corte", "lactação"/"seca", dd/mm/aaaa.
+    "Uso Produtivo", "Situação Leite", "Último Parto",
 ]
 
 # v4.4 — Fotos dos animais (arquivos no Google Drive; aqui só os dados de cada foto).
@@ -249,6 +251,44 @@ COLUNAS_PASTOS = ["ID", "Nome", "Área (ha)", "Contorno", "Cor", "Ativo", "Obser
 # v5.3 — Agenda de tarefas (tarefas.py). "Feito Em" vazio = ainda pendente.
 COLUNAS_TAREFAS = ["ID", "Data", "Título", "Responsável", "Repetir", "Feito Em",
                    "Observações", "Criado Por"]
+
+# v5.4 — módulo leiteiro. Abas novas; as colunas entram somente no fim do
+# esquema existente e a migração não altera dados das abas anteriores.
+COLUNAS_LEITE_PRODUCAO = [
+    "Data", "Vaca ID", "Brinco", "Modo Registro", "Ordenha", "Litros",
+    "CCS (células/mL)", "CPP (UFC/mL)", "Qualidade", "Temperatura",
+    "Observação", "Responsável", "ID Envio", "Criado Em",
+]
+COLUNAS_LEITE_CONFIG = [
+    "Preço por Litro", "Meta Litros por Vaca", "Queda de Alerta (%)",
+    "Dias sem Registro", "Número de Ordenhas", "Dias até Secagem", "Observações",
+]
+COLUNAS_LEITE_ALIMENTACAO = [
+    "Produto", "Fabricante", "Categoria", "Peso Saco (kg)",
+    "Proteína Bruta (%)", "NDT/Energia (%)", "Fibra (%)", "Cálcio (%)",
+    "Fósforo (%)", "Consumo Recomendado (g/cab/dia)", "Preço por Saco (R$)",
+    "Lote", "Validade", "Observação", "Ativo",
+]
+COLUNAS_LEITE_NECESSIDADES = [
+    "Categoria Produtiva", "Nutriente ou Item", "Valor Diário", "Unidade",
+    "Fonte", "Data Revisão", "Observação", "Ativo",
+]
+COLUNAS_LEITE_TRATAMENTOS = [
+    "Data", "Vaca ID", "Brinco", "Tipo", "Descrição", "Produto/Serviço",
+    "Quantidade", "Unidade", "Custo (R$)", "Responsável", "Período de Carência",
+    "Observação", "ID Envio", "Criado Em",
+]
+COLUNAS_LEITE_CONFORTO = [
+    "Data", "Local", "Sombra", "Água Disponível", "Ventilação",
+    "Área de Descanso", "Lotação", "Estresse Térmico", "Descanso Observado",
+    "Observação", "Responsável", "ID Envio", "Criado Em",
+]
+COLUNAS_LEITE_COLCHAO = [
+    "Data", "Local", "Material", "Quantidade", "Unidade", "Custo (R$)",
+    "Fornecedor", "Condição", "Próxima Troca", "Observação", "Foto Antes",
+    "Foto Depois", "Responsável", "ID Envio", "Criado Em",
+]
+
 # Repetição → de quantos em quantos dias a próxima é criada ao concluir.
 REPETICOES_TAREFA = {"Não": 0, "Semanal": 7, "Quinzenal": 14, "Mensal": 30,
                      "Trimestral": 90, "Semestral": 182, "Anual": 365}

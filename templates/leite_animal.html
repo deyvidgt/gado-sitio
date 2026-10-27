@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Ficha leiteira — {{ animal.brinco }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">Acompanhamento individual</span><h2>{{ animal.brinco }}</h2><p class="hint">{{ animal.id }} · {{ animal.situacao }}</p></div><a class="btn btn-outline" href="{{ url_for('animais_leite') }}">Voltar às vacas</a></div>
+<div class="metrics">
+  <div class="metric"><div class="metric-label">Produção acumulada</div><div class="metric-val">{{ total|br_num(1) }} L</div><div class="metric-sub">histórico registrado</div></div>
+  <div class="metric"><div class="metric-label">Último parto</div><div class="metric-val">{{ animal.parto|data_br }}</div><div class="metric-sub">{{ animal.dias if animal.dias is not none else '—' }} dias em lactação</div></div>
+  <div class="metric"><div class="metric-label">Tratamentos em carência</div><div class="metric-val">{{ carencias|length }}</div><div class="metric-sub">consulte antes de enviar o leite</div></div>
+</div>
+<div class="card"><h3>Histórico de produção</h3>{% for linha in historico %}<div class="linha"><strong>{{ linha.data|data_br }}</strong><span>{{ linha.litros|br_num(1) }} L{% if linha.ordenha %} · {{ linha.ordenha }}{% endif %}</span></div>{% else %}<p class="hint">Nenhum registro individual para esta vaca.</p>{% endfor %}</div>
+{% if carencias %}<div class="card"><h3>Tratamentos em carência</h3>{% for item in carencias %}<div class="linha aviso"><strong>{{ item.descricao }}</strong><span>até {{ item.fim|data_br }}</span></div>{% endfor %}</div>{% endif %}
+{% endblock %}

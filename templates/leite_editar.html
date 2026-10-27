@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Editar ordenha — Leite{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">Correção de registro</span><h2>Editar ordenha</h2></div></div>
+<form method="post" class="card form-grid">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <label>Data<input type="date" name="data" value="{{ linha.get('Data', '') }}" required></label>
+  <label>Modo<select name="modo_registro"><option value="individual" {% if linha.get('Modo Registro') == 'individual' %}selected{% endif %}>Por animal</option><option value="total" {% if linha.get('Modo Registro') == 'total' %}selected{% endif %}>Total da ordenha</option></select></label>
+  <label>Vaca ID<input name="vaca_id" value="{{ linha.get('Vaca ID', '') }}"></label>
+  <label>Brinco<input name="brinco" value="{{ linha.get('Brinco', '') }}"></label>
+  <label>Ordenha<input name="ordenha" value="{{ linha.get('Ordenha', '') }}"></label>
+  <label>Litros<input name="litros" inputmode="decimal" value="{{ linha.get('Litros', '') }}" required></label>
+  <label>CCS<input name="ccs" value="{{ linha.get('CCS (células/mL)', '') }}"></label>
+  <label>CPP<input name="cpp" value="{{ linha.get('CPP (UFC/mL)', '') }}"></label>
+  <label>Qualidade<input name="qualidade" value="{{ linha.get('Qualidade', '') }}"></label>
+  <label>Temperatura<input name="temperatura" value="{{ linha.get('Temperatura', '') }}"></label>
+  <label>Observação<input name="observacao" value="{{ linha.get('Observação', '') }}"></label>
+  <label>Responsável<input name="responsavel" value="{{ linha.get('Responsável', '') }}"></label>
+  <div><button class="btn btn-primary" type="submit">Salvar alterações</button></div>
+</form>
+{% endblock %}

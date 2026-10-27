@@ -16,6 +16,15 @@
 </section>
 
 <section class="card" style="margin-bottom:20px">
+  <div class="section-head" style="margin-bottom:12px"><h2>Resumo leiteiro</h2><a class="btn btn-outline" href="{{ url_for('painel_leite') }}">Abrir módulo</a></div>
+  <div class="tri">
+    <div><b>{{ resumo_leite.dia|br_num(1) }} L</b>hoje</div>
+    <div><b>{{ resumo_leite.semana|br_num(1) }} L</b>semana</div>
+    <div><b>{{ resumo_leite.mes|br_num(1) }} L</b>mês</div>
+  </div>
+</section>
+
+<section class="card" style="margin-bottom:20px">
   <div class="card-title">Ações rápidas</div>
   <div class="acoes-rapidas">{% for nome, endpoint in acoes_rapidas %}<a class="btn btn-outline" href="{{ url_for(endpoint) }}">{{ nome }}</a>{% endfor %}</div>
 </section>
@@ -322,10 +331,13 @@
 
 </div>
 
-<!-- ═══ ESTOQUE DE INSUMOS (v4.2) ════════════════════════════════════════════ -->
+<!-- ═══ ESTOQUE DE ALIMENTAÇÃO (v4.2) ════════════════════════════════════════ -->
 <div class="card" style="margin-bottom:24px" id="card-insumos">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-    <div class="card-title" style="margin-bottom:0">🧂 Estoque de Insumos</div>
+    <div>
+      <div class="card-title" style="margin-bottom:2px">🧂 Estoque de alimentação</div>
+      <div style="font-size:12px;color:var(--text-3)">Sal, sal proteinado e ração</div>
+    </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <a href="{{ url_for('comparar_insumos') }}" class="btn btn-outline btn-sm">🧮 Comparar preços</a>
       <a href="{{ url_for('novo_gasto') }}" class="btn btn-outline btn-sm">+ Lançar compra</a>
@@ -333,11 +345,16 @@
   </div>
   <div class="insumos-grid">
     {% for p in insumos %}
+    {% set status_label = {'ok': 'Normal', 'proximo': 'Atenção', 'urgente': 'Acabando', 'acabou': 'Acabou', 'sem_consumo': 'Sem consumo', 'sem_dados': 'Sem informação'}.get(p.status, 'Sem informação') %}
     <div class="insumo insumo-{{ p.status }}">
-      <div class="insumo-nome">{{ p.produto }}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div class="insumo-nome">{{ p.produto }}</div>
+        <span class="badge badge-{{ 'ok' if p.status == 'ok' else 'aviso' if p.status in ('proximo', 'sem_consumo') else 'ruim' if p.status in ('urgente', 'acabou') else '' }}">{{ status_label }}</span>
+      </div>
       {% if p.status == 'sem_dados' %}
         <div class="insumo-num">—</div>
-        <div class="insumo-txt">Conte os sacos em estoque na próxima visita.</div>
+        <div class="insumo-txt">Ainda não há contagem ou compra registrada.</div>
+        <div class="insumo-txt" style="margin-top:5px">Conte os sacos na próxima visita.</div>
       {% else %}
         <div class="insumo-num">~{{ '%g'|format(p.estoque)|replace('.', ',') }} <small>saco(s)</small></div>
         {% if p.status == 'sem_consumo' %}
@@ -346,6 +363,7 @@
           <div class="insumo-txt"><strong>Provavelmente acabou — comprar já.</strong></div>
         {% else %}
           <div class="insumo-txt">
+            {% if p.consumo_dia %}Consumo: <strong>{{ '%.2f'|format(p.consumo_dia)|replace('.', ',') }} saco(s)/dia</strong>.<br>{% endif %}
             Acaba por volta de <strong>{{ p.acaba_em.strftime('%d/%m') }}</strong>
             ({{ p.dias_restantes }} dia{{ 's' if p.dias_restantes != 1 else '' }}).<br>
             Compre até <strong>{{ p.comprar_ate.strftime('%d/%m') }}</strong>.
@@ -360,8 +378,8 @@
     {% endfor %}
   </div>
   <div style="font-size:11.5px;color:var(--text-3);margin-top:10px;line-height:1.5">
-    Calculado pelos sacos contados em estoque nas visitas e pelas compras lançadas em Gastos
-    (tipo Sal/Proteínado, com produto e quantidade de sacos).
+    Calculado pelos sacos contados nas visitas e pelas compras lançadas em Gastos.
+    A previsão depende de pelo menos duas contagens para estimar o consumo.
   </div>
 </div>
 

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Leite — Sítio Santo Antonio{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><span class="eyebrow">Atividade leiteira</span><h2>Painel do leite</h2></div>
+  <div class="acoes"><a class="btn btn-primary" href="{{ url_for('ordenha_leite') }}">Lançar ordenha</a><a class="btn" href="{{ url_for('animais_leite') }}">Vacas leiteiras</a><a class="btn" href="{{ url_for('listar_colchao') }}">Colchões</a><a class="btn" href="{{ url_for('relatorios_leite') }}">Relatório</a></div>
+</div>
+<div class="metrics">
+  <div class="metric"><strong>{{ '%.1f'|format(acumulado.dia)|replace('.', ',') }}</strong><span>Acumulado do dia (L)</span></div>
+  <div class="metric"><strong>{{ '%.1f'|format(acumulado.semana)|replace('.', ',') }}</strong><span>Acumulado da semana (L)</span></div>
+  <div class="metric"><strong>{{ '%.1f'|format(acumulado.mes)|replace('.', ',') }}</strong><span>Acumulado do mês (L)</span></div>
+  <div class="metric"><strong>{{ '%.1f'|format(acumulado.total)|replace('.', ',') }}</strong><span>Acumulado total (L)</span></div>
+</div>
+<div class="grid-3">
+  <div class="card"><strong>{{ contagens.animais_ativos }}</strong><span>Animais ativos</span></div>
+  <div class="card"><strong>{{ contagens.vacas_leiteiras_ativas }}</strong><span>Vacas leiteiras ativas</span></div>
+  <div class="card"><strong>{{ contagens.vacas_lactacao }}</strong><span>Vacas em lactação</span></div>
+</div>
+<div class="card">
+  <h3>Médias de produção</h3>
+  <div class="tri">
+    <div><strong>{{ '%.1f'|format(medias.media_diaria or 0)|replace('.', ',') }}</strong><small>Média por dia (L)</small></div>
+    <div><strong>{{ '%.1f'|format(medias.media_mensal or 0)|replace('.', ',') }}</strong><small>Média por mês (L)</small></div>
+    <div><strong>{{ '%.1f'|format(medias.media_por_animal or 0)|replace('.', ',') }}</strong><small>Média por animal (L)</small></div>
+  </div>
+</div>
+{% if colchoes_alertas %}
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h3>🛏️ Colchões</h3>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 0.5rem;">
+        {% if colchoes_alertas.urgente > 0 %}
+        <div><strong class="badge badge-ruim">{{ colchoes_alertas.urgente }}</strong><small>Urgente</small></div>
+        {% endif %}
+        {% if colchoes_alertas.aviso > 0 %}
+        <div><strong class="badge badge-aviso">{{ colchoes_alertas.aviso }}</strong><small>Em aviso</small></div>
+        {% endif %}
+        {% if colchoes_alertas.ok > 0 %}
+        <div><strong class="badge badge-ok">{{ colchoes_alertas.ok }}</strong><small>OK</small></div>
+        {% endif %}
+      </div>
+    </div>
+    <a href="{{ url_for('listar_colchao') }}" class="btn btn-small">Ver lista</a>
+  </div>
+</div>
+{% endif %}
+<div class="card"><span>{{ registros }} lançamentos registrados. Registros totais não entram no ranking individual.</span></div>
+{% endblock %}

@@ -320,6 +320,25 @@ def salvar_sitio_config():
     nome  = request.form.get("sitio_nome",  "").strip()
     donos = request.form.get("sitio_donos", "").strip()
 
+    def _coordenada(campo, minimo, maximo):
+        bruto = request.form.get(campo, "").strip().replace(",", ".")
+        if not bruto:
+            return None
+        try:
+            valor = float(bruto)
+        except ValueError:
+            raise ValueError(f"{campo.capitalize()} inválida.")
+        if not minimo <= valor <= maximo:
+            raise ValueError(f"{campo.capitalize()} fora do intervalo válido.")
+        return round(valor, 6)
+
+    try:
+        latitude = _coordenada("latitude", -90, 90)
+        longitude = _coordenada("longitude", -180, 180)
+    except ValueError as erro:
+        flash(str(erro), "error")
+        return redirect(url_for("configuracoes"))
+
     if not nome:
         flash("O nome do sítio não pode ser vazio.", "error")
         return redirect(url_for("configuracoes"))
@@ -331,6 +350,14 @@ def salvar_sitio_config():
     cfg = _carregar_sitio_config()
     cfg["nome"]  = nome
     cfg["donos"] = donos
+    if latitude is not None:
+        cfg["latitude"] = latitude
+    else:
+        cfg.pop("latitude", None)
+    if longitude is not None:
+        cfg["longitude"] = longitude
+    else:
+        cfg.pop("longitude", None)
 
     # Logo: emoji digitado ou imagem enviada
     logo_emoji = request.form.get("sitio_logo_emoji", "").strip()

@@ -282,6 +282,7 @@ def montar_itens(hoje: datetime | None = None) -> list[dict]:
         dados  = carregar_todas()
         df_c, df_g, df_v = dados["Compras"], dados["Gastos"], dados["Vendas"]
         df_m, df_vis     = dados["Manejo"], dados["Visitas"]
+        df_colchao = carregar_aba("Leite Colchão") if "Leite Colchão" in dados else None
     except Exception as e:
         logging.error(f"Erro ao carregar dados: {e}")
         item("erro:dados", f"❌ Erro ao ler dados do sistema: {e}", urgente=True)
@@ -338,6 +339,21 @@ def montar_itens(hoje: datetime | None = None) -> list[dict]:
             item(a["chave"], a["texto"], urgente=a["urgente"], repetir=1)
     except Exception as e:
         logging.error(f"Erro na reprodução: {e}")
+
+    # ── 1d) Colchão: troca vencida ou próxima ────────────────────────────────
+    try:
+        from leite import historico_colchao
+        if df_colchao is not None and not df_colchao.empty:
+            historicos = historico_colchao(df_colchao, referencia=hoje_d)
+            for local, hist in historicos.items():
+                # Urgente: próxima troca <= 7 dias
+                if hist and hist.get("status") == "urgente" and hist.get("dias_para_troca") is not None:
+                    dias = hist["dias_para_troca"]
+                    item(f"colchao:{local}:urgente",
+                         f"🛏️ Colchão {local} vence em {dias} dia(s) — marque a troca",
+                         urgente=True, repetir=2)
+    except Exception as e:
+        logging.error(f"Erro nos alertas de colchão: {e}")
 
     # ── 2) Insumos: previsão de estoque ──────────────────────────────────────
     try:

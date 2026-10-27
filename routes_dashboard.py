@@ -86,6 +86,13 @@ def dashboard():
 
     from insumos import previsao_todos
     insumos = previsao_todos(dados["Visitas"], dados["Gastos"], _agora())
+    try:
+        import leite
+        producao_leite = carregar_aba("Leite Produção")
+        resumo_leite = leite.acumulados(producao_leite, _agora().date())
+    except Exception as erro:
+        app.logger.warning(f"Painel: resumo leiteiro indisponível: {erro}")
+        resumo_leite = {"dia": 0, "semana": 0, "mes": 0, "total": 0}
     extras = _cards_extras(dados, r)
     alertas = _gerar_alertas(dados)
     estado_sitio = {"cabecas": r.get("estoque", 0), "peso_medio": peso_medio,
@@ -100,7 +107,7 @@ def dashboard():
                            alertas=alertas, indicadores=indicadores, rebanho_est=rebanho_est,
                            estado_sitio=estado_sitio, acoes_rapidas=acoes_rapidas,
                            atencao_agora=atencao_agora, ocorrencias=recentes[:6],
-                           tendencia_peso=[], **extras,
+                           resumo_leite=resumo_leite, tendencia_peso=[], **extras,
                            NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS, MEMBROS=MEMBROS)
 
 

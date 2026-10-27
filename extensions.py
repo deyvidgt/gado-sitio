@@ -326,6 +326,14 @@ def fmt_brl(v):
     except Exception:
         return "—"
 
+@app.template_filter("br_num")
+def fmt_num(v, casas=1):
+    try:
+        return f"{float(v):,.{int(casas)}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except Exception:
+        return "—"
+
+
 @app.template_filter("pct")
 def fmt_pct(v):
     try:

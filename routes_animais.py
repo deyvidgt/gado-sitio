@@ -52,6 +52,8 @@ def _dados_form(f) -> dict:
         "Entrada": f.get("entrada", ""), "Origem": f.get("origem", ""),
         "Ref Compra": f.get("ref_compra", ""), "Mãe": _mae_do_form(f.get("mae", "")),
         "Observações": f.get("observacoes", ""),
+        "Uso Produtivo": f.get("uso_produtivo", ""), "Situação Leite": f.get("situacao_leite", ""),
+        "Último Parto": f.get("ultimo_parto", ""),
     }
 
 
@@ -349,7 +351,9 @@ def editar_animal(id_):
             "pelagem": a["Pelagem"], "sinais": a["Sinais"], "origem": a["Origem"],
             "nascimento": a["Nascimento"].strftime("%Y-%m-%d") if pd.notna(a["Nascimento"]) else "",
             "entrada": a["Entrada"].strftime("%Y-%m-%d") if pd.notna(a["Entrada"]) else "",
-            "mae": a["Mãe"], "observacoes": a["Observações"], "ref_compra": a["Ref Compra"]}
+            "mae": a["Mãe"], "observacoes": a["Observações"], "ref_compra": a["Ref Compra"],
+            "uso_produtivo": a["Uso Produtivo"], "situacao_leite": a["Situação Leite"],
+            "ultimo_parto": a["Último Parto"].strftime("%Y-%m-%d") if pd.notna(a["Último Parto"]) else ""}
     return render_template("form_animal.html", modo="editar", row=a, form=form, id_=id_,
                            **_ctx_templates())
 
