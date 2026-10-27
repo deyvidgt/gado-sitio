@@ -63,15 +63,53 @@ def _salvar_cache(dados, agora):
     os.replace(temporario, caminho)
 
 
+def _coordenadas_do_mapa():
+    """Extrai coordenadas do centro do mapa de pastos (média dos contornos GeoJSON)."""
+    try:
+        from pastos import carregar as carregar_pastos
+        df_pastos = carregar_pastos()
+        if df_pastos.empty:
+            return None
+
+        coords = []
+        for _, row in df_pastos.iterrows():
+            geojson_str = row.get("Contorno GeoJSON")
+            if not geojson_str:
+                continue
+            try:
+                import json
+                geojson = json.loads(str(geojson_str))
+                if geojson.get("type") == "Polygon":
+                    # Poligono: pega coordenadas (longitude, latitude)
+                    pontos = geojson.get("coordinates", [[]])[0]
+                    coords.extend(pontos)
+            except (json.JSONDecodeError, TypeError, KeyError):
+                pass
+
+        if coords:
+            # Média das coordenadas (longitude, latitude)
+            lon_media = sum(c[0] for c in coords) / len(coords)
+            lat_media = sum(c[1] for c in coords) / len(coords)
+            return lat_media, lon_media
+    except Exception:
+        pass
+    return None
+
+
 def _coordenadas(cfg):
+    """Coordenadas do sítio: preferência (1) sitio_config.json, (2) mapa de pastos."""
     try:
         latitude = float(str(cfg.get("latitude", "")).replace(",", "."))
         longitude = float(str(cfg.get("longitude", "")).replace(",", "."))
     except (TypeError, ValueError):
-        return None
-    if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
-        return None
-    return latitude, longitude
+        latitude = longitude = None
+
+    if latitude is not None and longitude is not None:
+        if -90 <= latitude <= 90 and -180 <= longitude <= 180:
+            return latitude, longitude
+
+    # Fallback: tenta extrair do mapa de pastos
+    return _coordenadas_do_mapa()
 
 
 def _formatar(dados, cfg, salvo_em, desatualizado=False):
@@ -173,13 +211,31 @@ def alertas_tempo(prev):
     return alertas
 
 
-def previsao(*, agora=None):
+def previsao(*, agora=None, latitude=None, longitude=None):
+    """Previsão com suporte para geolocalização do navegador.
+
+    Se latitude/longitude não forem dados, tenta usar as coordenadas do sitio_config.json.
+    Se nenhuma coordenada existir, avisa para permitir geolocalização no celular.
+    """
     agora = agora or datetime.now()
     cfg = _configuracao()
-    coordenadas = _coordenadas(cfg)
+
+    # Permite sobrescrever com coordenadas do navegador
+    if latitude is not None and longitude is not None:
+        try:
+            coordenadas = (float(latitude), float(longitude))
+            if not (-90 <= coordenadas[0] <= 90 and -180 <= coordenadas[1] <= 180):
+                coordenadas = None
+        except (TypeError, ValueError):
+            coordenadas = None
+    else:
+        coordenadas = _coordenadas(cfg)
+
     cache = _ler_cache()
     if not coordenadas:
-        return {"status": "indisponível", "mensagem": "Cadastre as coordenadas do sítio."}
+        return {"status": "indisponível",
+                "mensagem": "Permita geolocalização para previsão automática.",
+                "pede_geo": True}
 
     if cache:
         try:

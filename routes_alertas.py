@@ -29,3 +29,13 @@ def central_alertas():
 @login_required
 def api_alertas():
     return jsonify({"alertas": _dados_alertas(), "tempo": tempo.previsao()})
+
+
+@app.route("/api/tempo/geo", methods=["POST"])
+@login_required
+def api_tempo_geo():
+    """Previsão com coordenadas do navegador (geolocalização mobile)."""
+    dados = request.get_json() or {}
+    latitude = dados.get("latitude")
+    longitude = dados.get("longitude")
+    return jsonify(tempo.previsao(latitude=latitude, longitude=longitude))

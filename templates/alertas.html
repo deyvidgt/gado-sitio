@@ -2,9 +2,13 @@
 {% block title %}Alertas — Sítio Santo Antonio{% endblock %}
 {% block content %}
 <div class="page-head"><div><span class="eyebrow">Acompanhe o que pede atenção</span><h2>Central de alertas</h2></div></div>
-<div class="card">
+<div class="card" id="card-tempo">
   <h3>Previsão do tempo{% if tempo.local %} · {{ tempo.local }}{% endif %}</h3>
   <p>{{ tempo.mensagem or 'Previsão indisponível' }}</p>
+  {% if tempo.pede_geo %}
+  <button id="btn-geo" style="margin-top:12px; padding:10px 16px; background:var(--green-600); color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:500; transition:all .2s">📍 Usar minha localização</button>
+  <small style="display:block; margin-top:8px; color:var(--text-3)">O sítio não tem coordenadas cadastradas. Toque para usar a localização do seu celular.</small>
+  {% endif %}
   {% if tempo.atual %}
     <div class="tri" style="margin-top:12px">
       <div><strong>{{ tempo.atual.temperatura|br_num(1) if tempo.atual.temperatura is not none else '—' }} °C</strong><small>Agora</small></div>
@@ -40,4 +44,70 @@
   </div>
   {% endif %}
 {% else %}<div class="card"><p>Nenhum alerta no momento.</p></div>{% endfor %}</div>
+
+<script>
+  // Geolocalização para previsão do tempo (v5.8)
+  const btnGeo = document.getElementById("btn-geo");
+  if (btnGeo) {
+    btnGeo.addEventListener("click", () => {
+      btnGeo.disabled = true;
+      btnGeo.textContent = "📍 Localizando...";
+
+      if (!navigator.geolocation) {
+        btnGeo.textContent = "📍 Geolocalização não disponível";
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          // Envia coordenadas para o servidor e atualiza a previsão
+          fetch("/api/tempo/geo", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ latitude, longitude })
+          })
+          .then(r => r.json())
+          .then(dados => {
+            // Atualiza card de tempo com os novos dados
+            const cardTempo = document.getElementById("card-tempo");
+            if (dados.dias && dados.dias.length > 0) {
+              cardTempo.innerHTML = `
+                <h3>Previsão do tempo · ${dados.local || "Sua localização"}</h3>
+                <p>${dados.mensagem}</p>
+                ${dados.atual ? `
+                <div class="tri" style="margin-top:12px">
+                  <div><strong>${(dados.atual.temperatura || 0).toFixed(1)} °C</strong><small>Agora</small></div>
+                  <div><strong>${dados.atual.umidade || '—'}%</strong><small>Umidade</small></div>
+                  <div><strong>${(dados.atual.vento_kmh || 0).toFixed(1)} km/h</strong><small>Vento</small></div>
+                </div>
+                <p><strong>${dados.atual.condicao}</strong></p>
+                ` : ''}
+                ${dados.dias ? `
+                <div class="linha" style="margin-top:12px">
+                  ${dados.dias.slice(0, 3).map(d => `
+                    <div><strong>${d.data.slice(8, 10)}/${d.data.slice(5, 7)}</strong> · ${d.condicao} · ${(d.minima || 0).toFixed(0)}–${(d.maxima || 0).toFixed(0)} °C · chuva ${d.chuva_probabilidade || '—'}%</div>
+                  `).join('')}
+                </div>
+                ` : ''}
+              `;
+            } else {
+              btnGeo.textContent = "📍 Falha ao obter previsão";
+            }
+          })
+          .catch(() => {
+            btnGeo.textContent = "📍 Erro na conexão";
+            btnGeo.disabled = false;
+          });
+        },
+        (erro) => {
+          console.warn("Geolocalização recusada ou falhou:", erro);
+          btnGeo.textContent = "📍 Permissão recusada";
+          btnGeo.disabled = false;
+        },
+        { timeout: 10000, enableHighAccuracy: false }
+      );
+    });
+  }
+</script>
 {% endblock %}
