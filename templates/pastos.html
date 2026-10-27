@@ -90,44 +90,83 @@
 <div class="card" style="margin-top:16px">
   <h3>Pastos</h3>
   {% for p in pastos %}
-  {% set classe = {'atencao': 'aviso', 'excesso': 'ruim'}.get(p.nivel, '') %}
+  {% set nivel_badge = {'ok': 'success', 'atencao': 'warning', 'excesso': 'danger'}.get(p.nivel, '') %}
   {% set pct = (p.ua_ha / capacidade * 100) if (capacidade and p.ua_ha and p.cab) else 0 %}
-  <div class="linha {{ classe }}" style="display:block">
-    <div style="display:flex;align-items:center;gap:8px">
-      <input type="checkbox" class="toggle-pasto-visibility" data-pasto="{{ p.id }}"
-             checked title="Mostrar/ocultar no mapa" style="width:20px;height:20px;cursor:pointer">
-      <span class="bol" style="background:{{ p.cor }}"></span>
-      <span class="linha-nome">{{ p.nome }}</span>
+
+  <div class="card-status">
+    <!-- Header com checkbox + nome + badge + botão -->
+    <div class="card-status-header">
+      <div style="display:flex;align-items:center;gap:var(--spacing-md)">
+        <input type="checkbox" class="toggle-pasto-visibility" data-pasto="{{ p.id }}"
+               checked title="Mostrar/ocultar no mapa" style="width:var(--touch-target-min);height:var(--touch-target-min);cursor:pointer">
+        <span class="bol" style="background:{{ p.cor }}"></span>
+        <span class="card-status-title">{{ p.nome }}</span>
+      </div>
       {% if p.nivel and p.cab %}
-      <span class="badge badge-{{ classe or 'ok' }}" style="margin-left:auto">
+      <span class="badge badge-{{ nivel_badge }}">
         {{ {'ok': 'Folgado', 'atencao': 'No limite', 'excesso': 'Lotado'}[p.nivel] }}</span>
       {% endif %}
-      <button type="button" class="btn btn-outline btn-sm btn-ver-mapa" data-pasto="{{ p.id }}" style="{% if not (p.nivel and p.cab) %}margin-left:auto;{% endif %}padding:2px 8px;font-size:12px">🗺️ Ver no mapa</button>
     </div>
-    <div class="tri" style="margin:8px 0 6px">
-      <div><b>{{ p.cab }}</b>cabeças</div>
-      <div><b>{{ '%.2f'|format(p.area)|replace('.', ',') }}</b>hectares</div>
-      <div><b>{% if p.ua_ha is not none and p.cab %}{{ '%.2f'|format(p.ua_ha)|replace('.', ',') }}{% if p.estimado %}~{% endif %}{% else %}—{% endif %}</b>UA/ha</div>
-      <div><b>{{ p.dias if p.dias is not none and p.cab else '—' }}</b>dias no pasto</div>
+
+    <!-- Tri-coluna: cabeças, hectares, UA/ha, dias -->
+    <div class="tri-grid">
+      <div class="tri-item">
+        <div class="tri-number">{{ p.cab }}</div>
+        <div class="tri-label">Cabeças</div>
+      </div>
+      <div class="tri-item">
+        <div class="tri-number">{{ '%.1f'|format(p.area)|replace('.', ',') }}</div>
+        <div class="tri-label">Hectares</div>
+      </div>
+      <div class="tri-item">
+        <div class="tri-number">
+          {% if p.ua_ha is not none and p.cab %}{{ '%.2f'|format(p.ua_ha)|replace('.', ',') }}{% if p.estimado %}<span style="font-size:0.6em">~</span>{% endif %}{% else %}—{% endif %}
+        </div>
+        <div class="tri-label">UA/ha</div>
+      </div>
     </div>
+
+    <!-- Barra de progresso (lotação) -->
     {% if pct %}
-    <div class="barra {{ classe }}"><i style="width:{{ [pct, 100]|min|round|int }}%"></i></div>
-    <div class="linha-sub" style="margin-top:3px">{{ pct|round|int }}% da capacidade do sítio</div>
+    <div class="progress-bar" style="{% if pct <= 75 %}--bar-class:success{% elif pct <= 90 %}--bar-class:warning{% else %}--bar-class:danger{% endif %}">
+      <div class="progress-fill {% if pct <= 75 %}{% elif pct <= 90 %}warning{% else %}danger{% endif %}"
+           style="width:{{ [pct, 100]|min|round|int }}%"></div>
+    </div>
+    <div class="progress-label">
+      <span>{{ pct|round|int }}% da capacidade</span>
+      <span>{{ p.dias if p.dias is not none and p.cab else '—' }} dias</span>
+    </div>
     {% endif %}
-    <details style="margin-top:6px"><summary class="muted">editar</summary>
-      <form method="post" action="{{ url_for('editar_pasto', id_=p.id) }}" style="display:flex;gap:6px;margin-top:6px">
+
+    <!-- Botão Ver no Mapa -->
+    <button type="button" class="btn btn-outline btn-sm btn-ver-mapa" data-pasto="{{ p.id }}"
+            style="margin-top:var(--spacing-md);width:100%">🗺️ Ver no mapa</button>
+
+    <!-- Seção Editar (accordion) -->
+    <details style="margin-top:var(--spacing-md)">
+      <summary class="muted" style="cursor:pointer">editar</summary>
+      <form method="post" action="{{ url_for('editar_pasto', id_=p.id) }}"
+            style="display:flex;gap:var(--spacing-sm);margin-top:var(--spacing-md)">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="text" name="nome" value="{{ p.nome }}" maxlength="40" required aria-label="Novo nome">
+        <input type="text" name="nome" value="{{ p.nome }}" maxlength="40" required aria-label="Novo nome" class="form-input" style="flex:1">
         <button class="btn btn-outline btn-sm">Renomear</button>
       </form>
-      <form method="post" action="{{ url_for('excluir_pasto', id_=p.id) }}" style="margin-top:6px">
+      <form method="post" action="{{ url_for('excluir_pasto', id_=p.id) }}"
+            style="margin-top:var(--spacing-md)">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button class="btn btn-outline btn-sm">🗑️ Excluir pasto</button>
       </form>
     </details>
   </div>
   {% endfor %}
-  <p class="muted" style="margin-top:8px">UA = 450 kg de animal. "~" = algum animal sem pesagem de balança (usou o peso médio).</p>
+
+  <p class="muted" style="margin-top:var(--spacing-lg)">
+    <strong>Legenda:</strong> UA = 450 kg de animal.
+    <span style="color:var(--color-success-main)">■</span> ≤75% = Folgado,
+    <span style="color:var(--color-warning-main)">■</span> 76–90% = No limite,
+    <span style="color:var(--color-danger-main)">■</span> >90% = Lotado.
+    "~" = peso estimado (sem balança).
+  </p>
 </div>
 {% endif %}
 
