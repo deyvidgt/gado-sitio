@@ -6,19 +6,20 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ## [5.8.0] — 2026-10-27
 
-### Adicionado (v5.8.0: Features & Rastreamento)
-- **Rastreamento de animais no mapa:** função `animais_por_pasto()` em `pastos.py` lista quais cabeças estão em cada pasto via `/api/pastos/animais`. Útil para saber em qual pasto está qual animal (brinco).
-- **Card de vacas prenhas:** função `_vacas_prenhas()` em `routes_dashboard.py` mostra vacas prenhas, atrasadas e prestes a parir nos próximos 14 dias (integrado com `reproducao.py`).
-- **Gráfico BCS×Peso:** novo módulo `bcs.py` correlaciona Body Condition Score (1-5 visual) com peso estimado. Funções: `bcs_historico()` e `analise_tendencia()` para diagnosticar problemas nutricionais.
-- **Planejamento de IA:** função `planejamento_ia()` em `reproducao.py` lista vacas candidatas à inseminação (vazias, sem cobertura há 60 dias+) com priorização por data.
-- **Histórico de peso:** rota `/animais/<id>/historico-peso` mostra gráfico de evolução de peso estimado (últimos 180 dias) com calibração do sítio.
-- **Melhorias em peso_foto.py:** +`historico_estimativas()` e `comparar_estimativa_vs_balanca()` para análise de evolução e validação de calibração.
+### Adicionado
+- **Gráfico de entrada/saída temporal:** função `_entrada_saida_timeline()` em `routes_dashboard.py` agrega compras (entrada, verde) e vendas (saída, vermelha) nos últimos 90 dias. Visualização com Chart.js no painel principal mostra fluxo de gado ao longo do tempo.
+- **Geolocalização automática da previsão do tempo:** novo endpoint `/api/tempo/geo` aceita latitude/longitude do navegador. Fallback automático: se o sítio não tem coordenadas cadastradas, o sistema extrai o centro geográfico do mapa de pastos via `_coordenadas_do_mapa()` (média dos contornos GeoJSON). Botão 📍 no card de previsão solicita permissão de localização.
+- **Toggle ocultar/mostrar mapa de pastos:** botão 👁️ na página **/pastos** comuta visibilidade do mapa (salva em localStorage). Útil para economizar banda/bateria em celular. Chama `mapa.invalidateSize()` ao reexibir.
+- **Comando de voz v5.8:** novos tipos de comando adicionados:
+  - `("historico_peso", r"\b(historico|evolu[cs]ao|grafico)\s+(de\s+)?peso\b")` — abre gráfico de peso do animal.
+  - `("bcs", r"\b(bcs|escore|condi[cs]ao\s+corporal)\b")` — abre BCS/Condition Score.
+  - Detecção melhorada de "Cobertura" e "Diagnóstico de Gestação" em `_tipo_manejo()`.
+- **Alertas com navegação direta:** função `_gerar_alertas()` agora inclui campo `rota` para cada alerta (ex: `/manejo/novo`, `/animais/<id>`, `/relatorios`). Template `alertas.html` renderiza alertas como links quando `rota` presente.
+- **Exemplos removido do git:** pasta `F:\programa sitio\exemplos\` excluída do versionamento (`.gitignore` atualizado).
 
 ### Corrigido
-- Route 'painel' renomeada para 'dashboard' em base.html (test fix).
-- Faltava `jsonify` import em `routes_dashboard.py` (API fix).
-- Pasta `backups/` removida da raiz do repositório (não deveria estar no Git).
-- Sidebar mobile travada corrigida (drawer code obsoleto removido de `gestures.js`).
+- **DataFrame ambiguous truth value:** substituir `dados.get(...) or pd.DataFrame()` por verificação `is None` em `_entrada_saida_timeline()`. Pandas DataFrames não são avaliáveis em contexto booleano.
+- Sidebar mobile travada em celular: z-index corrigido (sidebar 1001 > overlay 1000) e event listeners simplificados em `base.html`.
 
 ## [5.7.0] — 2026-10-27 (anterior)
 
