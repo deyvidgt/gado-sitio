@@ -8,9 +8,9 @@ import pandas as pd
 from leite import _data, _numero, contagens_rebanho, _sem_duplicidade, historico_colchao
 
 
-def _item(origem, titulo, detalhe, prioridade="aviso", acao="Abrir módulo"):
+def _item(origem, titulo, detalhe, prioridade="aviso", acao="Abrir módulo", rota=None):
     return {"origem": origem, "titulo": titulo, "detalhe": detalhe,
-            "prioridade": prioridade, "acao": acao}
+            "prioridade": prioridade, "acao": acao, "rota": rota}
 
 
 def _carencia(tratamentos, referencia):
@@ -27,7 +27,7 @@ def _carencia(tratamentos, referencia):
             animal = str(linha.get("Vaca ID") or linha.get("Brinco") or "animal não informado").strip()
             itens.append(_item("tratamento", "Tratamento em carência",
                                 f"{animal} está em carência até {fim.strftime('%d/%m/%Y')}.",
-                                "urgente", "Abrir tratamentos"))
+                                "urgente", "Ir para tratamentos", "/leite/tratamentos"))
     return itens
 
 
@@ -52,7 +52,7 @@ def _colchao_alertas(colchao, referencia):
             itens.append(_item(
                 "colchão", "🛏️ Colchão urgente",
                 f"Colchão da {local} vence em {dias} dia(s) — troca prevista para {data_str}.",
-                "urgente", "Abrir colchão"
+                "urgente", "Ir para colchão", "/leite/colchao"
             ))
 
         # Aviso: próxima troca <= 14 dias
@@ -63,7 +63,7 @@ def _colchao_alertas(colchao, referencia):
             itens.append(_item(
                 "colchão", "🛏️ Colchão próximo da troca",
                 f"Colchão da {local} próximo da troca (em {dias} dia(s), {data_str}).",
-                "aviso", "Abrir colchão"
+                "aviso", "Ir para colchão", "/leite/colchao"
             ))
 
     # Sugestão suave: última troca > 180 dias sem próxima troca registrada
@@ -78,7 +78,7 @@ def _colchao_alertas(colchao, referencia):
                 itens.append(_item(
                     "colchão", "🛏️ Revisar colchão",
                     f"Colchão da {local} não foi trocado há {dias} dias — considere revisar.",
-                    "aviso", "Abrir colchão"
+                    "aviso", "Ir para colchão", "/leite/colchao"
                 ))
 
     return itens
@@ -88,7 +88,7 @@ def _nutricao_alertas(alimentacao):
     if alimentacao is None or alimentacao.empty:
         return [_item("nutrição", "Nutrição e consumo",
                        "Cadastre ao menos um alimento leiteiro e suas necessidades diárias.",
-                       "aviso", "Abrir alimentação")]
+                       "aviso", "Ir para alimentação", "/leite/alimentacao")]
     incompletos = []
     campos = ["Proteína Bruta (%)", "NDT/Energia (%)", "Fibra (%)", "Cálcio (%)", "Fósforo (%)"]
     for _, linha in alimentacao.iterrows():
@@ -99,7 +99,7 @@ def _nutricao_alertas(alimentacao):
     if incompletos:
         return [_item("nutrição", "Nutrição e consumo",
                        "Ficha nutricional incompleta: " + ", ".join(incompletos) + ".",
-                       "aviso", "Abrir alimentação")]
+                       "aviso", "Ir para alimentação", "/leite/alimentacao")]
     return []
 
 
@@ -114,12 +114,12 @@ def todos(*, producao=None, animais=None, tratamentos=None, colchao=None,
         if ultima is None or (referencia - ultima).days >= 1:
             itens.append(_item("produção", "Produção sem registro",
                                f"Há {contagens['vacas_lactacao']} vaca(s) em lactação sem registro desde o último dia.",
-                               "urgente", "Abrir ordenha"))
+                               "urgente", "Registrar ordenha", "/leite/producao"))
     itens.extend(_carencia(tratamentos, referencia))
     itens.extend(_colchao_alertas(colchao, referencia))
     itens.extend(_nutricao_alertas(alimentacao))
     if not any(item["origem"] == "conforto" for item in itens):
         itens.append(_item("conforto", "Conforto térmico",
                            "Registre sombra, água, ventilação e descanso observado.",
-                           "aviso", "Abrir conforto"))
+                           "aviso", "Ir para conforto", "/leite/conforto"))
     return itens
