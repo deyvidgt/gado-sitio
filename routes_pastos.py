@@ -141,3 +141,15 @@ def mover_gado():
     except ValueError as e:
         flash(str(e), "error")
     return redirect(url_for("pastos"))
+
+
+@app.route("/api/pastos/animais")
+@login_required
+def api_pastos_animais():
+    """Retorna lista de animais por pasto para mostrar no mapa.
+    JSON: {pasto_id: [{id, brinco, nome, cor}, ...], ...}"""
+    from flask import jsonify
+    dados = _get_dados_cache()
+    df_a = A.carregar()
+    animais = PA.animais_por_pasto(dados["Manejo"], df_a)
+    return jsonify(animais), 200

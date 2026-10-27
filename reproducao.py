@@ -185,3 +185,63 @@ def registrar(tipo: str, vaca_ref: str, data, touro: str = "", resultado: str = 
         produto = re.sub(r"\s+", " ", str(touro or "")).strip()[:60]
     db.salvar_linha("Manejo", A._linha_manejo(d, tipo, 1, desc, responsavel,
                                               produto=produto, brincos="; ".join(refs)))
+
+
+def planejamento_ia(df_anim: pd.DataFrame, df_man: pd.DataFrame, hoje: pd.Timestamp | None = None) -> list[dict]:
+    """Retorna vacas candidatas a IA planejada nos próximos 30 dias.
+
+    Critérios: vaca viva, vazia (ultimo diagnóstico foi "Vazia"), sem cobertura
+    nos últimos 60 dias, e com BCS adequado (se disponível).
+
+    Útil para comunicar ao veterinário ou inseminador quem vai trabalhar.
+    """
+    if df_man is None or df_man.empty or df_anim is None or df_anim.empty:
+        return []
+
+    if hoje is None:
+        hoje = pd.Timestamp.now().normalize()
+
+    candidatas = []
+
+    for id_, animal in df_anim.iterrows():
+        if animal.get("Status") != "Vivo":
+            continue
+        if animal.get("Uso Produtivo") not in ("leite", "ambos"):
+            continue
+
+        # Procura último diagnóstico
+        diagnosticos = _eventos(df_man, TIPO_DIAGNOSTICO)
+        ultimo_diag = None
+        for data, anim_id, resultado, _ in reversed(diagnosticos):
+            if anim_id == animal.get("ID"):
+                ultimo_diag = (data, resultado)
+                break
+
+        # Só candidata se foi vazia no diagnóstico
+        if not ultimo_diag or ultimo_diag[1] != "Vazia":
+            continue
+
+        # Procura última cobertura
+        coberturas = _eventos(df_man, TIPO_COBERTURA)
+        ultima_cob = None
+        for data, anim_id, _, touro in reversed(coberturas):
+            if anim_id == animal.get("ID"):
+                ultima_cob = (data, touro)
+                break
+
+        # Só candidata se faz >= 60 dias da última cobertura
+        if ultima_cob and (hoje - ultima_cob[0]).days < 60:
+            continue
+
+        dias_proxima_ia = 21 if not ultima_cob else ((ultima_cob[0] + pd.Timedelta(days=21)) - hoje).days
+
+        candidatas.append({
+            "id": animal.get("ID"),
+            "nome": animal.get("Nome", ""),
+            "cor": animal.get("Cor", ""),
+            "ultimo_diag": ultimo_diag[0] if ultimo_diag else None,
+            "dias_proxima_ia": max(0, dias_proxima_ia),
+            "prioridade": "alta" if dias_proxima_ia <= 7 else "normal"
+        })
+
+    return sorted(candidatas, key=lambda x: (x["prioridade"] == "normal", x["dias_proxima_ia"]))

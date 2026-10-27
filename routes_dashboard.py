@@ -151,6 +151,23 @@ def _lotacao_e_composicao(dados, r) -> dict:
         return {"lotacao": None, "composicao": None}
 
 
+def _vacas_prenhas(dados) -> dict:
+    """Conta vacas prenhas, atrasadas e prestes a parir (próximos 14 dias).
+    Integrado com reproducao.py indicadores()."""
+    try:
+        import reproducao as R
+        indic = R.indicadores(dados["Manejo"])
+        return {
+            "prenhas": indic.get("prenhas_total", 0),
+            "atrasadas": indic.get("atrasadas_total", 0),
+            "proximo_parto": indic.get("parto_proximos_14d", 0),
+            "taxa_prenhez_pct": round(indic.get("taxa_prenhez", 0) * 100, 1)
+        }
+    except Exception as e:
+        app.logger.error(f"Painel: vacas prenhas falhou: {e}")
+        return {"prenhas": 0, "atrasadas": 0, "proximo_parto": 0, "taxa_prenhez_pct": 0}
+
+
 # ── Painel da Família (v5.0 fase 4): todos os sítios lado a lado e somados ────
 
 CAMPOS_FAMILIA = ("estoque", "capital_imobilizado", "total_vend", "perdas", "resultado_total")

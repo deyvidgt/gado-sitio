@@ -522,3 +522,35 @@ def _executar(p: dict):
         gravar_gasto(p["form"], calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"]))
         return "💸 Gasto registrado.", url_for("gastos")
     raise ValueError("Ação desconhecida.")
+
+
+@app.route("/animais/<id_>/historico-peso")
+@login_required
+def historico_peso(id_):
+    """Gráfico de evolução de peso estimado (últimos 180 dias).
+    Útil para diagnosticar ganho/perda de condição corporal."""
+    import peso_foto as PF
+    import json
+    from flask import render_template
+
+    dados = _get_dados_cache()
+    animal = A.por_id(A.carregar(), id_)
+    if not animal:
+        flash(f"Animal {id_} não encontrado.", "error")
+        return redirect(url_for("animais"))
+
+    historico = PF.historico_estimativas(id_, dados["Manejo"], limite_dias=180)
+    if not historico:
+        flash(f"Sem histórico de peso para {id_}.", "info")
+        return redirect(url_for("animal_ficha", id_=id_))
+
+    # Prepara dados para Chart.js
+    datas = [h["data"].strftime("%d/%m") for h in historico]
+    pesos = [h["calibrado"] for h in historico]
+
+    return render_template("animais/historico_peso.html",
+                          animal=animal,
+                          historico=historico,
+                          datas=json.dumps(datas),
+                          pesos=json.dumps(pesos),
+                          fator=historico[-1]["fator"] if historico else 1.0)
