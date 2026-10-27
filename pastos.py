@@ -353,3 +353,56 @@ def total_lotacao(df_pastos, sit: dict, capacidade: float | None = None) -> dict
     ua_ha = ua / ha if ha > 0 else None
     return {"ua": ua, "ha": ha, "ua_ha": ua_ha, "nivel": nivel(ua_ha, capacidade),
             "capacidade": capacidade}
+
+
+def animais_por_pasto(df_man: pd.DataFrame, df_anim: pd.DataFrame | None = None) -> dict:
+    """Retorna {pasto_id: [lista de animais]} baseado na última movimentação de pasto.
+
+    Útil para mostrar no mapa quais animais estão em cada pasto. Cada animal
+    aparece no pasto da sua última "Movimentação de Pasto" (coluna Pasto).
+    Animais sem movimentação registrada aparecem em pasto_id=None.
+
+    Se df_anim fornecido, enriquece com cor/nome do animal.
+    """
+    resultado = {}
+
+    # Pega última movimentação de pasto de cada animal
+    movs = df_man[df_man["Tipo"] == TIPO_MOV].copy()
+    if movs.empty:
+        return resultado
+
+    # Agrupar por Brincos (animal) e pegar a última linha (mais recente)
+    ultima_mov = movs.sort_values("Data").groupby("Brincos").tail(1)
+
+    for _, row in ultima_mov.iterrows():
+        brincos_str = row.get("Brincos", "")
+        pasto_id = row.get("Pasto", None)
+
+        # Parse brincos (pode vir como "Amarelo 21 #A0001, Vermelho 05 #A0002")
+        if pd.isna(brincos_str) or not brincos_str:
+            pasto_id = None  # Rebanho todo movido, não rastreamos individual
+            continue
+
+        # Separa múltiplos brincos se houver
+        brincos_lista = [b.strip() for b in str(brincos_str).split(",")]
+
+        if pasto_id not in resultado:
+            resultado[pasto_id] = []
+
+        for brinco in brincos_lista:
+            # Extrai ID (ex: "#A0001" de "Amarelo 21 #A0001")
+            match = re.search(r"#(A\d+)", brinco)
+            animal_id = match.group(1) if match else brinco
+
+            info = {"id": animal_id, "brinco": brinco}
+
+            # Se temos df_anim, adiciona cor e nome
+            if df_anim is not None:
+                anim = A.por_id(df_anim, animal_id)
+                if anim:
+                    info["nome"] = anim.get("Nome", "")
+                    info["cor"] = anim.get("Cor", "")
+
+            resultado[pasto_id].append(info)
+
+    return resultado
