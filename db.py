@@ -39,6 +39,7 @@ from config import (
     COLUNAS_PASTOS, COLUNAS_TAREFAS, COLUNAS_LEITE_PRODUCAO, COLUNAS_LEITE_CONFIG,
     COLUNAS_LEITE_ALIMENTACAO, COLUNAS_LEITE_NECESSIDADES, COLUNAS_LEITE_TRATAMENTOS,
     COLUNAS_LEITE_CONFORTO, COLUNAS_LEITE_COLCHAO,
+    COLUNAS_VOLUMOSOS, COLUNAS_CONSUMO_VOLUMOSOS,
 )
 
 # Mapa aba → colunas esperadas, usado para migrar colunas novas sem perder dados.
@@ -59,6 +60,8 @@ _SCHEMA_ABAS = {
     "Leite Tratamentos": COLUNAS_LEITE_TRATAMENTOS,
     "Leite Conforto": COLUNAS_LEITE_CONFORTO,
     "Leite Colchão": COLUNAS_LEITE_COLCHAO,
+    "Volumosos": COLUNAS_VOLUMOSOS,
+    "Consumo Volumosos": COLUNAS_CONSUMO_VOLUMOSOS,
 }
 
 # Caminho completo do arquivo de dados
@@ -243,6 +246,8 @@ def inicializar():
         wb.create_sheet("Leite Tratamentos").append(COLUNAS_LEITE_TRATAMENTOS)
         wb.create_sheet("Leite Conforto").append(COLUNAS_LEITE_CONFORTO)
         wb.create_sheet("Leite Colchão").append(COLUNAS_LEITE_COLCHAO)
+        wb.create_sheet("Volumosos").append(COLUNAS_VOLUMOSOS)
+        wb.create_sheet("Consumo Volumosos").append(COLUNAS_CONSUMO_VOLUMOSOS)
 
         wb.create_sheet("Resumo")
         wb.save(ARQUIVO_PATH)

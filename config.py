@@ -361,6 +361,16 @@ COLUNAS_LEITE_COLCHAO = [
     "Foto Depois", "Responsável", "ID Envio", "Criado Em",
 ]
 
+# v5.5 — Volumosos (feno, silo, etc) — entrada e consumo, para corte e leite
+COLUNAS_VOLUMOSOS = [
+    "Data", "Tipo", "Quantidade (kg)", "Qualidade", "Origem", "Custo (R$)",
+    "Observação", "ID Envio", "Criado Em",
+]
+COLUNAS_CONSUMO_VOLUMOSOS = [
+    "Data", "Tipo", "Quantidade consumida (kg)", "Local", "Observação",
+    "ID Envio", "Criado Em",
+]
+
 CORES = {
     "verde_escuro":  "1B5E20",
     "verde_medio":   "388E3C",

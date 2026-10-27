@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Volumosos — Feno e Silo{% endblock %}
+{% block page_title %}🌾 Volumosos{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Alimentação — Corte e Leite</span>
+    <h2>Volumosos (Feno, Silo, Pasto Picado…)</h2>
+  </div>
+  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+    <a href="{{ url_for('lancar_volumoso') }}" class="btn btn-primary">📥 Lançar entrada</a>
+    <a href="{{ url_for('registrar_consumo') }}" class="btn btn-gold">📋 Registrar consumo</a>
+  </div>
+</div>
+
+{% if volumosos %}
+<div class="card">
+  <div class="section-head"><h3>Estoque atual</h3></div>
+
+  {% for tipo, info in volumosos %}
+  <div class="linha" style="border-left: 4px solid {% if info.alerta == 'aviso' %}#ff9800{% else %}#4caf50{% endif %};">
+    <div>
+      <strong>{{ tipo }}</strong>
+      <small>
+        {{ "%.0f"|format(info.kg) }} kg
+        {% if info.dias_faltam %}
+          · <strong>Acaba em {{ info.dias_faltam }} dias</strong>
+        {% else %}
+          · Sem consumo registrado
+        {% endif %}
+      </small>
+    </div>
+    <div style="text-align: right;">
+      {% if info.alerta == 'aviso' %}
+        <span class="badge badge-aviso">🟡 Aviso</span>
+      {% else %}
+        <span class="badge badge-ok">✅ OK</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card">
+  <p style="color: var(--text-3); text-align: center;">Nenhum volumoso registrado ainda.</p>
+</div>
+{% endif %}
+
+<div style="margin-top: 2rem; padding: 1rem; background: #f5f5f5; border-radius: 0.5rem; font-size: 0.9rem; color: #666;">
+  <p><strong>💡 Dica:</strong> Lance a entrada de volumosos (compra ou produção) e registre o consumo diário para o sistema calcular quando acaba.</p>
+  <p><strong>🟡 Aviso:</strong> Volumoso acaba em ≤7 dias — hora de se providenciar.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Lançar Entrada — Volumosos{% endblock %}
+{% block page_title %}📥 Lançar Volumoso{% endblock %}
+
+{% block content %}
+<div style="max-width: 500px;">
+  <div class="form-card">
+    <p style="font-size: 12.5px; color: var(--text-3); margin-bottom: 20px;">
+      Registre uma nova entrada de feno, silo ou outro volumoso. Você define o tipo na hora.
+    </p>
+
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div class="form-group">
+        <label>Data *</label>
+        <input type="date" name="data" required value="{{ hoje }}">
+      </div>
+
+      <div class="form-group">
+        <label>Tipo * <small>(ex: Feno, Silo de Milho, Pasto Picado…)</small></label>
+        <input type="text" name="tipo" required placeholder="Digite o tipo">
+      </div>
+
+      <div class="form-group">
+        <label>Quantidade (kg) *</label>
+        <input type="number" name="quantidade" step="0.1" required placeholder="0">
+      </div>
+
+      <div class="form-group">
+        <label>Qualidade <small style="font-weight: 400;">(informativo)</small></label>
+        <select name="qualidade">
+          <option value="">—</option>
+          <option value="Ótima">Ótima</option>
+          <option value="Boa">Boa</option>
+          <option value="Regular">Regular</option>
+          <option value="Ruim">Ruim</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Origem <small style="font-weight: 400;">(compra, produção, etc)</small></label>
+        <input type="text" name="origem" placeholder="ex: compra, produção própria">
+      </div>
+
+      <div class="form-group">
+        <label>Custo (R$)</label>
+        <input type="text" name="custo" placeholder="0,00">
+      </div>
+
+      <div class="form-group full">
+        <label>Observação</label>
+        <textarea name="observacao" rows="2" placeholder="ex: fornecedor, lote, condição de armazenamento…"></textarea>
+      </div>
+
+      <div style="margin-top: 24px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <button type="submit" class="btn btn-primary">✅ Lançar</button>
+        <a href="{{ url_for('painel_volumosos') }}" class="btn btn-outline">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

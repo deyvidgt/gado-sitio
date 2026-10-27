@@ -72,6 +72,7 @@ from routes_lotes import *      # noqa: F401, F403
 
 # v5.4 — Produção leiteira
 from routes_leite import *      # noqa: F401, F403
+from routes_volumosos import *  # noqa: F401, F403
 from routes_alertas import *    # noqa: F401, F403
 
 # Calendário operacional consolidado (somente leitura)
