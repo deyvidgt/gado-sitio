@@ -4,6 +4,24 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ## [Não lançado]
 
+## [5.8.0] — 2026-10-27
+
+### Adicionado (v5.8.0: Features & Rastreamento)
+- **Rastreamento de animais no mapa:** função `animais_por_pasto()` em `pastos.py` lista quais cabeças estão em cada pasto via `/api/pastos/animais`. Útil para saber em qual pasto está qual animal (brinco).
+- **Card de vacas prenhas:** função `_vacas_prenhas()` em `routes_dashboard.py` mostra vacas prenhas, atrasadas e prestes a parir nos próximos 14 dias (integrado com `reproducao.py`).
+- **Gráfico BCS×Peso:** novo módulo `bcs.py` correlaciona Body Condition Score (1-5 visual) com peso estimado. Funções: `bcs_historico()` e `analise_tendencia()` para diagnosticar problemas nutricionais.
+- **Planejamento de IA:** função `planejamento_ia()` em `reproducao.py` lista vacas candidatas à inseminação (vazias, sem cobertura há 60 dias+) com priorização por data.
+- **Histórico de peso:** rota `/animais/<id>/historico-peso` mostra gráfico de evolução de peso estimado (últimos 180 dias) com calibração do sítio.
+- **Melhorias em peso_foto.py:** +`historico_estimativas()` e `comparar_estimativa_vs_balanca()` para análise de evolução e validação de calibração.
+
+### Corrigido
+- Route 'painel' renomeada para 'dashboard' em base.html (test fix).
+- Faltava `jsonify` import em `routes_dashboard.py` (API fix).
+- Pasta `backups/` removida da raiz do repositório (não deveria estar no Git).
+- Sidebar mobile travada corrigida (drawer code obsoleto removido de `gestures.js`).
+
+## [5.7.0] — 2026-10-27 (anterior)
+
 ### Adicionado (v5.7 Sprint 4: Component Library — Phase 4)
 - **Componentes de interface reutilizáveis:** biblioteca completa de 4 componentes Web (Modal, Toast, Accordion, Form Validator) com 100% ARIA accessibility, temas escuro/claro, e suporte a redução de movimento.
   - **Modal (Phase 1):** diálogos com foco aprisionado, suporte a ESC/clique fora, e métodos estáticos para confirm/alert.
