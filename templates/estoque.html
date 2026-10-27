@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Estoque de Animais{% endblock %}
+{% block page_title %}Estoque de Animais 🐄{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  #mapa-estoque { height:62vh; min-height:340px; border-radius:12px; }
+  .rotulo-pasto-estoque { background:rgba(0,0,0,.75); color:#fff; border:0; border-radius:12px; font-size:14px; font-weight:600; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.3); padding:8px 12px; }
+  .rotulo-pasto-estoque::before { display:none; }
+  .rotulo-pasto-estoque .num { display:block; font-size:20px; font-weight:700; color:#f1c40f; }
+  .rotulo-pasto-estoque .txt { font-size:11px; color:#ecf0f1; }
+  .legenda-estoque { display:flex; gap:16px; flex-wrap:wrap; padding:12px; background:var(--bg-2); border-radius:8px; margin-bottom:12px; }
+  .legenda-item { display:flex; align-items:center; gap:8px; font-size:13px; }
+  .legenda-item .bol { display:inline-block; width:16px; height:16px; border-radius:50%; }
+  .tri-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:12px; margin:12px 0; }
+  .tri-item { text-align:center; padding:12px; background:var(--bg-2); border-radius:8px; }
+  .tri-number { font-size:24px; font-weight:700; color:var(--green-700); }
+  .tri-label { font-size:11px; color:var(--text-3); margin-top:4px; text-transform:uppercase; }
+</style>
+
+<div class="card" style="margin-bottom:20px">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+    <button type="button" class="btn btn-outline btn-sm" id="onde-estou">📍 Onde estou</button>
+    <span class="muted" style="align-self:center">Visualize onde cada animal está no rebanho.</span>
+  </div>
+
+  <!-- Legenda de Lotação -->
+  {% if capacidade %}
+  <div class="legenda-estoque" style="margin-bottom:12px">
+    <div class="legenda-item">
+      <span class="bol" style="background:#e67e22"></span>
+      <span><b>Baixa</b> &lt; 50%</span>
+    </div>
+    <div class="legenda-item">
+      <span class="bol" style="background:#27ae60"></span>
+      <span><b>Ideal</b> 50–70%</span>
+    </div>
+    <div class="legenda-item">
+      <span class="bol" style="background:#f39c12"></span>
+      <span><b>Atenção</b> 70–100%</span>
+    </div>
+    <div class="legenda-item">
+      <span class="bol" style="background:#c0392b"></span>
+      <span><b>Lotado</b> &gt; 100%</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <div id="mapa-estoque" aria-label="Mapa de satélite com localização dos animais"></div>
+
+  <p class="muted" style="margin-top:6px">
+    Cada pin mostra a <b>quantidade de animais</b> naquele pasto.
+    {% if sem_pasto.cab %}<b>{{ sem_pasto.cab }}</b> cabeça(s) ainda sem pasto (indicada em "SEM SETOR").{% endif %}
+  </p>
+</div>
+
+<!-- Resumo de Cabeças por Pasto -->
+<div class="card" style="margin-bottom:20px">
+  <h3>🐄 Cabeças por Pasto</h3>
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px">
+    {% for p in pastos %}
+    <div style="padding:12px; background:var(--bg-2); border-radius:8px; border-left:4px solid {{ p.cor }}">
+      <div style="font-weight:600;margin-bottom:4px;font-size:13px">{{ p.nome }}</div>
+      <div style="font-size:20px;font-weight:700;color:var(--green-700)">{{ p.contagem }}</div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:4px">
+        <span>{{ p.cab }} cab vivas</span><br>
+        <span>{{ '%.2f'|format(p.ua_ha)|replace('.', ',') if p.ua_ha else '—' }} UA/ha</span>
+      </div>
+    </div>
+    {% endfor %}
+    {% if sem_pasto.cab %}
+    <div style="padding:12px; background:#ffebee; border-radius:8px; border-left:4px solid #c0392b">
+      <div style="font-weight:600;margin-bottom:4px;font-size:13px;color:#c0392b">SEM SETOR</div>
+      <div style="font-size:20px;font-weight:700;color:#c0392b">{{ sem_pasto.cab }}</div>
+      <div style="font-size:11px;color:#c0392b;margin-top:4px">sem localidade</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Composição do Rebanho -->
+<div class="card">
+  <h3>📊 Composição do Rebanho</h3>
+  {% if composicao.total > 0 %}
+  <div class="tri-grid">
+    <div class="tri-item">
+      <div class="tri-number">{{ composicao.total }}</div>
+      <div class="tri-label">Total de Cabeças</div>
+    </div>
+    <div class="tri-item">
+      <div class="tri-number">{{ composicao.sem_cadastro }}</div>
+      <div class="tri-label">Sem Cadastro Individual</div>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:12px">
+    <div>
+      <h4 style="font-size:12px;color:var(--text-3);text-transform:uppercase;margin-bottom:8px">Por Categoria</h4>
+      <ul style="list-style:none;padding:0;margin:0">
+        {% for cat, qtd in composicao.categorias.items() %}
+        <li style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px">
+          <span>{{ cat }}</span><span style="font-weight:600">{{ qtd }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div>
+      <h4 style="font-size:12px;color:var(--text-3);text-transform:uppercase;margin-bottom:8px">Por Sexo</h4>
+      <ul style="list-style:none;padding:0;margin:0">
+        {% for sexo, qtd in composicao.sexos.items() %}
+        <li style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px">
+          <span>{{ sexo }}</span><span style="font-weight:600">{{ qtd }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% else %}
+  <p class="muted">Nenhuma cabeça no rebanho.</p>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function () {
+  const pastos = {{ pastos|tojson }};
+  const br = (n, d) => n.toFixed(d).replace(".", ",");
+
+  // Inicializa o mapa
+  const mapa = L.map("mapa-estoque").setView([-18.92, -48.28], 12);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 19, attribution: "Imagem © Esri" }).addTo(mapa);
+
+  const grupo = L.featureGroup().addTo(mapa);
+  const marcadores = {};
+
+  // Desenha os pastos e adiciona pins com contagem de animais
+  pastos.forEach(p => {
+    // Contorno do pasto
+    const tinta = { baixa: "#e67e22", ideal: "#27ae60", atencao: "#f39c12", lotado: "#c0392b" }[p.nivel] || p.cor;
+    const camada = L.geoJSON(p.geo, {
+      style: { color: p.cor, weight: 2, fillColor: tinta, fillOpacity: .25 }
+    });
+
+    // Label do pasto
+    let txt = `<b>${p.nome}</b><br>${br(p.area, 1)} ha · ${p.cab} cab`;
+    if (p.cab && p.ua_ha != null) txt += `<br>${br(p.ua_ha, 2)} UA/ha`;
+    camada.bindTooltip(txt, { permanent: true, direction: "center", className: "rotulo-pasto-estoque" });
+    camada.addTo(grupo);
+
+    // Pin com contagem de animais (no centroide do pasto)
+    if (p.geo && p.geo.coordinates && p.geo.coordinates.length > 0) {
+      const coords = p.geo.coordinates[0]; // Polígono
+      if (coords.length > 0) {
+        // Calcula centroide (média das coordenadas)
+        const lat = coords.reduce((sum, c) => sum + c[1], 0) / coords.length;
+        const lon = coords.reduce((sum, c) => sum + c[0], 0) / coords.length;
+
+        // Cria custom marker com contagem
+        const html = `<div style="background:#fff;border:3px solid ${tinta};border-radius:50%;width:56px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.3)">
+          <div style="font-size:18px;color:${tinta}">${p.contagem}</div>
+          <div style="font-size:9px;color:var(--text-3)">cab</div>
+        </div>`;
+
+        const icon = L.divIcon({ html, iconSize: [56, 56], className: "" });
+        const marcador = L.marker([lat, lon], { icon })
+          .bindPopup(`<b>${p.nome}</b><br>🐄 ${p.contagem} cabeça(s)`)
+          .addTo(grupo);
+        marcadores[p.id] = marcador;
+      }
+    }
+  });
+
+  if (pastos.length) mapa.fitBounds(grupo.getBounds(), { padding: [20, 20] });
+
+  // "Onde estou" — geolocalização
+  document.getElementById("onde-estou").addEventListener("click", () => {
+    if (!navigator.geolocation) {
+      alert("Geolocalização não disponível no seu navegador.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        mapa.flyTo([latitude, longitude], 16);
+      },
+      (erro) => console.warn("Geolocalização recusada:", erro)
+    );
+  });
+})();
+</script>
+{% endblock %}

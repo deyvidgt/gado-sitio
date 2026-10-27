@@ -143,6 +143,40 @@ def mover_gado():
     return redirect(url_for("pastos"))
 
 
+@app.route("/estoque")
+@login_required
+def estoque_animais():
+    """Exibe animais no rebanho com indicação de em qual pasto estão (mapa com pins)."""
+    dados = _get_dados_cache()
+    df_p, df_a = PA.carregar(), A.carregar()
+    estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
+    sit = PA.situacao(df_p, df_a, dados["Manejo"], estoque,
+                      _peso_medio(df_a, dados["Manejo"]), hoje=_agora())
+    capacidade = _capacidade_ua_ha()
+
+    # Pastos com informações de lotação
+    pastos_lista = [{"id": p["ID"], "nome": p["Nome"], "area": float(p["Área (ha)"]), "cor": p["Cor"],
+                      "geo": json.loads(p["Contorno"]), **sit[p["ID"]],
+                      "nivel": PA.nivel(sit[p["ID"]]["ua_ha"], capacidade)}
+                     for _, p in PA.ativos(df_p).iterrows()]
+
+    # Animais por pasto (para contar cabeças)
+    animais_por_pasto = PA.animais_por_pasto(dados["Manejo"], df_a)
+
+    # Contagem de cabeças por pasto
+    contagem = {pasto_id: len(animais) for pasto_id, animais in animais_por_pasto.items()}
+
+    # Adiciona contagem aos dados dos pastos
+    for p in pastos_lista:
+        p["contagem"] = contagem.get(p["id"], 0)
+
+    return render_template("estoque.html", pastos=pastos_lista,
+                           capacidade=capacidade,
+                           composicao=A.composicao(df_a, estoque),
+                           sem_pasto=sit[None],
+                           hoje=pd.Timestamp(_agora()).strftime("%Y-%m-%d"))
+
+
 @app.route("/api/pastos/animais")
 @login_required
 def api_pastos_animais():

@@ -414,8 +414,58 @@ def relatorios_leite():
     df = carregar_aba("Leite Produção")
     serie = serie_diaria(df, inicio, fim)
     total = sum(litros for _, litros in serie)
+
+    # CCS e CPP (Contagem de Células Somáticas e Contagem Padrão de Placa)
+    df_filtrado = df.copy()
+    df_filtrado["Data"] = pd.to_datetime(df_filtrado.get("Data"), format="%d/%m/%Y", errors="coerce")
+    df_filtrado = df_filtrado[(df_filtrado["Data"] >= pd.Timestamp(inicio)) &
+                               (df_filtrado["Data"] <= pd.Timestamp(fim))]
+
+    # Série diária de CCS e CPP
+    ccs_serie = {}
+    cpp_serie = {}
+    for _, row in df_filtrado.iterrows():
+        data = row.get("Data")
+        if pd.isna(data):
+            continue
+        data_str = data.strftime("%Y-%m-%d")
+
+        # Acumula CCS (média das leituras)
+        ccs = row.get("CCS (células/mL)")
+        if ccs and str(ccs).strip():
+            try:
+                ccs_val = float(str(ccs).replace(",", "."))
+                if data_str not in ccs_serie:
+                    ccs_serie[data_str] = []
+                ccs_serie[data_str].append(ccs_val)
+            except (ValueError, TypeError):
+                pass
+
+        # Acumula CPP
+        cpp = row.get("CPP (UFC/mL)")
+        if cpp and str(cpp).strip():
+            try:
+                cpp_val = float(str(cpp).replace(",", "."))
+                if data_str not in cpp_serie:
+                    cpp_serie[data_str] = []
+                cpp_serie[data_str].append(cpp_val)
+            except (ValueError, TypeError):
+                pass
+
+    # Médias diárias
+    ccs_medias = {data: sum(vals) / len(vals) for data, vals in ccs_serie.items()}
+    cpp_medias = {data: sum(vals) / len(vals) for data, vals in cpp_serie.items()}
+
+    # Séries ordenadas para o gráfico
+    ccs_datas = sorted(ccs_medias.keys())
+    ccs_valores = [ccs_medias[d] for d in ccs_datas]
+    cpp_datas = sorted(cpp_medias.keys())
+    cpp_valores = [cpp_medias[d] for d in cpp_datas]
+
     return render_template("leite_relatorios.html", inicio=inicio, fim=fim, serie=serie,
-                           total=total, por_vaca=producao_por_animal(df, inicio, fim))
+                           total=total, por_vaca=producao_por_animal(df, inicio, fim),
+                           ccs_datas=ccs_datas, ccs_valores=ccs_valores,
+                           cpp_datas=cpp_datas, cpp_valores=cpp_valores)
 
 
 @app.route("/leite/colchao")

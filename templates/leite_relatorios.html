@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Relatório do leite — Sítio Santo Antonio{% endblock %}
 {% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.css">
 <div class="page-head">
   <div><span class="eyebrow">Atividade leiteira</span><h2>Relatório do leite</h2></div>
-  <div class="acoes"><a class="btn" href="{{ url_for('painel_leite') }}">Voltar ao painel</a></div>
+  <div class="acoes"><a class="btn" href="{{ url_for('painel_leite') }}">← Voltar ao painel</a></div>
 </div>
 <form method="get" class="card">
   <div class="grid-3">
@@ -47,4 +48,160 @@
   <p>Sem registros individuais no período. Registros totais não entram no ranking por vaca.</p>
   {% endif %}
 </div>
+
+<!-- CCS (Contagem de Células Somáticas) -->
+{% if ccs_valores %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h3>📊 CCS (Células Somáticas)</h3>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline btn-sm" onclick="downloadPDF('ccs', 'CCS')">📄 PDF</button>
+      <button class="btn btn-outline btn-sm" onclick="downloadExcel('ccs', 'CCS')">📋 Excel</button>
+    </div>
+  </div>
+  <p class="muted" style="margin-bottom:12px">Contagem de Células Somáticas — indicador de saúde da glândula mamária. Meta: &lt; 200.000 células/mL</p>
+  <div style="position:relative;height:320px;margin-bottom:12px">
+    <canvas id="chart-ccs"></canvas>
+  </div>
+  <div style="padding:12px;background:var(--bg-2);border-radius:8px;font-size:12px">
+    <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px">
+      <div><strong>Mínimo:</strong> {{ '%.0f'|format(ccs_valores|min)|replace('.', ',') if ccs_valores else '—' }}</div>
+      <div><strong>Máximo:</strong> {{ '%.0f'|format(ccs_valores|max)|replace('.', ',') if ccs_valores else '—' }}</div>
+      <div><strong>Média:</strong> {{ '%.0f'|format(ccs_valores|sum / ccs_valores|length)|replace('.', ',') if ccs_valores else '—' }}</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- CPP (Contagem Padrão de Placa) -->
+{% if cpp_valores %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h3>📊 CPP (Contagem Padrão de Placa)</h3>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline btn-sm" onclick="downloadPDF('cpp', 'CPP')">📄 PDF</button>
+      <button class="btn btn-outline btn-sm" onclick="downloadExcel('cpp', 'CPP')">📋 Excel</button>
+    </div>
+  </div>
+  <p class="muted" style="margin-bottom:12px">Contagem Padrão de Placa — indica presença de bactérias. Meta: &lt; 100.000 UFC/mL</p>
+  <div style="position:relative;height:320px;margin-bottom:12px">
+    <canvas id="chart-cpp"></canvas>
+  </div>
+  <div style="padding:12px;background:var(--bg-2);border-radius:8px;font-size:12px">
+    <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px">
+      <div><strong>Mínimo:</strong> {{ '%.0f'|format(cpp_valores|min)|replace('.', ',') if cpp_valores else '—' }}</div>
+      <div><strong>Máximo:</strong> {{ '%.0f'|format(cpp_valores|max)|replace('.', ',') if cpp_valores else '—' }}</div>
+      <div><strong>Média:</strong> {{ '%.0f'|format(cpp_valores|sum / cpp_valores|length)|replace('.', ',') if cpp_valores else '—' }}</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+(function () {
+  // Gráfico CCS
+  {% if ccs_valores %}
+  const ctxCCS = document.getElementById('chart-ccs');
+  if (ctxCCS) {
+    new Chart(ctxCCS, {
+      type: 'line',
+      data: {
+        labels: {{ ccs_datas|tojson }},
+        datasets: [{
+          label: 'CCS (células/mL)',
+          data: {{ ccs_valores|tojson }},
+          borderColor: '#e74c3c',
+          backgroundColor: 'rgba(231, 76, 60, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          pointBackgroundColor: '#e74c3c',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, labels: { usePointStyle: true, padding: 15 } },
+          filler: { propagate: true }
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString('pt-BR') } }
+        }
+      }
+    });
+  }
+  {% endif %}
+
+  // Gráfico CPP
+  {% if cpp_valores %}
+  const ctxCPP = document.getElementById('chart-cpp');
+  if (ctxCPP) {
+    new Chart(ctxCPP, {
+      type: 'line',
+      data: {
+        labels: {{ cpp_datas|tojson }},
+        datasets: [{
+          label: 'CPP (UFC/mL)',
+          data: {{ cpp_valores|tojson }},
+          borderColor: '#f39c12',
+          backgroundColor: 'rgba(243, 156, 18, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          pointBackgroundColor: '#f39c12',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, labels: { usePointStyle: true, padding: 15 } },
+          filler: { propagate: true }
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString('pt-BR') } }
+        }
+      }
+    });
+  }
+  {% endif %}
+
+  // Download functions
+  window.downloadPDF = function(tipo, nome) {
+    alert(`Download de ${nome} em PDF — Feature em desenvolvimento`);
+    // Será implementado com biblioteca como jsPDF ou html2pdf
+  };
+
+  window.downloadExcel = function(tipo, nome) {
+    const dados = tipo === 'ccs' ? {
+      datas: {{ ccs_datas|tojson }},
+      valores: {{ ccs_valores|tojson }}
+    } : {
+      datas: {{ cpp_datas|tojson }},
+      valores: {{ cpp_valores|tojson }}
+    };
+
+    // Cria CSV para download
+    let csv = `Data,${nome}\n`;
+    dados.datas.forEach((data, i) => {
+      csv += `${data},${dados.valores[i].toFixed(0)}\n`;
+    });
+
+    const link = document.createElement('a');
+    link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    link.download = `${tipo}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+})();
+</script>
 {% endblock %}
