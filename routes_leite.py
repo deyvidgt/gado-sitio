@@ -7,12 +7,65 @@ from io import BytesIO
 from flask import abort, flash, redirect, render_template, request, send_file, url_for
 from openpyxl import Workbook
 
+from datetime import timedelta, date
+import pandas as pd
+
 import animais as A
 from config import COLUNAS_LEITE_COLCHAO, COLUNAS_LEITE_CONFORTO, COLUNAS_LEITE_TRATAMENTOS
 from db import alterar_aba, carregar_aba, fazer_backup
 from extensions import _agora, _limpar_backups_antigos, _validar_csrf, app, login_required, salvar_linha, parse_valor
 from leite import _data, _numero, acumulados, contagens_rebanho, dias_em_lactacao, medias_periodo, producao_por_animal, serie_diaria, validar_producao, historico_colchao
-from comparativo import comparar_vacas
+
+
+def _comparar_vacas(ids_animais, periodo_dias=30):
+    """Compara até 3 vacas leiteiras no período."""
+    hoje = date.today()
+    inicio = hoje - timedelta(days=periodo_dias)
+
+    df_producao = carregar_aba("Leite Produção")
+    df_config = carregar_aba("Leite Configuração")
+
+    preco_litro = 0
+    if df_config is not None and not df_config.empty:
+        preco = _numero(df_config.iloc[0].get("Preço por Litro"))
+        preco_litro = preco if preco else 0
+
+    resultado = {}
+    for vaca_id in ids_animais:
+        vaca_id = str(vaca_id).strip()
+        if df_producao is None or df_producao.empty:
+            registros = pd.DataFrame()
+        else:
+            registros = df_producao[df_producao.get("Vaca ID", "").astype(str).str.strip() == vaca_id].copy()
+            if not registros.empty:
+                datas_lista = [_data(d) for d in registros.get("Data", [])]
+                mask = [d is not None and d >= inicio and d <= hoje for d in datas_lista]
+                registros = registros[mask]
+
+        if registros.empty:
+            resultado[vaca_id] = {
+                "producao_litros_dia": 0.0,
+                "custo_diario": 0.0,
+                "receita_diario": 0.0,
+                "margem_diario": 0.0,
+                "ccs_ultimo": None,
+                "cpp_ultimo": None,
+                "ultimos_eventos": []
+            }
+        else:
+            litros_total = sum(_numero(r.get("Litros", 0)) or 0 for _, r in registros.iterrows())
+            ccs_ultim = registros[registros.get("CCS") != ""].tail(1).get("CCS").values
+            cpp_ultim = registros[registros.get("CPP") != ""].tail(1).get("CPP").values
+            resultado[vaca_id] = {
+                "producao_litros_dia": round(litros_total / max(len(registros), 1), 2),
+                "custo_diario": 0.0,
+                "receita_diario": round((litros_total / max(len(registros), 1)) * preco_litro, 2),
+                "margem_diario": round((litros_total / max(len(registros), 1)) * preco_litro, 2),
+                "ccs_ultimo": _numero(ccs_ultim[0]) if len(ccs_ultim) > 0 else None,
+                "cpp_ultimo": _numero(cpp_ultim[0]) if len(cpp_ultim) > 0 else None,
+                "ultimos_eventos": []
+            }
+    return resultado
 
 
 @app.route("/leite")
@@ -473,7 +526,7 @@ def comparativo_leite():
         ids = [str(f.get(f"vaca_{i}", "")).strip() for i in range(1, 4)]
         ids = [v for v in ids if v]
         if ids:
-            resultado = comparar_vacas(ids)
+            resultado = _comparar_vacas(ids)
 
     return render_template("leite_comparativo.html", vacas_opcoes=vacas_opcoes, resultado=resultado)
 
@@ -486,4 +539,4 @@ def api_comparativo_leite():
     ids = [v.strip() for v in ids if v.strip()]
     if not ids:
         return jsonify({"erro": "Nenhuma vaca informada"}), 400
-    return jsonify(comparar_vacas(ids))
+    return jsonify(_comparar_vacas(ids))

@@ -14,7 +14,6 @@ from openpyxl.utils import get_column_letter
 from config import CORES, MEMBROS, NOMES_MEMBROS
 import db
 from db import carregar_todas, salvar_linha, safe_val
-from ui_helper import ui_ok, ui_aviso, ui_info, ui_titulo, ui_input, fmt_r
 from calculos import (
     partes_iguais,
     calcular_resumo_financeiro, calcular_todos_membros, calcular_fluxo_caixa,

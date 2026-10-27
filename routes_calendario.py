@@ -1,11 +1,102 @@
 # -*- coding: utf-8 -*-
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from calendar import monthrange, month_name
 
+import pandas as pd
 from flask import render_template, request, jsonify
 
 from extensions import app, _get_dados_cache, login_required
-import calendario
+
+
+def _data(valor):
+    """Converte para timestamp, normalized."""
+    d = pd.to_datetime(valor, dayfirst=True, errors="coerce")
+    return pd.NaT if pd.isna(d) else d.normalize()
+
+
+def _texto(valor):
+    """Converte para string segura."""
+    return "" if valor is None or pd.isna(valor) else str(valor).strip()
+
+
+def _tipo_manejo(tipo):
+    """Classifica tipo de manejo."""
+    t = _texto(tipo).lower()
+    if "vacina" in t or "vermif" in t or "brucelose" in t:
+        return "saude"
+    if t in {"cobertura", "diagnóstico de gestação"}:
+        return "reproducao"
+    return "manejo"
+
+
+def _urgencia(dias):
+    """Retorna urgência por dias."""
+    if dias is None:
+        return "normal"
+    if dias <= 3:
+        return "urgente"
+    if dias <= 7:
+        return "aviso"
+    return "normal"
+
+
+def _eventos_mes(dados, mes, ano, hoje=None):
+    """Retorna {data: [eventos]} para o mês especificado."""
+    hoje = pd.Timestamp(hoje or date.today()).normalize()
+    inicio = pd.Timestamp(year=ano, month=mes, day=1)
+    fim = pd.Timestamp(year=ano, month=mes, day=1) + pd.DateOffset(months=1) - timedelta(days=1)
+
+    resultado = {}
+
+    # Manejo (saúde, reprodução)
+    df_man = dados.get("Manejo", pd.DataFrame()) if dados else pd.DataFrame()
+    if df_man is not None and not df_man.empty:
+        for _, row in df_man.iterrows():
+            d = _data(row.get("Data"))
+            if pd.isna(d) or not (inicio <= d <= fim):
+                continue
+            tipo = _tipo_manejo(row.get("Tipo"))
+            titulo = _texto(row.get("Tipo")) or "Manejo"
+            detalhe = _texto(row.get("Descrição")) or _texto(row.get("Produto"))
+            dias = (d - hoje).days
+            urg = _urgencia(dias)
+            resultado.setdefault(d.date(), []).append({
+                "tipo": tipo, "titulo": titulo, "detalhes": detalhe,
+                "urgencia": urg, "origem": "Manejo"
+            })
+
+    # Visitas
+    df_vis = dados.get("Visitas", pd.DataFrame()) if dados else pd.DataFrame()
+    if df_vis is not None and not df_vis.empty:
+        for _, row in df_vis.iterrows():
+            d = _data(row.get("Data"))
+            if pd.isna(d) or not (inicio <= d <= fim):
+                continue
+            dias = (d - hoje).days
+            urg = _urgencia(dias)
+            resultado.setdefault(d.date(), []).append({
+                "tipo": "visita", "titulo": "Visita", "detalhes": _texto(row.get("Responsável")),
+                "urgencia": urg, "origem": "Visitas"
+            })
+
+    # Tarefas
+    df_tar = dados.get("Tarefas", pd.DataFrame()) if dados else pd.DataFrame()
+    if df_tar is not None and not df_tar.empty:
+        for _, row in df_tar.iterrows():
+            if _texto(row.get("Feito Em")):
+                continue
+            d = _data(row.get("Data"))
+            if pd.isna(d) or not (inicio <= d <= fim):
+                continue
+            dias = (d - hoje).days
+            urg = _urgencia(dias)
+            resultado.setdefault(d.date(), []).append({
+                "tipo": "tarefa", "titulo": _texto(row.get("Título")),
+                "detalhes": _texto(row.get("Responsável")),
+                "urgencia": urg, "origem": "Tarefas"
+            })
+
+    return resultado
 
 
 @app.route("/calendario")
@@ -23,7 +114,7 @@ def calendario_pagina():
     dados = _get_dados_cache()
 
     # Busca eventos do mês
-    eventos_por_dia = calendario.eventos_mes(dados, mes, ano)
+    eventos_por_dia = _eventos_mes(dados, mes, ano)
 
     # Monta grid: semanas com dias da semana
     hoje = date.today()
@@ -90,7 +181,7 @@ def api_calendario_eventos():
         return jsonify({"erro": "Data inválida"}), 400
 
     dados = _get_dados_cache()
-    eventos_por_dia = calendario.eventos_mes(dados, d.month, d.year)
+    eventos_por_dia = _eventos_mes(dados, d.month, d.year)
     eventos = eventos_por_dia.get(d, [])
 
     return jsonify({"data": str(d), "eventos": eventos})

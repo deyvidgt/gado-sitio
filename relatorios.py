@@ -11,11 +11,6 @@ import matplotlib.dates as mdates
 
 from config import MEMBROS, NOMES_MEMBROS, EMOJIS_MEMBROS, ALERTAS_SAUDE
 from db import carregar_todas
-from ui_helper import (
-    ui_titulo, ui_ok, ui_aviso, ui_info, ui_separador,
-    ui_tabela, ui_destaque, ui_input, ui_int, ui_float,
-    ui_data_simples, fmt_r, fmt_pct, fmt_cabecas,
-)
 from calculos import (
     calcular_estoque, calcular_cmp, calcular_gpcab, calcular_ctcab,
     calcular_resumo_financeiro, calcular_todos_membros,
