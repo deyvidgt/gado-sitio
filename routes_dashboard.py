@@ -36,7 +36,9 @@ def _entrada_saida_timeline(dados, dias=90):
     timeline = {}
 
     # Compras (entrada)
-    df_comp = dados.get("Compras") or pd.DataFrame()
+    df_comp = dados.get("Compras")
+    if df_comp is None:
+        df_comp = pd.DataFrame()
     for _, row in df_comp.iterrows():
         try:
             data = pd.to_datetime(row.get("Data")).date()
@@ -49,7 +51,9 @@ def _entrada_saida_timeline(dados, dias=90):
             pass
 
     # Vendas (saída)
-    df_vend = dados.get("Vendas") or pd.DataFrame()
+    df_vend = dados.get("Vendas")
+    if df_vend is None:
+        df_vend = pd.DataFrame()
     for _, row in df_vend.iterrows():
         try:
             data = pd.to_datetime(row.get("Data")).date()
