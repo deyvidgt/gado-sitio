@@ -185,4 +185,40 @@ def familia():
                            faltou=len(ok) < len(linhas))
 
 
+# ── Previsão do tempo (v5.6) ───────────────────────────────────────────────────
+
+@app.route("/tempo")
+@login_required
+def tempo():
+    """Página completa de previsão de tempo com gráficos e alertas."""
+    import tempo as T
+    prev = T.previsao(agora=_agora())
+    alertas = T.alertas_tempo(prev)
+
+    # Recomendações por tipo (para filtragem no template)
+    recomendacoes = {
+        "leite": {
+            "chuva_forte": "Risco de mastite — verificar ordenhadora e higiene da ordenha.",
+            "calor_umidade": "Estresse térmico — aumentar sombra, água fresca e ventilação.",
+            "vento_forte": "Risco de disseminação de doenças — aumentar vigilância sanitária.",
+            "queda_temp": "Queda de temperatura — verificar abrigo e aquecimento.",
+        },
+        "corte": {
+            "chuva_forte": "Armazenar camas/alimentos bem — evitar mofo e doenças.",
+            "calor_umidade": "Calor extremo — aumentar sombra, água e ventilação.",
+            "vento_forte": "Vento forte — proteger animais e reforçar abrigos.",
+            "queda_temp": "Queda de temperatura — verificar abrigo dos animais.",
+        },
+        "volumosos": {
+            "chuva_forte": "Chuva — armazenar volumosos e forragens bem para não estragar.",
+            "calor_umidade": "Calor — vigilância em armazenamento de feno/silagem.",
+            "vento_forte": "Vento forte — proteger pilhas de volumosos.",
+            "queda_temp": "Queda de temperatura — nenhum impacto direto.",
+        },
+    }
+
+    return render_template("tempo.html", prev=prev, alertas=alertas,
+                          recomendacoes=recomendacoes, fmt_data=fmt_data, fmt_brl=fmt_brl)
+
+
 # ══════════════════════════════════════════════════════════════════════════════

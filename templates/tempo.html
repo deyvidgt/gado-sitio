@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% block title %}Previsão de Tempo — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Previsão de Tempo{% endblock %}
+
+{% block content %}
+
+<style>
+  .tempo-card { margin-bottom: 20px; }
+  .tempo-agora {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  .tempo-agora > div { padding: 12px; background: var(--surface-2); border-radius: var(--radius); }
+  .tempo-agora strong { display: block; font-size: 1.5em; color: var(--green-600); }
+  .tempo-agora label { display: block; font-size: 0.8em; color: var(--text-3); margin-top: 4px; }
+  .chart-container { position: relative; height: 300px; margin-bottom: 20px; }
+  .alerta-tempo {
+    padding: 12px;
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+    border-left: 4px solid;
+  }
+  .alerta-tempo.urgente { background: #ffe6e6; border-left-color: var(--danger); color: var(--danger); }
+  .alerta-tempo.aviso { background: #fff3cd; border-left-color: var(--warn); color: var(--warn); }
+  .recomendacoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .recom-card {
+    padding: 12px;
+    background: var(--surface-2);
+    border-radius: var(--radius);
+  }
+  .recom-card h4 { margin: 0 0 8px 0; font-size: 1.1em; }
+  .recom-card p { margin: 0; font-size: 0.9em; color: var(--text-2); }
+  .dia-tabela {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    padding: 12px;
+    border-bottom: 1px solid var(--surface-2);
+    align-items: center;
+  }
+  .dia-tabela:hover { background: var(--surface-2); }
+  .dia-tabela strong { color: var(--green-600); }
+  .dia-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    padding: 12px;
+    font-weight: 600;
+    border-bottom: 2px solid var(--green-200);
+    background: var(--green-50);
+  }
+  @media (max-width: 768px) {
+    .recomendacoes { grid-template-columns: 1fr; }
+    .dia-tabela, .dia-header { grid-template-columns: 1fr; }
+    .tempo-agora { grid-template-columns: 1fr; }
+  }
+</style>
+
+<section class="card tempo-card">
+  <div class="section-head" style="margin-bottom:16px">
+    <h2>Dados Atuais</h2>
+    {% if prev.consultado_em %}<span class="status" style="font-size:0.9em">Atualizado em {{ prev.consultado_em[:16] | replace('T', ' ') }}</span>{% endif %}
+  </div>
+  {% if prev.status != 'indisponível' and prev.atual %}
+  <div class="tempo-agora">
+    <div>
+      <strong>{{ prev.atual.temperatura or '—' }}°C</strong>
+      <label>Temperatura</label>
+    </div>
+    <div>
+      <strong>{{ prev.atual.umidade or '—' }}%</strong>
+      <label>Umidade</label>
+    </div>
+    <div>
+      <strong>{{ prev.atual.vento_kmh or '—' }} km/h</strong>
+      <label>Vento</label>
+    </div>
+  </div>
+  <p style="color: var(--text-2); margin: 0;">{{ prev.atual.condicao }}</p>
+  {% else %}
+  <p style="color: var(--text-2);">{{ prev.mensagem or 'Previsão indisponível.' }}</p>
+  {% endif %}
+</section>
+
+{% if prev.status != 'indisponível' and prev.dias %}
+
+<!-- Gráfico de Previsão (7 dias) -->
+<section class="card tempo-card">
+  <div class="card-title" style="margin-bottom:20px">Previsão de 7 Dias</div>
+  <div class="chart-container">
+    <canvas id="chartTempo"></canvas>
+  </div>
+</section>
+
+<!-- Alertas -->
+{% if alertas %}
+<section class="card tempo-card">
+  <div class="card-title" style="margin-bottom:12px">Alertas Meteorológicos</div>
+  {% for a in alertas %}
+  <div class="alerta-tempo {{ a.nivel }}">
+    <strong>{{ a.icone }} {{ a.alerta }}</strong>
+    <p style="margin:4px 0 0 0">{{ a.descricao }}</p>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+<!-- Tabela Detalhada -->
+<section class="card tempo-card">
+  <div class="card-title" style="margin-bottom:12px">Detalhes por Dia</div>
+  <div class="dia-header">
+    <div>📅 Data</div>
+    <div>🌡️ Temp</div>
+    <div>🌧️ Chuva</div>
+    <div>💨 Vento</div>
+    <div>💧 Umidade</div>
+    <div>⚠️ Alerta</div>
+  </div>
+  {% for dia in prev.dias %}
+  <div class="dia-tabela">
+    <div><strong>{{ dia.data }}</strong></div>
+    <div>{{ dia.minima or '—' }}–<strong>{{ dia.maxima or '—' }}</strong>°C</div>
+    <div>{{ dia.chuva_mm or '—' }}mm<br><span style="font-size:0.85em; color:var(--text-3)">{{ dia.chuva_probabilidade or '—' }}%</span></div>
+    <div>{{ dia.get('vento_kmh', '—') }} km/h</div>
+    <div>{{ dia.get('umidade', '—') }}%</div>
+    <div style="font-size:0.9em">
+      {% set alerta_dia = alertas|selectattr('tipo', 'defined')|list %}
+      {% if alerta_dia|length > 0 %}
+        {% for a in alerta_dia[:1] %}{{ a.icone }}{% endfor %}
+      {% else %}✓{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</section>
+
+<!-- Recomendações por Módulo -->
+<section class="card tempo-card">
+  <div class="card-title" style="margin-bottom:12px">Recomendações por Módulo</div>
+  <div class="recomendacoes">
+    <div class="recom-card">
+      <h4>🥛 Leiteria</h4>
+      {% if alertas %}
+        {% for a in alertas %}
+          {% if a.tipo in recomendacoes.leite %}
+            <p>{{ recomendacoes.leite[a.tipo] }}</p>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <p>Condições normais — sem recomendações especiais.</p>
+      {% endif %}
+    </div>
+    <div class="recom-card">
+      <h4>🐄 Corte</h4>
+      {% if alertas %}
+        {% for a in alertas %}
+          {% if a.tipo in recomendacoes.corte %}
+            <p>{{ recomendacoes.corte[a.tipo] }}</p>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <p>Condições normais — sem recomendações especiais.</p>
+      {% endif %}
+    </div>
+    <div class="recom-card">
+      <h4>🌾 Volumosos</h4>
+      {% if alertas %}
+        {% for a in alertas %}
+          {% if a.tipo in recomendacoes.volumosos %}
+            <p>{{ recomendacoes.volumosos[a.tipo] }}</p>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <p>Condições normais — sem recomendações especiais.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<script>
+  // Gráfico de temperatura e precipitação para 7 dias (ou menos se houver)
+  const dados = {{ prev.dias|tojson }};
+
+  const labels = dados.map(d => {
+    const [y, m, day] = d.data.split('-');
+    return day + '/' + m;
+  });
+
+  const temperaturas = dados.map(d => d.maxima || 0);
+  const minimas = dados.map(d => d.minima || 0);
+  const chuvas = dados.map(d => d.chuva_mm || 0);
+
+  const ctx = document.getElementById('chartTempo').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Precipitação (mm)',
+          data: chuvas,
+          backgroundColor: 'rgba(54, 162, 235, 0.4)',
+          borderColor: 'rgb(54, 162, 235)',
+          yAxisID: 'y1',
+          borderRadius: 4,
+          type: 'bar',
+        },
+        {
+          label: 'Máxima (°C)',
+          data: temperaturas,
+          borderColor: 'rgb(255, 99, 99)',
+          backgroundColor: 'transparent',
+          borderWidth: 3,
+          tension: 0.1,
+          yAxisID: 'y',
+          pointBackgroundColor: 'rgb(255, 99, 99)',
+          pointRadius: 4,
+        },
+        {
+          label: 'Mínima (°C)',
+          data: minimas,
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          tension: 0.1,
+          yAxisID: 'y',
+          pointBackgroundColor: 'rgb(75, 192, 192)',
+          pointRadius: 3,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+        title: {
+          display: false,
+        },
+      },
+      scales: {
+        y: {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          title: {
+            display: true,
+            text: 'Temperatura (°C)',
+          },
+          ticks: {
+            callback: function(value) {
+              return value + '°';
+            },
+          },
+        },
+        y1: {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          title: {
+            display: true,
+            text: 'Precipitação (mm)',
+          },
+          ticks: {
+            callback: function(value) {
+              return value + 'mm';
+            },
+          },
+          grid: {
+            drawOnChartArea: false,
+          },
+        },
+      },
+    },
+  });
+</script>
+
+{% else %}
+<section class="card">
+  <p style="color: var(--text-2);">{{ prev.mensagem }}</p>
+</section>
+{% endif %}
+
+{% endblock %}
