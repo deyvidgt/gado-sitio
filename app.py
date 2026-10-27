@@ -49,6 +49,9 @@ from routes_relatorios import * # noqa: F401, F403
 # ── 10) Animais (brincos) e Comando de Voz ───────────────────────────────────
 from routes_animais import *    # noqa: F401, F403
 
+# v5.6 — Gráficos de crescimento (GMD) do animal
+from routes_pesagem import *    # noqa: F401, F403
+
 # v4.4 — Fotos dos animais (Google Drive)
 from routes_fotos import *      # noqa: F401, F403
 

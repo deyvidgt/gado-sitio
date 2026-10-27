@@ -108,6 +108,71 @@ def _formatar(dados, cfg, salvo_em, desatualizado=False):
     }
 
 
+def alertas_tempo(prev):
+    """Detecta alertas sobre as condições meteorológicas (chuva, calor, vento, temperatura).
+    Retorna lista de alertas com tipo, descrição e ícone para leite/corte/volumosos."""
+    alertas = []
+    if not prev or prev.get("status") == "indisponível":
+        return alertas
+
+    atual = prev.get("atual", {})
+    dias = prev.get("dias", [])
+
+    # Verifica hoje (primeiro dia da previsão)
+    hoje = dias[0] if dias else {}
+    chuva_hoje = hoje.get("chuva_mm", 0) or 0
+    temp_max = hoje.get("maxima", 0) or 0
+    umidade = atual.get("umidade", 0) or 0
+    vento = atual.get("vento_kmh", 0) or 0
+
+    # Chuva forte: >20mm → risco de mastite/higiene
+    if chuva_hoje > 20:
+        alertas.append({
+            "tipo": "chuva_forte",
+            "alerta": "Chuva forte",
+            "descricao": f"Precipitação de {chuva_hoje:.0f}mm — risco de mastite, higiene da ordenha crítica.",
+            "icone": "🌧️",
+            "nivel": "aviso" if chuva_hoje <= 40 else "urgente",
+        })
+
+    # Calor + umidade alta: >30°C + >70% umidade → estresse térmico
+    if temp_max > 30 and umidade > 70:
+        alertas.append({
+            "tipo": "calor_umidade",
+            "alerta": "Calor extremo",
+            "descricao": f"{temp_max:.0f}°C + {umidade}% umidade — estresse térmico alto.",
+            "icone": "🔥",
+            "nivel": "aviso",
+        })
+
+    # Queda abrupta de temperatura (comparar com amanhã)
+    if len(dias) > 1:
+        amanha = dias[1]
+        temp_amanha = amanha.get("minima", 0) or 0
+        temp_min_hoje = hoje.get("minima", 0) or 0
+        queda = temp_min_hoje - temp_amanha
+        if queda > 10:
+            alertas.append({
+                "tipo": "queda_temp",
+                "alerta": "Queda de temperatura",
+                "descricao": f"Queda de {queda:.0f}°C — verificar abrigo dos animais.",
+                "icone": "❄️",
+                "nivel": "aviso",
+            })
+
+    # Vento forte: >15 km/h → desconforto animal
+    if vento > 15:
+        alertas.append({
+            "tipo": "vento_forte",
+            "alerta": "Vento forte",
+            "descricao": f"Vento de {vento:.0f} km/h — desconforto animal e risco de disseminação de doenças.",
+            "icone": "💨",
+            "nivel": "aviso",
+        })
+
+    return alertas
+
+
 def previsao(*, agora=None):
     agora = agora or datetime.now()
     cfg = _configuracao()

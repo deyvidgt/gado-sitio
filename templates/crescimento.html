@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Crescimento — {{ fmt_brinco(animal['Brinco Cor'], animal['Brinco Nº']) }} · Sítio Santo Antonio{% endblock %}
+{% block page_title %}Crescimento 📈{% endblock %}
+
+{% block content %}
+<style>
+  .cres-header { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:24px; }
+  .cres-brinco { width:72px; height:72px; border-radius:50% 50% 50% 8px; display:flex;
+                 align-items:center; justify-content:center; font-size:26px; font-weight:700;
+                 border:3px solid rgba(0,0,0,.2); flex:none; }
+  .cres-header h2 { font-family:'Playfair Display',serif; font-size:22px; margin:0; }
+  .cres-header .sub { color:var(--text-3); font-size:13px; }
+  .btn-voltar { margin-left:auto; }
+  .tri { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+  .tri > div { flex:1; min-width:140px; background:var(--surface); border-radius:var(--radius);
+              padding:12px; box-shadow:var(--shadow); }
+  .tri > div .num { font-size:24px; font-weight:700; color:var(--green-700); }
+  .tri > div .label { font-size:12px; color:var(--text-3); margin-top:4px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px;
+           font-weight:600; background:var(--surface-2); }
+  .badge-ok { background:var(--green-100); color:var(--green-700); }
+  .badge-aviso { background:rgba(230,126,34,.12); color:#e67e22; }
+  .badge-ruim { background:rgba(192,57,43,.12); color:var(--danger); }
+  .tendencia { margin:8px 0 0 0; }
+  .chart-container { position:relative; height:280px; margin-bottom:20px; }
+  .lista-pesagens { background:var(--surface); border-radius:var(--radius);
+                   box-shadow:var(--shadow); overflow:hidden; }
+  .pes-row { display:flex; align-items:center; gap:12px; padding:10px 14px;
+            border-bottom:1px solid var(--cream-dk); font-size:13px; }
+  .pes-row:last-child { border-bottom:none; }
+  .pes-data { color:var(--text-3); min-width:90px; font-size:12px; }
+  .pes-peso { flex:1; }
+  .pes-peso b { font-size:16px; color:var(--text); }
+  .pes-gmd { min-width:100px; text-align:right; font-weight:600; }
+  .muted { color:var(--text-3); font-size:12px; }
+</style>
+
+<div class="cres-header">
+  <div class="cres-brinco" style="background:{{ COR_HEX.get(animal['Brinco Cor'], '#999') }};
+       color:{{ '#222' if animal['Brinco Cor'] in ['Amarelo','Branco','Rosa','Laranja'] else '#fff' }}">
+    {{ '%02d' % (animal['Brinco Nº'] or 0) }}
+  </div>
+  <div>
+    <h2>{{ fmt_brinco(animal['Brinco Cor'], animal['Brinco Nº']) }}</h2>
+    <p class="sub">{{ animal.get('Categoria', 'Animal') }} · {{ animal.get('Dono', '—') }}</p>
+  </div>
+  <a href="{{ url_for('ficha_animal', id_=id_animal) }}" class="btn btn-outline btn-voltar">← Voltar</a>
+</div>
+
+{% if pesagens %}
+<div class="tri">
+  <div>
+    <div class="num">{{ peso_inicial if peso_inicial else '—' }}{% if peso_inicial %}<span style="font-size:14px">kg</span>{% endif %}</div>
+    <div class="label">Peso Inicial</div>
+  </div>
+  <div>
+    <div class="num">{{ peso_atual if peso_atual else '—' }}{% if peso_atual %}<span style="font-size:14px">kg</span>{% endif %}</div>
+    <div class="label">Peso Atual</div>
+  </div>
+  <div>
+    <div class="num" style="color:{% if gmd_geral and gmd_geral > 800 %}var(--green-700){% elif gmd_geral and gmd_geral > 500 %}#e67e22{% else %}var(--danger){% endif %}">
+      {{ gmd_geral if gmd_geral else '—' }}{% if gmd_geral %}<span style="font-size:14px">g/dia</span>{% endif %}
+    </div>
+    <div class="label">GMD Geral</div>
+  </div>
+  {% if tendencia %}
+  <div>
+    <div class="num">{{ tendencia.media_g_dia if tendencia.media_g_dia else '—' }}{% if tendencia.media_g_dia %}<span style="font-size:14px">g/dia</span>{% endif %}</div>
+    <div class="label">GMD (últimos {{ tendencia.dias }} dias)</div>
+    {% if tendencia.tendencia %}
+    <div class="tendencia" style="font-size:12px; color:{% if tendencia.tendencia == 'acelerando' %}var(--green-700){% else %}var(--text-3){% endif %}">
+      📊 {{ tendencia.tendencia }}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if pesagens|length >= 2 %}
+<div class="card" style="margin-bottom:20px">
+  <div style="margin-bottom:16px">
+    <h3 style="margin:0;font-size:16px">Evolução do Peso</h3>
+    <p class="muted" style="margin:4px 0 0 0">{{ pesagens|length }} pesagens registradas</p>
+  </div>
+  <div class="chart-container">
+    <canvas id="chartCrescimento"></canvas>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div style="margin-bottom:12px">
+    <h3 style="margin:0;font-size:16px">Pesagens Registradas</h3>
+  </div>
+  <div class="lista-pesagens">
+    {% for p in pesagens %}
+    <div class="pes-row">
+      <span class="pes-data">{{ p.data_br }}</span>
+      <div class="pes-peso">
+        <b>{{ p.peso_kg }} kg</b>
+      </div>
+      <div class="pes-gmd">
+        {% if p.gmd_g_dia %}
+          <span style="color:{% if p.gmd_g_dia > 0 %}var(--green-700){% else %}var(--danger){% endif %}">
+            {{ "+" if p.gmd_g_dia > 0 else "" }}{{ (p.gmd_g_dia / 1000)|round(2, 'common')|string|replace('.', ',') }} kg/dia
+          </span>
+        {% else %}
+          <span class="muted">—</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% else %}
+<div class="card">
+  <p class="muted">Nenhuma pesagem de balança registrada para este animal.</p>
+  <a href="{{ url_for('pesagem', id=id_animal) }}" class="btn btn-primary" style="margin-top:12px">⚖️ Registrar pesagem</a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  const pesagens = {{ pesagens|tojson }};
+  const elChart = document.getElementById("chartCrescimento");
+
+  if (pesagens && pesagens.length >= 2 && elChart && typeof Chart !== "undefined") {
+    new Chart(elChart, {
+      type: "line",
+      data: {
+        labels: pesagens.map(p => p.data_br),
+        datasets: [{
+          label: "Peso (kg)",
+          data: pesagens.map(p => p.peso_kg),
+          borderColor: "#52a044",
+          backgroundColor: "rgba(82, 160, 68, 0.1)",
+          tension: 0.2,
+          fill: true,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: "#52a044",
+          pointBorderColor: "#fff",
+          pointBorderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            labels: { padding: 12, font: { size: 12 } }
+          },
+          tooltip: {
+            callbacks: {
+              afterLabel: function(ctx) {
+                const p = pesagens[ctx.dataIndex];
+                let extra = "";
+                if (p.gmd_g_dia !== null && p.gmd_g_dia !== undefined) {
+                  const gmd = (p.gmd_g_dia / 1000).toFixed(2).replace(".", ",");
+                  extra = (p.gmd_g_dia > 0 ? "+" : "") + gmd + " kg/dia desde a pesagem anterior";
+                }
+                return extra;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: false,
+            ticks: { font: { size: 11 } },
+            title: { display: true, text: "Peso (kg)", font: { size: 12 } }
+          },
+          x: {
+            ticks: { font: { size: 11 } }
+          }
+        }
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}
