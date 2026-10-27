@@ -329,6 +329,9 @@
       background: var(--surface-2) !important; border-color: var(--bg-2) !important; color: var(--text-3) !important;
     }
   </style>
+  <!-- v5.7: Mobile Refinements, Dark Mode, Gestures -->
+  <link rel="stylesheet" href="/static/css/mobile.css">
+  <link rel="stylesheet" href="/static/css/dark-mode.css">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -640,6 +643,25 @@ function dispensarInstall() {
     }
   });
 })();
+
+// v5.7: Dark Mode
+(function() {
+  const t = localStorage.getItem("gado-theme") || (matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", t);
+  const chk = document.getElementById("theme-chk");
+  if (chk) chk.checked = t === "dark";
+  const lbl = document.getElementById("theme-label");
+  if (chk) chk.addEventListener("change", () => {
+    const nt = chk.checked ? "dark" : "light";
+    localStorage.setItem("gado-theme", nt);
+    document.documentElement.setAttribute("data-theme", nt);
+    if (lbl) lbl.textContent = nt === "dark" ? "🌙 Tema escuro" : "☀️ Tema claro";
+  });
+})();
 </script>
+
+<!-- v5.7: Mobile Gestures -->
+<script src="/static/js/gestures.js"></script>
+
 </body>
 </html>
