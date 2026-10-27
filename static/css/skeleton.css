@@ -1,0 +1,338 @@
+/**
+ * Skeleton Screens & Shimmer Animation v5.7
+ * Loading states com visual agradável
+ *
+ * Uso:
+ * <div class="skeleton skeleton-text"></div>
+ * <div class="skeleton skeleton-image"></div>
+ * <div class="skeleton skeleton-card"></div>
+ */
+
+/* ========== SKELETON BASE ========== */
+
+.skeleton {
+  background: var(--color-neutral-200);
+  border-radius: var(--radius-md);
+  animation: shimmer 2s infinite;
+}
+
+[data-theme="dark"] .skeleton {
+  background: var(--color-neutral-300);
+}
+
+/* ========== SKELETON SHAPES ========== */
+
+.skeleton-text {
+  height: 12px;
+  margin-bottom: var(--spacing-sm);
+  width: 100%;
+}
+
+.skeleton-text.large {
+  height: 18px;
+}
+
+.skeleton-text.small {
+  height: 10px;
+}
+
+.skeleton-text:last-child {
+  margin-bottom: 0;
+}
+
+.skeleton-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.skeleton-image {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+}
+
+.skeleton-image.thumb {
+  width: 100px;
+  height: 100px;
+}
+
+.skeleton-card {
+  height: 200px;
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.skeleton-button {
+  height: 44px;
+  border-radius: var(--radius-md);
+  min-width: 120px;
+}
+
+.skeleton-input {
+  height: 40px;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.skeleton-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  margin-right: var(--spacing-sm);
+}
+
+/* ========== SKELETON LAYOUTS ========== */
+
+.skeleton-row {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+}
+
+.skeleton-row-item {
+  flex: 1;
+}
+
+.skeleton-paragraph {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
+.skeleton-paragraph .skeleton-text:last-child {
+  width: 80%;
+}
+
+/* Card skeleton: imagem + texto */
+.skeleton-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.skeleton-card-header {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.skeleton-card-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.skeleton-card-title {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.skeleton-card-title .skeleton-text:first-child {
+  width: 60%;
+}
+
+.skeleton-card-title .skeleton-text:last-child {
+  width: 40%;
+}
+
+/* List skeleton */
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.skeleton-list-item {
+  display: flex;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.skeleton-list-item .skeleton-avatar {
+  width: 40px;
+  height: 40px;
+}
+
+.skeleton-list-item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+/* Grid skeleton */
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.skeleton-grid-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.skeleton-grid-item .skeleton-image {
+  aspect-ratio: 1;
+}
+
+.skeleton-grid-item .skeleton-text {
+  width: 80%;
+}
+
+/* ========== ANIMATIONS ========== */
+
+@keyframes shimmer {
+  0% {
+    background-color: var(--color-neutral-200);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    background-position: 0% 0%;
+  }
+  100% {
+    background-color: var(--color-neutral-200);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    background-position: 200% 0%;
+  }
+}
+
+[data-theme="dark"] @keyframes shimmer {
+  0% {
+    background-color: var(--color-neutral-300);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    background-position: 0% 0%;
+  }
+  100% {
+    background-color: var(--color-neutral-300);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    background-position: 200% 0%;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ========== IMAGE LAZY LOADING STATES ========== */
+
+/* Imagem pendente de carregamento */
+img[data-src] {
+  background: var(--color-neutral-200);
+  animation: shimmer 2s infinite;
+}
+
+/* Imagem carregada com sucesso */
+img.lazy-loaded {
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* Erro ao carregar imagem */
+img.lazy-error {
+  opacity: 0.5;
+  filter: grayscale(1);
+  background: var(--color-danger-bg);
+}
+
+[data-theme="dark"] img[data-src] {
+  background: var(--color-neutral-300);
+}
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 480px) {
+  .skeleton-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  }
+
+  .skeleton-card {
+    height: 150px;
+  }
+}
+
+/* ========== UTILITY CLASSES ========== */
+
+.loading {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius-full);
+  border-top-color: var(--color-primary-main);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
+.spinner-large {
+  width: 32px;
+  height: 32px;
+  border-width: 4px;
+}
+
+/* Redução de movimento */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  img[data-src],
+  img.lazy-loaded,
+  .loading-spinner {
+    animation: none !important;
+  }
+
+  img[data-src] {
+    background: var(--color-neutral-300);
+  }
+}
