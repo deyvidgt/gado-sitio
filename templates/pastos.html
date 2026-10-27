@@ -6,7 +6,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
 <style>
-  #mapa { height:62vh; min-height:340px; border-radius:12px; }
+  #mapa { height:62vh; min-height:340px; border-radius:12px; transition:all .3s ease; }
+  #mapa.mapa-oculto { display:none; height:0; }
   .rotulo-pasto { background:rgba(0,0,0,.65); color:#fff; border:0; border-radius:8px; font-size:12px; line-height:1.3; text-align:center; box-shadow:none; }
   .rotulo-pasto::before { display:none; }
   .pastos-tab { width:100%; border-collapse:collapse; font-size:13.5px; }
@@ -23,6 +24,7 @@
 <div class="card">
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
     <button type="button" class="btn btn-outline btn-sm" id="onde-estou">📍 Onde estou</button>
+    <button type="button" class="btn btn-outline btn-sm" id="btn-toggle-mapa">👁️ Ocultar mapa</button>
     {% if pastos %}
     <select id="sel-foco-pasto" style="font-size:13px;padding:4px 8px;border-radius:6px;border:1px solid var(--border,#ccc)">
       <option value="">🎯 Escolher pasto...</option>
@@ -277,6 +279,24 @@
   document.getElementById("onde-estou").onclick = () => mapa.locate({ setView: true, maxZoom: 17 });
   mapa.on("locationfound", e => { (eu = eu || L.circleMarker(e.latlng, { radius: 8, color: "#fff", fillColor: "#2196f3", fillOpacity: 1 }).addTo(mapa)).setLatLng(e.latlng); });
   mapa.on("locationerror", () => document.getElementById("onde-estou").textContent = "📍 GPS indisponível");
+
+  // v5.8: Ocultar/mostrar mapa
+  const btnToggleMapa = document.getElementById("btn-toggle-mapa");
+  if (btnToggleMapa) {
+    let mapaOculto = localStorage.getItem("pastos-mapa-oculto") === "true";
+    const mapaDiv = document.getElementById("mapa");
+    if (mapaOculto) {
+      mapaDiv.classList.add("mapa-oculto");
+      btnToggleMapa.textContent = "👁️ Mostrar mapa";
+    }
+    btnToggleMapa.onclick = () => {
+      mapaOculto = !mapaOculto;
+      localStorage.setItem("pastos-mapa-oculto", mapaOculto);
+      mapaDiv.classList.toggle("mapa-oculto");
+      btnToggleMapa.textContent = mapaOculto ? "👁️ Mostrar mapa" : "👁️ Ocultar mapa";
+      if (!mapaOculto) setTimeout(() => mapa.invalidateSize(), 300);
+    };
+  }
 
   const quem = document.getElementById("quem");
   if (quem) quem.onchange = () => document.getElementById("campo-brincos").style.display = quem.value === "brincos" ? "" : "none";
