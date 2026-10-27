@@ -15,6 +15,40 @@
   </div>
 </section>
 
+<!-- ═══ CARDS CLICÁVEIS (v5.6) ════════════════════════════════════════════ -->
+<div class="cards-grid" style="margin-bottom:20px">
+  {% for card in cards %}
+  <a href="{{ url_for(card.link) }}" class="card-link" style="text-decoration:none;color:inherit">
+    <div class="card-clickable" style="background:var(--surface);border:1.5px solid var(--cream-dk);border-radius:12px;padding:16px;cursor:pointer;transition:all .2s;position:relative">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+        <div style="flex:1">
+          <div style="font-size:24px;margin-bottom:4px">{{ card.icone }}</div>
+          <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600;margin-bottom:6px">{{ card.titulo }}</div>
+          <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--green-700);margin-bottom:2px">{{ card.numero }}</div>
+          <div style="font-size:11px;color:var(--text-3)">{{ card.subtexto }}</div>
+        </div>
+        {% if card.alertas > 0 %}
+        <span class="badge badge-{{ 'ruim' if card.status == 'urgente' else 'aviso' if card.status == 'aviso' else 'ok' }}" style="position:absolute;top:10px;right:10px">{{ card.alertas }}</span>
+        {% endif %}
+      </div>
+      {% if card.status == 'urgente' %}
+      <div style="border-top:1px solid var(--cream-dk);margin-top:10px;padding-top:8px;font-size:11px;color:#c62828;font-weight:600">⚠️ Ação necessária</div>
+      {% elif card.status == 'aviso' %}
+      <div style="border-top:1px solid var(--cream-dk);margin-top:10px;padding-top:8px;font-size:11px;color:#ef6c00;font-weight:600">⚡ Atenção</div>
+      {% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+<style>
+.cards-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; }
+.card-clickable { box-shadow:0 1px 3px rgba(0,0,0,.08); }
+.card-clickable:hover { box-shadow:0 4px 12px rgba(0,0,0,.15); transform:translateY(-2px); border-color:var(--green-600); }
+@media(max-width:600px) { .cards-grid { grid-template-columns:repeat(2, 1fr); } }
+</style>
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+
 <section class="card" style="margin-bottom:20px">
   <div class="section-head" style="margin-bottom:12px"><h2>Resumo leiteiro</h2><a class="btn btn-outline" href="{{ url_for('painel_leite') }}">Abrir módulo</a></div>
   <div class="tri">
