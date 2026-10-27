@@ -275,9 +275,9 @@
     @media (max-width: 900px) { .two-col,.three-col { grid-template-columns:1fr; } }
     @media (max-width: 768px) {
       .hamburger { display:flex; }
-      .sidebar { transform:translateX(-100%); transition:transform .25s ease; z-index:150; }
+      .sidebar { transform:translateX(-100%); transition:transform .25s ease; z-index:1001; }
       .sidebar.open { transform:translateX(0); }
-      .sidebar-overlay.open { display:block; }
+      .sidebar-overlay.open { display:block; z-index:1000; }
       .main { margin-left:0; }
       .topbar { padding:0 16px 0 64px; }
       .content { padding:20px 16px; }
@@ -480,20 +480,27 @@
     const overlay = document.getElementById("overlay");
     const isOpen = sidebar.classList.contains("open");
 
-    sidebar.classList.toggle("open");
-    overlay.classList.toggle("open");
-
-    // Auto-close overlay on click (mobile)
-    if (!isOpen) {
-      overlay.addEventListener("click", closeSidebar, { once: true });
+    if (isOpen) {
+      closeSidebar();
+    } else {
+      sidebar.classList.add("open");
+      overlay.classList.add("open");
     }
   }
 
   function closeSidebar() {
-    document.querySelector(".sidebar").classList.remove("open");
-    document.getElementById("overlay").classList.remove("open");
+    const sidebar = document.querySelector(".sidebar");
+    const overlay = document.getElementById("overlay");
+    sidebar.classList.remove("open");
+    overlay.classList.remove("open");
   }
 
+  // Close sidebar when overlay clicked
+  document.getElementById("overlay").addEventListener("click", (e) => {
+    if (e.target.id === "overlay") closeSidebar();
+  });
+
+  // Close sidebar when nav link clicked (mobile only)
   document.querySelectorAll(".nav-link").forEach(a =>
     a.addEventListener("click", () => { if (window.innerWidth <= 768) closeSidebar(); }));
 
