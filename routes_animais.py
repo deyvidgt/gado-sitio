@@ -312,15 +312,34 @@ def ficha_animal(id_):
     filhos = df[df["Mãe"].astype(str).str.contains(f"#{id_}", regex=False)]
     mae_id = (A.ids_de(a["Mãe"]) or [None])[0]
     hist_peso = P.todas(dados["Manejo"]).get(id_, [])
-    return render_template("ficha_animal.html", a=_linha_animal(a, hoje), raw=a,
-                           nascimento=fmt_data(a["Nascimento"]) if pd.notna(a["Nascimento"]) else "",
-                           mae_txt=A._RE_ID.sub("", a["Mãe"]).strip(), mae_id=mae_id,
-                           filhos=[_linha_animal(x, hoje) for _, x in filhos.iterrows()],
-                           historico=A.historico(id_, dados["Manejo"], dados["Vendas"]),
-                           pesos=hist_peso, peso=P.resumo(hist_peso, _rendimento()),
-                           estimativa=PF.ultima_estimativa(id_, dados["Manejo"]),
-                           fotos=F.listar(id_), fotos_ativas=drive.configurado() or drive.cliente() is not None,
-                           TIPOS_FOTO=TIPOS_FOTO, **_ctx_templates())
+
+    # Detecta mobile por User-Agent ou query param
+    eh_mobile = request.args.get("modo") == "mobile" or (
+        "mobile" in request.headers.get("User-Agent", "").lower() or
+        "android" in request.headers.get("User-Agent", "").lower()
+    )
+
+    ctx = {
+        "a": _linha_animal(a, hoje), "raw": a,
+        "nascimento": fmt_data(a["Nascimento"]) if pd.notna(a["Nascimento"]) else "",
+        "mae_txt": A._RE_ID.sub("", a["Mãe"]).strip(), "mae_id": mae_id,
+        "filhos": [_linha_animal(x, hoje) for _, x in filhos.iterrows()],
+        "historico": A.historico(id_, dados["Manejo"], dados["Vendas"]),
+        "pesos": hist_peso, "peso": P.resumo(hist_peso, _rendimento()),
+        "estimativa": PF.ultima_estimativa(id_, dados["Manejo"]),
+        "fotos": F.listar(id_), "fotos_ativas": drive.configurado() or drive.cliente() is not None,
+        "TIPOS_FOTO": TIPOS_FOTO,
+        "ultimo_parto": fmt_data(a["Último Parto"]) if pd.notna(a["Último Parto"]) else "",
+        **_ctx_templates()
+    }
+
+    # Adiciona dias em lactação se houver data de parto
+    if pd.notna(a["Último Parto"]):
+        dias = (hoje.date() - pd.to_datetime(a["Último Parto"]).date()).days
+        ctx["dias_lactacao"] = max(0, dias)
+
+    template = "ficha_condensada.html" if eh_mobile else "ficha_animal.html"
+    return render_template(template, **ctx)
 
 
 @app.route("/animais/<id_>/editar", methods=["GET", "POST"])
