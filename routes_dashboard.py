@@ -102,12 +102,17 @@ def dashboard():
                      ("🗺️ Mover pasto", "pastos"), ("🛒 Nova compra", "nova_compra"),
                      ("🌾 Nova visita", "nova_visita")]
     atencao_agora = alertas + extras.get("repro", [])
+
+    # Cards clicáveis do painel (v5.6)
+    import dashboard
+    cards = dashboard.cards_painel(dados, r, extras)
+
     return render_template("dashboard.html", r=r, membros=membros_r, insumos=insumos,
                            estoque_membro=estoque_membro, recentes=recentes[:6],
                            alertas=alertas, indicadores=indicadores, rebanho_est=rebanho_est,
                            estado_sitio=estado_sitio, acoes_rapidas=acoes_rapidas,
                            atencao_agora=atencao_agora, ocorrencias=recentes[:6],
-                           resumo_leite=resumo_leite, tendencia_peso=[], **extras,
+                           resumo_leite=resumo_leite, tendencia_peso=[], cards=cards, **extras,
                            NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS, MEMBROS=MEMBROS)
 
 
