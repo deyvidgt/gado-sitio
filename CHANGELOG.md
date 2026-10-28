@@ -5,6 +5,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
+- **Animais Agrupados por Dono (v5.10):** nova página `/animais/dono/<dono>` mostra todos os animais de um dono:
+  - Lista com brincos numerados (Amarelo 01, Azul 99, etc.) com cor e status visual.
+  - Informações resumidas: peso atual, GMD, status (Vivo/Vendido/Morto), pasto atual.
+  - Contadores no topo: total de animais, vivos, vendidos, mortos, peso total.
+  - Clica no animal para abrir ficha completa.
+  - Nome do dono clicável em fichas (desktop e mobile) para ver seus animais.
+  - Ordenação por cor e número para fácil consulta.
 - **Painel de Estoque de Insumos (v5.10):** nova página `/insumos/estoque` com informações completas do estoque:
   - Nova aba `Insumos` para cadastrar marca, kg/saco, PB% e Energia de cada insumo.
   - Página mostra estado atual: sacos em estoque, kg total, valor monetário, consumo estimado.
