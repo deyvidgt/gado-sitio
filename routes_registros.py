@@ -21,6 +21,7 @@ from extensions import (
     fmt_brl, fmt_data, parse_valor,
     BASE_DIR,
 )
+from indicadores_coleta import processar_manejo_automatico  # v5.8 — coleta automática
 
 def _anos_de(df):
     if df.empty or "Data" not in df.columns:
@@ -583,6 +584,14 @@ def novo_manejo():
         salvar_linha("Manejo", [f.get("data") or _agora().strftime("%d/%m/%Y"), f.get("tipo"), _int_form(f.get("cabecas")),
                                 f.get("descricao", "").strip(), f.get("responsavel", ""),
                                 perda_de, produto, nasc_de, form["brincos_refs"]])
+        # v5.8 — coleta automática de dados para indicadores
+        processar_manejo_automatico(
+            tipo_manejo=f.get("tipo", ""),
+            brincos_str=form["brincos_refs"],
+            descricao=f.get("descricao", "").strip(),
+            pasto_id=f.get("pasto", ""),
+            qtd_cabecas=_int_form(f.get("cabecas"))
+        )
         from alertas_whatsapp import avisar_manejo
         from routes_visitas import _enviar_avisos_depois
         from routes_animais import _membro_logado
@@ -630,6 +639,14 @@ def editar_manejo(idx):
         }
         _aplicar_updates(df, idx, updates)
         reescrever_aba("Manejo", df)
+        # v5.8 — coleta automática de dados para indicadores (edição)
+        processar_manejo_automatico(
+            tipo_manejo=f.get("tipo", ""),
+            brincos_str=form["brincos_refs"],
+            descricao=f.get("descricao", "").strip(),
+            pasto_id=f.get("pasto", ""),
+            qtd_cabecas=_int_form(f.get("cabecas"))
+        )
         flash("Manejo atualizado!", "success")
         return redirect(url_for("manejo"))
     row = df.iloc[idx].to_dict()
