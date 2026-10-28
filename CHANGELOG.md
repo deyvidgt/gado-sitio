@@ -4,6 +4,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ## [Não lançado]
 
+### Modificado
+- **Calendário Unificado (v5.10):** refactored `/calendario` para integrar com API manejo:
+  - Calendário agora mostra **todos** os eventos: Manejo, Visitas, Compras, Vendas, Gastos, Tarefas.
+  - Antes: calendário tinha sua própria função `_eventos_mes()` que combinava dados de forma diferente da API `/api/calendario-manejo`.
+  - Agora: unificado — ambas páginas (calendário e agenda unificada) usam a mesma lógica.
+  - Modal do calendário: ícones diferentes por categoria (🌾 visita, 🩺 manejo, 📥 compra, 📤 venda, 💸 gasto, ✅ tarefa).
+  - Links contextuais: cada evento vai para a página certa (/manejo/novo, /visitas, /compras, etc.).
+  - Cada evento agora tem campo `categoria` para filtragem correta.
+
 ### Adicionado
 - **Animais Agrupados por Dono (v5.10):** nova página `/animais/dono/<dono>` mostra todos os animais de um dono:
   - Lista com brincos numerados (Amarelo 01, Azul 99, etc.) com cor e status visual.
