@@ -242,18 +242,79 @@
 
 </div>
 
+<!-- Modal de eventos do dia -->
+<div id="modalDia" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center">
+  <div style="background:var(--surface); border-radius:12px; padding:24px; max-width:500px; width:90%; max-height:80vh; overflow-y:auto; box-shadow:var(--shadow-lg)">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+      <h3 id="modalDiaData" style="margin:0"></h3>
+      <button onclick="document.getElementById('modalDia').style.display='none'" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-2)">✕</button>
+    </div>
+
+    <div id="modalDiaConteudo"></div>
+  </div>
+</div>
+
 <script>
-// Clique em dia do calendário para ver detalhes
+// Clique em dia do calendário para abrir modal
 document.querySelectorAll('.dia-box:not(.outro-mes)').forEach(dia => {
   dia.addEventListener('click', function() {
     const data = this.dataset.data;
     if (!data) return;
-    // Scroll para a seção de eventos
-    const evento = document.querySelector('[data-data-target="' + data + '"]');
-    if (evento) {
-      evento.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+
+    // Formata data para exibição
+    const d = new Date(data + 'T00:00:00');
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const dataFormatada = d.toLocaleDateString('pt-BR', options);
+
+    document.getElementById('modalDiaData').textContent = dataFormatada.charAt(0).toUpperCase() + dataFormatada.slice(1);
+
+    // Busca eventos do dia via API
+    fetch(`/api/calendario/eventos?data=${data}`)
+      .then(r => r.json())
+      .then(dados => {
+        const conteudo = document.getElementById('modalDiaConteudo');
+        if (!dados.eventos || dados.eventos.length === 0) {
+          conteudo.innerHTML = '<p style="color:var(--text-3); text-align:center">Sem eventos este dia</p>';
+        } else {
+          let html = '<div style="display:flex; flex-direction:column; gap:12px">';
+          dados.eventos.forEach(evt => {
+            let icon = '📌';
+            if (evt.tipo === 'visita') icon = '🌾';
+            else if (evt.tipo === 'manejo' || evt.tipo === 'saude' || evt.tipo === 'reproducao') icon = '🩺';
+
+            let urgencia_class = '';
+            if (evt.urgencia === 'urgente') urgencia_class = 'color:#c0392b';
+            else if (evt.urgencia === 'aviso') urgencia_class = 'color:#f39c12';
+
+            html += `<div style="padding:12px; background:var(--bg-2); border-radius:8px; border-left:3px solid ${evt.urgencia === 'urgente' ? '#c0392b' : evt.urgencia === 'aviso' ? '#f39c12' : 'var(--green-600)'}">
+              <div style="display:flex; gap:8px; margin-bottom:6px">
+                <span>${icon}</span>
+                <div style="flex:1">
+                  <div style="font-weight:600">${evt.titulo}</div>
+                  <div style="font-size:12px; color:var(--text-3); margin-top:2px">${evt.detalhes || 'Sem detalhes'}</div>
+                </div>
+              </div>
+              <a href="/manejo/novo?data=${data}&tipo=${evt.tipo}" style="display:inline-block; font-size:12px; color:var(--green-700); text-decoration:none; font-weight:600; margin-top:6px">→ Editar/Visualizar</a>
+            </div>`;
+          });
+          html += '</div>';
+          conteudo.innerHTML = html;
+        }
+        document.getElementById('modalDia').style.display = 'flex';
+      })
+      .catch(e => {
+        console.error('Erro ao buscar eventos:', e);
+        document.getElementById('modalDiaConteudo').innerHTML = '<p style="color:var(--danger)">Erro ao carregar eventos</p>';
+        document.getElementById('modalDia').style.display = 'flex';
+      });
   });
+});
+
+// Fecha modal ao clicar fora
+document.getElementById('modalDia').addEventListener('click', (e) => {
+  if (e.target.id === 'modalDia') {
+    document.getElementById('modalDia').style.display = 'none';
+  }
 });
 </script>
 

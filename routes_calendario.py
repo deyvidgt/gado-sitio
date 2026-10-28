@@ -7,6 +7,16 @@ from flask import render_template, request, jsonify
 
 from extensions import app, _get_dados_cache, login_required
 
+# Tradução de meses para português
+MESES_PT = {
+    1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+    5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+    9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+}
+
+# Tradução de dias da semana para português
+DIAS_SEMANA_PT = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
+
 
 def _data(valor):
     """Converte para timestamp, normalized."""
@@ -187,7 +197,7 @@ def calendario_pagina():
 
     return render_template(
         "calendario.html",
-        mes=mes, ano=ano, mes_nome=month_name[mes],
+        mes=mes, ano=ano, mes_nome=MESES_PT.get(mes, month_name[mes]),
         semanas=semanas,
         mes_ant=mes_ant, ano_ant=ano_ant,
         mes_prox=mes_prox, ano_prox=ano_prox,
