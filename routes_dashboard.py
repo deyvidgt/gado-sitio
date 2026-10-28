@@ -247,8 +247,10 @@ def dashboard():
                      "resultado": r.get("resultado_realizado", 0),
                      "lotacao": (extras.get("lotacao") or {}).get("ua_ha")}
     acoes_rapidas = [("⚖️ Nova pesagem", "pesagem"), ("🩺 Novo manejo", "novo_manejo"),
-                     ("🗺️ Mover pasto", "pastos"), ("🛒 Nova compra", "nova_compra"),
-                     ("🌾 Nova visita", "nova_visita")]
+                     ("🛒 Nova compra", "nova_compra"), ("🌾 Nova visita", "nova_visita")]
+    # Adiciona pastos se a rota existir
+    if "pastos" in app.url_map._rules_by_endpoint:
+        acoes_rapidas.insert(2, ("🗺️ Mover pasto", "pastos"))
     atencao_agora = alertas + extras.get("repro", [])
 
     # Cards clicáveis do painel (v5.6)
