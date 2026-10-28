@@ -67,20 +67,34 @@ def ganho_total(lote_id: str, dados: dict = None) -> float:
     return resumo["peso_final"] - resumo["peso_inicial"]
 
 
-def custo_por_lote(lote_id: str, custo_total: float = 0) -> dict:
-    """Calcula custo por cabeça e por dia do lote."""
+def custo_por_lote(lote_id: str, custo_total: float = 0, preco_venda_arroba: float = 0) -> dict:
+    """Calcula custo por cabeça, resultado financeiro do lote."""
     resumo = resumo_lote(lote_id)
     if not resumo or not resumo["quantidade"]:
-        return {"custo_total": custo_total, "custo_por_cab": 0, "custo_por_dia": 0}
+        return {"custo_total": custo_total, "custo_por_cab": 0, "custo_por_dia": 0, "resultado": 0}
 
     qtd = resumo["quantidade"]
     dias = resumo["dias"] or 1
+    peso_final = resumo["peso_final"]
+
+    # Receita (estimada): peso_final × rendimento × preco_arroba / 30kg
+    # Assumir rendimento 58% padrão se não informado
+    rendimento = 0.58
+    arrobas_por_cab = (peso_final * rendimento) / 30 if peso_final > 0 else 0
+    receita_por_cab = arrobas_por_cab * preco_venda_arroba if preco_venda_arroba > 0 else 0
+    receita_total = receita_por_cab * qtd
+
+    custo_por_cab = custo_total / qtd if qtd > 0 else 0
+    resultado = receita_total - custo_total
 
     return {
-        "custo_total": custo_total,
-        "custo_por_cab": round(custo_total / qtd, 2),
+        "custo_total": round(custo_total, 2),
+        "custo_por_cab": round(custo_por_cab, 2),
         "custo_por_dia": round(custo_total / dias, 2),
-        "custo_por_cab_por_dia": round(custo_total / (qtd * dias), 2),
+        "receita_total": round(receita_total, 2),
+        "receita_por_cab": round(receita_por_cab, 2),
+        "resultado": round(resultado, 2),
+        "margem": round((resultado / receita_total * 100), 1) if receita_total > 0 else 0,
     }
 
 
@@ -111,3 +125,21 @@ def alertas_confinamento(dados: dict = None) -> list:
             })
 
     return alertas
+
+
+def resumo_mensal_confinamento(dados: dict = None) -> dict:
+    """Retorna resumo mensal para relatório/WhatsApp."""
+    ativos = lotes_ativos(dados)
+
+    if ativos.empty:
+        return {"num_lotes": 0, "total_cabecas": 0, "gmd_medio": 0}
+
+    total_cab = pd.to_numeric(ativos.get("Quantidade", 0), errors="coerce").sum() or 0
+    gmd_med = pd.to_numeric(ativos.get("GMD (kg/dia)", 0), errors="coerce").mean() or 0
+
+    return {
+        "num_lotes": len(ativos),
+        "total_cabecas": int(total_cab),
+        "gmd_medio": round(gmd_med, 2),
+        "mensagem": f"📊 Confinamento: {len(ativos)} lotes, {int(total_cab)} cabeças, GMD médio {gmd_med:.2f} kg/dia"
+    }

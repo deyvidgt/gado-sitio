@@ -120,7 +120,18 @@ def avisos_genetica(dados: dict = None) -> list:
         if pai and mae and pai == mae:
             avisos.append({
                 "urgente": True,
-                "texto": f"⚠️ Animal {animal_id}: pai e mãe são o mesmo ({pai})"
+                "texto": f"Animal {animal_id}: pai e mãe sao o mesmo ({pai})"
             })
 
     return avisos
+
+
+def resumo_mensal_genetica(dados: dict = None) -> dict:
+    """Retorna resumo de genetica para relatorio/WhatsApp."""
+    avisos = avisos_genetica(dados)
+    num_avisos = len([a for a in avisos if a.get("urgente")])
+
+    return {
+        "num_avisos": num_avisos,
+        "mensagem": f"Genetica: {num_avisos} alerta(s) de endogamia detectado(s)" if num_avisos > 0 else "Genetica: Genealogia ok"
+    }
