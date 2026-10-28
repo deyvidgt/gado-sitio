@@ -1,126 +1,260 @@
 {% extends "base.html" %}
 {% block title %}Calendário — Sítio Santo Antonio{% endblock %}
-{% block page_title %}Calendário operacional{% endblock %}
+{% block page_title %}📅 Calendário do Sítio{% endblock %}
+
 {% block content %}
-<style>
-  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-  .cal-header h2 { margin: 0; }
-  .cal-nav { display: flex; gap: 10px; }
-  .cal-nav a { padding: 8px 12px; }
+<div style="max-width:1200px;margin:0 auto;padding:16px">
 
-  .cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 2px;
-    background: #eee;
-    padding: 2px;
-    margin-bottom: 20px;
-  }
-  .cal-dia-semana {
-    background: #333; color: #fff; font-weight: bold;
-    padding: 12px 4px; text-align: center; font-size: 0.85em;
-  }
-  .cal-dia {
-    background: #fff; min-height: 100px; padding: 8px;
-    position: relative; overflow: hidden; cursor: pointer;
-    transition: background 0.2s;
-  }
-  .cal-dia:hover { background: #f5f5f5; }
-  .cal-dia.passada { color: #999; }
-  .cal-dia.hoje {
-    border: 3px solid #ff6b6b; background: #fff5f5;
-  }
-  .cal-dia.outra-mes { background: #f9f9f9; }
-  .cal-dia-num {
-    font-weight: bold; margin-bottom: 4px; font-size: 0.9em;
-  }
-  .cal-dia-eventos {
-    font-size: 0.75em; line-height: 1.2;
-  }
-  .cal-evento {
-    padding: 2px 4px; margin: 2px 0; border-radius: 2px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .cal-evento.urgente { background: #ffe6e6; color: #c92a2a; }
-  .cal-evento.aviso { background: #fff3bf; color: #856400; }
-  .cal-evento.normal { background: #e7f5ff; color: #0c5aa0; }
-
-  @media (max-width: 600px) {
-    .cal-dia { min-height: 80px; padding: 4px; font-size: 0.85em; }
-    .cal-dia-num { font-size: 0.8em; }
-    .cal-dia-eventos { font-size: 0.65em; }
-  }
-</style>
-
-<div class="section-head">
-  <h2>Calendário do sítio</h2>
-  <div class="acoes-rapidas">
-    <a class="btn btn-outline btn-sm" href="{{ url_for('novo_manejo') }}">+ Manejo</a>
-    <a class="btn btn-primary btn-sm" href="{{ url_for('nova_visita') }}">+ Visita</a>
+  <!-- ── Navegação de mês ── -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+    <h2 style="margin:0">{{ mes_nome }} de {{ ano }}</h2>
+    <div style="display:flex;gap:8px">
+      <a href="{{ url_for('calendario_pagina', mes=mes_ant, ano=ano_ant) }}"
+         class="btn btn-outline btn-sm">← Mês anterior</a>
+      <a href="{{ url_for('calendario_pagina') }}" class="btn btn-outline btn-sm">Hoje</a>
+      <a href="{{ url_for('calendario_pagina', mes=mes_prox, ano=ano_prox) }}"
+         class="btn btn-outline btn-sm">Próximo mês →</a>
+    </div>
   </div>
-</div>
 
-<div class="cal-header">
-  <h3 style="margin:0">{{ mes_nome }} de {{ ano }}</h3>
-  <div class="cal-nav">
-    <a class="btn btn-outline btn-sm" href="{{ url_for('calendario_pagina', mes=mes_ant, ano=ano_ant) }}">← Anterior</a>
-    <a class="btn btn-outline btn-sm" href="{{ url_for('calendario_pagina') }}">Hoje</a>
-    <a class="btn btn-outline btn-sm" href="{{ url_for('calendario_pagina', mes=mes_prox, ano=ano_prox) }}">Próximo →</a>
-  </div>
-</div>
+  <div class="grid grid-2" style="gap:20px">
 
-<div class="cal-grid">
-  {# Cabeçalho dos dias da semana #}
-  {% for dia_semana in ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"] %}
-    <div class="cal-dia-semana">{{ dia_semana }}</div>
-  {% endfor %}
+    <!-- ── Calendário (esquerda) ── -->
+    <div class="card">
+      <style>
+        .calendario-grid {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 4px;
+          margin-top: 16px;
+        }
 
-  {# Grid de dias #}
-  {% for semana in semanas %}
-    {% for info in semana %}
-      {% if info is none %}
-        <div class="cal-dia outra-mes"></div>
-      {% else %}
-        <div class="cal-dia {% if info.hoje %}hoje{% elif info.passada_data %}passada{% endif %}"
-             data-data="{{ info.data }}">
-          <div class="cal-dia-num">{{ info.dia }}</div>
-          <div class="cal-dia-eventos">
-            {% for ev in info.eventos|slice(3) %}
-              <div class="cal-evento {{ ev.urgencia }}">{{ ev.titulo|truncate(20) }}</div>
-            {% endfor %}
-            {% if info.eventos|length > 3 %}
-              <div style="font-weight:bold; color:#666">+{{ info.eventos|length - 3 }}</div>
+        .dia-semana {
+          text-align: center;
+          font-weight: 600;
+          font-size: 12px;
+          color: var(--text-2);
+          padding: 8px 4px;
+          text-transform: uppercase;
+        }
+
+        .dia-box {
+          aspect-ratio: 1;
+          border: 1px solid var(--bg-2);
+          border-radius: 6px;
+          padding: 6px;
+          display: flex;
+          flex-direction: column;
+          cursor: pointer;
+          transition: all 0.2s;
+          font-size: 12px;
+          background: var(--surface);
+        }
+
+        .dia-box:hover {
+          background: var(--bg-2);
+          border-color: var(--green-600);
+          transform: translateY(-2px);
+        }
+
+        .dia-box.outro-mes {
+          opacity: 0.3;
+          cursor: default;
+        }
+
+        .dia-box.hoje {
+          background: var(--green-100);
+          border: 2px solid var(--green-600);
+          font-weight: 600;
+        }
+
+        .dia-numero {
+          font-weight: 600;
+          margin-bottom: 4px;
+          color: var(--text-primary);
+        }
+
+        .dia-eventos {
+          display: flex;
+          gap: 3px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .evento-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: var(--green-600);
+          flex-shrink: 0;
+        }
+
+        .evento-dot.urgente { background: #c0392b; }
+        .evento-dot.aviso { background: #f39c12; }
+        .evento-dot.normal { background: var(--green-600); }
+
+        .eventos-mais {
+          font-size: 10px;
+          color: var(--text-2);
+          font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+          .dia-box {
+            padding: 4px;
+            font-size: 11px;
+          }
+          .dia-numero {
+            margin-bottom: 2px;
+          }
+        }
+      </style>
+
+      <h3 style="margin-top:0">📅 Calendário</h3>
+
+      <div class="calendario-grid">
+        <!-- Dias da semana -->
+        <div class="dia-semana">Seg</div>
+        <div class="dia-semana">Ter</div>
+        <div class="dia-semana">Qua</div>
+        <div class="dia-semana">Qui</div>
+        <div class="dia-semana">Sex</div>
+        <div class="dia-semana">Sab</div>
+        <div class="dia-semana">Dom</div>
+
+        <!-- Dias do mês -->
+        {% for semana in semanas %}
+          {% for info in semana %}
+            {% if info is none %}
+              <div class="dia-box outro-mes"></div>
+            {% else %}
+              <div class="dia-box {% if info.hoje %}hoje{% endif %}" data-data="{{ info.data }}" style="cursor:pointer">
+                <div class="dia-numero">{{ info.dia }}</div>
+                <div class="dia-eventos">
+                  {% set urgentes = info.eventos|selectattr('urgencia', 'equalto', 'urgente')|list %}
+                  {% set avisos = info.eventos|selectattr('urgencia', 'equalto', 'aviso')|list %}
+                  {% set normais = info.eventos|selectattr('urgencia', 'equalto', 'normal')|list %}
+
+                  {% for evt in urgentes[:2] %}
+                    <div class="evento-dot urgente" title="Urgente"></div>
+                  {% endfor %}
+                  {% for evt in avisos[:2] %}
+                    <div class="evento-dot aviso" title="Aviso"></div>
+                  {% endfor %}
+                  {% for evt in normais[:1] %}
+                    <div class="evento-dot normal" title="Normal"></div>
+                  {% endfor %}
+
+                  {% if info.eventos|length > 5 %}
+                    <span class="eventos-mais">+{{ info.eventos|length - 5 }}</span>
+                  {% endif %}
+                </div>
+              </div>
             {% endif %}
-          </div>
-        </div>
-      {% endif %}
-    {% endfor %}
-  {% endfor %}
-</div>
+          {% endfor %}
+        {% endfor %}
+      </div>
 
-<div style="margin-top: 20px; padding: 10px; background: #f5f5f5; border-radius: 4px; font-size: 0.9em;">
-  <p><span style="display:inline-block; width:12px; height:12px; background:#ffe6e6; margin-right:4px"></span> Urgente (≤3 dias)</p>
-  <p><span style="display:inline-block; width:12px; height:12px; background:#fff3bf; margin-right:4px"></span> Aviso (≤7 dias)</p>
-  <p><span style="display:inline-block; width:12px; height:12px; background:#e7f5ff; margin-right:4px"></span> Normal (&gt;7 dias)</p>
+      <div style="margin-top:16px;font-size:12px;color:var(--text-3)">
+        <strong>Legenda:</strong><br>
+        <span style="display:inline-block;width:10px;height:10px;background:#c0392b;border-radius:50%;margin-right:6px;vertical-align:middle"></span> Urgente (≤3 dias)
+        <span style="display:inline-block;width:10px;height:10px;background:#f39c12;border-radius:50%;margin:0 6px 0 12px;vertical-align:middle"></span> Aviso (≤7 dias)
+        <span style="display:inline-block;width:10px;height:10px;background:var(--green-600);border-radius:50%;margin:0 6px 0 12px;vertical-align:middle"></span> Normal
+      </div>
+    </div>
+
+    <!-- ── Eventos do sítio (direita) ── -->
+    <div>
+      <!-- Eventos do mês -->
+      <div class="card" style="margin-bottom:16px">
+        <h3 style="margin-top:0">📋 Eventos deste mês</h3>
+        {% if todos_eventos %}
+          <ul class="lista-items">
+            {% for item in todos_eventos %}
+              <li class="lista-item">
+                <span class="lista-item-icon">
+                  {% if item.tipo == 'visita' %}🌾
+                  {% elif item.tipo == 'manejo' %}🩺
+                  {% elif item.tipo == 'tarefa' %}✅
+                  {% elif item.tipo == 'alerta' %}⚠️
+                  {% else %}📌{% endif %}
+                </span>
+                <div class="lista-item-content">
+                  <div class="lista-item-label">{{ item.titulo }}</div>
+                  <div class="lista-item-desc">
+                    {{ item.data|fmt_data }}
+                    {% if item.urgencia %}
+                      ·
+                      {% if item.urgencia == 'urgente' %}
+                        <span style="color:#c0392b;font-weight:600">Urgente</span>
+                      {% elif item.urgencia == 'aviso' %}
+                        <span style="color:#f39c12;font-weight:600">Aviso</span>
+                      {% endif %}
+                    {% endif %}
+                  </div>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p style="color:var(--text-3);font-size:13px">Sem eventos este mês.</p>
+        {% endif %}
+      </div>
+
+      <!-- Próximos eventos (próximos 7 dias) -->
+      <div class="card" style="margin-bottom:16px">
+        <h3 style="margin-top:0">⏰ Próximos 7 dias</h3>
+        {% if proximos_7_dias %}
+          <ul class="lista-items">
+            {% for item in proximos_7_dias %}
+              <li class="lista-item">
+                <span class="lista-item-icon">
+                  {% if item.tipo == 'visita' %}🌾
+                  {% elif item.tipo == 'manejo' %}🩺
+                  {% elif item.tipo == 'tarefa' %}✅
+                  {% else %}📌{% endif %}
+                </span>
+                <div class="lista-item-content">
+                  <div class="lista-item-label">{{ item.titulo }}</div>
+                  <div class="lista-item-desc">{{ item.data|fmt_data }}</div>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p style="color:var(--text-3);font-size:13px">Nada agendado para os próximos 7 dias.</p>
+        {% endif %}
+      </div>
+
+      <!-- Ações rápidas -->
+      <div class="card">
+        <h3 style="margin-top:0">⚡ Ações rápidas</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <a href="{{ url_for('nova_visita') }}" class="btn btn-primary btn-sm">🌾 Nova visita</a>
+          <a href="{{ url_for('novo_manejo') }}" class="btn btn-outline btn-sm">🩺 Novo manejo</a>
+          <a href="{{ url_for('tarefas') }}" class="btn btn-outline btn-sm">✅ Tarefas</a>
+          <a href="{{ url_for('manejo') }}" class="btn btn-outline btn-sm">📋 Histórico</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
 </div>
 
 <script>
-document.querySelectorAll('.cal-dia').forEach(dia => {
+// Clique em dia do calendário para ver detalhes
+document.querySelectorAll('.dia-box:not(.outro-mes)').forEach(dia => {
   dia.addEventListener('click', function() {
     const data = this.dataset.data;
     if (!data) return;
-    fetch(`{{ url_for('api_calendario_eventos') }}?data=${data}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.eventos && d.eventos.length > 0) {
-          const msg = d.eventos.map(e => `${e.titulo} (${e.origem})`).join('\n');
-          alert(`${data}:\n\n${msg}`);
-        } else {
-          alert(`Sem eventos em ${data}.`);
-        }
-      })
-      .catch(e => console.error(e));
+    // Scroll para a seção de eventos
+    const evento = document.querySelector('[data-data-target="' + data + '"]');
+    if (evento) {
+      evento.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   });
 });
 </script>
+
 {% endblock %}

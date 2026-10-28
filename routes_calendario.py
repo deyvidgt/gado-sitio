@@ -160,12 +160,39 @@ def calendario_pagina():
         mes_prox = mes + 1
         ano_prox = ano
 
+    # Todos os eventos do mês (ordenados por data)
+    todos_eventos = []
+    for d, evts in sorted(eventos_por_dia.items()):
+        for evt in evts:
+            todos_eventos.append({
+                "tipo": evt.get("tipo", ""),
+                "titulo": evt.get("titulo", ""),
+                "data": d,
+                "urgencia": evt.get("urgencia", "normal")
+            })
+
+    # Próximos 7 dias
+    proximos_7_dias = []
+    data_inicio = date.today()
+    data_fim = data_inicio + timedelta(days=7)
+    for d in sorted(eventos_por_dia.keys()):
+        if data_inicio <= d < data_fim:
+            for evt in eventos_por_dia[d]:
+                proximos_7_dias.append({
+                    "tipo": evt.get("tipo", ""),
+                    "titulo": evt.get("titulo", ""),
+                    "data": d,
+                    "urgencia": evt.get("urgencia", "normal")
+                })
+
     return render_template(
         "calendario.html",
         mes=mes, ano=ano, mes_nome=month_name[mes],
         semanas=semanas,
         mes_ant=mes_ant, ano_ant=ano_ant,
         mes_prox=mes_prox, ano_prox=ano_prox,
+        todos_eventos=todos_eventos,
+        proximos_7_dias=proximos_7_dias,
         tipo=""
     )
 
