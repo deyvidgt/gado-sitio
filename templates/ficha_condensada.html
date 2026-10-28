@@ -181,6 +181,11 @@
   {% if a.status == 'Vivo' %}
   <a href="{{ url_for('pesagem', id=a.id) }}" class="btn btn-outline btn-sm">⚖️ Pesar</a>
   <a href="{{ url_for('novo_manejo', prefill=1, brincos=a.brinco, cabecas=1) }}" class="btn btn-primary btn-sm">🩺 Manejo</a>
+  {% if pasto_id %}
+  <a href="{{ url_for('pastos') }}#pasto-{{ pasto_id }}" class="btn btn-outline btn-sm">📍 {{ pasto_nome or 'Pasto' }}</a>
+  {% else %}
+  <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mov-pasto').scrollIntoView({behavior:'smooth'})">📍 Pasto</button>
+  {% endif %}
   {% endif %}
   <a href="{{ url_for('animais') }}" class="btn btn-outline btn-sm">← Voltar</a>
 </div>

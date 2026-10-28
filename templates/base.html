@@ -774,6 +774,22 @@
     document.getElementById("drawer-backdrop").style.display = "none";
   }
 
+  // Debounce GLOBAL contra cliques múltiplos em qualquer link/botão que navegue
+  // Problema: cliques rápidos no celular abrem múltiplas abas
+  let globalNavTimeout = null;
+  document.addEventListener("click", (e) => {
+    const target = e.target.closest("a, button[type='submit'], [onclick*='location'], [onclick*='navigate']");
+    if (target && (target.href || target.onclick)) {
+      // Bloqueia navegação se houve uma nos últimos 600ms
+      if (globalNavTimeout) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      globalNavTimeout = setTimeout(() => { globalNavTimeout = null; }, 600);
+    }
+  }, true);
+
   // Close menu when link clicked + debounce against rapid clicks
   let linkClickTimeout = null;
   document.querySelectorAll(".drawer-link").forEach(a => {
