@@ -95,51 +95,7 @@
 {% endif %}
 <!-- ════════════════════════════════════════════════════════════════════════ -->
 
-<!-- Gráfico de Entrada/Saída (v5.8) -->
-{% if entrada_saida.datas %}
-<section class="card" style="margin-bottom:20px">
-  <div class="card-title">Fluxo de Animais (últimos 90 dias)</div>
-  <div style="position:relative;height:280px;margin-top:16px">
-    <canvas id="chart-entrada-saida"></canvas>
-  </div>
-</section>
-
-<script>
-  const ctx = document.getElementById('chart-entrada-saida').getContext('2d');
-  new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: {{ entrada_saida.datas|tojson }},
-      datasets: [
-        {
-          label: 'Entrada (Compras)',
-          data: {{ entrada_saida.entrada|tojson }},
-          backgroundColor: 'rgba(76, 175, 80, 0.7)',
-          borderColor: 'rgba(76, 175, 80, 1)',
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-        {
-          label: 'Saída (Vendas)',
-          data: {{ entrada_saida.saida|tojson }},
-          backgroundColor: 'rgba(244, 67, 54, 0.7)',
-          borderColor: 'rgba(244, 67, 54, 1)',
-          borderWidth: 1,
-          borderRadius: 4,
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { padding: 15, font: { size: 12 } } } },
-      scales: {
-        y: { beginAtZero: true, ticks: { stepSize: 1 }, title: { display: true, text: 'Cabeças' } }
-      }
-    }
-  });
-</script>
-{% endif %}
+<!-- Gráfico de Entrada/Saída foi para /fluxo-animais (v5.10) -->
 
 <section class="card" style="margin-bottom:20px">
   <div class="card-title">Ações rápidas</div>
@@ -180,102 +136,15 @@
 </div>
 {% endif %}
 
-<!-- ═══ FINANCEIRO EXPANDIDO (Seção Colapsável) ════════════════════════════════ -->
-<details class="card-detail" style="margin-bottom:24px" open>
-  <summary style="background:var(--bg-2)">
-    <div style="display:flex;align-items:center;gap:10px">
-      <span>💰</span>
-      <span>Indicadores Financeiros</span>
-    </div>
-  </summary>
-  <div class="metrics" style="margin-top:16px">
-    <div class="metric">
-      <div class="metric-icon">🐄</div>
-      <div class="metric-label">Estoque Atual</div>
-      <div class="metric-val">{{ r.estoque }} cab.</div>
-      <div class="metric-sub">{{ r.cab_comp }} compradas / {{ r.cab_vend }} vendidas</div>
-    </div>
-    <div class="metric gold">
-      <div class="metric-icon">💲</div>
-      <div class="metric-label">CTCab (Custo/Cabeça)</div>
-      <div class="metric-val">{{ r.ctcab | brl }}</div>
-      <div class="metric-sub">CMP {{ r.cmp | brl }} + Gastos {{ r.gpcab | brl }}</div>
-    </div>
-    <div class="metric {% if r.resultado_realizado < 0 %}red{% endif %}">
-      <div class="metric-icon">📈</div>
-      <div class="metric-label">Resultado Realizado</div>
-      <div class="metric-val {{ 'pos' if r.resultado_realizado >= 0 else 'neg' }}">
-        {{ r.resultado_realizado | brl }}
-      </div>
-      <div class="metric-sub">ROI {{ r.roi_realizado | pct }}</div>
-    </div>
-    <div class="metric blue">
-      <div class="metric-icon">🎯</div>
-      <div class="metric-label">Break-even do Estoque</div>
-      <div class="metric-val">{{ r.break_even | brl }}</div>
-      <div class="metric-sub">Preço mín. por cabeça p/ lucrar</div>
-    </div>
-    <div class="metric">
-      <div class="metric-icon">🎫</div>
-      <div class="metric-label">Ticket Médio Venda</div>
-      <div class="metric-val">{{ r.ticket_medio | brl }}</div>
-      <div class="metric-sub">Margem bruta {{ r.margem_bruta | pct }}</div>
-    </div>
-    <div class="metric gold">
-      <div class="metric-icon">🏦</div>
-      <div class="metric-label">Capital Imobilizado</div>
-      <div class="metric-val">{{ r.capital_imobilizado | brl }}</div>
-      <div class="metric-sub">{{ r.estoque }} cab. × {{ r.ctcab | brl }}</div>
-    </div>
-    {% if r.perdas and r.perdas > 0 %}
-    <div class="metric red">
-      <div class="metric-icon">💀</div>
-      <div class="metric-label">Perdas (mortes)</div>
-      <div class="metric-val neg">{{ r.perdas | brl }}</div>
-      <div class="metric-sub">{{ r.cab_mortes }} cabeça(s) perdida(s)</div>
-    </div>
-    {% endif %}
-  </div>
-</details>
+<!-- Indicadores Financeiros movidos para /financeiro (v5.10) -->
+<section class="card" style="margin-bottom:20px;text-align:center">
+  <a href="{{ url_for('financeiro') }}" class="btn btn-primary">💰 Ver Indicadores Financeiros Completos →</a>
+</section>
 
-<!-- ═══ ESTOQUE POR MEMBRO (Colapsável) ═════════════════════════════════════════ -->
-<details class="card-detail" style="margin-bottom:24px">
-  <summary style="background:var(--bg-2)">
-    <div style="display:flex;align-items:center;gap:10px">
-      <span>👨‍👩‍👦</span>
-      <span>Estoque por Membro</span>
-    </div>
-  </summary>
-  <div class="three-col" style="margin-top:16px">
-    {% for m in MEMBROS %}
-    <div class="member-card" style="border-top-color:var(--{% if loop.index==1 %}green-500{% elif loop.index==2 %}gold{% else %}info{% endif %})">
-      <h3 style="font-size:15px;margin-bottom:12px">{{ EMOJIS[m] }} {{ NOMES[m] }}</h3>
-      <div class="kv">
-        <span class="kv-key">Cabeças em estoque</span>
-        <span style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green-700)">
-          {{ estoque_membro[m] }}
-        </span>
-      </div>
-      {% set mr = membros[m] %}
-      <div class="kv"><span class="kv-key">Já vendeu</span><span>{{ mr.cabecas }} cab.</span></div>
-      <div class="kv">
-        <span class="kv-key">Resultado realizado</span>
-        <span class="{{ 'pos' if mr.resultado >= 0 else 'neg' }}">{{ mr.resultado | brl }}</span>
-      </div>
-      {% if mr.perdas and mr.perdas > 0 %}
-      <div class="kv">
-        <span class="kv-key">Perdas (mortes)</span>
-        <span class="neg">− {{ mr.perdas | brl }}</span>
-      </div>
-      <div class="kv">
-        <span class="kv-key">Resultado líquido</span>
-        <span class="{{ 'pos' if mr.resultado_liquido >= 0 else 'neg' }}">{{ mr.resultado_liquido | brl }}</span>
-      </div>
-      {% endif %}
-    </div>
-    {% endfor %}
-  </div>
-</details><!-- /estoque-membro -->
+<!-- Estoque por Membro movido para /resultado (v5.10) -->
+<section class="card" style="margin-bottom:20px;text-align:center">
+  <a href="{{ url_for('resultado') }}" class="btn btn-primary">📊 Ver Resultado por Membro →</a>
+</section>
 
 <!-- ═══ TAREFAS DA SEMANA (v5.3) ════════════════════════════════════════════ -->
 <div class="card" style="margin-bottom:24px">

@@ -25,6 +25,9 @@ from routes_auth import *   # noqa: F401, F403
 # ── 3) Dashboard ─────────────────────────────────────────────────────────────
 from routes_dashboard import *  # noqa: F401, F403
 
+# ── 3b) Dashboard — Páginas reorganizadas (v5.10) ────────────────────────────
+from routes_financeiro_novo import *  # noqa: F401, F403
+
 # ── 4) APIs JSON (base) ──────────────────────────────────────────────────────
 from routes_api import *        # noqa: F401, F403
 

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Lembretes WhatsApp — Sítio Santo Antonio{% endblock %}
+{% block page_title %}📲 Lembretes WhatsApp{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;margin:0 auto;padding:20px">
+
+  <section class="card" style="margin-bottom:24px">
+    <div class="card-title">Preferências de Notificação</div>
+    <form method="POST" action="#" style="margin-top:16px">
+
+      <div style="padding:12px 0;border-bottom:1px solid var(--bg-2)">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" name="urgentes" {% if user_prefs.get('urgentes') %}checked{% endif %} style="width:18px;height:18px">
+          <span style="font-weight:600">⚠️ Avisos Urgentes</span>
+        </label>
+        <p style="font-size:12px;color:var(--text-3);margin-top:4px;margin-left:26px">Mortes, acidentes, alertas críticos</p>
+      </div>
+
+      <div style="padding:12px 0;border-bottom:1px solid var(--bg-2)">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" name="semanal" {% if user_prefs.get('semanal') %}checked{% endif %} style="width:18px;height:18px">
+          <span style="font-weight:600">📊 Resumo Semanal</span>
+        </label>
+        <p style="font-size:12px;color:var(--text-3);margin-top:4px;margin-left:26px">Segunda-feira com compras, vendas e resultado</p>
+      </div>
+
+      <div style="padding:12px 0;border-bottom:1px solid var(--bg-2)">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" name="visita" {% if user_prefs.get('visita') %}checked{% endif %} style="width:18px;height:18px">
+          <span style="font-weight:600">🗓️ Lembrete de Visita</span>
+        </label>
+        <p style="font-size:12px;color:var(--text-3);margin-top:4px;margin-left:26px">Notificação quando alguém registra uma visita</p>
+      </div>
+
+      <div style="padding:12px 0;border-bottom:1px solid var(--bg-2)">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" name="eventos" {% if user_prefs.get('eventos') %}checked{% endif %} style="width:18px;height:18px">
+          <span style="font-weight:600">🎉 Eventos</span>
+        </label>
+        <p style="font-size:12px;color:var(--text-3);margin-top:4px;margin-left:26px">Nascimentos, partos confirmados</p>
+      </div>
+
+      <div style="padding:12px 0;border-bottom:1px solid var(--bg-2)">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" name="mensal" {% if user_prefs.get('mensal') %}checked{% endif %} style="width:18px;height:18px">
+          <span style="font-weight:600">📅 Resumo Mensal</span>
+        </label>
+        <p style="font-size:12px;color:var(--text-3);margin-top:4px;margin-left:26px">1º do mês com resultado e indicadores</p>
+      </div>
+
+      <div style="padding:12px 0">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" name="valores" {% if user_prefs.get('valores') %}checked{% endif %} style="width:18px;height:18px">
+          <span style="font-weight:600">💰 Valores em Aviso</span>
+        </label>
+        <p style="font-size:12px;color:var(--text-3);margin-top:4px;margin-left:26px">Incluir valores (compra/venda/resultado)</p>
+      </div>
+
+      <div style="margin-top:20px;text-align:center">
+        <button type="submit" class="btn" style="background:var(--green-600);color:white">💾 Salvar Preferências</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card" style="margin-bottom:24px">
+    <div class="card-title">Fila de Avisos Pendentes</div>
+    {% if avisos_pendentes %}
+    <div style="margin-top:16px">
+      {% for aviso in avisos_pendentes %}
+      <div style="padding:12px;background:var(--bg-2);border-left:4px solid var(--green-600);border-radius:4px;margin-bottom:8px;font-size:13px">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+          <div>
+            <div style="font-weight:600;margin-bottom:4px">{{ aviso.get('tipo', 'Aviso') }}</div>
+            <div style="color:var(--text-2)">{{ aviso.get('texto') or aviso.get('msg') }}</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:4px">
+              📅 {{ aviso.get('data', '—') }}
+              {% if aviso.get('timestamp') %}· {{ aviso.get('timestamp') }}{% endif %}
+            </div>
+          </div>
+          <span style="color:var(--text-3);font-size:11px">
+            {% if aviso.get('status') == 'pendente' %}⏳{% elif aviso.get('status') == 'enviado' %}✅{% else %}—{% endif %}
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:var(--text-3);margin-top:16px;text-align:center">Nenhum aviso pendente. Tudo certo! ✅</p>
+    {% endif %}
+  </section>
+
+  <div style="margin-top:24px;text-align:center">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+    <a href="{{ url_for('central_alertas') }}" class="btn btn-outline">🔔 Central de Alertas</a>
+  </div>
+
+</div>
+
+<style>
+  input[type="checkbox"] { cursor: pointer; }
+  .card-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+</style>
+{% endblock %}

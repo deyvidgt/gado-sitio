@@ -1,118 +1,124 @@
 {% extends "base.html" %}
-{% block title %}Fluxo de Caixa{% endblock %}
-{% block page_title %}Fluxo de Caixa 💰{% endblock %}
+{% block title %}Fluxo de Caixa — Sítio Santo Antonio{% endblock %}
+{% block page_title %}📈 Fluxo de Caixa{% endblock %}
 
 {% block content %}
-<div class="page-head"><div><span class="eyebrow">Últimos 12 meses</span><h2>Fluxo de Caixa</h2></div></div>
+<div style="max-width:1000px;margin:0 auto;padding:20px">
 
-<div class="card">
-  <h3>Entrada vs Saída Mensal</h3>
-  <div style="position:relative;height:400px;margin-bottom:20px">
-    <canvas id="chart-fluxo"></canvas>
-  </div>
+  {% if fluxo %}
+  <section class="card" style="margin-bottom:24px">
+    <div class="card-title">Entrada vs Saída (últimos 12 meses)</div>
+    <div style="position:relative;height:300px;margin-top:16px">
+      <canvas id="chart-fluxo"></canvas>
+    </div>
+  </section>
 
-  <h3 style="margin-top:30px">Saldo Acumulado</h3>
-  <div style="position:relative;height:300px;margin-bottom:20px">
-    <canvas id="chart-saldo"></canvas>
-  </div>
-</div>
+  <section class="card" style="margin-bottom:24px">
+    <div class="card-title">Saldo Acumulado</div>
+    <div style="position:relative;height:300px;margin-top:16px">
+      <canvas id="chart-saldo"></canvas>
+    </div>
+  </section>
 
-<div class="card">
-  <h3>Detalhes por Mês</h3>
-  <table style="width:100%;border-collapse:collapse">
-    <thead>
-      <tr style="border-bottom:2px solid var(--border)">
-        <th style="padding:10px;text-align:left">Mês</th>
-        <th style="padding:10px;text-align:right">Entrada</th>
-        <th style="padding:10px;text-align:right">Saída</th>
-        <th style="padding:10px;text-align:right">Saldo</th>
-        <th style="padding:10px;text-align:right">Acumulado</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for mes in fluxo %}
-      <tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:10px">{{ mes.label }}</td>
-        <td style="padding:10px;text-align:right;color:var(--green-600)"><strong>{{ '%.2f'|format(mes.entrada)|replace('.', ',') }}</strong></td>
-        <td style="padding:10px;text-align:right;color:var(--red-600)"><strong>{{ '%.2f'|format(mes.saida)|replace('.', ',') }}</strong></td>
-        <td style="padding:10px;text-align:right;{% if mes.saldo >= 0 %}color:var(--green-600){% else %}color:var(--red-600){% endif %}"><strong>{{ '%.2f'|format(mes.saldo)|replace('.', ',') }}</strong></td>
-        <td style="padding:10px;text-align:right;{% if mes.saldo_acum >= 0 %}color:var(--green-600){% else %}color:var(--red-600){% endif %}"><strong>{{ '%.2f'|format(mes.saldo_acum)|replace('.', ',') }}</strong></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+  <section class="card" style="margin-bottom:24px">
+    <div class="card-title">Detalhes Mensais</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:12px">
+      <thead>
+        <tr style="background:var(--bg-2)">
+          <th style="padding:10px;text-align:left">Mês</th>
+          <th style="padding:10px;text-align:right">Receita</th>
+          <th style="padding:10px;text-align:right">Despesa</th>
+          <th style="padding:10px;text-align:right">Saldo</th>
+          <th style="padding:10px;text-align:right">Acumulado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in fluxo %}
+        <tr style="border-bottom:1px solid var(--bg-2)">
+          <td style="padding:10px">{{ m.mes }}</td>
+          <td style="padding:10px;text-align:right;color:var(--green-700);font-weight:600">{{ m.receita|brl }}</td>
+          <td style="padding:10px;text-align:right;color:var(--danger);font-weight:600">{{ m.despesa|brl }}</td>
+          <td style="padding:10px;text-align:right" class="{{ 'pos' if m.saldo_mes >= 0 else 'neg' }}">{{ m.saldo_mes|brl }}</td>
+          <td style="padding:10px;text-align:right;font-weight:600">{{ m.saldo_acumulado|brl }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-<script>
-const dados = {{ fluxo|tojson }};
-
-// Gráfico Entrada vs Saída
-new Chart(document.getElementById('chart-fluxo'), {
-  type: 'bar',
-  data: {
-    labels: dados.map(d => d.label),
-    datasets: [
-      {
-        label: 'Entrada (Vendas)',
-        data: dados.map(d => d.entrada),
-        backgroundColor: 'rgba(46, 125, 50, 0.7)',
-        borderColor: 'rgb(46, 125, 50)',
-        borderWidth: 1
+  <script>
+    // Gráfico de Entrada vs Saída
+    const ctxFluxo = document.getElementById('chart-fluxo').getContext('2d');
+    new Chart(ctxFluxo, {
+      type: 'bar',
+      data: {
+        labels: {{ fluxo|map(attribute='mes')|list|tojson }},
+        datasets: [
+          {
+            label: 'Receita',
+            data: {{ fluxo|map(attribute='receita')|list|tojson }},
+            backgroundColor: 'rgba(76, 175, 80, 0.7)',
+            borderColor: 'rgba(76, 175, 80, 1)',
+            borderWidth: 1,
+            borderRadius: 4,
+          },
+          {
+            label: 'Despesa',
+            data: {{ fluxo|map(attribute='despesa')|list|tojson }},
+            backgroundColor: 'rgba(244, 67, 54, 0.7)',
+            borderColor: 'rgba(244, 67, 54, 1)',
+            borderWidth: 1,
+            borderRadius: 4,
+          }
+        ]
       },
-      {
-        label: 'Saída (Compras + Gastos)',
-        data: dados.map(d => d.saida),
-        backgroundColor: 'rgba(198, 40, 40, 0.7)',
-        borderColor: 'rgb(198, 40, 40)',
-        borderWidth: 1
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { beginAtZero: true } }
       }
-    ]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom' } },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          callback: (v) => 'R$ ' + (v/1000).toFixed(0) + 'k'
-        }
-      }
-    }
-  }
-});
+    });
 
-// Gráfico Saldo Acumulado
-new Chart(document.getElementById('chart-saldo'), {
-  type: 'line',
-  data: {
-    labels: dados.map(d => d.label),
-    datasets: [{
-      label: 'Saldo Acumulado',
-      data: dados.map(d => d.saldo_acum),
-      borderColor: 'rgb(66, 133, 244)',
-      backgroundColor: 'rgba(66, 133, 244, 0.1)',
-      borderWidth: 3,
-      fill: true,
-      tension: 0.4,
-      pointRadius: 5,
-      pointHoverRadius: 7
-    }]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom' } },
-    scales: {
-      y: {
-        ticks: {
-          callback: (v) => 'R$ ' + (v/1000).toFixed(0) + 'k'
-        }
+    // Gráfico de Saldo Acumulado
+    const ctxSaldo = document.getElementById('chart-saldo').getContext('2d');
+    new Chart(ctxSaldo, {
+      type: 'line',
+      data: {
+        labels: {{ fluxo|map(attribute='mes')|list|tojson }},
+        datasets: [{
+          label: 'Saldo Acumulado',
+          data: {{ fluxo|map(attribute='saldo_acumulado')|list|tojson }},
+          borderColor: 'rgba(33, 150, 243, 1)',
+          backgroundColor: 'rgba(33, 150, 243, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { beginAtZero: true } }
       }
-    }
-  }
-});
-</script>
+    });
+  </script>
+  {% else %}
+  <div class="card">
+    <p style="color:var(--text-3);text-align:center">Sem dados de fluxo de caixa ainda.</p>
+  </div>
+  {% endif %}
+
+  <div style="margin-top:24px;text-align:center">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+    <a href="{{ url_for('relatorios') }}" class="btn btn-outline">📊 Ver Relatórios</a>
+  </div>
+
+</div>
+
+<style>
+  .pos { color: var(--green-700); }
+  .neg { color: var(--danger); }
+</style>
 {% endblock %}
