@@ -4,6 +4,25 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (v5.8.1: Novos Indicadores)
+- **Estado do Colchão nas Visitas:** nova coluna "Estado Colchão" em `COLUNAS_VISITAS` permite registrar a cada visita o status do colchão (integração com módulo leiteiro v5.4).
+- **4 novas abas de rastreamento:**
+  - **Engorda Pastagem:** rastrear crescimento (GMD) vs condição do pasto; campos: Pasto ID, Peso Inicial/Final, Dias, GMD, Lotação (UA/ha), Consumo estimado (kg MS/dia).
+  - **GMD Lotação:** análise histórica; correlação entre GMD e densidade (UA/ha) com recomendação automática.
+  - **Ração Consumo:** eficiência alimentar (módulo leiteiro); rastreia ração oferecida vs consumida, taxa consumo (%), desperdício (%).
+  - **Mortalidade Bezerros:** taxa mensal de mortalidade (%) com causas (3 campos: diarreia, infecção, outro).
+- **Módulo `indicadores_v58.py`:** 4 funções análise:
+  - `engorda_pastagem_resumo()` → lotes ativos, ganho médio, melhor lote
+  - `gmd_lotacao_analise()` → periodos, correlação, recomendação
+  - `racao_consumo_analise()` → consumo médio (%), desperdício (%), custo total
+  - `mortalidade_bezerros_analise()` → taxa média, total nascidos/mortos, causas top-5
+- **Rotas dos indicadores:**
+  - GET `/indicadores/engorda-pastagem` — resumo de lotes vs pasto
+  - GET `/indicadores/gmd-lotacao` — análise histórica GMD vs lotação
+  - GET `/indicadores/racao-consumo` — eficiência alimentar
+  - GET `/indicadores/mortalidade-bezerros` — taxa mortalidade mensal
+- **Migração automática:** todas as 4 novas abas criadas automaticamente em `db.inicializar()` quando o .xlsx é versionado.
+
 ## [5.9.0] — 2026-10-27
 
 ### Adicionado
