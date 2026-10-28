@@ -424,6 +424,134 @@ def api_alertas_count():
         return jsonify({'count': 0}), 200
 
 
+# ── Dashboard Novo (v5.8) — Mobile-First ──────────────────────────────────────
+@app.route('/dashboard-novo')
+@login_required
+def dashboard_novo_view():
+    """Dashboard mobile-first v5.8 com 7 cards prioritizados"""
+    try:
+        # Importar funções do novo módulo
+        from dashboard_novo import chuvas_mes, cotacao_mercado, alertas_consolidados
+        from insumos import previsao_todos
+
+        # Cache de dados
+        dados = _get_dados_cache()
+        r = _get_resumo_cache()
+
+        # 1. RESUMO LEITEIRO
+        try:
+            import leite
+            prod = carregar_aba("Leite Produção")
+            resumo_leite = leite.acumulados(prod, _agora().date())
+        except Exception as e:
+            app.logger.debug(f"Resumo leiteiro indisponível: {e}")
+            resumo_leite = {"dia": 0, "semana": 0, "mes": 0}
+
+        # 2. PREVISÃO DO TEMPO
+        try:
+            tempo_previsao = tempo_mod.previsao()
+        except Exception as e:
+            app.logger.debug(f"Previsão indisponível: {e}")
+            tempo_previsao = {"status": "indisponível"}
+
+        # 3. AVISOS & ALERTAS CONSOLIDADOS
+        try:
+            avisos = alertas_consolidados(dados)
+        except Exception as e:
+            app.logger.debug(f"Alertas consolidados falhou: {e}")
+            avisos = []
+
+        # 4. AGENDA DE MANEJO (TAREFAS)
+        tarefas = []
+        try:
+            import tarefas as tf
+            pendentes = tf.pendentes(_agora().date())
+            for t in (pendentes or [])[:5]:
+                dias_atraso = max(0, (_agora().date() - t.get("data_vencimento", _agora().date())).days)
+                dias_ate = (t.get("data_vencimento", _agora().date()) - _agora().date()).days
+
+                if dias_atraso > 0:
+                    status_label = f"⏰ {dias_atraso}d atrasada"
+                elif dias_ate == 0:
+                    status_label = "🔴 Hoje"
+                elif dias_ate < 0:
+                    status_label = f"✅ +{abs(dias_ate)}d"
+                else:
+                    status_label = f"📅 +{dias_ate}d"
+
+                tarefas.append({
+                    "titulo": t.get("titulo", "Sem título"),
+                    "status_label": status_label,
+                    "dias_atraso": dias_atraso,
+                    "dias_ate": dias_ate,
+                })
+        except Exception as e:
+            app.logger.debug(f"Tarefas falhou: {e}")
+
+        # 5. ESTOQUE DE ALIMENTAÇÃO
+        estoque_info = []
+        try:
+            insumos_prev = previsao_todos(dados.get("Visitas"), dados.get("Gastos"), _agora())
+            for nome, info in insumos_prev.items():
+                estoque_info.append({
+                    "nome": nome,
+                    "quantidade": int(info.get("sacos", 0)),
+                    "dias_faltam": int(info.get("dias_faltam", 999)),
+                    "status": info.get("status", "ok"),
+                    "percentual": min(100, max(0, info.get("percentual_sacos", 0))),
+                })
+        except Exception as e:
+            app.logger.debug(f"Insumos falhou: {e}")
+
+        # 6. CHUVAS DO MÊS
+        try:
+            chuvas = chuvas_mes()
+        except Exception as e:
+            app.logger.debug(f"Chuvas falhou: {e}")
+            chuvas = {"total": 0, "media": 90, "semanas": []}
+
+        # 7. COTAÇÃO DE MERCADO
+        try:
+            cotacao = cotacao_mercado()
+        except Exception as e:
+            app.logger.debug(f"Cotação falhou: {e}")
+            cotacao = []
+
+        # ESTADO DO SÍTIO (resumo)
+        try:
+            estoque_membro = calcular_estoque_por_membro(dados["Compras"], dados["Vendas"], dados["Manejo"])
+        except Exception as e:
+            app.logger.debug(f"Estoque por membro falhou: {e}")
+            estoque_membro = []
+
+        estado_sitio = {
+            "cabecas": r.get("estoque", 0),
+            "lotacao": 0,  # TODO: integrar com pastos.nivel()
+        }
+
+        # Renderizar template
+        return render_template("dashboard_novo.html",
+                             resumo_leite=resumo_leite,
+                             tempo=tempo_previsao,
+                             avisos_consolidados=avisos,
+                             tarefas_pendentes=tarefas,
+                             estoque_info=estoque_info,
+                             chuvas_mes=chuvas,
+                             cotacao=cotacao,
+                             cotacao_data=_agora().strftime("%d/%m %H:%M"),
+                             estado_sitio=estado_sitio,
+                             resultado=r,
+                             estoque_por_membro=estoque_membro,
+                             NOMES=NOMES_MEMBROS,
+                             EMOJIS=EMOJIS_MEMBROS)
+
+    except Exception as e:
+        app.logger.error(f"Erro dashboard-novo: {e}", exc_info=True)
+        return render_template("dashboard.html",  # Fallback ao dashboard antigo
+                             r=_get_resumo_cache(),
+                             erro=f"Dashboard novo temporariamente indisponível: {str(e)}")
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 
 
