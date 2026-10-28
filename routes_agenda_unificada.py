@@ -96,9 +96,36 @@ def agenda_unificada():
 
     proximos.sort(key=lambda x: x["data"])
 
+    # Todos os eventos do mês (para o novo calendário)
+    todos_eventos = []
+    for d, evts in sorted(eventos_por_dia.items()):
+        for evt in evts:
+            todos_eventos.append({
+                "tipo": evt.get("tipo", ""),
+                "titulo": evt.get("titulo", ""),
+                "data": d,
+                "urgencia": evt.get("urgencia", "normal")
+            })
+
+    # Próximos 7 dias (para o novo calendário)
+    proximos_7_dias = []
+    data_inicio = date.today()
+    data_fim = data_inicio + timedelta(days=7)
+    for d in sorted(eventos_por_dia.keys()):
+        if data_inicio <= d < data_fim:
+            for evt in eventos_por_dia[d]:
+                proximos_7_dias.append({
+                    "tipo": evt.get("tipo", ""),
+                    "titulo": evt.get("titulo", ""),
+                    "data": d,
+                    "urgencia": evt.get("urgencia", "normal")
+                })
+
     return render_template("agenda_unificada.html",
                           mes=mes, ano=ano, hoje=hoje,
                           semanas=semanas,
                           tarefas_pendentes=tarefas_pend[:10],
                           proximos_14_dias=proximos[:20],
+                          todos_eventos=todos_eventos,
+                          proximos_7_dias=proximos_7_dias,
                           fmt_data=fmt_data)
