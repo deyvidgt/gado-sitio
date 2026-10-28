@@ -265,6 +265,33 @@
     .linha-sub  { font-size:12px; color:var(--text-3); }
     .linha-fim  { margin-left:auto; text-align:right; }
 
+    /* v5.10: Semáforo (cor + palavra sempre) */
+    .semaforo { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:6px; background:var(--surface-2); font-size:12px; font-weight:600; }
+    .semaforo-indicador { width:16px; height:16px; border-radius:50%; flex-shrink:0; }
+    .semaforo-label { color:var(--text); }
+
+    /* v5.10: Alertas destacados (urgentes, avisos) */
+    .alerta { display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:8px; border-left:4px solid; margin-bottom:8px; font-size:13px; font-weight:500; }
+    .alerta-critico { background:rgba(192,57,43,.12); border-left-color:var(--danger); color:var(--danger); }
+    .alerta-aviso   { background:rgba(230,126,34,.12); border-left-color:var(--warn);   color:var(--warn); }
+    .alerta-icon { font-size:18px; flex-shrink:0; }
+    [data-theme="dark"] .alerta-critico { background:rgba(192,57,43,.18); }
+    [data-theme="dark"] .alerta-aviso   { background:rgba(230,126,34,.18); }
+
+    /* v5.10: Tabela responsiva (mobile-first) */
+    .table-responsiva { width:100%; border-collapse:collapse; }
+    .table-responsiva thead { background:var(--surface-2); border-bottom:2px solid var(--green-500); }
+    .table-responsiva th { padding:10px 14px; text-align:left; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-3); }
+    .table-responsiva td { padding:10px 14px; border-bottom:1px solid var(--bg-2); color:var(--text-2); }
+    .table-responsiva tbody tr:hover { background:var(--green-50); }
+    @media (max-width:768px) {
+      .table-responsiva thead { display:none; }
+      .table-responsiva tbody { display:block; }
+      .table-responsiva tr { display:block; border:1px solid var(--bg-2); border-radius:8px; padding:12px; margin-bottom:8px; background:var(--surface); }
+      .table-responsiva td { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border:none; }
+      .table-responsiva td::before { content:attr(data-label); font-weight:600; color:var(--text-3); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+    }
+
     /* Forms */
     .form-card { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:32px; max-width:640px; }
     .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
