@@ -207,7 +207,8 @@ def gerar_alertas_mastite() -> List[Dict]:
             # Cria alerta
             if tipo_alerta:
                 try:
-                    animal = animais.obter(vaca_id)
+                    df_animais = animais.carregar()
+                    animal = df_animais[df_animais['ID'].astype(str) == str(vaca_id)].iloc[0] if not df_animais.empty else {}
                     brinco_desc = f"{animal.get('Brinco Cor', '')} {int(animal.get('Brinco Nº', 0)) or '??'}"
                 except Exception:
                     brinco_desc = f"ID {vaca_id}"

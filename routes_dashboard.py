@@ -241,6 +241,14 @@ def dashboard():
     except Exception as erro:
         app.logger.warning(f"Painel: resumo leiteiro indisponível: {erro}")
         resumo_leite = {"dia": 0, "semana": 0, "mes": 0, "total": 0}
+
+    # v5.10 Onda 1 — Mastite prediction & health monitoring
+    try:
+        from mastite_predicao import resumo_saude_leite
+        saude_leite = resumo_saude_leite()
+    except Exception as erro:
+        app.logger.warning(f"Painel: saúde do leite indisponível: {erro}")
+        saude_leite = {"total_vacas": 0, "alertas_urgentes": 0, "alertas_aviso": 0}
     extras = _cards_extras(dados, r)
     alertas = _gerar_alertas(dados)
     estado_sitio = {"cabecas": r.get("estoque", 0), "peso_medio": peso_medio,
@@ -268,7 +276,7 @@ def dashboard():
                            alertas=alertas, indicadores=indicadores, rebanho_est=rebanho_est,
                            estado_sitio=estado_sitio, acoes_rapidas=acoes_rapidas,
                            atencao_agora=atencao_agora, ocorrencias=recentes[:6],
-                           resumo_leite=resumo_leite, tendencia_peso=[], cards=cards,
+                           resumo_leite=resumo_leite, saude_leite=saude_leite, tendencia_peso=[], cards=cards,
                            entrada_saida=entrada_saida, tempo=tempo_previsao, pastos_disponivel=pastos_disponivel,
                            **extras, NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS, MEMBROS=MEMBROS)
 

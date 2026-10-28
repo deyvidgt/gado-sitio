@@ -59,6 +59,38 @@
   </div>
 </section>
 
+<!-- v5.10 Onda 1 — Mastite Alerts Widget -->
+<section class="card" style="margin-bottom:20px">
+  <div class="section-head" style="margin-bottom:12px"><h2>🏥 Saúde do Leite — Mastite</h2><a class="btn btn-outline" href="{{ url_for('saude_leite') }}">Detalhes</a></div>
+  {% if saude_leite.alertas_urgentes > 0 or saude_leite.alertas_aviso > 0 %}
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
+      <div style="text-align:center; padding:10px; background:rgba(220,38,38,.1); border-radius:4px;">
+        <div style="font-size:20px;font-weight:bold;color:var(--red-600);">{{ saude_leite.alertas_urgentes }}</div>
+        <div style="font-size:11px;color:var(--text-3);">🚨 Urgentes</div>
+      </div>
+      <div style="text-align:center; padding:10px; background:rgba(234,179,8,.1); border-radius:4px;">
+        <div style="font-size:20px;font-weight:bold;color:var(--orange-600);">{{ saude_leite.alertas_aviso }}</div>
+        <div style="font-size:11px;color:var(--text-3);">⚠️ Avisos</div>
+      </div>
+      <div style="text-align:center; padding:10px; background:var(--bg-2); border-radius:4px;">
+        <div style="font-size:20px;font-weight:bold;color:var(--text-primary);">{{ saude_leite.total_vacas }}</div>
+        <div style="font-size:11px;color:var(--text-3);">Monitoradas</div>
+      </div>
+    </div>
+    {% for alerta in saude_leite.alertas_detalhados[:3] %}
+      <div style="background:{% if alerta.tipo == 'urgente' %}rgba(220,38,38,.08){% else %}rgba(234,179,8,.08){% endif %}; border-left:3px solid {% if alerta.tipo == 'urgente' %}var(--red-600){% else %}var(--orange-600){% endif %}; padding:8px 10px; margin-bottom:6px; font-size:12px; border-radius:2px;">
+        <strong>{{ alerta.animal_desc }}</strong>: {{ alerta.motivo }}
+      </div>
+    {% endfor %}
+  {% else %}
+    <div style="text-align:center; padding:20px; color:var(--green-600);">
+      <div style="font-size:24px;">✅</div>
+      <div style="font-size:13px; font-weight:600;">Rebanho Saudável</div>
+      <div style="font-size:11px; color:var(--text-3); margin-top:4px;">{{ saude_leite.total_vacas }} vacas monitoradas — sem alertas</div>
+    </div>
+  {% endif %}
+</section>
+
 <!-- ═══ PREVISÃO DO TEMPO (v5.9) ═════════════════════════════════════════════ -->
 {% if tempo.status != 'indisponível' %}
 <section class="card" style="margin-bottom:20px">

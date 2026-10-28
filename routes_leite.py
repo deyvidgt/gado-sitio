@@ -639,3 +639,23 @@ def api_comparativo_leite():
     if not ids:
         return jsonify({"erro": "Nenhuma vaca informada"}), 400
     return jsonify(_comparar_vacas(ids))
+
+
+# v5.10 Onda 1 — Mastite Prediction & Health Monitoring
+@app.route("/leite/saude")
+@login_required
+def saude_leite():
+    """Dashboard de saúde do leite com alertas de mastite."""
+    from mastite_predicao import resumo_saude_leite, gerar_alertas_mastite
+
+    resumo = resumo_saude_leite()
+    alertas = gerar_alertas_mastite()
+
+    # Agrupar por tipo
+    alertas_urgentes = [a for a in alertas if a['tipo'] == 'urgente']
+    alertas_aviso = [a for a in alertas if a['tipo'] == 'aviso']
+
+    return render_template("leite_saude.html",
+                          resumo=resumo,
+                          alertas_urgentes=alertas_urgentes,
+                          alertas_aviso=alertas_aviso)
