@@ -2,7 +2,7 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
-## [Não lançado]
+## [5.10.1] — 2026-10-29
 
 ### Modificado
 - **Calendário Unificado (v5.10):** refactored `/calendario` para integrar com API manejo:
