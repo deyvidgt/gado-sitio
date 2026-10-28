@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+{% block title %}Calculador de Ração — Sítio Santo Antonio{% endblock %}
+{% block page_title %}🌾 Calculador de Ração Avançado{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:16px">
+
+  <!-- Header com informações -->
+  <div class="alerta alerta-aviso">
+    <span class="alerta-icon">📋</span>
+    <span><strong>Aviso:</strong> Este calculador é orientativo e não substitui análise de nutricionista. Baseado em tabelas Embrapa e NRC.</span>
+  </div>
+
+  <!-- Seção de Entrada -->
+  <div class="secao">
+    <h2 class="secao-titulo">📊 Dados do Animal</h2>
+    <div class="card">
+      <form id="form-racao" onsubmit="calcularRacao(event)">
+        <div class="grid grid-3">
+          <!-- Categoria -->
+          <div class="form-group">
+            <label class="form-label required">Categoria</label>
+            <select id="categoria" required onchange="atualizarDicas()">
+              <option value="Lactação">Lactação (vaca ordenhada)</option>
+              <option value="Seca">Seca (no período seco)</option>
+              <option value="Novilha">Novilha (antes de 1º parto)</option>
+              <option value="Bezerro">Bezerro (até 12 meses)</option>
+            </select>
+            <div class="form-help" id="dica-categoria"></div>
+          </div>
+
+          <!-- Peso Vivo -->
+          <div class="form-group">
+            <label class="form-label required">Peso Vivo (kg)</label>
+            <input type="number" id="peso_vivo" required min="1" max="1000" value="500"
+                   placeholder="Ex: 500" onchange="atualizarDicas()">
+            <div class="form-help">Peso do animal em quilogramas</div>
+          </div>
+
+          <!-- Produção de Leite -->
+          <div class="form-group" id="grupo-producao">
+            <label class="form-label">Produção de Leite (L/dia)</label>
+            <input type="number" id="producao_litros" min="0" max="100" step="0.5" value="0"
+                   placeholder="Ex: 20">
+            <div class="form-help">Só aplicável para categoria "Lactação"</div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-principal" style="width: 100%;">
+          🧮 Calcular Necessidades e Sugerir Ração
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Resultados -->
+  <div id="resultados" style="display: none;">
+
+    <!-- Necessidades Nutricionais -->
+    <div class="secao">
+      <h2 class="secao-titulo">🎯 Necessidades Nutricionais Diárias</h2>
+      <div class="card">
+        <div class="grid grid-3">
+          <div class="metric">
+            <div class="metric-icon">📦</div>
+            <div class="metric-label">Matéria Seca</div>
+            <div class="metric-val"><span id="res-ms">—</span> kg</div>
+            <div class="metric-sub">total consumo diário</div>
+          </div>
+
+          <div class="metric gold">
+            <div class="metric-icon">🧬</div>
+            <div class="metric-label">Proteína Bruta</div>
+            <div class="metric-val"><span id="res-pb">—</span> g</div>
+            <div class="metric-sub"><span id="res-pb-pct">—</span>% da MS</div>
+          </div>
+
+          <div class="metric blue">
+            <div class="metric-icon">⚡</div>
+            <div class="metric-label">Energia Metabolizável</div>
+            <div class="metric-val"><span id="res-energia">—</span> Mcal</div>
+            <div class="metric-sub"><span id="res-energia-kcal">—</span> kcal/kg MS</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sugestão de Ração -->
+    <div class="secao">
+      <h2 class="secao-titulo">🥕 Sugestão de Ração (Balanceada)</h2>
+      <div class="card">
+        <div id="sugestao-conteudo"></div>
+      </div>
+    </div>
+
+    <!-- Análise Nutricional da Sugestão -->
+    <div class="secao">
+      <h2 class="secao-titulo">📈 Análise da Sugestão vs. Necessidades</h2>
+      <div class="card">
+        <div class="grid grid-3">
+          <div style="padding: 12px; background: var(--surface-2); border-radius: 8px;">
+            <div style="font-size: 12px; color: var(--text-3); text-transform: uppercase; margin-bottom: 6px;">Matéria Seca</div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <div style="font-size: 18px; font-weight: 700; color: var(--green-600);">
+                <span id="ana-ms">—</span> kg
+              </div>
+              <div style="font-size: 12px; color: var(--text-3);">
+                vs <span id="ana-ms-alvo">—</span> kg
+              </div>
+            </div>
+            <div style="font-size: 11px; color: var(--text-3); margin-top: 4px;">
+              <span id="ana-ms-desvio">—</span>
+            </div>
+          </div>
+
+          <div style="padding: 12px; background: var(--surface-2); border-radius: 8px;">
+            <div style="font-size: 12px; color: var(--text-3); text-transform: uppercase; margin-bottom: 6px;">Proteína Bruta</div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <div style="font-size: 18px; font-weight: 700; color: var(--green-600);">
+                <span id="ana-pb">—</span> g
+              </div>
+              <div style="font-size: 12px; color: var(--text-3);">
+                vs <span id="ana-pb-alvo">—</span> g
+              </div>
+            </div>
+            <div style="font-size: 11px; color: var(--text-3); margin-top: 4px;">
+              <span id="ana-pb-desvio">—</span>
+            </div>
+          </div>
+
+          <div style="padding: 12px; background: var(--surface-2); border-radius: 8px;">
+            <div style="font-size: 12px; color: var(--text-3); text-transform: uppercase; margin-bottom: 6px;">Energia Metabolizável</div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <div style="font-size: 18px; font-weight: 700; color: var(--green-600);">
+                <span id="ana-energia">—</span> Mcal
+              </div>
+              <div style="font-size: 12px; color: var(--text-3);">
+                vs <span id="ana-energia-alvo">—</span> Mcal
+              </div>
+            </div>
+            <div style="font-size: 11px; color: var(--text-3); margin-top: 4px;">
+              <span id="ana-energia-desvio">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custo da Ração -->
+    <div class="secao" id="secao-custo" style="display: none;">
+      <h2 class="secao-titulo">💰 Análise de Custo</h2>
+      <div class="card">
+        <div class="grid grid-2">
+          <div class="metric" style="border-left-color: var(--gold);">
+            <div class="metric-icon">💵</div>
+            <div class="metric-label">Custo Total Diário</div>
+            <div class="metric-val">R$ <span id="custo-total">—</span></div>
+            <div class="metric-sub">ração completa por dia</div>
+          </div>
+
+          <div class="metric blue">
+            <div class="metric-icon">📦</div>
+            <div class="metric-label">Custo por kg MS</div>
+            <div class="metric-val">R$ <span id="custo-kg-ms">—</span></div>
+            <div class="metric-sub">custo/kg matéria seca</div>
+          </div>
+        </div>
+
+        <div id="detalhes-custo" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--bg-2);">
+          <!-- Será preenchido com detalhes de custo por ingrediente -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Loading -->
+  <div id="carregando" style="display: none; text-align: center; padding: 40px;">
+    <p style="color: var(--text-3);">⏳ Calculando necessidades e sugerindo ração...</p>
+  </div>
+
+</div>
+
+<style>
+  select, input[type="number"], input[type="text"], textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--bg-3);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  select:focus, input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--green-600);
+    box-shadow: 0 0 0 3px rgba(27,94,32,.1);
+  }
+</style>
+
+<script>
+const dicasCategoria = {
+  "Lactação": "Vaca em produção — ajuste a produção de leite para cálculo preciso",
+  "Seca": "Vaca no período seco (sem ordenha) — menor necessidade nutritiva",
+  "Novilha": "Fêmea antes do 1º parto — requisitos para crescimento + gestação",
+  "Bezerro": "Até 12 meses — altas necessidades de proteína e energia para crescimento",
+};
+
+function atualizarDicas() {
+  const categoria = document.getElementById('categoria').value;
+  document.getElementById('dica-categoria').textContent = dicasCategoria[categoria] || '';
+
+  // Mostra/esconde campo de produção
+  const grupoProducao = document.getElementById('grupo-producao');
+  if (categoria === 'Lactação') {
+    grupoProducao.style.display = 'block';
+  } else {
+    grupoProducao.style.display = 'none';
+    document.getElementById('producao_litros').value = '0';
+  }
+}
+
+async function calcularRacao(event) {
+  event.preventDefault();
+
+  const categoria = document.getElementById('categoria').value;
+  const peso = parseFloat(document.getElementById('peso_vivo').value);
+  const producao = parseFloat(document.getElementById('producao_litros').value) || 0;
+
+  document.getElementById('carregando').style.display = 'block';
+  document.getElementById('resultados').style.display = 'none';
+
+  try {
+    const resp = await fetch('/api/racao/calcular', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        categoria, peso_vivo: peso, producao_litros: producao
+      })
+    });
+
+    const dados = await resp.json();
+    if (!dados.sucesso) {
+      alert('Erro: ' + (dados.erro || 'Cálculo falhou'));
+      document.getElementById('carregando').style.display = 'none';
+      return;
+    }
+
+    renderizarResultados(dados.necessidades, dados.sugestao);
+  } catch (erro) {
+    alert('Erro na requisição: ' + erro.message);
+    document.getElementById('carregando').style.display = 'none';
+  }
+}
+
+function renderizarResultados(necessidades, sugestao) {
+  // Necessidades
+  document.getElementById('res-ms').textContent = necessidades.ms_kg;
+  document.getElementById('res-pb').textContent = Math.round(necessidades.pb_g);
+  document.getElementById('res-pb-pct').textContent = necessidades.proteina_pct_ms;
+  document.getElementById('res-energia').textContent = necessidades.energia_mcal;
+  document.getElementById('res-energia-kcal').textContent = Math.round(necessidades.energia_kcal_kg_ms);
+
+  // Sugestão
+  if (sugestao) {
+    let html = '<ul class="lista-items">';
+    sugestao.ingredientes.forEach(ing => {
+      html += `
+        <li class="lista-item">
+          <span class="lista-item-icon">🥕</span>
+          <div class="lista-item-content">
+            <div class="lista-item-label">${ing.nome}</div>
+            <div class="lista-item-desc">
+              Proteína: ${(ing.pb_contribuido_g || 0).toFixed(0)}g |
+              Energia: ${(ing.energia_contribuida_mcal || 0).toFixed(1)} Mcal
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-weight: 600; font-size: 14px;">${ing.kg.toFixed(1)} kg</div>
+            ${ing.custo_r ? `<div style="font-size: 12px; color: var(--text-3);">R$ ${ing.custo_r.toFixed(2)}</div>` : ''}
+          </div>
+        </li>
+      `;
+    });
+    html += '</ul>';
+    document.getElementById('sugestao-conteudo').innerHTML = html;
+
+    // Análise
+    const devMS = (sugestao.ms_total_kg - necessidades.ms_kg) / necessidades.ms_kg * 100;
+    const devPB = (sugestao.pb_total_g - necessidades.pb_g) / necessidades.pb_g * 100;
+    const devEn = (sugestao.energia_total_mcal - necessidades.energia_mcal) / necessidades.energia_mcal * 100;
+
+    document.getElementById('ana-ms').textContent = sugestao.ms_total_kg.toFixed(1);
+    document.getElementById('ana-ms-alvo').textContent = necessidades.ms_kg.toFixed(1);
+    document.getElementById('ana-ms-desvio').textContent = `${devMS > 0 ? '+' : ''}${devMS.toFixed(1)}%`;
+
+    document.getElementById('ana-pb').textContent = Math.round(sugestao.pb_total_g);
+    document.getElementById('ana-pb-alvo').textContent = Math.round(necessidades.pb_g);
+    document.getElementById('ana-pb-desvio').textContent = `${devPB > 0 ? '+' : ''}${devPB.toFixed(1)}%`;
+
+    document.getElementById('ana-energia').textContent = sugestao.energia_total_mcal.toFixed(1);
+    document.getElementById('ana-energia-alvo').textContent = necessidades.energia_mcal.toFixed(1);
+    document.getElementById('ana-energia-desvio').textContent = `${devEn > 0 ? '+' : ''}${devEn.toFixed(1)}%`;
+
+    // Custo
+    if (sugestao.custo_total_r !== undefined) {
+      document.getElementById('secao-custo').style.display = 'block';
+      document.getElementById('custo-total').textContent = sugestao.custo_total_r.toFixed(2);
+      document.getElementById('custo-kg-ms').textContent = (sugestao.custo_por_kg_ms || 0).toFixed(2);
+
+      let detalhes = '<div class="grid grid-3">';
+      sugestao.ingredientes.forEach(ing => {
+        if (ing.preco_kg !== undefined) {
+          detalhes += `
+            <div style="padding: 12px; background: var(--surface-2); border-radius: 8px;">
+              <div style="font-size: 12px; color: var(--text-3); font-weight: 600; margin-bottom: 4px;">${ing.nome}</div>
+              <div style="font-size: 14px; font-weight: 700;">R$ ${(ing.custo_r || 0).toFixed(2)}</div>
+              <div style="font-size: 11px; color: var(--text-3);">${ing.kg.toFixed(1)}kg × R$ ${ing.preco_kg.toFixed(2)}/kg</div>
+            </div>
+          `;
+        }
+      });
+      detalhes += '</div>';
+      document.getElementById('detalhes-custo').innerHTML = detalhes;
+    }
+  }
+
+  document.getElementById('carregando').style.display = 'none';
+  document.getElementById('resultados').style.display = 'block';
+  window.scrollTo({ top: document.getElementById('resultados').offsetTop - 100, behavior: 'smooth' });
+}
+
+// Inicializa
+document.addEventListener('DOMContentLoaded', atualizarDicas);
+</script>
+{% endblock %}
