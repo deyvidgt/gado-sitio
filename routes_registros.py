@@ -522,9 +522,17 @@ def manejo():
         d["Brincos"] = _brincos_legiveis(d.get("Brincos"))
         d["_idx"] = int(real_idx)
         rows.append(d)
+
+    # Ordenação por data
+    ordem = request.args.get("ordem", "desc")
+    if ordem == "asc":
+        rows.sort(key=lambda x: str(x.get("Data", "")))
+    else:
+        rows.sort(key=lambda x: str(x.get("Data", "")), reverse=True)
+
     return render_template("lista.html", titulo="Manejo 🩺", secao="manejo", aba="Manejo",
                            colunas=["Data","Tipo","Qtd Cabeças","Produto","Brincos","Descrição","Responsável","Perda De","Nascimento De"],
-                           rows=rows,
+                           rows=rows, ordem=ordem,
                            anos_disponiveis=_anos_de(df),
                            tipos_disponiveis=_tipos_de(df),
                            pessoas_disponiveis=_pessoas_de(df, "Responsável", "Perda De", "Nascimento De"))

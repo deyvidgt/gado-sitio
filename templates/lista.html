@@ -7,7 +7,7 @@
   <h2>{{ titulo }}</h2>
   <div style="display:flex;gap:10px;align-items:center">
     {% set ordem = ordem if ordem is defined else 'desc' %}
-    {% if secao in ['compras','gastos','vendas'] %}
+    {% if secao in ['manejo','compras','gastos','vendas'] %}
       {% set outra_ordem = 'asc' if ordem == 'desc' else 'desc' %}
       <a href="?ordem={{ outra_ordem }}" class="btn btn-outline btn-sm">
         {% if ordem == 'desc' %}📅 Mais antigos primeiro{% else %}📅 Mais recentes primeiro{% endif %}
