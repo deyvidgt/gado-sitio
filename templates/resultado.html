@@ -3,75 +3,71 @@
 {% block page_title %}📊 Resultado por Membro{% endblock %}
 
 {% block content %}
-<div style="max-width:1000px;margin:0 auto;padding:20px">
+<div style="max-width:1000px;margin:0 auto;padding:16px">
 
   <!-- Resumo Geral -->
-  <section class="card" style="margin-bottom:24px;background:linear-gradient(135deg, var(--surface) 0%, var(--bg-2) 100%)">
-    <div class="section-head" style="margin-bottom:12px"><h2>📈 Resultado Geral</h2></div>
-    <div class="tri">
-      <div><b>{{ resumo_geral.estoque }}</b>cabeças em estoque</div>
-      <div><b class="{{ 'pos' if resumo_geral.resultado_realizado >= 0 else 'neg' }}">{{ resumo_geral.resultado_realizado|brl }}</b>resultado</div>
-      <div><b>{{ resumo_geral.roi_realizado|pct }}</b>ROI</div>
-    </div>
-  </section>
-
-  <!-- Por Membro -->
-  <div class="three-col" style="margin-bottom:24px">
-    {% for m in MEMBROS %}
-    {% set mr = membros[m] %}
-    <div class="member-card" style="border-top-color:var(--{% if loop.index==1 %}green-500{% elif loop.index==2 %}gold{% else %}info{% endif %})">
-      <h3 style="font-size:15px;margin-bottom:12px">{{ EMOJIS_MEMBROS[m] }} {{ NOMES_MEMBROS[m] }}</h3>
-
-      <div class="kv">
-        <span class="kv-key">Estoque</span>
-        <span style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green-700)">
-          {{ mr.estoque }} cab.
-        </span>
-      </div>
-
-      <div class="kv">
-        <span class="kv-key">Já vendeu</span>
-        <span>{{ mr.cabecas }} cab.</span>
-      </div>
-
-      <div class="kv">
-        <span class="kv-key">Resultado realizado</span>
-        <span class="{{ 'pos' if mr.resultado >= 0 else 'neg' }}">{{ mr.resultado | brl }}</span>
-      </div>
-
-      {% if mr.perdas and mr.perdas > 0 %}
-      <div class="kv">
-        <span class="kv-key">Perdas (mortes)</span>
-        <span class="neg">− {{ mr.perdas | brl }}</span>
-      </div>
-
-      <div class="kv">
-        <span class="kv-key">Resultado líquido</span>
-        <span class="{{ 'pos' if mr.resultado_liquido >= 0 else 'neg' }}">{{ mr.resultado_liquido | brl }}</span>
-      </div>
-      {% endif %}
-
-      <div class="kv">
-        <span class="kv-key">Custo/cabeça</span>
-        <span>{{ mr.ctcab | brl }}</span>
+  <div class="secao">
+    <h2 class="secao-titulo">📈 Resultado Geral</h2>
+    <div class="card" style="background:linear-gradient(135deg, var(--surface) 0%, var(--bg-2) 100%)">
+      <div class="tri">
+        <div><span style="font-size:11px;color:var(--text-3);text-transform:uppercase">Estoque</span><br><b>{{ resumo_geral.estoque }}</b><span style="font-size:12px;color:var(--text-3)">cabeças</span></div>
+        <div><span style="font-size:11px;color:var(--text-3);text-transform:uppercase">Resultado</span><br><b class="{{ 'pos' if resumo_geral.resultado_realizado >= 0 else 'neg' }}">{{ resumo_geral.resultado_realizado|brl }}</b></div>
+        <div><span style="font-size:11px;color:var(--text-3);text-transform:uppercase">ROI</span><br><b>{{ resumo_geral.roi_realizado|pct }}</b></div>
       </div>
     </div>
-    {% endfor %}
   </div>
 
-  <div style="margin-top:24px;text-align:center">
-    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+  <!-- Por Membro -->
+  <div class="secao">
+    <h2 class="secao-titulo">💰 Por Membro</h2>
+    <div class="grid grid-3">
+      {% for m in MEMBROS %}
+      {% set mr = membros[m] %}
+      <div class="card" style="border-top:4px solid var(--{% if loop.index==1 %}green-500{% elif loop.index==2 %}gold{% else %}info{% endif %})">
+        <h3 style="font-size:15px;margin-bottom:12px;color:var(--text)">{{ EMOJIS_MEMBROS[m] }} {{ NOMES_MEMBROS[m] }}</h3>
+
+        <ul class="lista-items">
+          <li class="lista-item">
+            <span class="lista-item-label">Estoque</span>
+            <span class="lista-item-valor">{{ mr.estoque }} cab.</span>
+          </li>
+
+          <li class="lista-item">
+            <span class="lista-item-label">Já vendeu</span>
+            <span class="lista-item-valor">{{ mr.cabecas }} cab.</span>
+          </li>
+
+          <li class="lista-item">
+            <span class="lista-item-label">Resultado</span>
+            <span class="lista-item-valor {% if mr.resultado < 0 %}ruim{% endif %}">{{ mr.resultado | brl }}</span>
+          </li>
+
+          {% if mr.perdas and mr.perdas > 0 %}
+          <li class="lista-item">
+            <span class="lista-item-label">Perdas</span>
+            <span class="lista-item-valor ruim">− {{ mr.perdas | brl }}</span>
+          </li>
+
+          <li class="lista-item">
+            <span class="lista-item-label">Líquido</span>
+            <span class="lista-item-valor {% if mr.resultado_liquido < 0 %}ruim{% endif %}">{{ mr.resultado_liquido | brl }}</span>
+          </li>
+          {% endif %}
+
+          <li class="lista-item">
+            <span class="lista-item-label">CTCab</span>
+            <span class="lista-item-valor">{{ mr.ctcab | brl }}</span>
+          </li>
+        </ul>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Botões de ação -->
+  <div class="btn-group">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secundario">← Voltar ao Dashboard</a>
   </div>
 
 </div>
-
-<style>
-  .three-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
-  .member-card { background: var(--surface); padding: 16px; border-radius: 8px; border-top: 4px solid var(--green-500); }
-  .kv { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--bg-2); font-size: 13px; }
-  .kv:last-child { border-bottom: none; }
-  .kv-key { color: var(--text-3); font-weight: 600; }
-  .pos { color: var(--green-700); font-weight: 600; }
-  .neg { color: var(--danger); font-weight: 600; }
-</style>
 {% endblock %}

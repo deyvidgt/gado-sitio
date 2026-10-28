@@ -3,24 +3,30 @@
 {% block page_title %}🐄 Fluxo de Animais{% endblock %}
 
 {% block content %}
-<div style="max-width:1000px;margin:0 auto;padding:20px">
+<div style="max-width:1000px;margin:0 auto;padding:16px">
 
   {% if fluxo.entrada_total >= 0 %}
-  <section class="card" style="margin-bottom:24px;background:linear-gradient(135deg, var(--surface) 0%, var(--bg-2) 100%)">
-    <div class="section-head" style="margin-bottom:12px"><h2>Movimento Recente</h2></div>
-    <div class="tri">
-      <div><b>{{ fluxo.entrada_total }}</b>cabeças entrada</div>
-      <div><b>{{ fluxo.saida_total }}</b>cabeças saída</div>
-      <div><b class="{{ 'pos' if fluxo.saldo >= 0 else 'neg' }}">{{ fluxo.saldo }}</b>saldo</div>
+  <!-- Resumo Geral -->
+  <div class="secao">
+    <h2 class="secao-titulo">Movimento Recente (90 dias)</h2>
+    <div class="card" style="background:linear-gradient(135deg, var(--surface) 0%, var(--bg-2) 100%)">
+      <div class="tri">
+        <div><span style="font-size:11px;color:var(--text-3);text-transform:uppercase">Entrada</span><br><b>{{ fluxo.entrada_total }}</b><span style="font-size:12px;color:var(--text-3)">cabeças</span></div>
+        <div><span style="font-size:11px;color:var(--text-3);text-transform:uppercase">Saída</span><br><b>{{ fluxo.saida_total }}</b><span style="font-size:12px;color:var(--text-3)">cabeças</span></div>
+        <div><span style="font-size:11px;color:var(--text-3);text-transform:uppercase">Saldo</span><br><b class="{{ 'pos' if fluxo.saldo >= 0 else 'neg' }}">{% if fluxo.saldo >= 0 %}+{% endif %}{{ fluxo.saldo }}</b></div>
+      </div>
     </div>
-  </section>
+  </div>
 
-  <section class="card" style="margin-bottom:24px">
-    <div class="card-title">Entrada vs Saída (últimos 90 dias)</div>
-    <div style="position:relative;height:300px;margin-top:16px">
-      <canvas id="chart-fluxo-animais"></canvas>
+  <!-- Gráfico -->
+  <div class="secao">
+    <h2 class="secao-titulo">Entrada vs Saída</h2>
+    <div class="grafico-container">
+      <div class="grafico">
+        <canvas id="chart-fluxo-animais"></canvas>
+      </div>
     </div>
-  </section>
+  </div>
 
   <script>
     const ctxAnimais = document.getElementById('chart-fluxo-animais').getContext('2d');
@@ -58,45 +64,49 @@
     });
   </script>
 
-  <section class="card" style="margin-bottom:24px">
-    <div class="card-title">Resumo</div>
-    <div style="margin-top:16px;font-size:13px">
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg-2)">
-        <span style="color:var(--text-3);font-weight:600">Total de Entradas:</span>
-        <span style="color:var(--green-700);font-weight:700">{{ fluxo.entrada_total }} cabeças</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg-2)">
-        <span style="color:var(--text-3);font-weight:600">Total de Saídas:</span>
-        <span style="color:var(--danger);font-weight:700">{{ fluxo.saida_total }} cabeças</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:8px 0">
-        <span style="color:var(--text-3);font-weight:600">Saldo Líquido:</span>
-        <span style="font-weight:700" class="{{ 'pos' if fluxo.saldo >= 0 else 'neg' }}">
-          {% if fluxo.saldo >= 0 %}+{% endif %}{{ fluxo.saldo }} cabeças
-        </span>
-      </div>
+  <!-- Resumo em Lista -->
+  <div class="secao">
+    <h2 class="secao-titulo">Resumo Detalhado</h2>
+    <div class="card">
+      <ul class="lista-items">
+        <li class="lista-item">
+          <span class="lista-item-label">Total de Entradas</span>
+          <span class="lista-item-valor">{{ fluxo.entrada_total }} cabeças</span>
+        </li>
+        <li class="lista-item">
+          <span class="lista-item-label">Total de Saídas</span>
+          <span class="lista-item-valor ruim">{{ fluxo.saida_total }} cabeças</span>
+        </li>
+        <li class="lista-item">
+          <span class="lista-item-label">Saldo Líquido</span>
+          <span class="lista-item-valor {% if fluxo.saldo >= 0 %}aviso{% else %}ruim{% endif %}">
+            {% if fluxo.saldo >= 0 %}+{% endif %}{{ fluxo.saldo }} cabeças
+          </span>
+        </li>
+      </ul>
     </div>
-  </section>
+  </div>
 
   {% else %}
-  <div class="card">
-    <p style="color:var(--text-3);text-align:center">Sem dados de movimentação ainda.</p>
+  <div class="secao">
+    <div class="card" style="text-align:center;padding:32px">
+      <p style="color:var(--text-3)">Sem dados de movimentação ainda.</p>
+    </div>
   </div>
   {% endif %}
 
-  <div style="margin-top:24px;text-align:center">
-    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
-    <a href="{{ url_for('compras') }}" class="btn btn-outline">📦 Compras</a>
-    <a href="{{ url_for('vendas') }}" class="btn btn-outline">🤝 Vendas</a>
+  <!-- Botões -->
+  <div class="btn-group">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secundario">← Voltar</a>
+    <a href="{{ url_for('compras') }}" class="btn btn-secundario">📦 Compras</a>
+    <a href="{{ url_for('vendas') }}" class="btn btn-principal">🤝 Vendas</a>
   </div>
 
 </div>
 
 <style>
-  .pos { color: var(--green-700); }
-  .neg { color: var(--danger); }
-  .tri { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .tri div { text-align: center; padding: 12px; }
-  .tri b { display: block; font-size: 24px; margin-bottom: 4px; }
+  .pos { color: var(--green-700); font-weight: 600; }
+  .neg { color: var(--danger); font-weight: 600; }
+  .aviso { color: var(--warn); font-weight: 600; }
 </style>
 {% endblock %}

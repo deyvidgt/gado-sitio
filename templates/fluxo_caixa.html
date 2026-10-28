@@ -3,48 +3,57 @@
 {% block page_title %}📈 Fluxo de Caixa{% endblock %}
 
 {% block content %}
-<div style="max-width:1000px;margin:0 auto;padding:20px">
+<div style="max-width:1000px;margin:0 auto;padding:16px">
 
   {% if fluxo %}
-  <section class="card" style="margin-bottom:24px">
-    <div class="card-title">Entrada vs Saída (últimos 12 meses)</div>
-    <div style="position:relative;height:300px;margin-top:16px">
-      <canvas id="chart-fluxo"></canvas>
+  <!-- Gráfico Entrada vs Saída -->
+  <div class="secao">
+    <h2 class="secao-titulo">Entrada vs Saída (últimos 12 meses)</h2>
+    <div class="grafico-container">
+      <div class="grafico">
+        <canvas id="chart-fluxo"></canvas>
+      </div>
     </div>
-  </section>
+  </div>
 
-  <section class="card" style="margin-bottom:24px">
-    <div class="card-title">Saldo Acumulado</div>
-    <div style="position:relative;height:300px;margin-top:16px">
-      <canvas id="chart-saldo"></canvas>
+  <!-- Gráfico Saldo Acumulado -->
+  <div class="secao">
+    <h2 class="secao-titulo">Saldo Acumulado</h2>
+    <div class="grafico-container">
+      <div class="grafico">
+        <canvas id="chart-saldo"></canvas>
+      </div>
     </div>
-  </section>
+  </div>
 
-  <section class="card" style="margin-bottom:24px">
-    <div class="card-title">Detalhes Mensais</div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:12px">
-      <thead>
-        <tr style="background:var(--bg-2)">
-          <th style="padding:10px;text-align:left">Mês</th>
-          <th style="padding:10px;text-align:right">Receita</th>
-          <th style="padding:10px;text-align:right">Despesa</th>
-          <th style="padding:10px;text-align:right">Saldo</th>
-          <th style="padding:10px;text-align:right">Acumulado</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for m in fluxo %}
-        <tr style="border-bottom:1px solid var(--bg-2)">
-          <td style="padding:10px">{{ m.mes }}</td>
-          <td style="padding:10px;text-align:right;color:var(--green-700);font-weight:600">{{ m.receita|brl }}</td>
-          <td style="padding:10px;text-align:right;color:var(--danger);font-weight:600">{{ m.despesa|brl }}</td>
-          <td style="padding:10px;text-align:right" class="{{ 'pos' if m.saldo_mes >= 0 else 'neg' }}">{{ m.saldo_mes|brl }}</td>
-          <td style="padding:10px;text-align:right;font-weight:600">{{ m.saldo_acumulado|brl }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </section>
+  <!-- Tabela de Detalhes -->
+  <div class="secao">
+    <h2 class="secao-titulo">Detalhes Mensais</h2>
+    <div class="card">
+      <table class="table-responsiva">
+        <thead>
+          <tr>
+            <th>Mês</th>
+            <th style="text-align:right">Receita</th>
+            <th style="text-align:right">Despesa</th>
+            <th style="text-align:right">Saldo</th>
+            <th style="text-align:right">Acumulado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in fluxo %}
+          <tr>
+            <td data-label="Mês">{{ m.mes }}</td>
+            <td data-label="Receita" style="text-align:right;color:var(--green-700);font-weight:600">{{ m.receita|brl }}</td>
+            <td data-label="Despesa" style="text-align:right;color:var(--danger);font-weight:600">{{ m.despesa|brl }}</td>
+            <td data-label="Saldo" style="text-align:right" class="{{ 'pos' if m.saldo_mes >= 0 else 'neg' }}">{{ m.saldo_mes|brl }}</td>
+            <td data-label="Acumulado" style="text-align:right;font-weight:600">{{ m.saldo_acumulado|brl }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
   <script>
     // Gráfico de Entrada vs Saída
@@ -105,20 +114,23 @@
     });
   </script>
   {% else %}
-  <div class="card">
-    <p style="color:var(--text-3);text-align:center">Sem dados de fluxo de caixa ainda.</p>
+  <div class="secao">
+    <div class="card" style="text-align:center;padding:32px">
+      <p style="color:var(--text-3)">Sem dados de fluxo de caixa ainda.</p>
+    </div>
   </div>
   {% endif %}
 
-  <div style="margin-top:24px;text-align:center">
-    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
-    <a href="{{ url_for('relatorios') }}" class="btn btn-outline">📊 Ver Relatórios</a>
+  <!-- Botões -->
+  <div class="btn-group">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secundario">← Voltar ao Dashboard</a>
+    <a href="{{ url_for('relatorios') }}" class="btn btn-principal">📊 Ver Relatórios</a>
   </div>
 
 </div>
 
 <style>
-  .pos { color: var(--green-700); }
-  .neg { color: var(--danger); }
+  .pos { color: var(--green-700); font-weight: 600; }
+  .neg { color: var(--danger); font-weight: 600; }
 </style>
 {% endblock %}
