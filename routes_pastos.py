@@ -38,6 +38,34 @@ def _capacidade_ua_ha() -> float:
 
 @app.route("/pastos")
 @login_required
+def _extrair_animais_por_pasto(df_manejo):
+    """Extrai últimos brincos/animais registrados em cada pasto."""
+    animais_por_pasto = {}
+    if df_manejo.empty or "Pasto" not in df_manejo.columns:
+        return animais_por_pasto
+
+    # Últimas movimentações de pasto (ordenar por data DESC)
+    df_mov = df_manejo[df_manejo["Pasto"].notna() & (df_manejo["Pasto"] != "")].copy()
+    if df_mov.empty:
+        return animais_por_pasto
+
+    for pasto_id, grup in df_mov.groupby("Pasto"):
+        # Pega o registro mais recente de cada animal neste pasto
+        if "Brincos" in grup.columns:
+            brincos_set = set()
+            for _, row in grup.sort_values("Data", ascending=False, na_position="last").iterrows():
+                brincos_str = str(row.get("Brincos", "")).strip()
+                if brincos_str and brincos_str != "":
+                    # Parse "Amarelo 21 #A0001, Azul 12 #A0002" → ["Amarelo 21", "Azul 12"]
+                    for brinco in brincos_str.split(","):
+                        brinco_limpo = brinco.strip().split("#")[0].strip()  # Remove ID
+                        if brinco_limpo:
+                            brincos_set.add(brinco_limpo)
+            if brincos_set:
+                animais_por_pasto[pasto_id] = sorted(list(brincos_set))
+
+    return animais_por_pasto
+
 def pastos():
     dados = _get_dados_cache()
     df_p, df_a = PA.carregar(), A.carregar()
@@ -45,9 +73,14 @@ def pastos():
     sit = PA.situacao(df_p, df_a, dados["Manejo"], estoque,
                       _peso_medio(df_a, dados["Manejo"]), hoje=_agora())
     capacidade = _capacidade_ua_ha()
+
+    # Extrai animais por pasto
+    animais_por_pasto = _extrair_animais_por_pasto(dados["Manejo"])
+
     lista = [{"id": p["ID"], "nome": p["Nome"], "area": float(p["Área (ha)"]), "cor": p["Cor"],
               "geo": json.loads(p["Contorno"]), **sit[p["ID"]],
-              "nivel": PA.nivel(sit[p["ID"]]["ua_ha"], capacidade)}
+              "nivel": PA.nivel(sit[p["ID"]]["ua_ha"], capacidade),
+              "animais": animais_por_pasto.get(p["ID"], [])}
              for _, p in PA.ativos(df_p).iterrows()]
     return render_template("pastos.html", pastos=lista, sem_pasto=sit[None],
                            capacidade=capacidade, composicao=A.composicao(df_a, estoque),

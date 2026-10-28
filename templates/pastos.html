@@ -165,6 +165,25 @@
     </div>
     {% endif %}
 
+    <!-- Animais neste pasto -->
+    {% if p.animais %}
+    <div style="margin-top:var(--spacing-md);padding:12px;background:var(--bg-2);border-radius:8px;border-left:3px solid {{ p.cor }}">
+      <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600;margin-bottom:6px">🐄 Animais neste pasto</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        {% for animal in p.animais[:8] %}
+          <span style="background:{{ p.cor }};color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">
+            {{ animal }}
+          </span>
+        {% endfor %}
+        {% if p.animais|length > 8 %}
+          <span style="color:var(--text-3);font-size:12px;align-self:center">
+            +{{ p.animais|length - 8 }} mais
+          </span>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Botão Ver no Mapa -->
     <button type="button" class="btn btn-outline btn-sm btn-ver-mapa" data-pasto="{{ p.id }}"
             style="margin-top:var(--spacing-md);width:100%">🗺️ Ver no mapa</button>
