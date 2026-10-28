@@ -5,7 +5,7 @@ from calendar import monthrange, month_name
 import pandas as pd
 from flask import render_template, request, jsonify
 
-from extensions import app, _get_dados_cache, login_required, fmt_data
+from extensions import app, _get_dados_cache, login_required
 
 
 def _data(valor):
@@ -193,7 +193,6 @@ def calendario_pagina():
         mes_prox=mes_prox, ano_prox=ano_prox,
         todos_eventos=todos_eventos,
         proximos_7_dias=proximos_7_dias,
-        fmt_data=fmt_data,
         tipo=""
     )
 

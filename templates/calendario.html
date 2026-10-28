@@ -182,7 +182,7 @@
                 <div class="lista-item-content">
                   <div class="lista-item-label">{{ item.titulo }}</div>
                   <div class="lista-item-desc">
-                    {{ item.data|fmt_data }}
+                    {{ item.data|data_br }}
                     {% if item.urgencia %}
                       ·
                       {% if item.urgencia == 'urgente' %}
@@ -216,7 +216,7 @@
                 </span>
                 <div class="lista-item-content">
                   <div class="lista-item-label">{{ item.titulo }}</div>
-                  <div class="lista-item-desc">{{ item.data|fmt_data }}</div>
+                  <div class="lista-item-desc">{{ item.data|data_br }}</div>
                 </div>
               </li>
             {% endfor %}
