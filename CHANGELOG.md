@@ -5,6 +5,34 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
+- **Previsão de Partos e Reprodução (v5.10 Onda 3):** nova página `/partos` com calendário e alertas de parto:
+  - Calcula datas esperadas de parto (283 dias) a partir de coberturas registradas.
+  - Status por vaca: gestação → toque (35d antes) → secagem (60d antes) → parto.
+  - Alertas urgentes para partos esperados dentro de 7 dias, avisos de toque e secagem com recomendações.
+  - Dashboard com contadores de fases e timeline visual.
+  - Integração com WhatsApp (notificação de partos iminentes).
+  - Novo módulo: `partos_predicao.py`; rota: GET `/partos`, API `/api/partos/resumo`.
+- **Análise Genética e Consanguinidade (v5.10 Onda 4):** nova página `/genetica` com coeficiente de endogamia e sugestões de acasalamento:
+  - Calcula coeficiente de endogamia de Wright (F) em até 4 gerações de pedigree.
+  - Alertas: verde (<3.13%), amarelo (3.13-6.25%), vermelho (>6.25%) com recomendações.
+  - Análise de progênie: lista filhos registrados com média de peso.
+  - Sugestões de acasalamento: recomenda touros compatíveis (menor endogamia resultante).
+  - Dashboard de consanguinidade com alertas de rebanho crítico/elevado.
+  - Novo módulo: `consanguinidade.py`; rotas: GET `/genetica`, `/genetica/<animal_id>`, APIs.
+- **Rastreamento de Doenças e Carência (v5.10 Onda 2):** nova página `/doencas` com histórico de tratamentos:
+  - Registra doenças, medicamentos e datas de tratamento em nova aba "Tratamentos".
+  - Valida períodos de carência (40+ medicamentos): laticinínios, carne, ambos.
+  - Impede venda de animais em carência (aviso no formulário de vendas).
+  - Histórico de 365 dias por animal com status de resolução.
+  - Novo módulo: `doencas_carencia.py`; rotas: GET `/doencas`, `/doencas/registrar`, `/doencas/<animal_id>`.
+  - Schema: nova aba "Tratamentos" com 12 colunas (ID Animal, Data, Brinco, Tipo Doença, Medicamento, etc.).
+- **Alertas Preditivos de Mastite (v5.10 Onda 1):** nova página `/leite/saude` com monitoramento de qualidade de leite:
+  - Monitora CCS (Contagem de Células Somáticas): aviso ≥200k, crítico ≥400k (MAPA IN 76).
+  - Tendência: calcula subindo/descendo/estável nos últimos 60 dias.
+  - CBT (higiene) e CPP (patógenos) com thresholds de alerta.
+  - Estima dias até criticidade com cores (vermelho/amarelo/verde).
+  - Dashboard no painel principal com widget de mastite.
+  - Novo módulo: `mastite_predicao.py`; rotas: GET `/leite/saude`, `/configuracoes/alertas-saude`.
 - **Previsão do Tempo: Município e Estado (v5.10.1):** exibe localização completa quando configurada:
   - Novos campos `municipio` e `estado` no `sitio_config.json` (opcionais).
   - Quando ambos preenchidos, exibe "Município, Estado" na previsão (ex: "Uberlândia, MG").
