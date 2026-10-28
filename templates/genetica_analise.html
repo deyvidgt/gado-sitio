@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Análise Genética — {{ animal_desc }}{% endblock %}
+
+{% block content %}
+<h1>🧬 Análise Genética — {{ animal_desc }}</h1>
+
+<!-- Endogamia -->
+<section style="background:var(--bg-secondary);padding:16px;border-radius:8px;margin-bottom:20px;border-left:4px solid {% if coeficiente_endogamia > 6.25 %}var(--red-600){% elif coeficiente_endogamia > 3.13 %}var(--orange-600){% else %}var(--green-600){% endif %};">
+  <h2 style="margin-top:0;font-size:14px;">📊 Coeficiente de Endogamia</h2>
+  <div style="display:flex;gap:20px;align-items:center;">
+    <div style="text-align:center;">
+      <div style="font-size:32px;font-weight:bold;color:{% if coeficiente_endogamia > 6.25 %}var(--red-600){% elif coeficiente_endogamia > 3.13 %}var(--orange-600){% else %}var(--green-600){% endif %};">{{ coeficiente_endogamia }}%</div>
+      <div style="font-size:12px;color:var(--text-3);">Wright F</div>
+    </div>
+    <div style="flex:1;">
+      {% if coeficiente_endogamia > 6.25 %}
+      <div style="font-weight:600;color:var(--red-600);">🚨 CRÍTICA</div>
+      <div style="font-size:12px;color:var(--text-secondary);">Risco de depressão genética. Evitar acasalamento com parentes próximos.</div>
+      {% elif coeficiente_endogamia > 3.13 %}
+      <div style="font-weight:600;color:var(--orange-600);">⚠️ ELEVADA</div>
+      <div style="font-size:12px;color:var(--text-secondary);">Monitorar. Preferir acasalamento com linhagens distantes.</div>
+      {% else %}
+      <div style="font-weight:600;color:var(--green-600);">✅ SEGURA</div>
+      <div style="font-size:12px;color:var(--text-secondary);">Dentro dos limites recomendados.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- Progênie -->
+{% if progenie.total_filhos > 0 %}
+<section style="margin-bottom:20px;">
+  <h2 style="margin-bottom:12px;">👨‍👩‍👧‍👦 Progênie ({{ progenie.total_filhos }} filhos)</h2>
+
+  {% if progenie.media_peso %}
+  <div style="background:var(--bg-2);padding:12px;border-radius:6px;margin-bottom:12px;">
+    <div style="font-size:12px;color:var(--text-3);margin-bottom:4px;">Peso Médio</div>
+    <div style="font-size:18px;font-weight:bold;">{{ progenie.media_peso }} kg</div>
+  </div>
+  {% endif %}
+
+  <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
+    Últimos filhos registrados:
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">
+    {% for filho in progenie.filhos[:6] %}
+    <div style="background:var(--bg-2);padding:10px;border-radius:6px;border-left:3px solid var(--blue-600);">
+      <div style="font-weight:600;font-size:12px;">{{ filho.brinco }}</div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:4px;">
+        {% if filho.peso %}
+          Peso: {{ filho.peso }} kg
+        {% else %}
+          Sem peso registrado
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+<div style="background:var(--bg-secondary);padding:16px;border-radius:8px;margin-bottom:20px;text-align:center;">
+  <div style="font-size:12px;color:var(--text-3);">Nenhum filho registrado no sistema</div>
+</div>
+{% endif %}
+
+<!-- Sugestões de Acasalamento -->
+{% if sugestoes_acasalamento %}
+<section style="margin-bottom:20px;">
+  <h2 style="margin-bottom:12px;">💑 Sugestões de Acasalamento</h2>
+  <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
+    Touros recomendados (menor ancestrais comuns = menor endogamia):
+  </div>
+
+  {% for sugestao in sugestoes_acasalamento %}
+  <div style="background:var(--bg-2);padding:10px;margin-bottom:8px;border-radius:6px;border-left:3px solid var(--green-600);">
+    <div style="font-weight:600;">{{ sugestao.touro_desc }}</div>
+    <div style="font-size:11px;color:var(--text-3);margin-top:4px;">
+      {{ sugestao.ancestrais_comuns }} ancestral(is) comum(ns)
+      <span style="margin-left:10px;background:rgba(34,197,94,.2);padding:2px 6px;border-radius:3px;">Score: {{ sugestao.score }}/10</span>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+<!-- Info -->
+<div style="background:var(--bg-secondary);padding:16px;border-radius:8px;border-left:3px solid var(--blue-600);">
+  <h3 style="margin-top:0;font-size:14px;font-weight:600;">📌 Sobre Endogamia</h3>
+  <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">
+    <p>O coeficiente de endogamia (F de Wright) mede a probabilidade de dois alelos serem idênticos por descendência de um ancestral comum.</p>
+    <p><strong>Depressão genética:</strong> alta endogamia aumenta risco de características indesejáveis (fertilidade baixa, doenças congênitas).</p>
+    <p><strong>Gestão:</strong> preferir acasalamentos com linhagens geneticamente distantes.</p>
+  </div>
+</div>
+
+<div style="margin-top:20px;">
+  <a href="{{ url_for('dashboard_genetica') }}" class="btn btn-outline">← Voltar</a>
+</div>
+
+{% endblock %}

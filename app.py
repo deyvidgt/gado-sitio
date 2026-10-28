@@ -99,6 +99,12 @@ from routes_agenda_unificada import * # noqa: F401, F403
 # v5.10 Onda 2 — Histórico de doenças e carência
 from routes_doencas import *    # noqa: F401, F403
 
+# v5.10 Onda 3 — Previsão de partos
+from routes_partos import *     # noqa: F401, F403
+
+# v5.10 Onda 4 — Análise genética e consanguinidade
+from routes_genetica import *   # noqa: F401, F403
+
 # v5.7 — Histórico de medicações (medicacoes.py)
 from routes_medicacoes import * # noqa: F401, F403
 
