@@ -84,6 +84,12 @@ from routes_leite import *      # noqa: F401, F403
 from routes_volumosos import *  # noqa: F401, F403
 from routes_alertas import *    # noqa: F401, F403
 
+# v5.10 — Calculador de ração avançado
+from routes_racao_avancada import *  # noqa: F401, F403
+
+# v5.10 — Reconhecimento de animal e genealogia visual (BETA)
+from routes_reconhecimento import *  # noqa: F401, F403
+
 # Calendário operacional consolidado (somente leitura)
 from routes_calendario import * # noqa: F401, F403
 
