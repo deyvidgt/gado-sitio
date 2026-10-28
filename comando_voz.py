@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-comando_voz.py — entende frases faladas/digitadas e monta o registro (v5.8)
+comando_voz.py — entende frases faladas/digitadas e monta o registro (v5.10.1)
 
 Funciona com regras (sem IA paga, sem internet no servidor): o vocabulário do
 sítio é pequeno e fixo. O texto vem do reconhecimento de voz do celular (ou do
@@ -21,10 +21,15 @@ Exemplos que ele entende:
   comprei 5 cabeças por 15 mil, 2 do deyvid 2 do nilson 1 da mãe
   vendi amarelo 21 e azul 12 por 9 mil, arroba a 310
   gastei 350 reais de sal, 10 sacos
-  visita contei 38 cabeças, choveu 20 milímetros, sal baixo, proteinado ok
+  visita contei 38 cabeças, choveu 20 milímetros, sal baixo, proteinado ok, colcho ok
   ficha amarelo 21
   histórico de peso do amarelo 21          (abre gráfico de evolução)
   bcs do amarelo 21            (Body Condition Score — nota visual)
+  registrei 15 litros de leite amarelo 21 (produçãdo de leite individual)
+  leite total 120 litros hoje            (produçãdo total do dia)
+  nova tarefa ordenha amanhã             (criar tarefa recorrente)
+  amarelo 21 pario                       (parto após diagnóstico)
+  mover amarelo 21 pro pasto norte       (movimentação de pasto por voz)
 
 Dividido em duas partes:
   • analisar(texto)          → intenção pura (só texto; fácil de testar);
@@ -142,7 +147,10 @@ _FILLER = {"registrar", "registra", "registre", "cadastrar", "cadastra", "cadast
            "inseminacao", "inseminada", "inseminado",
            # v5.8: peso e bcs
            "historico", "evolucao", "grafico", "bcs", "escore", "corporal", "condicao",
-           "magra", "magro", "gorda", "gordo", "gordura", "peso"}
+           "magra", "magro", "gorda", "gordo", "gordura", "peso",
+           # v5.10+: leite, tarefas, pastos
+           "leite", "ordenha", "produçao", "producao", "tarefa", "tarefas", "mover",
+           "pario", "pariram", "pariu", "colcho"}
 
 
 # ── Tokens ────────────────────────────────────────────────────────────────────
@@ -586,6 +594,10 @@ _ACOES = [
     ("morte",      r"\b(morreu|morreram|morte|morta|morto|faleceu|perdemos|perdi)\b"),
     ("venda",      r"\b(vendi|vendeu|vendemos|venda|vendido|vendida|vendidos|vendidas)\b"),
     ("gasto",      r"\b(gastei|gastamos|gasto|gastos|paguei|pagamos|despesa)\b"),
+    ("leite",      r"\b(leite|ordenh\w*|produçao|producao|produz\w*)\b"),
+    ("parto",      r"\b(pario|pariram|pariu|parto|pariu)\b"),
+    ("tarefa",     r"\b(tarefa|tarefas|agend\w*|lembr\w*|programar?)\b"),
+    ("pasto",      r"\b(mover|movimentacao|pasto|moveu|movi|move|vou mover)\b"),
     ("manejo",     r"\b(vacin\w*|vermif\w*|pesagem|pesei|pesou|pesamos|pesar|peso|tratamento|"
                    r"tratei|medicad\w*|medicamento|remedio|pasto|cobr\w*|diagnos\w*|prenha|vazia)\b"),
     ("nascimento", r"\b(nasceu|nasceram|nascimento|pariu|nascida|nascido)\b"),
@@ -788,6 +800,11 @@ def _analisar_visita(toks, n):
         (("cheio",), "Cheio"), (("meio", "metade"), "Meio"), (("baixo",), "Baixo"), (("vazio",), "Vazio")])
     if v:
         campos["conteiner"] = v
+    # Colcho: estrutura onde fica sal, proteinado, silo, feno
+    v = _nivel(toks, {"colcho"}, [
+        (("ok", "bom", "boa"), "OK"), (("alerta", "precisa"), "Alerta"), (("critico", "ruim"), "Crítico")])
+    if v:
+        campos["colcho"] = v
     obs = _apos(toks, {"observacao", "observacoes", "obs", "anotar", "anota"})
     if obs:
         campos["observacoes"] = obs
@@ -1266,6 +1283,98 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
             url_form["brincos"] = ", ".join(r.split(" #")[0] for r in refs)
         out["url_form"] = ("/compras/nova?" if acao == "compra" else "/vendas/nova?") + \
             urlencode({"prefill": 1, **url_form})
+        return out
+
+    # ── Leite (v5.10)
+    if acao == "leite":
+        out["titulo"] = "🥛 Registro de Leite"
+        alvos = _brincos(toks)
+        valor = None
+        for i, t in enumerate(toks):
+            if t.v is not None and i + 1 < len(toks) and toks[i + 1].n in ("litro", "litros"):
+                valor = float(t.v)
+                t.usado = toks[i + 1].usado = True
+                break
+        if not valor:
+            out["avisos"].append("Quantos litros? (ex.: 15 litros)")
+        if not alvos and not re.search(r"\btotal\b", n):
+            out["avisos"].append("Animal não dito — registra como produção total do rebanho.")
+        out["campos"] += [["Data", data_br], ["Tipo", "Ordenha"]]
+        if alvos:
+            out["campos"].append(["Animal", ", ".join(r.split(" #")[0] for r in [
+                A.ref(df[df["ID"] == A.resolver(df, a["num"], a.get("cor")).iloc[0]["ID"]].iloc[0])
+                for a in alvos if len(A.resolver(df, a["num"], a.get("cor"))) == 1])])
+        out["campos"].append(["Produção (L)", f"{valor:.1f}".replace(".", ",") if valor else "—"])
+        out["url_form"] = "/leite/nova?" + urlencode({"prefill": 1, "producao": f"{valor:.1f}".replace(".", ",") if valor else "",
+                                                       "data": data_iso})
+        out["so_formulario"] = True
+        return out
+
+    # ── Tarefa (v5.10)
+    if acao == "tarefa":
+        out["titulo"] = "✅ Nova Tarefa"
+        descricao = _texto_livre(toks)
+        repeticao = "Não"
+        if re.search(r"\b(todos os dias|diaria|diarios|amanha)\b", n):
+            repeticao = "Diária"
+        elif re.search(r"\b(toda semana|semanal|proxima segunda)\b", n):
+            repeticao = "Semanal"
+        elif re.search(r"\b(todo mes|mensal)\b", n):
+            repeticao = "Mensal"
+        out["campos"] += [["Data", data_br], ["Descrição", descricao or "—"], ["Repetir", repeticao]]
+        if not descricao:
+            out["avisos"].append("Descrição não dita — abra o formulário para completar.")
+        out["url_form"] = "/tarefas/nova?" + urlencode({"prefill": 1, "descricao": descricao,
+                                                        "data": data_iso, "repeticao": repeticao})
+        out["so_formulario"] = True
+        return out
+
+    # ── Parto (v5.10 — reprodução)
+    if acao == "parto":
+        out["titulo"] = "🐮 Parto"
+        alvos = _brincos(toks)
+        refs, ids = resolver_alvos(alvos)
+        if not ids and alvos:
+            out["erros"].append(f"Animal {_brinco_txt(alvos[0].get('cor'), alvos[0]['num'])} não encontrado.")
+        elif ids:
+            out["campos"].append(["Vaca", refs[0].split(" #")[0]])
+        else:
+            out["avisos"].append("Animal não dito — abra o Manejo e registre o parto.")
+        out["campos"] += [["Data", data_br]]
+        out["payload"] = {"acao": "manejo", "linha": {
+            "Data": data_iso, "Tipo": "Parto", "Qtd Cabeças": 1, "Descrição": n,
+            "Responsável": membro, "Brincos": "; ".join(refs) if refs else ""}}
+        out["url_form"] = "/manejo/novo?" + urlencode({"prefill": 1, "tipo": "Parto", "cabecas": 1,
+                                                       "brincos": refs[0].split(" #")[0] if refs else "",
+                                                       "data": data_iso})
+        return out
+
+    # ── Pasto — movimentação (v5.10)
+    if acao == "pasto" and re.search(r"\b(mover|moveu|movi|move|movimentacao)\b", n):
+        out["titulo"] = "🗺️ Movimentação de Pasto"
+        alvos = _brincos(toks)
+        refs, ids = resolver_alvos(alvos)
+        # Procura nome do pasto na frase ("pro pasto norte", "mover … pro norte")
+        pasto_nome = ""
+        for i, t in enumerate(toks):
+            if t.n in ("pasto", "pro", "para") and i + 1 < len(toks):
+                prox = toks[i + 1].o
+                if toks[i + 1].n not in _FILLER and toks[i + 1].v is None and toks[i + 1].n not in _CORES:
+                    pasto_nome = prox
+                    break
+        if not ids and alvos:
+            out["avisos"].append("Brinco não confirmado — abra o Manejo para registrar.")
+        if not pasto_nome:
+            out["avisos"].append("Nome do pasto não dito — complete no formulário.")
+        out["campos"] += [["Data", data_br], ["Animais", ", ".join(r.split(" #")[0] for r in refs) or "—"],
+                         ["Pasto", pasto_nome or "—"]]
+        out["payload"] = {"acao": "manejo", "linha": {
+            "Data": data_iso, "Tipo": "Movimentação de Pasto", "Qtd Cabeças": len(refs) or 1,
+            "Pasto": pasto_nome, "Descrição": n, "Responsável": membro, "Brincos": "; ".join(refs)}}
+        out["url_form"] = "/manejo/novo?" + urlencode({"prefill": 1, "tipo": "Movimentação de Pasto",
+                                                       "cabecas": len(refs) or 1, "pasto": pasto_nome,
+                                                       "brincos": ", ".join(r.split(" #")[0] for r in refs),
+                                                       "data": data_iso})
         return out
 
     # ── Gasto
