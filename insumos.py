@@ -174,6 +174,69 @@ def previsao_todos(df_vis, df_gast, hoje=None) -> list[dict]:
     return [previsao_insumo(p, df_vis, df_gast, hoje) for p in INSUMOS]
 
 
+def estoque_completo(df_insumos: pd.DataFrame, df_vis: pd.DataFrame,
+                     df_gast: pd.DataFrame, hoje=None) -> list[dict]:
+    """Estado atual de cada insumo com informações do catálogo (marca, nutrição, etc).
+
+    Combina previsão de estoque com dados do catálogo de insumos."""
+    hoje = pd.Timestamp(hoje or datetime.now()).normalize()
+    out = []
+
+    if df_insumos is None or df_insumos.empty:
+        # Sem catálogo, retorna só a previsão
+        for p in INSUMOS:
+            prev = previsao_insumo(p, df_vis, df_gast, hoje)
+            prev["marca"] = None
+            prev["preco_saco"] = None
+            prev["kg_saco"] = None
+            prev["pb_pct"] = None
+            prev["energia"] = None
+            out.append(prev)
+        return out
+
+    # Agrupa catálogo por tipo de insumo
+    por_tipo = {}
+    for _, row in df_insumos[df_insumos["Tipo"].notna()].iterrows():
+        tipo = str(row.get("Tipo", "")).strip()
+        if tipo not in por_tipo:
+            por_tipo[tipo] = []
+        por_tipo[tipo].append({
+            "marca": str(row.get("Marca", "")).strip(),
+            "preco_saco": _num(row.get("R$/Saco")),
+            "kg_saco": _num(row.get("kg/Saco")),
+            "pb_pct": _num(row.get("PB (%)")),
+            "energia": _num(row.get("Energia (Mcal/kg)")),
+        })
+
+    # Monta resultado com última marca de cada tipo
+    for p in INSUMOS:
+        prev = previsao_insumo(p, df_vis, df_gast, hoje)
+        ultimas = por_tipo.get(p, [{}])
+        ultima = ultimas[-1] if ultimas else {}
+
+        prev["marca"] = ultima.get("marca")
+        prev["preco_saco"] = ultima.get("preco_saco")
+        prev["kg_saco"] = ultima.get("kg_saco")
+        prev["pb_pct"] = ultima.get("pb_pct")
+        prev["energia"] = ultima.get("energia")
+
+        # Calcula kg em estoque se temos estoque em sacos e kg/saco
+        if prev["estoque"] is not None and prev["kg_saco"] is not None:
+            prev["kg_estoque"] = round(prev["estoque"] * prev["kg_saco"], 1)
+        else:
+            prev["kg_estoque"] = None
+
+        # Calcula valor total se temos sacos e preço
+        if prev["estoque"] is not None and prev["preco_saco"] is not None:
+            prev["valor_total"] = round(prev["estoque"] * prev["preco_saco"], 2)
+        else:
+            prev["valor_total"] = None
+
+        out.append(prev)
+
+    return out
+
+
 def texto_previsao(p: dict) -> str:
     """Uma linha legível (painel e WhatsApp)."""
     nome = p["produto"]

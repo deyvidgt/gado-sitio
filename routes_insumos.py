@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Comparador de proteinado/ração — Sítio Santo Antonio v5.3
+Comparador de proteinado/ração e painel de estoque — Sítio Santo Antonio v5.10
 
-Só calcula: nada é gravado na planilha, por isso é GET (os valores vão na URL
-e o link pode ser guardado/mandado no WhatsApp).
+Comparador: só calcula, nada é gravado (valores na URL).
+Estoque: mostra estado atual com marca, nutrição e valor.
 """
 from flask import render_template, request
 
 import insumos as I
+import db
 from calculos import calcular_estoque
 from config import INSUMOS
 from extensions import app, login_required, _get_dados_cache
@@ -35,3 +36,13 @@ def comparar_insumos():
                            resultado=I.comparar(opcoes, cabecas), linhas=range(LINHAS),
                            pagos=[(p, u) for p, u in pagos if u],
                            consumo_padrao=CONSUMO_PADRAO)
+
+
+@app.route("/insumos/estoque")
+@login_required
+def estoque_insumos():
+    """Painel de estoque atual: sacos, kg, valor, marca, nutrição."""
+    dados = _get_dados_cache()
+    insumos_info = I.estoque_completo(dados.get("Insumos"), dados["Visitas"],
+                                      dados["Gastos"])
+    return render_template("estoque_insumos.html", insumos=insumos_info)

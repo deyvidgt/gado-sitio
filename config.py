@@ -437,6 +437,11 @@ COLUNAS_GENETICA = [
     "Data Registro", "Observação", "Responsável", "ID Envio",
 ]
 
+COLUNAS_INSUMOS = [
+    "Tipo", "Marca", "R$/Saco", "kg/Saco", "PB (%)", "Energia (Mcal/kg)",
+    "Data Cadastro", "Observações",
+]
+
 CORES = {
     "verde_escuro":  "1B5E20",
     "verde_medio":   "388E3C",

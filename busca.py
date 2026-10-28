@@ -18,6 +18,7 @@ ABAS_DISPONIVEIS = [
     {"termo": "pastos", "titulo": "Pastos", "link": "/pastos", "icone": "🗺️"},
     {"termo": "manejo", "titulo": "Manejo", "link": "/manejo", "icone": "🌿"},
     {"termo": "insumos", "titulo": "Insumos", "link": "/insumos/comparar", "icone": "🧂"},
+    {"termo": "estoque", "titulo": "Estoque de Insumos", "link": "/insumos/estoque", "icone": "📦"},
     {"termo": "visita", "titulo": "Visitas", "link": "/visitas", "icone": "🗓️"},
     {"termo": "tarefa", "titulo": "Tarefas", "link": "/tarefas", "icone": "📋"},
     {"termo": "calendario", "titulo": "Calendário", "link": "/calendario", "icone": "📅"},
