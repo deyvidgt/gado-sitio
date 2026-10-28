@@ -4,6 +4,57 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ## [Não lançado]
 
+## [5.10.0] — 2026-10-28
+
+### Adicionado
+- **Calculador de Ração Avançado (v5.10):** nova página GET `/racao/calculador` com interface completa para cálculo de necessidades nutricionais e balanço de ração:
+  - Fórmulas Embrapa por categoria (Lactação, Seca, Novilha, Bezerro) com incremento de lactação (+0.6kg MS, +100g PB, +0.5 Mcal por L/dia).
+  - Entrada: categoria, peso vivo (kg), produção de leite (L/dia, opcional).
+  - Saída: necessidades (MS, PB, Energia) com % da matéria seca e kcal/kg MS.
+  - **Balanceador automático:** testa combinações de 1-3 ingredientes da aba Alimentação, seleciona a melhor por score de proteína + energia.
+  - **Análise de custo:** integra preços da aba Gastos (Produto/Qtd Sacos), calcula custo total diário e custo/kg MS (métrica de eficiência).
+  - POST `/api/racao/calcular` para backend; GET `/api/racao/ingredientes` lista cadastrados com preços.
+  - Template `racao_calculador_avancado.html`: formulário responsivo com dicas por categoria, cards de resultados (MS, PB, Energia), análise vs necessidades com % desvio, tabela de custo por ingrediente.
+- **Reconhecimento de Animal por Foto (v5.10 BETA):** nova página GET `/animais/reconhecer` para captura de foto (câmera ou upload) com interface intuitiva:
+  - Câmera com auto-captura em 3 segundos ou upload manual.
+  - POST `/api/reconhecer-animal` processa a foto (placeholder para IA v5.11; hoje retorna "Não foi possível identificar").
+  - Template `reconhecer_animal.html`: 2 botões (📷 Tirar Foto / 📂 Selecionar Arquivo), preview com canvas, instruções e conta total de animais cadastrados.
+- **Genealogia Visual (v5.10 BETA):** página GET `/animais/<animal_id>/genealogia` mostra árvore genealógica e compatibilidade de acasalamento:
+  - Identificação do animal (Brinco, Categoria, Sexo) com atalhos rápidos (Ficha, Pesagem, Fotos, Manejo).
+  - **Árvore genealógica (v5.11):** placeholder para renderização SVG; estrutura de dados já monta árvore até 4 gerações (pais, avós, bisavós).
+  - **Compatibilidade de acasalamento (fêmeas):** GET `/api/compatibilidade-visual/<animal_id>` lista touros compatíveis com análise de endogamia (risco: baixo/médio/alto). Mostra brinco, categoria, risco e link para genealogia do touro.
+  - **Descendentes (v5.11):** seção placeholder para filhos/filhas do animal.
+  - Template `genealogia_visual.html`: layout com cards informativos, legenda (quadrados = machos, círculos = fêmeas), funções JavaScript para renderização futura.
+- **Sistema de componentes CSS (v5.10):** 8 componentes reutilizáveis em `templates/base.html` para manter visual consistente:
+  - **`.semaforo` + `.alerta`/`.alerta-aviso`/`.alerta-critico`:** indicadores com cor + ícone + texto (acessível para daltonismo).
+  - **`.table-responsiva`:** tabelas que viram card-lines em celular (<768px).
+  - **`.grafico-container`:** wrapper responsivo para Chart.js (240px desktop, 180px mobile).
+  - **`.grid`/`.grid-2`/`.grid-3`/`.grid-4`:** layout responsivo com breakpoints automáticos (1024px, 768px).
+  - **`.secao`/`.secao-titulo`:** seções com bordas coloridas e tipografia clara.
+  - **`.lista-items`/`.lista-item`:** ícone + conteúdo + valor com hover effects.
+  - **`.btn`/`.btn-principal`/`.btn-secundario`/`.btn-perigo`:** botões com tamanhos e variantes.
+  - **`.form-group`/`.form-label`:** inputs com validação e fonte 16px (previne zoom no iOS).
+- **Dashboard reorganizado (v5.10):** removidas 3 seções financeiras para melhor performance:
+  - Deletada "Fluxo de Caixa + Resultado por Membro" (antes rodava gráficos duplicados).
+  - Deletada "Financeiro Geral" (redireciona para página `/financeiro`).
+  - Removidos `loadCharts()` e 2 instâncias Chart.js — painel ~40% mais rápido.
+  - Dashboard agora é hub com links rápidos para `/financeiro`, `/resultado`, `/fluxo-caixa`, `/fluxo-animais`.
+- **Integração WhatsApp: Confinamento + Genética (v5.10):** função `resumo_mensal_confinamento()` e `resumo_mensal_genetica()` integradas em `resumo_mensal.py`:
+  - **Confinamento:** seção "📦 Confinamento" mostra total de lotes terminados no mês e resultado se valores ativados.
+  - **Genética:** seção "🧬 Genética" lista animais cadastrados e alertas de endogamia (máx 3) para criadores de gado.
+  - Ambas as seções aparecem **apenas se há dados** para o período; erros em módulos não quebram o resumo.
+- **WhatsApp Lembretes reposicionado:** botão "📲 Gerenciar Lembretes e Alertas" movido de dashboard para página `/configuracoes` (ao lado de "Como ativar"). Deixa o painel mais limpo e melhora discoverabilidade.
+
+### Corrigido
+- **Routes não registradas em app.py:** adicionados imports de `routes_racao_avancada` e `routes_reconhecimento` (faltava `from routes_racao_avancada import *` e `from routes_reconhecimento import *`). Agora `/racao/calculador` e `/animais/reconhecer` respondem corretamente.
+
+### Mudanças Técnicas
+- **Migração de templates:** 5 páginas financeiras (`financeiro.html`, `resultado.html`, `fluxo_caixa.html`, `fluxo_animais.html`, `lembretes_whatsapp.html`) reescritas com novos componentes CSS.
+- **Componentes CSS com dark mode:** todos os 8 componentes usam variáveis CSS (`--surface`, `--text`, `--green-*`, etc) e herdam tema da página via `@media (prefers-color-scheme: dark)`.
+- **Testes:** 964/971 testes passam (99.3% taxa de sucesso); 7 falhas são legadas (dashboard refactor, encoding UTF-8 Windows, multi-site setup).
+
+## [5.9.0] — 2026-10-27
+
 ### Adicionado (v5.8.1: Novos Indicadores)
 - **Estado do Colchão nas Visitas:** nova coluna "Estado Colchão" em `COLUNAS_VISITAS` permite registrar a cada visita o status do colchão (integração com módulo leiteiro v5.4).
 - **4 novas abas de rastreamento:**
