@@ -38,9 +38,9 @@ def estoque_por_tipo(df_volumosos):
 
     # Colunas esperadas: Data, Tipo, Quantidade, Qualidade, Origem, Custo
     df = df_volumosos.copy()
-    df["_data"] = df.get("Data", "").map(_data)
-    df["_qty"] = df.get("Quantidade", 0).map(_numero)
-    df["_tipo"] = df.get("Tipo", "").astype(str).str.strip()
+    df["_data"] = df["Data"].map(_data) if "Data" in df.columns else pd.Series(dtype=object)
+    df["_qty"] = df["Quantidade"].map(_numero) if "Quantidade" in df.columns else pd.Series(dtype=float)
+    df["_tipo"] = df["Tipo"].astype(str).str.strip() if "Tipo" in df.columns else pd.Series(dtype=str)
 
     linhas = df[df["_data"].notna() & df["_qty"].notna() & (df["_tipo"] != "")].copy()
     if linhas.empty:
@@ -56,9 +56,9 @@ def consumo_periodo(df_consumo, df_volumosos, inicio, fim, tipo=None):
         return 0.0
 
     df = df_consumo.copy()
-    df["_data"] = df.get("Data", "").map(_data)
-    df["_qty"] = df.get("Quantidade consumida", 0).map(_numero)
-    df["_tipo"] = df.get("Tipo", "").astype(str).str.strip()
+    df["_data"] = df["Data"].map(_data) if "Data" in df.columns else pd.Series(dtype=object)
+    df["_qty"] = df["Quantidade consumida"].map(_numero) if "Quantidade consumida" in df.columns else pd.Series(dtype=float)
+    df["_tipo"] = df["Tipo"].astype(str).str.strip() if "Tipo" in df.columns else pd.Series(dtype=str)
 
     linhas = df[df["_data"].notna() & df["_qty"].notna() & (df["_tipo"] != "")].copy()
 
