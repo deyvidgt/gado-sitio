@@ -13,7 +13,6 @@ import pandas as pd
 from datetime import datetime, timedelta
 from db import carregar_aba
 from extensions import _agora
-from calculos import resultado
 
 
 def engorda_pastagem_resumo(dados: dict = None) -> dict:

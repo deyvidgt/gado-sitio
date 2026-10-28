@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Engorda vs Pastagem — Sítio Santo Antonio{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>📊 Indicadores de Engorda vs Pastagem</h1>
+
+  {% if resumo.erro %}
+    <div class="alerta alerta-aviso">
+      Erro ao carregar dados: {{ resumo.erro }}
+    </div>
+  {% else %}
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Lotes Ativos</div>
+        <div class="metric-valor">{{ resumo.lotes_ativos }}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Ganho Médio (kg/dia)</div>
+        <div class="metric-valor">{{ resumo.ganho_medio }}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Melhor Lote</div>
+        <div class="metric-valor">{{ resumo.melhor_lote.pasto or '—' }}</div>
+        <div class="metric-info">GMD: {{ resumo.melhor_lote.gmd }} kg/dia</div>
+      </div>
+    </div>
+
+    {% if resumo.tabela %}
+    <h2>Histórico (últimas 10 entradas)</h2>
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Pasto</th>
+          <th>Dias</th>
+          <th>GMD (kg/dia)</th>
+          <th>Lotação (UA/ha)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for linha in resumo.tabela %}
+        <tr>
+          <td>{{ linha.get('Data', '—') }}</td>
+          <td>{{ linha.get('Pasto ID', '—') }}</td>
+          <td>{{ linha.get('Dias no Pasto', '—') }}</td>
+          <td>{{ linha.get('GMD (kg/dia)', '—') }}</td>
+          <td>{{ linha.get('Lotação (UA/ha)', '—') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  {% endif %}
+</div>
+
+<style>
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  h1, h2 { margin-top: 20px; }
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin: 20px 0; }
+  .metric { background: var(--surface); padding: 16px; border-radius: 8px; text-align: center; }
+  .metric-label { font-size: 12px; color: var(--text-3); text-transform: uppercase; }
+  .metric-valor { font-size: 28px; font-weight: 600; margin: 8px 0; }
+  .metric-info { font-size: 12px; color: var(--text-2); }
+  .tabela { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  .tabela th, .tabela td { padding: 12px; text-align: left; border-bottom: 1px solid var(--bg-2); }
+  .tabela th { background: var(--bg-2); font-weight: 600; }
+  .alerta { padding: 12px; border-radius: 4px; margin: 16px 0; }
+  .alerta-aviso { background: var(--warn); color: var(--text); }
+</style>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Mortalidade de Bezerros — Sítio Santo Antonio{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>🐄 Taxa de Mortalidade de Bezerros</h1>
+
+  {% if analise.erro %}
+    <div class="alerta alerta-aviso">
+      Erro ao carregar dados: {{ analise.erro }}
+    </div>
+  {% else %}
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Taxa Média</div>
+        <div class="metric-valor">{{ analise.taxa_media }}%</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Bezerros Nascidos</div>
+        <div class="metric-valor">{{ analise.total_nascidos }}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Bezerros Mortos</div>
+        <div class="metric-valor">{{ analise.total_mortos }}</div>
+      </div>
+    </div>
+
+    {% if analise.causas %}
+    <h2>Principais Causas</h2>
+    <div class="causas">
+      {% for causa, count in analise.causas.items() %}
+      <div class="causa-item">
+        <span class="causa-nome">{{ causa or '—' }}</span>
+        <span class="causa-count">{{ count }} ocorrências</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if analise.tabela %}
+    <h2>Histórico (últimos 12 meses)</h2>
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>Período</th>
+          <th>Nascidos</th>
+          <th>Mortos</th>
+          <th>Taxa Mortalidade</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for linha in analise.tabela %}
+        <tr>
+          <td>{{ linha.get('Período (mês/ano)', '—') }}</td>
+          <td>{{ linha.get('Bezerros Nascidos', '—') }}</td>
+          <td>{{ linha.get('Bezerros Mortos', '—') }}</td>
+          <td class="{% if linha.get('Taxa Mortalidade (%)', 0)|float < 3 %}status-ok{% elif linha.get('Taxa Mortalidade (%)', 0)|float < 7 %}status-aviso{% else %}status-ruim{% endif %}">
+            {{ linha.get('Taxa Mortalidade (%)', '—') }}%
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  {% endif %}
+</div>
+
+<style>
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  h1, h2 { margin-top: 20px; }
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin: 20px 0; }
+  .metric { background: var(--surface); padding: 16px; border-radius: 8px; text-align: center; }
+  .metric-label { font-size: 12px; color: var(--text-3); text-transform: uppercase; }
+  .metric-valor { font-size: 28px; font-weight: 600; margin: 8px 0; }
+  .causas { display: grid; gap: 12px; margin: 16px 0; }
+  .causa-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface); border-radius: 4px; }
+  .causa-nome { font-weight: 500; }
+  .causa-count { font-size: 12px; color: var(--text-3); background: var(--bg-2); padding: 4px 8px; border-radius: 4px; }
+  .tabela { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  .tabela th, .tabela td { padding: 12px; text-align: left; border-bottom: 1px solid var(--bg-2); }
+  .tabela th { background: var(--bg-2); font-weight: 600; }
+  .status-ok { color: var(--green-600); font-weight: 600; }
+  .status-aviso { color: var(--warn); font-weight: 600; }
+  .status-ruim { color: var(--danger); font-weight: 600; }
+  .alerta { padding: 12px; border-radius: 4px; margin: 16px 0; }
+  .alerta-aviso { background: var(--warn); color: var(--text); }
+</style>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Ração - Consumo — Sítio Santo Antonio{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>🍽️ Análise de Ração Oferecida vs Consumida</h1>
+
+  {% if analise.erro %}
+    <div class="alerta alerta-aviso">
+      Erro ao carregar dados: {{ analise.erro }}
+    </div>
+  {% else %}
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Consumo Médio</div>
+        <div class="metric-valor">{{ analise.consumo_medio }}%</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Desperdício Médio</div>
+        <div class="metric-valor">{{ analise.desperdicio_medio }}%</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Custo Mês</div>
+        <div class="metric-valor">R$ {{ analise.custo_total_mes }}</div>
+      </div>
+    </div>
+
+    {% if analise.tabela %}
+    <h2>Histórico (últimas 10 semanas)</h2>
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Tipo Ração</th>
+          <th>Oferecida (kg)</th>
+          <th>Consumida (kg)</th>
+          <th>Taxa Consumo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for linha in analise.tabela %}
+        <tr>
+          <td>{{ linha.get('Data', '—') }}</td>
+          <td>{{ linha.get('Tipo Ração', '—') }}</td>
+          <td>{{ linha.get('Quantidade Oferecida (kg)', '—') }}</td>
+          <td>{{ linha.get('Quantidade Consumida (kg)', '—') }}</td>
+          <td class="{% if linha.get('Taxa Consumo (%)', 0)|float > 85 %}status-ok{% elif linha.get('Taxa Consumo (%)', 0)|float > 70 %}status-aviso{% else %}status-ruim{% endif %}">
+            {{ linha.get('Taxa Consumo (%)', '—') }}%
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  {% endif %}
+</div>
+
+<style>
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  h1, h2 { margin-top: 20px; }
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin: 20px 0; }
+  .metric { background: var(--surface); padding: 16px; border-radius: 8px; text-align: center; }
+  .metric-label { font-size: 12px; color: var(--text-3); text-transform: uppercase; }
+  .metric-valor { font-size: 28px; font-weight: 600; margin: 8px 0; }
+  .tabela { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  .tabela th, .tabela td { padding: 12px; text-align: left; border-bottom: 1px solid var(--bg-2); }
+  .tabela th { background: var(--bg-2); font-weight: 600; }
+  .status-ok { color: var(--green-600); font-weight: 600; }
+  .status-aviso { color: var(--warn); font-weight: 600; }
+  .status-ruim { color: var(--danger); font-weight: 600; }
+  .alerta { padding: 12px; border-radius: 4px; margin: 16px 0; }
+  .alerta-aviso { background: var(--warn); color: var(--text); }
+</style>
+{% endblock %}
