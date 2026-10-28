@@ -1,13 +1,40 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-busca.py — Busca rápida global por animais, tarefas, eventos, registros (v5.6)
+busca.py — Busca rápida global por animais, tarefas, eventos, registros, abas (v5.10)
 """
 import re
 from functools import lru_cache
 import db
 import animais
 import tarefas
+
+# Atalhos de abas/páginas que podem ser pesquisados
+ABAS_DISPONIVEIS = [
+    {"termo": "dashboard", "titulo": "Dashboard", "link": "/", "icone": "🏠"},
+    {"termo": "animais", "titulo": "Animais", "link": "/animais", "icone": "🐄"},
+    {"termo": "pesagem", "titulo": "Pesagem", "link": "/animais/pesagem", "icone": "⚖️"},
+    {"termo": "reproducao", "titulo": "Reprodução", "link": "/reproducao", "icone": "🐮"},
+    {"termo": "pastos", "titulo": "Pastos", "link": "/pastos", "icone": "🗺️"},
+    {"termo": "manejo", "titulo": "Manejo", "link": "/manejo", "icone": "🌿"},
+    {"termo": "insumos", "titulo": "Insumos", "link": "/insumos/comparar", "icone": "🧂"},
+    {"termo": "visita", "titulo": "Visitas", "link": "/visitas", "icone": "🗓️"},
+    {"termo": "tarefa", "titulo": "Tarefas", "link": "/tarefas", "icone": "📋"},
+    {"termo": "calendario", "titulo": "Calendário", "link": "/calendario", "icone": "📅"},
+    {"termo": "agenda", "titulo": "Agenda Unificada", "link": "/agenda", "icone": "📅"},
+    {"termo": "compra", "titulo": "Compras", "link": "/compras", "icone": "📦"},
+    {"termo": "gasto", "titulo": "Gastos", "link": "/gastos", "icone": "💸"},
+    {"termo": "venda", "titulo": "Vendas", "link": "/vendas", "icone": "🤝"},
+    {"termo": "lote", "titulo": "Lotes", "link": "/lotes", "icone": "📦"},
+    {"termo": "relatorio", "titulo": "Relatórios", "link": "/relatorios", "icone": "📈"},
+    {"termo": "financeiro", "titulo": "Financeiro", "link": "/financeiro", "icone": "💰"},
+    {"termo": "resultado", "titulo": "Resultado por Membro", "link": "/resultado", "icone": "📊"},
+    {"termo": "fluxo", "titulo": "Fluxo de Caixa", "link": "/fluxo-caixa", "icone": "📈"},
+    {"termo": "genetica", "titulo": "Genética", "link": "/genetica", "icone": "🧬"},
+    {"termo": "confinamento", "titulo": "Confinamento", "link": "/confinamento", "icone": "🏚️"},
+    {"termo": "conversao alimentar", "titulo": "Conversão Alimentar", "link": "/nutrição/conversão", "icone": "🥣"},
+    {"termo": "ocupacao pastos", "titulo": "Ocupação de Pastos", "link": "/pastos/ocupação", "icone": "🌾"},
+]
 
 
 def buscar_global(termo: str, tipo_filtro: str | None = None) -> list[dict]:
@@ -77,11 +104,23 @@ def buscar_global(termo: str, tipo_filtro: str | None = None) -> list[dict]:
     except Exception:
         pass
 
+    # Abas/Páginas: pesquisa rápida por nome de aba
+    for aba in ABAS_DISPONIVEIS:
+        if termo in aba["termo"]:
+            resultados.append({
+                "tipo": "aba",
+                "id": aba["link"],
+                "titulo": aba["titulo"],
+                "subtitulo": "Ir para esta página",
+                "link": aba["link"],
+                "icone": aba["icone"]
+            })
+
     # Filtro por tipo se pedido
     if tipo_filtro:
         resultados = [r for r in resultados if r["tipo"] == tipo_filtro]
 
-    # Ordena por tipo (animal > tarefa > evento) e limita a 10
-    ordem = {"animal": 0, "tarefa": 1, "evento": 2}
+    # Ordena por tipo (animal > tarefa > evento > aba) e limita a 10
+    ordem = {"animal": 0, "tarefa": 1, "evento": 2, "aba": 3}
     resultados.sort(key=lambda r: (ordem.get(r["tipo"], 99), r["titulo"]))
     return resultados[:10]
