@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Ocupacao de Pastos — Lotacao e Rotacao{% endblock %}
+
+{% block content %}
+<h1>Ocupacao de Pastos (Lotacao Dinamica)</h1>
+
+<!-- Resumo Geral -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;">
+  <div class="metric" style="border-left:3px solid {% if resumo.saude_rebanho == 'CRITICA' %}var(--red-600){% elif resumo.saude_rebanho == 'AVISO' %}var(--orange-600){% else %}var(--green-600){% endif %};">
+    <div style="font-size:24px;font-weight:bold;">{{ resumo.saude_rebanho }}</div>
+    <div style="font-size:12px;color:var(--text-3);">Saude do Rebanho</div>
+  </div>
+  <div class="metric" style="border-left:3px solid var(--blue-600);">
+    <div style="font-size:24px;font-weight:bold;">{{ resumo.media_taxa_ocupacao_percent }}%</div>
+    <div style="font-size:12px;color:var(--text-3);">Taxa Media de Ocupacao</div>
+  </div>
+  <div class="metric" style="border-left:3px solid var(--red-600);">
+    <div style="font-size:24px;font-weight:bold;">{{ resumo.pastos_criticos }}</div>
+    <div style="font-size:12px;color:var(--text-3);">Pastos Criticos</div>
+  </div>
+  <div class="metric" style="border-left:3px solid var(--orange-600);">
+    <div style="font-size:24px;font-weight:bold;">{{ resumo.pastos_aviso }}</div>
+    <div style="font-size:12px;color:var(--text-3);">Avisos de Lotacao</div>
+  </div>
+</div>
+
+<!-- Alertas Criticos -->
+{% if alertas_criticos %}
+<div style="margin-bottom:20px;">
+  <h2 style="color:var(--red-600);margin:0 0 12px;">CRITICO (Sobrelotacao >100%)</h2>
+  {% for alerta in alertas_criticos %}
+  <div style="background:rgba(220,38,38,.1);border-left:4px solid var(--red-600);padding:12px;margin-bottom:10px;border-radius:4px;">
+    <div style="font-weight:600;">{{ alerta.nome_pasto }}</div>
+    <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">
+      <div>Ocupacao: {{ alerta.taxa_ocupacao_percent }}% ({{ alerta.ua_ha_atual }} UA/ha de {{ alerta.capacidade_ua_ha }})</div>
+      <div>{{ alerta.cabeças }} cabecas em {{ alerta.area_ha }} ha ({{ alerta.dias }} dias)</div>
+      <div style="margin-top:6px;font-weight:600;color:var(--red-600);">{{ alerta.recomendacao }}</div>
+    </div>
+    <a href="{{ url_for('plano_rotacao_pasto', pasto_id=alerta.pasto_id) }}" class="btn btn-outline" style="font-size:11px;margin-top:8px;">Ver Plano</a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Alertas de Aviso -->
+{% if alertas_avisos %}
+<div style="margin-bottom:20px;">
+  <h2 style="color:var(--orange-600);margin:0 0 12px;">AVISO (Lotacao 85-100%)</h2>
+  {% for alerta in alertas_avisos %}
+  <div style="background:rgba(234,179,8,.1);border-left:4px solid var(--orange-600);padding:12px;margin-bottom:8px;border-radius:4px;">
+    <div style="font-weight:600;">{{ alerta.nome_pasto }}</div>
+    <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">
+      <div>Ocupacao: {{ alerta.taxa_ocupacao_percent }}% — {{ alerta.motivo }}</div>
+      <div style="margin-top:4px;">{{ alerta.recomendacao }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Pastos em Alerta (75-85%) -->
+{% if alertas_info %}
+<div style="margin-bottom:20px;">
+  <h2 style="color:var(--blue-600);margin:0 0 12px;">ALERTA (Lotacao 75-85% - Otimizado)</h2>
+  {% for alerta in alertas_info %}
+  <div style="background:rgba(59,130,246,.1);border-left:4px solid var(--blue-600);padding:12px;margin-bottom:8px;border-radius:4px;">
+    <div style="font-weight:600;">{{ alerta.nome_pasto }}</div>
+    <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">
+      <div>Ocupacao: {{ alerta.taxa_ocupacao_percent }}% — {{ alerta.motivo }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Pastos Subutilizados -->
+{% if pastos_subutilizados %}
+<div style="margin-bottom:20px;">
+  <h2 style="color:var(--green-600);margin:0 0 12px;">Subutilizados (<30%)</h2>
+  {% for alerta in pastos_subutilizados %}
+  <div style="background:rgba(34,197,94,.1);border-left:4px solid var(--green-600);padding:12px;margin-bottom:8px;border-radius:4px;">
+    <div style="font-weight:600;">{{ alerta.nome_pasto }}</div>
+    <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">
+      <div>Ocupacao: {{ alerta.taxa_ocupacao_percent }}% — {{ alerta.motivo }}</div>
+      <div style="margin-top:4px;">{{ alerta.recomendacao }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Info -->
+<div style="background:var(--bg-secondary);padding:16px;border-radius:8px;border-left:3px solid var(--blue-600);">
+  <h3 style="margin-top:0;font-size:14px;font-weight:600;">Sobre Lotacao e Rotacao</h3>
+  <ul style="font-size:12px;color:var(--text-secondary);margin:0;padding-left:20px;">
+    <li><strong>UA/ha:</strong> Unidade Animal por hectare. 1 UA = 450 kg de gado</li>
+    <li><strong>Capacidade padrao:</strong> Braquiaria 3.0 | Coastcross 3.5 | Tifton 3.2 UA/ha</li>
+    <li><strong>Taxa de ocupacao:</strong> (UA/ha atual) / (capacidade) × 100%</li>
+    <li><strong>Ideal:</strong> 75-85% da capacidade para producao otimizada</li>
+    <li><strong>>100%:</strong> Sobrelotacao — retirar animais para recuperacao do pasto</li>
+    <li><strong>&lt;30%:</strong> Subutilizacao — oportunidade de aumentar rebanho</li>
+  </ul>
+</div>
+
+<div style="margin-top:20px;">
+  <a href="{{ url_for('dashboard_pastos') if 'pastos' in request.path else url_for('dashboard') }}" class="btn btn-outline">← Voltar</a>
+</div>
+
+{% endblock %}

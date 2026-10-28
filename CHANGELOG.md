@@ -5,6 +5,20 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
+- **Conversão Alimentar e Eficiência Nutricional (v5.10 Onda 5):** nova página `/nutrição/conversão` com análise de eficiência alimentar:
+  - Calcula conversão alimentar: kg ração consumida / kg ganho de peso (corte) ou kg leite (leiteiro).
+  - Padrões por categoria: Bezerro 4.5 | Novilha 6.0 | Boi 6.5 | Vaca Lactação 1.3 | Vaca Seca 8.0.
+  - Alertas: verde (<10% desvio), amarelo (10-20%), vermelho (>20%) do padrão.
+  - Análise por animal: consumo total/diário, ganho de peso, comparação com padrão.
+  - Recomendações automatizadas: revisar forragem, qualidade de concentrado, mastite, parasitas.
+  - Novo módulo: `conversao_alimentar.py`; rotas: GET `/nutrição/conversão`, `/nutrição/conversão/<animal_id>`, APIs.
+- **Ocupação de Pastos e Rotação Dinâmica (v5.10 Onda 6):** nova página `/pastos/ocupação` com controle de lotação e períodos de ocupação/descanso:
+  - Calcula dias recomendados de ocupação/descanso baseado em lotação atual vs. capacidade.
+  - Taxa de ocupação: compara UA/ha atual com capacidade do pasto (Braquiária 3.0 | Coastcross 3.5 | Tifton 3.2).
+  - Alertas: vermelho (>100% sobrelotação), amarelo (85-100%), verde (otimizado 75-85%), azul (subutilizado <30%).
+  - Plano de rotação simulado: projeta 3 ciclos com datas de ocupação/descanso e recomendações.
+  - Benefícios: melhor produção, menos parasitas, maior longevidade do pasto, maior sustentabilidade.
+  - Novo módulo: `pastos_ocupacao.py`; rotas: GET `/pastos/ocupação`, `/pastos/<pasto_id>/rotação`, APIs.
 - **Previsão de Partos e Reprodução (v5.10 Onda 3):** nova página `/partos` com calendário e alertas de parto:
   - Calcula datas esperadas de parto (283 dias) a partir de coberturas registradas.
   - Status por vaca: gestação → toque (35d antes) → secagem (60d antes) → parto.

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Conversao Alimentar — {{ animal_desc }}{% endblock %}
+
+{% block content %}
+<h1>Conversao Alimentar — {{ animal_desc }}</h1>
+
+<!-- Status de Conversao -->
+<section style="background:var(--bg-secondary);padding:16px;border-radius:8px;margin-bottom:20px;border-left:4px solid {% if resultado.tipo_alerta == 'critico' %}var(--red-600){% elif resultado.tipo_alerta == 'aviso' %}var(--orange-600){% else %}var(--green-600){% endif %};">
+  <h2 style="margin-top:0;font-size:14px;">Eficiencia Nutricional</h2>
+  <div style="display:flex;gap:20px;align-items:center;">
+    <div style="text-align:center;">
+      <div style="font-size:32px;font-weight:bold;color:{% if resultado.tipo_alerta == 'critico' %}var(--red-600){% elif resultado.tipo_alerta == 'aviso' %}var(--orange-600){% else %}var(--green-600){% endif %};">{{ resultado.conversao_alimentar }}</div>
+      <div style="font-size:12px;color:var(--text-3);">kg racao / kg ganho</div>
+    </div>
+    <div style="flex:1;">
+      {% if resultado.tipo_alerta == 'critico' %}
+      <div style="font-weight:600;color:var(--red-600);">CRITICO</div>
+      <div style="font-size:12px;color:var(--text-secondary);">{{ resultado.desvio_percent|default('-') }}% acima do padrao ({{ resultado.padrao_conversao }})</div>
+      {% elif resultado.tipo_alerta == 'aviso' %}
+      <div style="font-weight:600;color:var(--orange-600);">AVISO</div>
+      <div style="font-size:12px;color:var(--text-secondary);">{{ resultado.desvio_percent|default('-') }}% acima do padrao. Revisar alimentacao.</div>
+      {% else %}
+      <div style="font-weight:600;color:var(--green-600);">OK</div>
+      <div style="font-size:12px;color:var(--text-secondary);">Dentro do esperado (padrao: {{ resultado.padrao_conversao }})</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- Dados de Consumo e Ganho -->
+{% if resultado.consumo_total_kg > 0 or resultado.ganho_total_kg > 0 %}
+<section style="margin-bottom:20px;">
+  <h2 style="margin-bottom:12px;">Consumo e Ganho ({{ resultado.periodo_dias }} dias)</h2>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px;">
+    <div style="background:var(--bg-2);padding:12px;border-radius:6px;border-left:3px solid var(--blue-600);">
+      <div style="font-size:12px;color:var(--text-3);">Consumo Total</div>
+      <div style="font-size:18px;font-weight:bold;">{{ resultado.consumo_total_kg }} kg</div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">Media: {{ resultado.consumo_medio_dia_kg }} kg/dia</div>
+    </div>
+
+    <div style="background:var(--bg-2);padding:12px;border-radius:6px;border-left:3px solid var(--green-600);">
+      <div style="font-size:12px;color:var(--text-3);">Ganho de Peso</div>
+      <div style="font-size:18px;font-weight:bold;">{{ resultado.ganho_total_kg }} kg</div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">Media: {{ resultado.ganho_dia_kg }} kg/dia</div>
+    </div>
+
+    <div style="background:var(--bg-2);padding:12px;border-radius:6px;border-left:3px solid var(--orange-600);">
+      <div style="font-size:12px;color:var(--text-3);">Peso Corporal</div>
+      <div style="font-size:14px;font-weight:bold;">{{ resultado.peso_inicial_kg|default('-') }} → {{ resultado.peso_final_kg|default('-') }} kg</div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">{{ resultado.dias_com_dados }} dias com dados</div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- Recomendacoes -->
+{% if resultado.recomendacao %}
+<section style="background:rgba(59,130,246,.1);border-left:4px solid var(--blue-600);padding:12px;border-radius:6px;margin-bottom:20px;">
+  <h3 style="margin-top:0;margin-bottom:8px;font-size:13px;">Recomendacao</h3>
+  <p style="margin:0;font-size:12px;">{{ resultado.recomendacao }}</p>
+</section>
+{% endif %}
+
+<!-- Info -->
+<div style="background:var(--bg-secondary);padding:16px;border-radius:8px;border-left:3px solid var(--blue-600);">
+  <h3 style="margin-top:0;font-size:14px;font-weight:600;">Sobre Conversao Alimentar</h3>
+  <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">
+    <p><strong>Conversao Alimentar (CA):</strong> mede quantos kg de racao sao necessarios para gerar 1 kg de ganho de peso (corte) ou 1 kg de leite (leiteiro).</p>
+    <p><strong>Categoria:</strong> {{ resultado.categoria|title }}</p>
+    <p><strong>Padrao esperado:</strong> {{ resultado.padrao_conversao }} (CA)</p>
+    {% if resultado.desvio_percent %}
+    <p><strong>Seu desvio:</strong> {{ resultado.desvio_percent }}% {% if resultado.desvio_percent > 0 %}acima{% else %}abaixo{% endif %} do padrao</p>
+    {% endif %}
+  </div>
+</div>
+
+<div style="margin-top:20px;">
+  <a href="{{ url_for('dashboard_conversao') }}" class="btn btn-outline">← Voltar</a>
+</div>
+
+{% endblock %}

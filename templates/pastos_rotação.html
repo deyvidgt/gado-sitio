@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Plano de Rotacao — {{ nome_pasto }}{% endblock %}
+
+{% block content %}
+<h1>Plano de Rotacao — {{ nome_pasto }}</h1>
+
+<!-- Status Atual -->
+<section style="background:var(--bg-secondary);padding:16px;border-radius:8px;margin-bottom:20px;border-left:4px solid {% if estimativa.taxa_ocupacao_percent > 100 %}var(--red-600){% elif estimativa.taxa_ocupacao_percent > 85 %}var(--orange-600){% else %}var(--green-600){% endif %};">
+  <h2 style="margin-top:0;font-size:14px;">Situacao Atual</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;">
+    <div>
+      <div style="font-size:12px;color:var(--text-3);">UA/ha Atual</div>
+      <div style="font-size:18px;font-weight:bold;">{{ estimativa.ua_ha_atual }}</div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:var(--text-3);">Capacidade</div>
+      <div style="font-size:18px;font-weight:bold;">{{ estimativa.capacidade_ua_ha }}</div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:var(--text-3);">Taxa de Ocupacao</div>
+      <div style="font-size:18px;font-weight:bold;color:{% if estimativa.taxa_ocupacao_percent > 100 %}var(--red-600){% elif estimativa.taxa_ocupacao_percent > 85 %}var(--orange-600){% else %}var(--green-600){% endif %};">{{ estimativa.taxa_ocupacao_percent }}%</div>
+    </div>
+  </div>
+</section>
+
+<!-- Recomendacao -->
+{% if rotacao.recomendacao %}
+<section style="background:rgba(59,130,246,.1);border-left:4px solid var(--blue-600);padding:12px;border-radius:6px;margin-bottom:20px;">
+  <h3 style="margin-top:0;margin-bottom:8px;font-size:13px;">Recomendacao de Rotacao</h3>
+  <p style="margin:0;font-size:12px;font-weight:600;">{{ rotacao.recomendacao }}</p>
+</section>
+{% endif %}
+
+<!-- Plano de Rotacao (3 ciclos) -->
+{% if rotacao.plano %}
+<section style="margin-bottom:20px;">
+  <h2 style="margin-bottom:12px;">Plano Projetado (3 Ciclos)</h2>
+
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    {% for ciclo in rotacao.plano %}
+    <div style="background:var(--bg-2);padding:12px;border-radius:6px;border-left:3px solid {% if ciclo.fase == 'Ocupacao' %}var(--orange-600){% else %}var(--green-600){% endif %};">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:600;">Ciclo {{ ciclo.ciclo }} — {{ ciclo.fase }}</div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">
+            {{ ciclo.data_inicio }} ate {{ ciclo.data_fim }} ({{ ciclo.dias }} dias)
+          </div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:4px;">{{ ciclo.status }}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="padding:6px 10px;background:var(--bg-primary);border-radius:4px;font-size:11px;">
+            {{ ciclo.acao }}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- Estimativa de Dias -->
+<section style="margin-bottom:20px;">
+  <h2 style="margin-bottom:12px;">Estimativa de Ciclo</h2>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">
+    <div style="background:var(--bg-2);padding:12px;border-radius:6px;border-left:3px solid var(--orange-600);">
+      <div style="font-size:12px;color:var(--text-3);">Dias de Ocupacao Recomendado</div>
+      <div style="font-size:18px;font-weight:bold;">{{ estimativa.dias_ocupacao_recomendado }}</div>
+    </div>
+
+    <div style="background:var(--bg-2);padding:12px;border-radius:6px;border-left:3px solid var(--green-600);">
+      <div style="font-size:12px;color:var(--text-3);">Dias de Descanso Recomendado</div>
+      <div style="font-size:18px;font-weight:bold;">{{ estimativa.dias_descanso_recomendado }}</div>
+    </div>
+
+    <div style="background:var(--bg-2);padding:12px;border-radius:6px;border-left:3px solid var(--blue-600);">
+      <div style="font-size:12px;color:var(--text-3);">Ciclo Total</div>
+      <div style="font-size:18px;font-weight:bold;">{{ estimativa.dias_ocupacao_recomendado + estimativa.dias_descanso_recomendado }}</div>
+    </div>
+  </div>
+</section>
+
+<!-- Info -->
+<div style="background:var(--bg-secondary);padding:16px;border-radius:8px;border-left:3px solid var(--blue-600);">
+  <h3 style="margin-top:0;font-size:14px;font-weight:600;">Sobre Rotacao de Pastos</h3>
+  <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">
+    <p><strong>Rotacao:</strong> alterna ocupacao e descanso para permitir recuperacao da forragem.</p>
+    <p><strong>Dias de ocupacao:</strong> quanto menos lotado, mais dias pode ficar. Com pasto cheio, retira antes.</p>
+    <p><strong>Dias de descanso:</strong> tempo para regredir (30-45 dias típico). Menos dias se sobrelotado.</p>
+    <p><strong>Beneficios:</strong> melhor producao, menos parasitas, pasto mais resistente, maior longevidade.</p>
+  </div>
+</div>
+
+<div style="margin-top:20px;">
+  <a href="{{ url_for('dashboard_ocupacao_pastos') }}" class="btn btn-outline">← Voltar</a>
+</div>
+
+{% endblock %}
