@@ -4,13 +4,13 @@
 
 {% block content %}
 
-<section class="estado-sitio card" style="margin-bottom:20px">
-  <div class="section-head" style="margin-bottom:12px"><h2>Estado do sítio</h2><span class="status">● {{ estado_sitio.cabecas }} cabeças no estoque</span></div>
+<section class="estado-sitio card" style="margin-bottom:20px;background:linear-gradient(135deg, var(--surface) 0%, var(--bg-2) 100%)">
+  <div class="section-head" style="margin-bottom:12px"><h2>🌾 Estado do Sítio</h2><span class="status">🐄 {{ estado_sitio.cabecas }} cabeças no estoque</span></div>
   <div class="tri">
     <div><b>{{ estado_sitio.cabecas }}</b>cabeças</div>
     <div><b>{{ '%.0f'|format(estado_sitio.peso_medio or 0) }} kg</b>peso médio</div>
     <div><b>{{ r.ctcab|brl }}</b>custo/cabeça</div>
-    <div><b>{{ r.resultado_realizado|brl }}</b>resultado</div>
+    <div><b class="{{ 'pos' if r.resultado_realizado >= 0 else 'neg' }}">{{ r.resultado_realizado|brl }}</b>resultado</div>
     <div><b>{{ '%.2f'|format(estado_sitio.lotacao or 0) }}</b>UA/ha</div>
   </div>
 </section>
@@ -49,11 +49,21 @@
 </style>
 <!-- ════════════════════════════════════════════════════════════════════════ -->
 
+<!-- ═══ RESUMO LEITEIRO (v5.4) - PRIORIDADE ALTA ════════════════════════════════ -->
+<section class="card" style="margin-bottom:20px">
+  <div class="section-head" style="margin-bottom:12px"><h2>🥛 Resumo Leiteiro</h2><a class="btn btn-outline" href="{{ url_for('painel_leite') }}">Abrir módulo</a></div>
+  <div class="tri">
+    <div><b>{{ resumo_leite.dia|br_num(1) }} L</b>hoje</div>
+    <div><b>{{ resumo_leite.semana|br_num(1) }} L</b>semana</div>
+    <div><b>{{ resumo_leite.mes|br_num(1) }} L</b>mês</div>
+  </div>
+</section>
+
 <!-- ═══ PREVISÃO DO TEMPO (v5.9) ═════════════════════════════════════════════ -->
 {% if tempo.status != 'indisponível' %}
 <section class="card" style="margin-bottom:20px">
   <div class="section-head" style="margin-bottom:12px">
-    <h2>Previsão do tempo{% if tempo.local %} · {{ tempo.local }}{% endif %}</h2>
+    <h2>☀️ Previsão do Tempo{% if tempo.local %} · {{ tempo.local }}{% endif %}</h2>
     <a class="btn btn-outline" href="{{ url_for('central_alertas') }}" style="font-size:12px">Ver alertas</a>
   </div>
 
@@ -84,15 +94,6 @@
 </section>
 {% endif %}
 <!-- ════════════════════════════════════════════════════════════════════════ -->
-
-<section class="card" style="margin-bottom:20px">
-  <div class="section-head" style="margin-bottom:12px"><h2>Resumo leiteiro</h2><a class="btn btn-outline" href="{{ url_for('painel_leite') }}">Abrir módulo</a></div>
-  <div class="tri">
-    <div><b>{{ resumo_leite.dia|br_num(1) }} L</b>hoje</div>
-    <div><b>{{ resumo_leite.semana|br_num(1) }} L</b>semana</div>
-    <div><b>{{ resumo_leite.mes|br_num(1) }} L</b>mês</div>
-  </div>
-</section>
 
 <!-- Gráfico de Entrada/Saída (v5.8) -->
 {% if entrada_saida.datas %}
@@ -179,86 +180,102 @@
 </div>
 {% endif %}
 
-<!-- Métricas principais -->
-<div class="metrics">
-  <div class="metric">
-    <div class="metric-icon">🐄</div>
-    <div class="metric-label">Estoque Atual</div>
-    <div class="metric-val">{{ r.estoque }} cab.</div>
-    <div class="metric-sub">{{ r.cab_comp }} compradas / {{ r.cab_vend }} vendidas</div>
-  </div>
-  <div class="metric gold">
-    <div class="metric-icon">💲</div>
-    <div class="metric-label">CTCab (Custo/Cabeça)</div>
-    <div class="metric-val">{{ r.ctcab | brl }}</div>
-    <div class="metric-sub">CMP {{ r.cmp | brl }} + Gastos {{ r.gpcab | brl }}</div>
-  </div>
-  <div class="metric {% if r.resultado_realizado < 0 %}red{% endif %}">
-    <div class="metric-icon">📈</div>
-    <div class="metric-label">Resultado Realizado</div>
-    <div class="metric-val {{ 'pos' if r.resultado_realizado >= 0 else 'neg' }}">
-      {{ r.resultado_realizado | brl }}
+<!-- ═══ FINANCEIRO EXPANDIDO (Seção Colapsável) ════════════════════════════════ -->
+<details class="card-detail" style="margin-bottom:24px" open>
+  <summary style="background:var(--bg-2)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span>💰</span>
+      <span>Indicadores Financeiros</span>
     </div>
-    <div class="metric-sub">ROI {{ r.roi_realizado | pct }}</div>
-  </div>
-  <div class="metric blue">
-    <div class="metric-icon">🎯</div>
-    <div class="metric-label">Break-even do Estoque</div>
-    <div class="metric-val">{{ r.break_even | brl }}</div>
-    <div class="metric-sub">Preço mín. por cabeça p/ lucrar</div>
-  </div>
-  <div class="metric">
-    <div class="metric-icon">🎫</div>
-    <div class="metric-label">Ticket Médio Venda</div>
-    <div class="metric-val">{{ r.ticket_medio | brl }}</div>
-    <div class="metric-sub">Margem bruta {{ r.margem_bruta | pct }}</div>
-  </div>
-  <div class="metric gold">
-    <div class="metric-icon">🏦</div>
-    <div class="metric-label">Capital Imobilizado</div>
-    <div class="metric-val">{{ r.capital_imobilizado | brl }}</div>
-    <div class="metric-sub">{{ r.estoque }} cab. × {{ r.ctcab | brl }}</div>
-  </div>
-  {% if r.perdas and r.perdas > 0 %}
-  <div class="metric red">
-    <div class="metric-icon">💀</div>
-    <div class="metric-label">Perdas (mortes)</div>
-    <div class="metric-val neg">{{ r.perdas | brl }}</div>
-    <div class="metric-sub">{{ r.cab_mortes }} cabeça(s) perdida(s)</div>
-  </div>
-  {% endif %}
-</div>
-
-<!-- Estoque por Membro -->
-<div class="three-col" style="margin-bottom:24px">
-  {% for m in MEMBROS %}
-  <div class="member-card" style="border-top-color:var(--{% if loop.index==1 %}green-500{% elif loop.index==2 %}gold{% else %}info{% endif %})">
-    <h3 style="font-size:15px;margin-bottom:12px">{{ EMOJIS[m] }} {{ NOMES[m] }}</h3>
-    <div class="kv">
-      <span class="kv-key">Cabeças em estoque</span>
-      <span style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green-700)">
-        {{ estoque_membro[m] }}
-      </span>
+  </summary>
+  <div class="metrics" style="margin-top:16px">
+    <div class="metric">
+      <div class="metric-icon">🐄</div>
+      <div class="metric-label">Estoque Atual</div>
+      <div class="metric-val">{{ r.estoque }} cab.</div>
+      <div class="metric-sub">{{ r.cab_comp }} compradas / {{ r.cab_vend }} vendidas</div>
     </div>
-    {% set mr = membros[m] %}
-    <div class="kv"><span class="kv-key">Já vendeu</span><span>{{ mr.cabecas }} cab.</span></div>
-    <div class="kv">
-      <span class="kv-key">Resultado realizado</span>
-      <span class="{{ 'pos' if mr.resultado >= 0 else 'neg' }}">{{ mr.resultado | brl }}</span>
+    <div class="metric gold">
+      <div class="metric-icon">💲</div>
+      <div class="metric-label">CTCab (Custo/Cabeça)</div>
+      <div class="metric-val">{{ r.ctcab | brl }}</div>
+      <div class="metric-sub">CMP {{ r.cmp | brl }} + Gastos {{ r.gpcab | brl }}</div>
     </div>
-    {% if mr.perdas and mr.perdas > 0 %}
-    <div class="kv">
-      <span class="kv-key">Perdas (mortes)</span>
-      <span class="neg">− {{ mr.perdas | brl }}</span>
+    <div class="metric {% if r.resultado_realizado < 0 %}red{% endif %}">
+      <div class="metric-icon">📈</div>
+      <div class="metric-label">Resultado Realizado</div>
+      <div class="metric-val {{ 'pos' if r.resultado_realizado >= 0 else 'neg' }}">
+        {{ r.resultado_realizado | brl }}
+      </div>
+      <div class="metric-sub">ROI {{ r.roi_realizado | pct }}</div>
     </div>
-    <div class="kv">
-      <span class="kv-key">Resultado líquido</span>
-      <span class="{{ 'pos' if mr.resultado_liquido >= 0 else 'neg' }}">{{ mr.resultado_liquido | brl }}</span>
+    <div class="metric blue">
+      <div class="metric-icon">🎯</div>
+      <div class="metric-label">Break-even do Estoque</div>
+      <div class="metric-val">{{ r.break_even | brl }}</div>
+      <div class="metric-sub">Preço mín. por cabeça p/ lucrar</div>
+    </div>
+    <div class="metric">
+      <div class="metric-icon">🎫</div>
+      <div class="metric-label">Ticket Médio Venda</div>
+      <div class="metric-val">{{ r.ticket_medio | brl }}</div>
+      <div class="metric-sub">Margem bruta {{ r.margem_bruta | pct }}</div>
+    </div>
+    <div class="metric gold">
+      <div class="metric-icon">🏦</div>
+      <div class="metric-label">Capital Imobilizado</div>
+      <div class="metric-val">{{ r.capital_imobilizado | brl }}</div>
+      <div class="metric-sub">{{ r.estoque }} cab. × {{ r.ctcab | brl }}</div>
+    </div>
+    {% if r.perdas and r.perdas > 0 %}
+    <div class="metric red">
+      <div class="metric-icon">💀</div>
+      <div class="metric-label">Perdas (mortes)</div>
+      <div class="metric-val neg">{{ r.perdas | brl }}</div>
+      <div class="metric-sub">{{ r.cab_mortes }} cabeça(s) perdida(s)</div>
     </div>
     {% endif %}
   </div>
-  {% endfor %}
-</div><!-- /three-col -->
+</details>
+
+<!-- ═══ ESTOQUE POR MEMBRO (Colapsável) ═════════════════════════════════════════ -->
+<details class="card-detail" style="margin-bottom:24px">
+  <summary style="background:var(--bg-2)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span>👨‍👩‍👦</span>
+      <span>Estoque por Membro</span>
+    </div>
+  </summary>
+  <div class="three-col" style="margin-top:16px">
+    {% for m in MEMBROS %}
+    <div class="member-card" style="border-top-color:var(--{% if loop.index==1 %}green-500{% elif loop.index==2 %}gold{% else %}info{% endif %})">
+      <h3 style="font-size:15px;margin-bottom:12px">{{ EMOJIS[m] }} {{ NOMES[m] }}</h3>
+      <div class="kv">
+        <span class="kv-key">Cabeças em estoque</span>
+        <span style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green-700)">
+          {{ estoque_membro[m] }}
+        </span>
+      </div>
+      {% set mr = membros[m] %}
+      <div class="kv"><span class="kv-key">Já vendeu</span><span>{{ mr.cabecas }} cab.</span></div>
+      <div class="kv">
+        <span class="kv-key">Resultado realizado</span>
+        <span class="{{ 'pos' if mr.resultado >= 0 else 'neg' }}">{{ mr.resultado | brl }}</span>
+      </div>
+      {% if mr.perdas and mr.perdas > 0 %}
+      <div class="kv">
+        <span class="kv-key">Perdas (mortes)</span>
+        <span class="neg">− {{ mr.perdas | brl }}</span>
+      </div>
+      <div class="kv">
+        <span class="kv-key">Resultado líquido</span>
+        <span class="{{ 'pos' if mr.resultado_liquido >= 0 else 'neg' }}">{{ mr.resultado_liquido | brl }}</span>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</details><!-- /estoque-membro -->
 
 <!-- ═══ TAREFAS DA SEMANA (v5.3) ════════════════════════════════════════════ -->
 <div class="card" style="margin-bottom:24px">
@@ -304,13 +321,13 @@
       {% set classe = {'atencao': 'aviso', 'excesso': 'ruim'}.get(lotacao.nivel, '') %}
       {% set pct = (lotacao.ua_ha / lotacao.capacidade * 100)|round|int %}
       <div class="barra {{ classe }}" style="margin:8px 0 4px"><i style="width:{{ [pct, 100]|min }}%"></i></div>
-      <span class="badge badge-{{ classe or 'ok' }}">{{ pct }}% da capacidade</span>
+      <span class="badge badge-{{ classe or 'ok' }}">{% if classe == 'ruim' %}🚨{% elif classe == 'aviso' %}⚡{% else %}✅{% endif %} {{ pct }}% da capacidade</span>
       {% endif %}
       <p style="font-size:12px;color:var(--text-3);margin-top:6px">
         {{ '%.1f'|format(lotacao.ua)|replace('.', ',') }} UA em {{ '%.1f'|format(lotacao.ha)|replace('.', ',') }} ha
-        {% if lotacao.nivel == 'excesso' %}· ⚠️ acima da capacidade
-        {% elif lotacao.nivel == 'atencao' %}· perto do limite
-        {% elif lotacao.nivel == 'ok' %}· folga no pasto{% endif %}
+        {% if lotacao.nivel == 'excesso' %}· 🚨 acima da capacidade
+        {% elif lotacao.nivel == 'atencao' %}· ⚡ perto do limite
+        {% elif lotacao.nivel == 'ok' %}· ✅ folga no pasto{% endif %}
       </p>
       <a href="{{ url_for('pastos') }}" style="font-size:13px;color:var(--green-600)">Ver mapa dos pastos →</a>
     {% else %}
@@ -1738,4 +1755,11 @@ document.addEventListener("DOMContentLoaded", () => {
   loadChuvas();
 });
 </script>
+
+<!-- ═══ BOTÃO FLUTUANTE (FAB - Nova Visita) ════════════════════════════════════ -->
+<div class="fab-container">
+  <a href="{{ url_for('nova_visita') }}" class="fab-primary" title="Registrar nova visita">🌾</a>
+</div>
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+
 {% endblock %}

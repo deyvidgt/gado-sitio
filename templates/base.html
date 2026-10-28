@@ -296,6 +296,22 @@
     @media (max-width: 768px) { .search-box { width:160px; } .search-input { font-size:12px; padding:6px 10px; } }
     @media (max-width: 480px) { .metrics { grid-template-columns:1fr; } .topbar-title { font-size:16px; } .search-box { width:100%; } .topbar-left { gap:8px; } }
 
+    /* ── Botão Flutuante (FAB) ─────────────────────────────────────────────── */
+    .fab-container { position: fixed; bottom: 28px; right: 28px; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; z-index: 50; }
+    .fab-primary { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--green-600), var(--green-700)); color: #fff; border: none; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.2); display: flex; align-items: center; justify-content: center; transition: all .2s; text-decoration: none; }
+    .fab-primary:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+    .fab-primary:active { transform: scale(0.95); }
+    @media (max-width: 768px) { .fab-container { bottom: 20px; right: 20px; } .fab-primary { width: 48px; height: 48px; font-size: 20px; } }
+
+    /* ── Seções Colapsáveis (Details) ──────────────────────────────────────── */
+    details { margin-bottom: 20px; }
+    details.card-detail { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    summary { padding: 20px 24px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-weight: 600; color: var(--green-700); user-select: none; transition: background .15s; }
+    [data-theme="dark"] summary { color: var(--green-300); }
+    summary:hover { background: var(--bg-2); }
+    details[open] > summary { background: var(--bg-2); border-bottom: 1px solid var(--bg-2); }
+    details.card-detail > :not(summary) { padding: 0 24px 20px; }
+
     /* ── Modo escuro: estilos escritos direto no HTML das páginas ─────────────
        Várias telas usam cores fixas inline (verde-escuro, cinza #444, caixas de
        aviso claras). No tema escuro isso some no fundo; aqui ajustamos todas de
