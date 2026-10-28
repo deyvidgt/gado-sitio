@@ -498,17 +498,7 @@
   <a class="btn btn-outline btn-sm" href="{{ url_for('pesagem') }}">Ver pesagens</a>
 </section>
 
-<!-- Fluxo de caixa + Membros -->
-<div class="two-col" style="margin-bottom:24px">
-  <div class="card">
-    <div class="card-title">💰 Fluxo de Caixa</div>
-    <canvas id="chartFluxo" height="200"></canvas>
-  </div>
-  <div class="card">
-    <div class="card-title">👨‍👩‍👦 Resultado por Membro</div>
-    <canvas id="chartMembros" height="200"></canvas>
-  </div>
-</div>
+<!-- Fluxo de Caixa + Resultado por Membro movidos para /fluxo-caixa e /resultado (v5.10) -->
 
 <!-- Evolução do rebanho -->
 <div class="card" style="margin-bottom:24px">
@@ -589,26 +579,10 @@
 </div>
 <!-- ═══════════════════════════════════════════════════════════════════════════ -->
 
-<!-- Resumo financeiro + Atividade recente -->
+<!-- Financeiro Geral movido para /financeiro (v5.10) -->
+<!-- Atividade recente -->
 <div class="two-col">
-  <div class="card">
-    <div class="card-title">📊 Financeiro Geral</div>
-    <div class="kv"><span class="kv-key">Total Compras</span><span>{{ r.total_comp | brl }}</span></div>
-    <div class="kv"><span class="kv-key">Total Gastos</span><span>{{ r.total_gast | brl }}</span></div>
-    <div class="kv"><span class="kv-key">Custo Total</span><span style="font-weight:600">{{ r.total_custo | brl }}</span></div>
-    <div class="kv"><span class="kv-key">Receita (Vendas)</span><span>{{ r.total_vend | brl }}</span></div>
-    <div class="kv">
-      <span class="kv-key">Resultado Realizado</span>
-      <span class="{{ 'pos' if r.resultado_realizado >= 0 else 'neg' }}">{{ r.resultado_realizado | brl }}</span>
-    </div>
-    <div class="kv">
-      <span class="kv-key">Resultado + Estoque</span>
-      <span class="{{ 'pos' if r.resultado_total >= 0 else 'neg' }}">{{ r.resultado_total | brl }}</span>
-    </div>
-    <div class="kv"><span class="kv-key">ROI Total</span><span>{{ r.roi_total | pct }}</span></div>
-  </div>
-
-  <div class="card">
+  <div class="card" style="grid-column: span 2">
     <div class="card-title">🕐 Atividade Recente</div>
     {% if recentes %}
       {% for rec in recentes %}
@@ -1226,52 +1200,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ── Fluxo + Membros ── */
-async function loadCharts() {
-  let gFluxo, gMembros;
-  try {
-    [gFluxo, gMembros] = await Promise.all([
-      _apiFetch("/api/fluxo"),
-      _apiFetch("/api/membros"),
-    ]);
-  } catch(e) {
-    console.error("Erro ao carregar gráficos de fluxo/membros:", e);
-    return;
-  }
-  if (!gFluxo || !gMembros) return;
-
-  new Chart(document.getElementById("chartFluxo"), {
-    type: "bar",
-    data: {
-      labels: gFluxo.labels,
-      datasets: [
-        { label: "Entradas", data: gFluxo.entradas, backgroundColor: "rgba(61,122,52,.75)", borderRadius: 4 },
-        { label: "Saídas",   data: gFluxo.saidas,   backgroundColor: "rgba(192,57,43,.65)", borderRadius: 4 },
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { labels: { font: { family:"DM Sans", size:12 } } } },
-      scales: { y: { ticks: { callback: v => "R$ " + v.toLocaleString("pt-BR") } } }
-    }
-  });
-
-  new Chart(document.getElementById("chartMembros"), {
-    type: "bar",
-    data: {
-      labels: gMembros.nomes,
-      datasets: [
-        { label: "Receita",   data: gMembros.receitas,   backgroundColor: "rgba(61,122,52,.75)",  borderRadius: 4 },
-        { label: "Custo",     data: gMembros.custos,     backgroundColor: "rgba(201,151,42,.75)", borderRadius: 4 },
-        { label: "Resultado", data: gMembros.resultados, backgroundColor: "rgba(41,128,185,.75)", borderRadius: 4 },
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { labels: { font: { family:"DM Sans", size:12 } } } },
-      scales: { y: { ticks: { callback: v => "R$ " + v.toLocaleString("pt-BR") } } }
-    }
-  });
-}
+// Gráficos de fluxo e membros movidos para /fluxo-caixa e /resultado (v5.10)
 
 /* ── Evolução do rebanho ── */
 let chartRebanho = null;
@@ -1619,7 +1548,7 @@ document.addEventListener("themeChanged", () => {
 
 /* ── Init (bloco 2) ── */
 document.addEventListener("DOMContentLoaded", () => {
-  loadCharts();
+  // loadCharts() removido (v5.10: gráficos agora em /fluxo-caixa e /resultado)
   loadRebanho();
   loadChuvas();
 });
