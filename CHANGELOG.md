@@ -5,6 +5,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
+- **Painel de Estoque de Insumos (v5.10):** nova página `/insumos/estoque` com informações completas do estoque:
+  - Nova aba `Insumos` para cadastrar marca, kg/saco, PB% e Energia de cada insumo.
+  - Página mostra estado atual: sacos em estoque, kg total, valor monetário, consumo estimado.
+  - Valores nutricionais (PB e Energia) mostrados junto com marca do último cadastro.
+  - Status visual (OK, Próximo 21 dias, Urgente ≤7 dias, Acabou).
+  - Link rápido da página de comparação para o painel de estoque.
+  - Busca rápida: termo "estoque" encontra a página.
+  - Novo módulo: função `estoque_completo()` em `insumos.py`.
 - **Conversão Alimentar e Eficiência Nutricional (v5.10 Onda 5):** nova página `/nutrição/conversão` com análise de eficiência alimentar:
   - Calcula conversão alimentar: kg ração consumida / kg ganho de peso (corte) ou kg leite (leiteiro).
   - Padrões por categoria: Bezerro 4.5 | Novilha 6.0 | Boi 6.5 | Vaca Lactação 1.3 | Vaca Seca 8.0.
