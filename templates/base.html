@@ -665,9 +665,7 @@
       <a href="{{ url_for('animais') }}" class="drawer-link">🐄 Animais</a>
       <a href="{{ url_for('pesagem') }}" class="drawer-link">⚖️ Pesagem</a>
       <a href="{{ url_for('reproducao') }}" class="drawer-link">🐮 Reprodução</a>
-      {% if 'pastos' in url_for.__self__.url_map._rules_by_endpoint %}
       <a href="{{ url_for('pastos') }}" class="drawer-link">🗺️ Pastos</a>
-      {% endif %}
       <a href="{{ url_for('manejo') }}" class="drawer-link">🌿 Manejo</a>
       <a href="{{ url_for('comparar_insumos') }}" class="drawer-link">🧂 Insumos</a>
       <a href="{{ url_for('visitas') }}" class="drawer-link">🗓️ Visitas</a>
