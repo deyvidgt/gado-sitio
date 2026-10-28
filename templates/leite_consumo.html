@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Consumo de Rações — Leite{% endblock %}
+
+{% block content %}
+<div style="display: flex; gap: 1rem; margin: 1rem 0; flex-wrap: wrap;">
+    <a href="{{ url_for('leite_index') }}" style="flex: 1; min-width: 150px;">← Voltar ao Leite</a>
+    <a href="{{ url_for('alimentacao_leite') }}" style="flex: 1; min-width: 150px;">📝 Cadastrar Ração</a>
+</div>
+
+<h1>📊 Consumo de Rações e Insumos</h1>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div style="padding: 1rem; margin: 1rem 0; background: {{ '#d4edda' if category == 'success' else '#f8d7da' }}; border-radius: 0.25rem; border-left: 4px solid {{ '#28a745' if category == 'success' else '#dc3545' }};">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="metrics" style="margin: 2rem 0;">
+    <div class="metric">
+        <div style="font-size: 2rem; font-weight: bold; color: #2c3e50;">{{ "%.1f" | format(resumo.total_oferecido) }}</div>
+        <div style="font-size: 0.85rem; color: #7f8c8d;">kg Total Oferecido</div>
+    </div>
+    <div class="metric">
+        <div style="font-size: 2rem; font-weight: bold; color: #27ae60;">{{ "%.1f" | format(resumo.taxa_media) }}%</div>
+        <div style="font-size: 0.85rem; color: #7f8c8d;">Taxa Consumo Média</div>
+    </div>
+    <div class="metric">
+        <div style="font-size: 2rem; font-weight: bold; color: #e74c3c;">{{ "%.1f" | format(resumo.desperdicio_total) }}</div>
+        <div style="font-size: 0.85rem; color: #7f8c8d;">kg Desperdício Total</div>
+    </div>
+    <div class="metric">
+        <div style="font-size: 2rem; font-weight: bold; color: #8e44ad;">R$ {{ "%.2f" | format(resumo.custo_total) }}</div>
+        <div style="font-size: 0.85rem; color: #7f8c8d;">Custo Total</div>
+    </div>
+</div>
+
+{% if consumos %}
+    <div style="overflow-x: auto; margin: 2rem 0;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead>
+                <tr style="background: #ecf0f1; border-bottom: 2px solid #bdc3c7;">
+                    <th style="padding: 0.75rem; text-align: left;">📅 Data</th>
+                    <th style="padding: 0.75rem; text-align: left;">Tipo Ração</th>
+                    <th style="padding: 0.75rem; text-align: right;">Oferecido (kg)</th>
+                    <th style="padding: 0.75rem; text-align: right;">Consumido (kg)</th>
+                    <th style="padding: 0.75rem; text-align: right;">Taxa (%)</th>
+                    <th style="padding: 0.75rem; text-align: right;">Desperdício</th>
+                    <th style="padding: 0.75rem; text-align: right;">Custo (R$)</th>
+                    <th style="padding: 0.75rem; text-align: left;">Responsável</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for consumo in consumos %}
+                    <tr style="border-bottom: 1px solid #ecf0f1; {% if loop.index % 2 == 0 %}background: #f8f9fa;{% endif %}">
+                        <td style="padding: 0.75rem;">{{ consumo.get('Data', '') }}</td>
+                        <td style="padding: 0.75rem;">{{ consumo.get('Tipo Ração', '') }}</td>
+                        <td style="padding: 0.75rem; text-align: right;">{{ "%.1f" | format(consumo.get('Quantidade Oferecida (kg)', 0) or 0) }}</td>
+                        <td style="padding: 0.75rem; text-align: right;">{{ "%.1f" | format(consumo.get('Quantidade Consumida (kg)', 0) or 0) }}</td>
+                        <td style="padding: 0.75rem; text-align: right;">
+                            <span style="background: {{ '#d4edda' if (consumo.get('Taxa Consumo (%)', 0) or 0) >= 80 else '#fff3cd' if (consumo.get('Taxa Consumo (%)', 0) or 0) >= 70 else '#f8d7da' }}; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">
+                                {{ "%.1f" | format(consumo.get('Taxa Consumo (%)', 0) or 0) }}%
+                            </span>
+                        </td>
+                        <td style="padding: 0.75rem; text-align: right;">{{ "%.1f" | format(consumo.get('Desperdício (kg)', 0) or 0) }} kg</td>
+                        <td style="padding: 0.75rem; text-align: right;">R$ {{ "%.2f" | format(consumo.get('Custo Total Oferecido (R$)', 0) or 0) }}</td>
+                        <td style="padding: 0.75rem;">{{ consumo.get('Responsável', '—') }}</td>
+                    </tr>
+                    {% if consumo.get('Observação') %}
+                        <tr style="background: #ecf0f1; border-bottom: 1px solid #bdc3c7;">
+                            <td colspan="8" style="padding: 0.5rem; font-size: 0.85rem; color: #555;">💬 {{ consumo.get('Observação') }}</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div style="padding: 2rem; background: #ecf0f1; border-radius: 0.5rem; text-align: center; color: #7f8c8d;">
+        <p>Nenhum registro de consumo ainda.</p>
+        <p><a href="{{ url_for('alimentacao_leite') }}" style="color: #3498db; text-decoration: none;">Registre o primeiro aqui →</a></p>
+    </div>
+{% endif %}
+
+<div style="margin: 2rem 0; padding: 1rem; background: #e8f4f8; border-left: 4px solid #3498db; border-radius: 0.25rem;">
+    <strong>💡 Dica:</strong> Taxa de consumo > 80% é ótimo. 70-80% é bom. < 70% pode indicar desperdício ou rejeição.
+</div>
+
+{% endblock %}

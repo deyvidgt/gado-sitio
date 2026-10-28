@@ -42,7 +42,9 @@ def registrar_engorda_pastagem(pasto_id: str, brincos: str, peso_inicial: float,
         True se registrou, False se erro
     """
     try:
-        df = carregar_aba("Engorda Pastagem") or pd.DataFrame()
+        df = carregar_aba("Engorda Pastagem")
+        if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+            df = pd.DataFrame()
 
         # Calcula consumo estimado por diferença de peso e duração
         consumo_estimado = ((peso_final - peso_inicial) / dias) if dias > 0 else 0
@@ -98,7 +100,9 @@ def registrar_gmd_lotacao(periodo_dias: int, animais: int, peso_inicial: float,
         True se registrou, False se erro
     """
     try:
-        df = carregar_aba("GMD Lotação") or pd.DataFrame()
+        df = carregar_aba("GMD Lotação")
+        if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+            df = pd.DataFrame()
 
         # % de ocupação = lotação atual / capacidade
         ocupacao_perc = 0
@@ -150,7 +154,9 @@ def registrar_racao_consumo(tipo_racao: str, qty_oferecida: float, qty_consumida
         True se registrou, False se erro
     """
     try:
-        df = carregar_aba("Ração Consumo") or pd.DataFrame()
+        df = carregar_aba("Ração Consumo")
+        if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+            df = pd.DataFrame()
 
         # Cálculos de consumo e desperdício
         taxa_consumo = 0

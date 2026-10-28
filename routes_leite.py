@@ -659,3 +659,72 @@ def saude_leite():
                           resumo=resumo,
                           alertas_urgentes=alertas_urgentes,
                           alertas_aviso=alertas_aviso)
+
+
+# v5.8 — Acesso direto a Nutrição e Consumo
+@app.route("/leite/consumo")
+@login_required
+def consumo_leite():
+    """Lista consumo de rações e insumos com histórico e monitoramento."""
+    df_consumo = carregar_aba("Ração Consumo")
+
+    if df_consumo is None or df_consumo.empty:
+        consumos = []
+        resumo = {"total_oferecido": 0, "taxa_media": 0, "desperdicio_total": 0}
+    else:
+        # Últimas 30 registros
+        consumos = df_consumo.tail(30).to_dict('records')
+
+        # Resumo geral
+        resumo = {
+            "total_oferecido": float(df_consumo.get("Quantidade Oferecida (kg)", [0]).sum() or 0),
+            "taxa_media": float(df_consumo.get("Taxa Consumo (%)", [0]).mean() or 0),
+            "desperdicio_total": float(df_consumo.get("Desperdício (kg)", [0]).sum() or 0),
+            "custo_total": float(df_consumo.get("Custo Total Oferecido (R$)", [0]).sum() or 0),
+        }
+
+    return render_template("leite_consumo.html",
+                          consumos=consumos,
+                          resumo=resumo,
+                          MEMBROS=MEMBROS,
+                          NOMES=NOMES_MEMBROS)
+
+
+@app.route("/leite/nutricao")
+@login_required
+def nutricao_leite():
+    """Lista necessidades nutricionais por categoria com rastreamento."""
+    df_necessidades = carregar_aba("Leite Necessidades")
+    df_alimentacao = carregar_aba("Leite Alimentação")
+
+    # Agrupar necessidades por categoria
+    necessidades = {}
+    if df_necessidades is not None and not df_necessidades.empty:
+        for _, linha in df_necessidades.iterrows():
+            cat = str(linha.get("Categoria", "Geral")).strip()
+            if cat not in necessidades:
+                necessidades[cat] = []
+            necessidades[cat].append({
+                "item": linha.get("Item", ""),
+                "valor": linha.get("Valor", ""),
+                "unidade": linha.get("Unidade", ""),
+                "fonte": linha.get("Fonte", ""),
+            })
+
+    # Produtos disponíveis
+    produtos = []
+    if df_alimentacao is not None and not df_alimentacao.empty:
+        for _, linha in df_alimentacao.iterrows():
+            produtos.append({
+                "produto": linha.get("Produto", ""),
+                "proteina": linha.get("Proteína Bruta (%)", ""),
+                "energia": linha.get("NDT/Energia (%)", ""),
+                "categoria": linha.get("Categoria", ""),
+                "consumo": linha.get("Consumo/dia (kg)", ""),
+            })
+
+    return render_template("leite_nutricao.html",
+                          necessidades=necessidades,
+                          produtos=produtos,
+                          MEMBROS=MEMBROS,
+                          NOMES=NOMES_MEMBROS)
