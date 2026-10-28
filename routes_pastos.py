@@ -36,8 +36,6 @@ def _capacidade_ua_ha() -> float:
         return 0.0
 
 
-@app.route("/pastos")
-@login_required
 def _extrair_animais_por_pasto(df_manejo):
     """Extrai últimos brincos/animais registrados em cada pasto."""
     animais_por_pasto = {}
@@ -66,6 +64,8 @@ def _extrair_animais_por_pasto(df_manejo):
 
     return animais_por_pasto
 
+@app.route("/pastos")
+@login_required
 def pastos():
     dados = _get_dados_cache()
     df_p, df_a = PA.carregar(), A.carregar()

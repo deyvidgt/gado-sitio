@@ -113,6 +113,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-shrink: 0;
     }
     .btn-header {
       background: rgba(255,255,255,0.15);
@@ -629,7 +630,7 @@
     </div>
 
     <!-- Busca Rápida Global -->
-    <div id="search-container" style="flex:1; max-width:400px; margin:0 16px;">
+    <div id="search-container" style="flex:1 1 auto; min-width:100px; max-width:300px; margin:0 12px;">
       <input type="text" id="search-input" class="search-input" placeholder="🔍 Procurar…"
              aria-label="Busca rápida global" autocomplete="off">
       <div id="search-dropdown" class="search-dropdown"></div>
@@ -693,11 +694,12 @@
       <a href="{{ url_for('novo_manejo') }}" class="drawer-link">🩺 Novo manejo</a>
       <a href="{{ url_for('nova_visita') }}" class="drawer-link">🌾 Registrar visita</a>
       <a href="{{ url_for('voz') }}" class="drawer-link">🎤 Comando de voz</a>
+      <a href="{{ url_for('ajuda') }}" class="drawer-link">❓ Ajuda</a>
+      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
+      <a href="{{ url_for('configuracoes') }}" class="drawer-link">⚙️ Configurações</a>
       <a href="{{ url_for('importar') }}" class="drawer-link">⬆️ Importar Excel</a>
       <a href="{{ url_for('exportar') }}" class="drawer-link">⬇️ Exportar Excel</a>
       <a href="{{ url_for('listar_backups') }}" class="drawer-link">💾 Backups</a>
-      <a href="{{ url_for('ajuda') }}" class="drawer-link">❓ Ajuda</a>
-      <a href="{{ url_for('configuracoes') }}" class="drawer-link">⚙️ Configurações</a>
       <a href="{{ url_for('logout') }}" class="drawer-link" style="color:var(--danger)">🚪 Sair</a>
     </nav>
   </div>
