@@ -380,6 +380,12 @@ COLUNAS_LEITE_COLCHAO = [
     "Foto Depois", "Responsável", "ID Envio", "Criado Em",
 ]
 
+# v5.10 Onda 2 — Histórico de Doenças e Tratamentos (todas as abas)
+COLUNAS_TRATAMENTOS = [
+    "ID Animal", "Data", "Brinco", "Tipo Doença", "Tratamento", "Medicamento",
+    "Observações", "Resolvido", "Data Resolução", "Responsável", "ID Envio", "Criado Em",
+]
+
 # v5.5 — Volumosos (feno, silo, etc) — entrada e consumo, para corte e leite
 COLUNAS_VOLUMOSOS = [
     "Data", "Tipo", "Quantidade (kg)", "Qualidade", "Origem", "Custo (R$)",

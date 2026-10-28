@@ -180,7 +180,9 @@
     /* Busca rápida — mostrar na barra de cabeçalho */
     #search-container {
       display: flex !important;
-      flex-direction: column;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
       position: relative;
       width: 100%;
       z-index: 999;
@@ -196,8 +198,33 @@
       color: var(--text-primary);
       outline: none;
       transition: all 0.2s;
-      width: 100%;
+      flex: 1;
+      min-width: 100px;
       box-sizing: border-box;
+    }
+
+    #search-btn {
+      display: none;
+      padding: 8px 14px;
+      background: var(--green-600);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    #search-btn:hover {
+      background: var(--green-700);
+      filter: brightness(1.05);
+    }
+
+    #search-btn:active {
+      transform: scale(0.98);
     }
 
     .search-input:focus {
@@ -635,9 +662,10 @@
     </div>
 
     <!-- Busca Rápida Global -->
-    <div id="search-container" style="flex:1 1 auto; min-width:100px; max-width:300px; margin:0 12px;">
+    <div id="search-container" style="margin:0 12px;">
       <input type="text" id="search-input" class="search-input" placeholder="🔍 Procurar…"
              aria-label="Busca rápida global" autocomplete="off">
+      <button type="button" id="search-btn" aria-label="Executar busca" title="Buscar (Enter)">🔎</button>
       <div id="search-dropdown" class="search-dropdown"></div>
     </div>
 
@@ -850,16 +878,26 @@ function dispensarInstall() {
   if (b) b.remove();
 }
 
-// Busca rápida global com debounce
+// Busca rápida global com debounce e Enter imediato
 (function() {
   const input = document.getElementById('search-input');
+  const btn = document.getElementById('search-btn');
   const dropdown = document.getElementById('search-dropdown');
   let debounceTimer;
   const cacheKey = 'gado-search-cache';
 
+  function updateButtonVisibility() {
+    if (input.value.trim().length > 0) {
+      btn.style.display = 'block';
+    } else {
+      btn.style.display = 'none';
+      dropdown.style.display = 'none';
+    }
+  }
+
   function showResults(resultados) {
     if (!resultados.length) {
-      dropdown.innerHTML = '<div style="padding:10px 12px;color:var(--text-3);font-size:12px;">Nenhum resultado encontrado</div>';
+      dropdown.innerHTML = '<div style="padding:10px 12px;color:var(--text-secondary);font-size:12px;">Nenhum resultado encontrado</div>';
       dropdown.style.display = 'block';
       return;
     }
@@ -895,29 +933,57 @@ function dispensarInstall() {
         showResults(data.resultados);
       })
       .catch(() => {
-        dropdown.innerHTML = '<div style="padding:10px 12px;color:var(--danger);font-size:12px;">Erro na busca</div>';
+        dropdown.innerHTML = '<div style="padding:10px 12px;color:var(--red-600);font-size:12px;">Erro na busca</div>';
         dropdown.style.display = 'block';
       });
   }
 
+  function buscarENavegar() {
+    clearTimeout(debounceTimer);
+    const termo = input.value.trim();
+    if (!termo || termo.length < 2) {
+      dropdown.style.display = 'none';
+      return;
+    }
+    buscar(termo);
+    // Navega para primeiro resultado em 100ms
+    setTimeout(() => {
+      const link = dropdown.querySelector('.search-result');
+      if (link) window.location.href = link.href;
+    }, 100);
+  }
+
+  // Digitar: debounce 200ms para listar resultados
   input.addEventListener('input', (e) => {
+    updateButtonVisibility();
     clearTimeout(debounceTimer);
     const termo = e.target.value.trim();
     debounceTimer = setTimeout(() => buscar(termo), 200);
   });
 
+  // Enter: busca imediata (sem debounce) e navega
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && dropdown.style.display === 'block') {
-      const link = dropdown.querySelector('.search-result');
-      if (link) window.location.href = link.href;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      buscarENavegar();
     }
   });
 
+  // Botão: busca imediata (sem debounce) e navega
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    buscarENavegar();
+  });
+
+  // Fechar ao clicar fora
   document.addEventListener('click', (e) => {
     if (!e.target.closest('#search-container')) {
       dropdown.style.display = 'none';
     }
   });
+
+  // Inicializar botão
+  updateButtonVisibility();
 })();
 
 // v5.7: Dark Mode
