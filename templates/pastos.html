@@ -300,6 +300,14 @@
     let txt = `<b>${p.nome}</b><br>${br(p.area, 1)} ha · ${p.cab} cab`;
     if (p.cab && p.ua_ha != null) txt += `<br>${br(p.ua_ha, 2)} UA/ha${p.estimado ? "~" : ""}`;
     if (p.cab && p.dias != null) txt += ` · ${p.dias} dias`;
+
+    // Adiciona lista de animais se disponível
+    if (p.animais && p.animais.length > 0) {
+      const animaisStr = p.animais.slice(0, 5).join(", ");
+      const maisAnimais = p.animais.length > 5 ? ` +${p.animais.length - 5}` : "";
+      txt += `<br><small>🐄 ${animaisStr}${maisAnimais}</small>`;
+    }
+
     camada.bindTooltip(txt, { permanent: true, direction: "center", className: "rotulo-pasto" });
     camada.addTo(grupo);
     camadas[p.id] = camada;
