@@ -198,10 +198,10 @@
         {% elif lotacao.nivel == 'atencao' %}· ⚡ perto do limite
         {% elif lotacao.nivel == 'ok' %}· ✅ folga no pasto{% endif %}
       </p>
-      <a href="{{ url_for('pastos') }}" style="font-size:13px;color:var(--green-600)">Ver mapa dos pastos →</a>
+      {% if pastos_disponivel %}<a href="{{ url_for('pastos') }}" style="font-size:13px;color:var(--green-600)">Ver mapa dos pastos →</a>{% endif %}
     {% else %}
       <p style="font-size:13px;color:var(--text-3)">Desenhe os pastos em
-        <a href="{{ url_for('pastos') }}" style="color:var(--green-600)">🗺️ Pastos</a>
+        {% if pastos_disponivel %}<a href="{{ url_for('pastos') }}" style="color:var(--green-600)">🗺️ Pastos</a>{% else %}🗺️ Pastos{% endif %}
         para ver a lotação (UA/ha).</p>
     {% endif %}
   </div>

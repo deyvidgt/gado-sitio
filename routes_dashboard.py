@@ -246,10 +246,11 @@ def dashboard():
     estado_sitio = {"cabecas": r.get("estoque", 0), "peso_medio": peso_medio,
                      "resultado": r.get("resultado_realizado", 0),
                      "lotacao": (extras.get("lotacao") or {}).get("ua_ha")}
+    pastos_disponivel = "pastos" in app.url_map._rules_by_endpoint
     acoes_rapidas = [("⚖️ Nova pesagem", "pesagem"), ("🩺 Novo manejo", "novo_manejo"),
                      ("🛒 Nova compra", "nova_compra"), ("🌾 Nova visita", "nova_visita")]
     # Adiciona pastos se a rota existir
-    if "pastos" in app.url_map._rules_by_endpoint:
+    if pastos_disponivel:
         acoes_rapidas.insert(2, ("🗺️ Mover pasto", "pastos"))
     atencao_agora = alertas + extras.get("repro", [])
 
@@ -268,8 +269,8 @@ def dashboard():
                            estado_sitio=estado_sitio, acoes_rapidas=acoes_rapidas,
                            atencao_agora=atencao_agora, ocorrencias=recentes[:6],
                            resumo_leite=resumo_leite, tendencia_peso=[], cards=cards,
-                           entrada_saida=entrada_saida, tempo=tempo_previsao, **extras,
-                           NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS, MEMBROS=MEMBROS)
+                           entrada_saida=entrada_saida, tempo=tempo_previsao, pastos_disponivel=pastos_disponivel,
+                           **extras, NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS, MEMBROS=MEMBROS)
 
 
 def _cards_extras(dados, r) -> dict:
