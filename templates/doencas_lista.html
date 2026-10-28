@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Doenças e Carência{% endblock %}
+
+{% block content %}
+<h1>📋 Histórico de Doenças — Status de Carência</h1>
+
+<div style="margin-bottom:20px;">
+  <a href="{{ url_for('registrar_doenca') }}" class="btn" style="background:var(--green-600);">🩺 Registrar Novo Tratamento</a>
+</div>
+
+{% if animais_com_alerta %}
+  <!-- Animais em carência -->
+  {% set em_carencia = animais_com_alerta | selectattr('em_carencia', 'equalto', True) | list %}
+  {% if em_carencia %}
+  <section style="margin-bottom:20px;">
+    <h2 style="color:var(--red-600);margin-bottom:12px;">⚠️ EM CARÊNCIA — Não podem ser vendidos</h2>
+    {% for animal in em_carencia %}
+    <div style="background:rgba(220,38,38,.1); border-left:4px solid var(--red-600); padding:14px; margin-bottom:10px; border-radius:4px;">
+      <div style="font-weight:600;color:var(--text-primary);margin-bottom:6px;font-size:14px;">
+        🐄 {{ animal.brinco }}
+      </div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">
+        <strong>{{ animal.medicamento }}</strong> — aplié em {{ animal.data_liberacao.strftime('%d/%m/%Y') if animal.data_liberacao else '?' }}
+      </div>
+      <div style="display:flex;gap:20px;font-size:13px;">
+        <div>
+          <span style="font-weight:600;color:var(--red-600);">{{ animal.dias_restantes }}</span>
+          <span style="color:var(--text-3);">dias restantes</span>
+        </div>
+        <div>
+          <span style="color:var(--text-3);">Libera em:</span>
+          <span style="font-weight:600;color:var(--text-primary);">{{ animal.data_liberacao.strftime('%d/%m/%Y') if animal.data_liberacao else '?' }}</span>
+        </div>
+      </div>
+      <div style="margin-top:8px;">
+        <a href="{{ url_for('historico_doencas', animal_id=animal.vaca_id) }}" class="btn btn-outline" style="font-size:11px;padding:4px 8px;">Ver histórico completo</a>
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <!-- Animais livres -->
+  {% set livres = animais_com_alerta | selectattr('em_carencia', 'equalto', False) | list %}
+  {% if livres %}
+  <section>
+    <h2 style="color:var(--green-600);margin-bottom:12px;">✅ LIVRES — Podem ser vendidos</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">
+      {% for animal in livres %}
+      <div style="background:var(--bg-secondary);border:1px solid var(--green-300);padding:12px;border-radius:6px;">
+        <div style="font-weight:600;color:var(--text-primary);margin-bottom:6px;">{{ animal.brinco }}</div>
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:8px;">Última doença resolvida</div>
+        <a href="{{ url_for('historico_doencas', animal_id=animal.vaca_id) }}" class="btn btn-outline" style="font-size:11px;padding:4px 8px;width:100%;">Detalhes</a>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+{% else %}
+<div style="text-align:center;padding:40px;background:var(--bg-secondary);border-radius:8px;border:1px solid var(--border);">
+  <div style="font-size:32px;margin-bottom:8px;">📋</div>
+  <div style="font-size:14px;font-weight:600;color:var(--text-primary);">Nenhum registro de doença</div>
+  <div style="font-size:12px;color:var(--text-secondary);margin-top:8px;">
+    Comece registrando o primeiro tratamento quando houver necessidade.
+  </div>
+</div>
+{% endif %}
+
+<!-- Info Box -->
+<div style="margin-top:30px;background:var(--bg-secondary);padding:16px;border-radius:8px;border-left:3px solid var(--blue-600);">
+  <h3 style="margin-top:0;font-size:14px;font-weight:600;">📌 Como Funciona</h3>
+  <ul style="font-size:12px;color:var(--text-secondary);margin:0;padding-left:20px;">
+    <li><strong>Registre:</strong> clique em "Novo Tratamento" e preencha medicamento + data</li>
+    <li><strong>Sistema calcula:</strong> carência automática (consultando tabela MAPA)</li>
+    <li><strong>Aviso:</strong> animal aparece em "EM CARÊNCIA" até liberação</li>
+    <li><strong>Integração:</strong> ao tentar vender, sistema avisa se está em carência</li>
+    <li><strong>WhatsApp:</strong> alertas de liberação próxima (adiado para próxima onda)</li>
+  </ul>
+</div>
+
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico — {{ animal_desc }}{% endblock %}
+
+{% block content %}
+<h1>🩺 Histórico de Doenças — {{ animal_desc }}</h1>
+
+<!-- Status atual de carência -->
+{% if status_carencia.em_carencia %}
+<div style="background:rgba(220,38,38,.1); border-left:4px solid var(--red-600); padding:16px; margin-bottom:20px; border-radius:4px;">
+  <div style="font-weight:600;color:var(--red-600);margin-bottom:6px;">⚠️ ANIMAL EM CARÊNCIA</div>
+  <div style="font-size:13px;color:var(--text-secondary);">
+    <strong>{{ status_carencia.medicamento }}</strong> — faltam <strong style="color:var(--red-600);">{{ status_carencia.dias_restantes }} dias</strong>
+  </div>
+  <div style="font-size:12px;color:var(--text-3);margin-top:6px;">
+    Liberado em: <strong>{{ status_carencia.data_liberacao.strftime('%d/%m/%Y às %H:%M') if status_carencia.data_liberacao else '?' }}</strong>
+  </div>
+  <div style="margin-top:10px;font-size:12px;color:var(--red-700);">
+    ❌ <strong>Não pode ser vendido</strong> até a data de liberação
+  </div>
+</div>
+{% else %}
+<div style="background:rgba(34,197,94,.1); border-left:4px solid var(--green-600); padding:16px; margin-bottom:20px; border-radius:4px;">
+  <div style="font-weight:600;color:var(--green-600);">✅ SEM RESTRIÇÕES DE CARÊNCIA</div>
+  <div style="font-size:13px;color:var(--text-secondary);">Animal pode ser vendido normalmente</div>
+</div>
+{% endif %}
+
+<!-- Histórico -->
+{% if historico %}
+<h2 style="margin-top:20px;margin-bottom:12px;">📋 Registros de Tratamento (últimos 365 dias)</h2>
+<div style="overflow-x:auto;">
+  <table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead>
+      <tr style="background:var(--bg-2);border-bottom:1px solid var(--border);">
+        <th style="padding:10px;text-align:left;">Data</th>
+        <th style="padding:10px;text-align:left;">Doença</th>
+        <th style="padding:10px;text-align:left;">Tratamento</th>
+        <th style="padding:10px;text-align:left;">Medicamento</th>
+        <th style="padding:10px;text-align:left;">Carência</th>
+        <th style="padding:10px;text-align:left;">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for registro in historico %}
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:10px;">{{ registro.data.strftime('%d/%m/%Y') if registro.data else '?' }}</td>
+        <td style="padding:10px;"><strong>{{ registro.doenca }}</strong></td>
+        <td style="padding:10px;font-size:11px;">{{ registro.tratamento or '—' }}</td>
+        <td style="padding:10px;"><em>{{ registro.medicamento }}</em></td>
+        <td style="padding:10px;">
+          {% if registro.carencia > 0 %}
+            {{ registro.carencia }}h leite
+          {% else %}
+            Nenhuma (leite)
+          {% endif %}
+        </td>
+        <td style="padding:10px;">{{ registro.resolvido }}</td>
+      </tr>
+      {% if registro.observacoes %}
+      <tr style="border-bottom:1px solid var(--border);background:var(--bg-2);">
+        <td colspan="6" style="padding:8px;font-size:11px;color:var(--text-3);">
+          📝 <strong>Obs:</strong> {{ registro.observacoes }}
+        </td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div style="text-align:center;padding:30px;background:var(--bg-secondary);border-radius:6px;margin-top:20px;">
+  <div style="font-size:14px;color:var(--text-secondary);">Nenhum registro de doença para este animal</div>
+</div>
+{% endif %}
+
+<!-- Ações -->
+<div style="margin-top:20px;display:flex;gap:10px;">
+  <a href="{{ url_for('registrar_doenca') }}" class="btn" style="background:var(--green-600);">➕ Novo Tratamento</a>
+  <a href="{{ url_for('listar_doencas') }}" class="btn btn-outline">← Voltar</a>
+</div>
+
+{% endblock %}
