@@ -42,6 +42,7 @@ from config import (
     COLUNAS_VOLUMOSOS, COLUNAS_CONSUMO_VOLUMOSOS,
     COLUNAS_ENGORDA_PASTAGEM, COLUNAS_GMD_LOTACAO, COLUNAS_RACAO_CONSUMO,
     COLUNAS_MORTALIDADE_BEZERROS,
+    COLUNAS_CONFINAMENTO_LOTES, COLUNAS_GENETICA,  # v5.10
 )
 
 # Mapa aba → colunas esperadas, usado para migrar colunas novas sem perder dados.

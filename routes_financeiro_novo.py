@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from db import carregar_aba, RAIZ
 from calculos import calcular_todos_membros, calcular_estoque_por_membro
 from config import MEMBROS, NOMES_MEMBROS, EMOJIS_MEMBROS
-from extensions import app, _agora, login_required, _get_dados_cache, _get_membros_cache, fmt_brl, fmt_data
+from extensions import app, _agora, login_required, _get_dados_cache, _get_membros_cache, _get_resumo_cache, fmt_brl, fmt_data
 import os
 import json
 
@@ -27,7 +27,7 @@ import json
 def financeiro():
     """Página de indicadores financeiros completos."""
     dados = _get_dados_cache()
-    r = _get_membros_cache()[0]  # resumo geral
+    r = _get_resumo_cache()  # resumo geral
 
     return render_template("financeiro.html", r=r)
 
@@ -36,10 +36,10 @@ def financeiro():
 @login_required
 def resultado():
     """Página de resultado por membro e período."""
+    from calculos import calcular_resumo_financeiro
     dados = _get_dados_cache()
-    membros_data = _get_membros_cache()
-    resumo_geral = membros_data[0]
-    membros_dict = {m: membros_data[i+1] for i, m in enumerate(MEMBROS)}
+    membros_dict = _get_membros_cache()
+    resumo_geral = calcular_resumo_financeiro(dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"])
 
     return render_template(
         "resultado.html",
@@ -111,23 +111,25 @@ def _calcular_fluxo_mensal(vendas, compras, gastos, meses=12):
         data_fim = agora - timedelta(days=30*(i-1))
 
         # Receita (vendas)
+        receita = 0
         if not vendas.empty:
             v = vendas[(pd.to_datetime(vendas["Data"], format="%d/%m/%Y", errors="coerce") >= data_inicio) &
                       (pd.to_datetime(vendas["Data"], format="%d/%m/%Y", errors="coerce") < data_fim)]
-            receita = pd.to_numeric(v.get("Total", 0), errors="coerce").sum()
-        else:
-            receita = 0
+            if not v.empty:
+                receita = float(pd.to_numeric(v["Valor Total (R$)"], errors="coerce").sum())
 
         # Despesa (compras + gastos)
         despesa = 0
         if not compras.empty:
             c = compras[(pd.to_datetime(compras["Data"], format="%d/%m/%Y", errors="coerce") >= data_inicio) &
                        (pd.to_datetime(compras["Data"], format="%d/%m/%Y", errors="coerce") < data_fim)]
-            despesa += pd.to_numeric(c.get("Total", 0), errors="coerce").sum()
+            if not c.empty:
+                despesa += float(pd.to_numeric(c["Valor Total (R$)"], errors="coerce").sum())
         if not gastos.empty:
             g = gastos[(pd.to_datetime(gastos["Data"], format="%d/%m/%Y", errors="coerce") >= data_inicio) &
                       (pd.to_datetime(gastos["Data"], format="%d/%m/%Y", errors="coerce") < data_fim)]
-            despesa += pd.to_numeric(g.get("Total", 0), errors="coerce").sum()
+            if not g.empty:
+                despesa += float(pd.to_numeric(g["Valor Total (R$)"], errors="coerce").sum())
 
         saldo_mes = receita - despesa
         saldo_acum += saldo_mes
@@ -169,7 +171,8 @@ def _calcular_fluxo_animais(compras, vendas, manejo, dias=90):
         saida = 0
         if not vendas.empty:
             v = vendas[pd.to_datetime(vendas["Data"], format="%d/%m/%Y", errors="coerce").dt.date == data.date()]
-            saida += pd.to_numeric(v.get("Quantidade", 0), errors="coerce").sum()
+            if not v.empty:
+                saida += int(pd.to_numeric(v["Qtd Cabeças"], errors="coerce").sum())
         if not manejo.empty:
             m = manejo[(manejo["Tipo"].isin(["Morte", "Perda"])) &
                       (pd.to_datetime(manejo["Data"], format="%d/%m/%Y", errors="coerce").dt.date == data.date())]

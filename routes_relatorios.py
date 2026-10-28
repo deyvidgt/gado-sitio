@@ -173,18 +173,6 @@ def relatorio_pdf():
     )
 
 
-@app.route("/fluxo-caixa")
-@login_required
-def fluxo_caixa():
-    """Página de fluxo de caixa visual com gráfico mensal."""
-    from calculos import fluxo_caixa_mensal
-    
-    dados = _get_dados_cache()
-    fluxo = fluxo_caixa_mensal(dados["Compras"], dados["Gastos"], dados["Vendas"], meses=12)
-    
-    return render_template("fluxo_caixa.html", fluxo=fluxo, titulo="Fluxo de Caixa")
-
-
 @app.route("/comparativo-anual")
 @login_required
 def comparativo_anual():

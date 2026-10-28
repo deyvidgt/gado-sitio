@@ -67,9 +67,9 @@ def ganho_total(lote_id: str, dados: dict = None) -> float:
     return resumo["peso_final"] - resumo["peso_inicial"]
 
 
-def custo_por_lote(lote_id: str, custo_total: float = 0, preco_venda_arroba: float = 0) -> dict:
+def custo_por_lote(lote_id: str, custo_total: float = 0, preco_venda_arroba: float = 0, dados: dict = None) -> dict:
     """Calcula custo por cabeça, resultado financeiro do lote."""
-    resumo = resumo_lote(lote_id)
+    resumo = resumo_lote(lote_id, dados)
     if not resumo or not resumo["quantidade"]:
         return {"custo_total": custo_total, "custo_por_cab": 0, "custo_por_dia": 0, "resultado": 0}
 
