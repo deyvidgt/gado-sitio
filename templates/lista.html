@@ -104,7 +104,50 @@
 
 <div class="table-wrap">
   {% if rows %}
-  <table>
+  <style>
+    @media (max-width: 768px) {
+      .lista-table { display: none; }
+      .lista-cards { display: block; }
+    }
+    @media (min-width: 769px) {
+      .lista-table { display: table; }
+      .lista-cards { display: none; }
+    }
+    .card-linha {
+      background: var(--surface);
+      border: 1px solid var(--bg-2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .card-linha-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+    .card-linha-label {
+      font-weight: 600;
+      color: var(--text-2);
+      min-width: 100px;
+    }
+    .card-linha-valor {
+      text-align: right;
+      color: var(--text);
+    }
+    .card-linha-acoes {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--bg-2);
+    }
+  </style>
+
+  <!-- Desktop: Tabela -->
+  <table class="lista-table">
     <thead>
       <tr>
         <th>#</th>
@@ -131,8 +174,6 @@
     </thead>
     <tbody>
       {% for row in rows %}
-        {# _idx é o índice REAL do DataFrame (passado pelo app.py) — garante que
-           excluir/editar atuem no registro correto mesmo com tabela ordenada #}
         {% set i = row._idx if row._idx is defined else loop.index0 %}
         {% set pessoa = (row.get('Registrado Por','') if secao == 'gastos' else (row.get('Responsável','') if secao == 'manejo' else '')) %}
         {% set _val = row.get('Valor Total (R$)') %}
@@ -144,12 +185,10 @@
         {% for col in colunas %}
           <td>
             {% set v = row.get(col, '') %}
-            {# Tratar None, NaN real e a string 'nan' que pode vir do pandas #}
             {% if v is none or v == '' or v|string == 'nan' or v|string == 'NaT' %}—
             {% elif col.endswith('(R$)') %}
               {{ v | brl }}
             {% elif v is number and v == v|int %}
-              {# Inteiro lido como float pelo pandas (coluna com célula vazia): 7.0 → 7 #}
               {{ v|int }}
             {% elif col == 'Tipo' and secao == 'gastos' %}
               <span class="badge badge-gasto">{{ v }}</span>
@@ -181,6 +220,79 @@
       {% endfor %}
     </tbody>
   </table>
+
+  <!-- Mobile: Cards -->
+  <div class="lista-cards">
+    {% for row in rows %}
+      {% set i = row._idx if row._idx is defined else loop.index0 %}
+      {% set pessoa = (row.get('Registrado Por','') if secao == 'gastos' else (row.get('Responsável','') if secao == 'manejo' else '')) %}
+      {% set _val = row.get('Valor Total (R$)') %}
+      {% set _cab = row.get('Qtd Cabeças') %}
+    <div class="card-linha" data-pessoa="{{ (pessoa or '')|string }}"
+         data-valor="{{ _val if (_val is number and _val == _val) else 0 }}"
+         data-cab="{{ _cab if (_cab is number and _cab == _cab) else 0 }}">
+      <div class="card-linha-row">
+        <span class="card-linha-label">{% if colunas[0] == 'Data' %}{{ row.get('Data', '—') }}{% else %}{{ row.get(colunas[0], '—') }}{% endif %}</span>
+        {% if secao in ['vendas', 'gastos'] and 'Valor Total (R$)' in colunas %}
+          <span class="card-linha-valor" style="font-weight:700;color:var(--green-600)">{{ row.get('Valor Total (R$)', '—') | brl }}</span>
+        {% endif %}
+      </div>
+      {% for col in colunas[:4] %}
+        {% if col != 'Data' and col != 'Valor Total (R$)' %}
+          {% set v = row.get(col, '') %}
+          {% if v is not none and v != '' and v|string != 'nan' %}
+          <div class="card-linha-row">
+            <span class="card-linha-label">{{ col }}</span>
+            <span class="card-linha-valor">
+              {% if col.endswith('(R$)') %}
+                {{ v | brl }}
+              {% elif v is number and v == v|int %}
+                {{ v|int }}
+              {% elif col == 'Tipo' %}
+                <span class="badge {% if secao == 'gastos' %}badge-gasto{% else %}badge-manejo{% endif %}">{{ v }}</span>
+              {% else %}
+                {{ v }}
+              {% endif %}
+            </span>
+          </div>
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+      <div class="card-linha-acoes">
+        {% if secao == 'compras' %}
+          <a href="{{ url_for('editar_compra', idx=i) }}" class="btn btn-outline btn-sm">✏️ Editar</a>
+          <form method="post" action="{{ url_for('excluir', aba='Compras', idx=i) }}"
+                onsubmit="return confirm('Excluir?')" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-danger btn-sm" type="submit">🗑 Deletar</button>
+          </form>
+        {% elif secao == 'gastos' %}
+          <a href="{{ url_for('editar_gasto', idx=i) }}" class="btn btn-outline btn-sm">✏️ Editar</a>
+          <form method="post" action="{{ url_for('excluir', aba='Gastos', idx=i) }}"
+                onsubmit="return confirm('Excluir?')" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-danger btn-sm" type="submit">🗑 Deletar</button>
+          </form>
+        {% elif secao == 'vendas' %}
+          <a href="{{ url_for('editar_venda', idx=i) }}" class="btn btn-outline btn-sm">✏️ Editar</a>
+          <form method="post" action="{{ url_for('excluir', aba='Vendas', idx=i) }}"
+                onsubmit="return confirm('Excluir?')" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-danger btn-sm" type="submit">🗑 Deletar</button>
+          </form>
+        {% elif secao == 'manejo' %}
+          <a href="{{ url_for('editar_manejo', idx=i) }}" class="btn btn-outline btn-sm">✏️ Editar</a>
+          <form method="post" action="{{ url_for('excluir', aba='Manejo', idx=i) }}"
+                onsubmit="return confirm('Excluir?')" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-danger btn-sm" type="submit">🗑 Deletar</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
   {% else %}
     <div style="background:var(--white);padding:48px;text-align:center;border-radius:var(--radius);box-shadow:var(--shadow)">
       <div style="font-size:40px;margin-bottom:12px">📭</div>
