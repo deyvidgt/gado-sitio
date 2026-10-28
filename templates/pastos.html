@@ -23,21 +23,63 @@
   .legenda-item .bol { width:16px; height:16px; }
   .comp li { list-style:none; margin:3px 0; font-size:13.5px; }
   .comp .barra { display:inline-block; height:9px; border-radius:5px; background:var(--accent, #4363d8); vertical-align:1px; margin-right:5px; }
+
+  /* ── Mobile responsivo (< 768px) ── */
+  @media (max-width: 768px) {
+    #mapa { height: 40vh; min-height: 240px; }
+
+    .mapa-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .mapa-controls button,
+    .mapa-controls select {
+      width: 100%;
+    }
+
+    .mapa-controls .mapa-text {
+      grid-column: 1 / -1;
+      display: none;
+    }
+
+    .mapa-controls select {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* Desktop (> 768px) */
+  @media (min-width: 769px) {
+    .mapa-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .mapa-controls button,
+    .mapa-controls select {
+      white-space: nowrap;
+    }
+  }
 </style>
 
 <div class="card">
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+  <div class="mapa-controls">
     <button type="button" class="btn btn-outline btn-sm" id="onde-estou">📍 Onde estou</button>
-    <button type="button" class="btn btn-outline btn-sm" id="btn-toggle-mapa">👁️ Ocultar mapa</button>
+    <button type="button" class="btn btn-outline btn-sm" id="btn-toggle-mapa">👁️ Ocultar</button>
     {% if pastos %}
-    <select id="sel-foco-pasto" style="font-size:13px;padding:4px 8px;border-radius:6px;border:1px solid var(--border,#ccc)">
-      <option value="">🎯 Escolher pasto...</option>
+    <select id="sel-foco-pasto" style="font-size:13px;padding:8px;border-radius:6px;border:1px solid var(--border,#ccc);background:var(--surface)">
+      <option value="">🎯 Pasto...</option>
       {% for p in pastos %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}
     </select>
-    <button type="button" class="btn btn-outline btn-sm" id="btn-focar-pasto">🎯 Mostrar selecionado</button>
+    <button type="button" class="btn btn-outline btn-sm" id="btn-focar-pasto">🎯 Ver</button>
     {% endif %}
-    <button type="button" class="btn btn-outline btn-sm" id="btn-abrir-kmz">📂 Importar KMZ</button>
-    <span class="muted" style="align-self:center">Novo pasto: toque no ⬟ do mapa ou importe arquivo .kmz.</span>
+    <button type="button" class="btn btn-outline btn-sm" id="btn-abrir-kmz">📂 KMZ</button>
+    <span class="muted mapa-text" style="align-self:center">Novo: toque ⬟ ou importe .kmz</span>
   </div>
 
   <form method="post" action="{{ url_for('importar_kmz') }}" enctype="multipart/form-data" id="form-kmz" style="display:none;margin-bottom:12px;padding:12px;background:var(--bg-2,#f8f9fa);border:1px dashed var(--accent,#4363d8);border-radius:8px">
