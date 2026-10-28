@@ -751,7 +751,12 @@
 
 <script>
   /* ── Menu Drawer ─────────────────────────────────────────────────────────── */
+  let menuClickTimeout = null;
   function toggleMenu() {
+    // Debounce: evita múltiplos cliques rápidos no botão menu
+    if (menuClickTimeout) return;
+    menuClickTimeout = setTimeout(() => { menuClickTimeout = null; }, 300);
+
     const drawer = document.getElementById("drawer-menu");
     const backdrop = document.getElementById("drawer-backdrop");
     const isOpen = drawer.style.display !== "none";
@@ -769,14 +774,24 @@
     document.getElementById("drawer-backdrop").style.display = "none";
   }
 
-  // Close menu when link clicked
+  // Close menu when link clicked + debounce against rapid clicks
+  let linkClickTimeout = null;
   document.querySelectorAll(".drawer-link").forEach(a => {
-    a.addEventListener("click", () => { closeMenu(); });
+    a.addEventListener("click", (e) => {
+      // Previne múltiplos cliques rápidos
+      if (linkClickTimeout) {
+        e.preventDefault();
+        return;
+      }
+      linkClickTimeout = setTimeout(() => { linkClickTimeout = null; }, 500);
+      closeMenu();
+    });
   });
 
   /* ── Tema ────────────────────────────────────────────────────────────────── */
   const html = document.documentElement;
   const themeIcon = document.getElementById("theme-icon");
+  let themeClickTimeout = null;
 
   function applyTheme(theme) {
     html.setAttribute("data-theme", theme);
@@ -788,6 +803,10 @@
   }
 
   function toggleTheme() {
+    // Debounce: evita múltiplos cliques rápidos no botão de tema
+    if (themeClickTimeout) return;
+    themeClickTimeout = setTimeout(() => { themeClickTimeout = null; }, 300);
+
     applyTheme(html.getAttribute("data-theme") === "dark" ? "light" : "dark");
   }
 
