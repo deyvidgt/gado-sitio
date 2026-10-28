@@ -61,6 +61,7 @@
   <a href="#leite">9e. Atividade Leiteira</a>
   <a href="#voz">10. Comando de Voz</a>
   <a href="#lotes">10b. Lotes</a>
+  <a href="#indicadores">10c. Indicadores (Engorda, GMD, Ração, Mortalidade)</a>
   <a href="#consultas">11. Consultas e Relatórios</a>
   <a href="#ferramentas">12. Importar, Exportar e Backups</a>
   <a href="#config">13. Configurações</a>
@@ -451,6 +452,51 @@
 {{ passo('p-animais.png', 'Lista de animais') }}
 {{ passo('p-visitas.png', 'Lista de visitas') }}
 {{ passo('p-relatorios.png', 'Relatórios') }}
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="indicadores">10c. Indicadores — Engorda, GMD, Ração, Mortalidade</h2>
+<p><strong>v5.8:</strong> novos indicadores para acompanhar a produção de corte e leite.</p>
+
+<h3>📊 Engorda vs Pastagem</h3>
+<p>Rastreia o ganho de peso médio (GMD — ganho médio diário) dos lotes em cada pasto.
+  Mostra quantas cabeças estão engordando, qual o ganho esperado e em qual pasto o desempenho foi melhor.
+  Útil para saber se o pasto está bom, se o lote está demorando muito, e para comparar resultados.</p>
+<ul>
+  <li><strong>Campos:</strong> Data, Pasto, Brincos (quais animais), Peso Inicial e Final, Dias no Pasto, GMD (kg/dia), Lotação (UA/ha).</li>
+  <li><strong>Ver dados:</strong> menu → Indicadores → Engorda vs Pastagem.</li>
+</ul>
+
+<h3>📈 GMD vs Lotação</h3>
+<p>Análise histórica: compara ganho de peso com densidade do rebanho.
+  Se o ganho cai quando a lotação sobe, o pasto está lotado demais.
+  O sistema calcula a correlação automaticamente e recomenda aumentar ou reduzir a densidade.</p>
+<ul>
+  <li><strong>Campos:</strong> Data, Período (dias), GMD, Lotação (UA/ha), % Ocupação da capacidade.</li>
+  <li><strong>Ver dados:</strong> menu → Indicadores → GMD vs Lotação.</li>
+</ul>
+
+<h3>🍽️ Ração Oferecida vs Consumida</h3>
+<p><strong>Módulo leiteiro:</strong> rastreia eficiência alimentar — quanto de ração o rebanho realmente come
+  vs quanto se oferece. Taxa de consumo baixa pode indicar qualidade ruim ou desperdício.</p>
+<ul>
+  <li><strong>Campos:</strong> Data, Tipo de Ração, Quantidade Oferecida (kg), Quantidade Consumida (kg), Taxa de Consumo (%), Desperdício (%).</li>
+  <li><strong>Ver dados:</strong> menu → Indicadores → Ração - Consumo.</li>
+</ul>
+
+<h3>🐄 Mortalidade de Bezerros</h3>
+<p>Acompanha perdas de bezerros — percentual mensal, causas (diarreia, infecção, etc) e idade da morte.
+  Mais de 5% ao mês merece atenção: pode indicar problema de higiene, colostro ou vacinação.</p>
+<ul>
+  <li><strong>Campos:</strong> Período (mês/ano), Bezerros Nascidos, Bezerros Mortos, Taxa (%), Causas (3).</li>
+  <li><strong>Ver dados:</strong> menu → Indicadores → Mortalidade de Bezerros.</li>
+</ul>
+
+<div class="dica">
+  <strong>💡 Dica:</strong> os indicadores preenchem sozinhos se você registrar os dados no manejo.
+  Exemplo: registre peso no manejo (Pesagem), que aparece em GMD automaticamente.
+</div>
+
 <a class="voltar" href="#indice">↑ voltar ao índice</a>
 
 <!-- ═════════════════════════════════════════════════════════════════════ -->
