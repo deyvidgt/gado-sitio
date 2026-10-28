@@ -35,6 +35,14 @@ from calculos import (  # noqa: E402
 )
 from config import MEMBROS, NOMES_MEMBROS, EMOJIS_MEMBROS  # noqa: E402
 
+# Importa novos módulos do v5.10
+try:
+    from confinamento import resumo_mensal_confinamento  # noqa: E402
+    from genetica import resumo_mensal_genetica  # noqa: E402
+    MODULOS_V510 = True
+except ImportError:
+    MODULOS_V510 = False
+
 MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho",
          "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
 
@@ -137,7 +145,30 @@ def montar_resumo_mensal(dados: dict, ano: int, mes: int, com_valores: bool = Tr
             linhas.append(f"{EMOJIS_MEMBROS.get(m, '•')} {NOMES_MEMBROS.get(m, m)}: "
                           f"{fmt_r(r['resultado_liquido'])} ({r['cabecas']} cab vendidas)")
 
-    linhas += ["", "_Sistema de Gestão de Gado_"]
+    # v5.10: Resumos de confinamento e genética
+    if MODULOS_V510:
+        try:
+            resumo_conf = resumo_mensal_confinamento(ano, mes)
+            if resumo_conf and resumo_conf.get("total_lotes", 0) > 0:
+                linhas += ["", "*📦 Confinamento*"]
+                linhas.append(f"Lotes finalizados: {resumo_conf.get('total_lotes', 0)}")
+                if com_valores and resumo_conf.get("resultado_total"):
+                    linhas.append(f"Resultado: {fmt_r(resumo_conf.get('resultado_total', 0))}")
+        except Exception as e:
+            logging.debug(f"Erro ao carregar resumo de confinamento: {e}")
+
+        try:
+            resumo_gen = resumo_mensal_genetica(ano, mes)
+            if resumo_gen and resumo_gen.get("total_animais", 0) > 0:
+                linhas += ["", "*🧬 Genética*"]
+                linhas.append(f"Animais cadastrados: {resumo_gen.get('total_animais', 0)}")
+                if resumo_gen.get("alertas"):
+                    for alerta in resumo_gen.get("alertas", [])[:3]:  # Máx 3 alertas
+                        linhas.append(f"⚠️ {alerta}")
+        except Exception as e:
+            logging.debug(f"Erro ao carregar resumo de genética: {e}")
+
+    linhas += ["", "_Sistema de Gestão de Gado v5.10_"]
     return "\n".join(linhas)
 
 
