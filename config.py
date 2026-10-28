@@ -252,6 +252,13 @@ COLUNAS_PASTOS = ["ID", "Nome", "Área (ha)", "Contorno", "Cor", "Ativo", "Obser
 COLUNAS_TAREFAS = ["ID", "Data", "Título", "Responsável", "Repetir", "Feito Em",
                    "Observações", "Criado Por"]
 
+# v5.7 — Histórico de medicações por animal (medicacoes.py) — Leite e Corte
+COLUNAS_MEDICACOES = [
+    "Data", "Brincos", "Tipo Medicação", "Princípio Ativo",
+    "Dosagem", "Via", "Motivo", "Quarentena Leite (dias)",
+    "Data Liberação", "Custo (R$)", "Responsável", "Observações",
+]
+
 # v5.4 — módulo leiteiro. Abas novas; as colunas entram somente no fim do
 # esquema existente e a migração não altera dados das abas anteriores.
 COLUNAS_LEITE_PRODUCAO = [

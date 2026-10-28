@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar Medicação{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 600px; margin: 20px auto;">
+
+<h1>💊 Registrar Medicação</h1>
+
+{% if erro %}
+<div style="background: #ffe6e6; color: #c0392b; padding: 12px; border-radius: 6px; margin-bottom: 20px;">
+  ❌ {{ erro }}
+</div>
+{% endif %}
+
+<form method="POST" style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 16px rgba(0,0,0,0.08);">
+
+  <!-- Data -->
+  <div style="margin-bottom: 16px;">
+    <label style="display: block; font-weight: 600; margin-bottom: 6px;">📅 Data</label>
+    <input type="text" name="data" placeholder="dd/mm/aaaa" required
+           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+  </div>
+
+  <!-- Brincos -->
+  <div style="margin-bottom: 16px;">
+    <label style="display: block; font-weight: 600; margin-bottom: 6px;">🐄 Animais (Brincos)</label>
+    <textarea name="brincos" placeholder="Amarelo 01 #A0001; Azul 05 #A0005" required
+              style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; height: 60px;"></textarea>
+    <small style="color: #999;">Formato: "Cor Nº #ID; Cor Nº #ID" (mesmo de Vendas)</small>
+  </div>
+
+  <!-- Tipo Medicação -->
+  <div style="margin-bottom: 16px;">
+    <label style="display: block; font-weight: 600; margin-bottom: 6px;">💊 Tipo de Medicação</label>
+    <select name="tipo" required style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;">
+      <option value="">— Selecione —</option>
+      <option value="Antibiótico IM">Antibiótico IM</option>
+      <option value="Antibiótico IV">Antibiótico IV</option>
+      <option value="Antibiótico Oral">Antibiótico Oral</option>
+      <option value="Antiinflamatório">Antiinflamatório</option>
+      <option value="Antiparasitário">Antiparasitário</option>
+      <option value="Antidiarreico">Antidiarreico</option>
+      <option value="Vitaminas">Vitaminas</option>
+      <option value="Outro">Outro</option>
+    </select>
+  </div>
+
+  <!-- Princípio Ativo -->
+  <div style="margin-bottom: 16px;">
+    <label style="display: block; font-weight: 600; margin-bottom: 6px;">🔬 Princípio Ativo</label>
+    <input type="text" name="principio" placeholder="ex: Penicilina benzatina, Ivermectina"
+           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+  </div>
+
+  <!-- Dosagem -->
+  <div style="margin-bottom: 16px;">
+    <label style="display: block; font-weight: 600; margin-bottom: 6px;">📏 Dosagem</label>
+    <input type="text" name="dosagem" placeholder="ex: 20 mL, 1 comprimido"
+           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+  </div>
+
+  <!-- Via -->
+  <div style="margin-bottom: 16px;">
+    <label style="display: block; font-weight: 600; margin-bottom: 6px;">💉 Via de Administração</label>
+    <select name="via" required style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;">
+      <option value="">— Selecione —</option>
+      <option value="IM">IM (Intramuscular)</option>
+      <option value="IV">IV (Intravenosa)</option>
+      <option value="Oral">Oral</option>
+      <option value="Tópico">Tópico</option>
+    </select>
+  </div>
+
+  <!-- Motivo -->
+  <div style="margin-bottom: 16px;">
+    <label style="display: block; font-weight: 600; margin-bottom: 6px;">🎯 Motivo do Tratamento</label>
+    <select name="motivo" required style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;">
+      <option value="">— Selecione —</option>
+      <option value="Mastite">Mastite</option>
+      <option value="Metrite">Metrite</option>
+      <option value="Ferida">Ferida / Abscesso</option>
+      <option value="Respiratório">Doença Respiratória</option>
+      <option value="Diareia">Diareia / Gastroenterite</option>
+      <option value="Controle Parasitário">Controle Parasitário</option>
+      <option value="Outro">Outro</option>
+    </select>
+  </div>
+
+  <!-- Quarentena Leite -->
+  <div style="margin-bottom: 16px;">
+    <label style="display: block; font-weight: 600; margin-bottom: 6px;">⏱️ Quarentena de Leite (dias)</label>
+    <input type="number" name="quarentena_dias" value="3" min="0" max="30" required
+           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;">
+    <small style="color: #999;">Mínimo 3 dias para antibiótico. 0 se não afeta leite.</small>
+  </div>
+
+  <!-- Custo -->
+  <div style="margin-bottom: 16px;">
+    <label style="display: block; font-weight: 600; margin-bottom: 6px;">💰 Custo (R$)</label>
+    <input type="number" name="custo" value="0" min="0" step="0.01"
+           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;">
+  </div>
+
+  <!-- Observações -->
+  <div style="margin-bottom: 20px;">
+    <label style="display: block; font-weight: 600; margin-bottom: 6px;">📝 Observações</label>
+    <textarea name="observacoes" placeholder="Notas extras (opcional)"
+              style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; height: 80px;"></textarea>
+  </div>
+
+  <!-- Botões -->
+  <div style="display: flex; gap: 10px;">
+    <button type="submit" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #3d7a34, #2d5a27); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+      ✅ Registrar
+    </button>
+    <a href="{{ url_for('medicacoes_dashboard') }}" style="flex: 1; padding: 12px; background: #f0f0f0; color: #333; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none;">
+      ❌ Cancelar
+    </a>
+  </div>
+
+</form>
+
+</div>
+{% endblock %}

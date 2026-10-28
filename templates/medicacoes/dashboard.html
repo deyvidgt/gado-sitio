@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Medicações — Histórico{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1000px; margin: 20px auto;">
+
+<h1>💊 Histórico de Medicações</h1>
+
+<!-- ALERTAS DE QUARENTENA HOJE -->
+{% if alertas.total > 0 %}
+<div class="card" style="background: #ffe6e6; border-left: 4px solid #c0392b;">
+  <h2 style="color: #c0392b; margin: 0;">⚠️ Animais em Quarentena de Leite</h2>
+  <p style="margin: 8px 0; color: #555;">Total: <strong>{{ alertas.total }}</strong> animal(is)</p>
+
+  {% if alertas.por_vencer_hoje %}
+  <div style="background: #fff; padding: 12px; border-radius: 6px; margin: 8px 0;">
+    <strong style="color: #c0392b;">🚨 Vencem HOJE:</strong>
+    <ul style="margin: 6px 0 0 20px; padding: 0;">
+      {% for item in alertas.por_vencer_hoje %}
+      <li>{{ item.brinco }} — {{ item.motivo }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if alertas.por_liberar %}
+  <div style="background: #fff; padding: 12px; border-radius: 6px; margin: 8px 0;">
+    <strong style="color: #e67e22;">⏳ Ainda em quarentena:</strong>
+    <ul style="margin: 6px 0 0 20px; padding: 0;">
+      {% for item in alertas.por_liberar %}
+      <li>{{ item.brinco }} — Libera em {{ item.dias_falta }} dia(s) ({{ item.liberacao }})</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% else %}
+<div class="card" style="background: #e6ffe6; border-left: 4px solid #3d7a34;">
+  <p style="color: #2d5a27; margin: 0;">✅ Nenhum animal em quarentena hoje!</p>
+</div>
+{% endif %}
+
+<!-- MEDICAÇÕES RECENTES (30 dias) -->
+<div class="card" style="margin-top: 20px;">
+  <h2>📋 Últimas Medicações (30 dias)</h2>
+
+  {% if medicacoes_recentes %}
+  <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+    <thead>
+      <tr style="background: #f0f0f0; border-bottom: 1px solid #ddd;">
+        <th style="padding: 10px; text-align: left;">Data</th>
+        <th style="padding: 10px; text-align: left;">Brincos</th>
+        <th style="padding: 10px; text-align: left;">Tipo</th>
+        <th style="padding: 10px; text-align: left;">Motivo</th>
+        <th style="padding: 10px; text-align: left;">Liberação</th>
+        <th style="padding: 10px; text-align: left;">Responsável</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for med in medicacoes_recentes %}
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 8px;">{{ med['Data'] }}</td>
+        <td style="padding: 8px;"><strong>{{ med['Brincos'] }}</strong></td>
+        <td style="padding: 8px;">{{ med['Tipo Medicação'] }}</td>
+        <td style="padding: 8px;">{{ med['Motivo'] }}</td>
+        <td style="padding: 8px;">
+          {% set liberacao = med['Data Liberação'] %}
+          {% if liberacao %}
+            {{ liberacao }}
+          {% endif %}
+        </td>
+        <td style="padding: 8px; color: #666;">{{ med['Responsável'] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color: #999;">Nenhuma medicação registrada nos últimos 30 dias.</p>
+  {% endif %}
+</div>
+
+<!-- BOTÃO FLUTUANTE -->
+<div style="position: fixed; bottom: 28px; right: 28px; z-index: 50;">
+  <a href="{{ url_for('registrar_medicacao') }}"
+     style="display: flex; align-items: center; justify-content: center;
+             width: 56px; height: 56px; border-radius: 50%;
+             background: linear-gradient(135deg, #3d7a34, #2d5a27);
+             color: white; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+             transition: all 0.2s; text-decoration: none;"
+     title="Registrar nova medicação"
+     onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.25)'"
+     onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.2)'">
+    💉
+  </a>
+</div>
+
+</div>
+{% endblock %}

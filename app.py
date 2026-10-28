@@ -81,6 +81,9 @@ from routes_alertas import *    # noqa: F401, F403
 # Calendário operacional consolidado (somente leitura)
 from routes_calendario import * # noqa: F401, F403
 
+# v5.7 — Histórico de medicações (medicacoes.py)
+from routes_medicacoes import * # noqa: F401, F403
+
 # ── Migração/criação do arquivo de dados ──────────────────────────────────────
 # IMPORTANTE: roda em QUALQUER forma de entrada (wsgi/PythonAnywhere, .exe e dev).
 # Antes só rodava em `python app.py`, então no servidor as colunas novas (ex.: "Perda De",

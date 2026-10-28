@@ -36,7 +36,7 @@ from config import (
     ARQUIVO_DADOS,
     COLUNAS_COMPRAS, COLUNAS_GASTOS,
     COLUNAS_VENDAS, COLUNAS_MANEJO, COLUNAS_VISITAS, COLUNAS_ANIMAIS, COLUNAS_FOTOS,
-    COLUNAS_PASTOS, COLUNAS_TAREFAS, COLUNAS_LEITE_PRODUCAO, COLUNAS_LEITE_CONFIG,
+    COLUNAS_PASTOS, COLUNAS_TAREFAS, COLUNAS_MEDICACOES, COLUNAS_LEITE_PRODUCAO, COLUNAS_LEITE_CONFIG,
     COLUNAS_LEITE_ALIMENTACAO, COLUNAS_LEITE_NECESSIDADES, COLUNAS_LEITE_TRATAMENTOS,
     COLUNAS_LEITE_CONFORTO, COLUNAS_LEITE_COLCHAO,
     COLUNAS_VOLUMOSOS, COLUNAS_CONSUMO_VOLUMOSOS,
@@ -53,6 +53,7 @@ _SCHEMA_ABAS = {
     "Fotos":   COLUNAS_FOTOS,     # v4.4
     "Pastos":  COLUNAS_PASTOS,    # v5.2
     "Tarefas": COLUNAS_TAREFAS,   # v5.3
+    "Medicações": COLUNAS_MEDICACOES,  # v5.7 — histórico de medicações
     "Leite Produção": COLUNAS_LEITE_PRODUCAO,
     "Leite Configuração": COLUNAS_LEITE_CONFIG,
     "Leite Alimentação": COLUNAS_LEITE_ALIMENTACAO,
@@ -239,6 +240,7 @@ def inicializar():
         wb.create_sheet("Fotos").append(COLUNAS_FOTOS)
         wb.create_sheet("Pastos").append(COLUNAS_PASTOS)
         wb.create_sheet("Tarefas").append(COLUNAS_TAREFAS)
+        wb.create_sheet("Medicações").append(COLUNAS_MEDICACOES)
         wb.create_sheet("Leite Produção").append(COLUNAS_LEITE_PRODUCAO)
         wb.create_sheet("Leite Configuração").append(COLUNAS_LEITE_CONFIG)
         wb.create_sheet("Leite Alimentação").append(COLUNAS_LEITE_ALIMENTACAO)
