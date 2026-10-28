@@ -1,0 +1,243 @@
+/* ── Cards Mobile-First (v5.8 redesign) ──────────────────────────────────── */
+
+.card-mobile {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.card-mobile-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.card-mobile-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.card-mobile-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--green-700);
+}
+
+[data-theme="dark"] .card-mobile-title {
+  color: var(--green-300);
+}
+
+.card-mobile-body {
+  display: grid;
+  gap: 8px;
+}
+
+/* Valor grande + rótulo pequeno */
+.card-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-metric-val {
+  font-family: 'Playfair Display', serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.card-metric-label {
+  font-size: 12px;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Status semáforo */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.status-ok { background: var(--green-100); color: var(--green-700); }
+.status-aviso { background: rgba(230, 126, 34, 0.15); color: #c87000; }
+.status-urgente { background: rgba(192, 57, 43, 0.15); color: var(--danger); }
+
+[data-theme="dark"] .status-ok { background: rgba(144, 201, 127, 0.15); color: var(--green-300); }
+[data-theme="dark"] .status-aviso { background: rgba(230, 126, 34, 0.15); color: #f4a84a; }
+[data-theme="dark"] .status-urgente { background: rgba(192, 57, 43, 0.15); color: #ef9a9a; }
+
+/* Gráfico simples (barras) */
+.grafico-barras {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  height: 80px;
+  margin: 8px 0;
+}
+
+.barra-col {
+  flex: 1;
+  background: linear-gradient(135deg, var(--green-600), var(--green-700));
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+  position: relative;
+}
+
+.barra-col:hover {
+  opacity: 0.8;
+}
+
+.barra-label {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+/* Linhas de dados (para listas) */
+.dados-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--bg-2);
+  font-size: 13px;
+}
+
+.dados-linha:last-child {
+  border-bottom: none;
+}
+
+.dados-label {
+  color: var(--text-3);
+}
+
+.dados-val {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dados-val.pos { color: var(--green-600); }
+.dados-val.neg { color: var(--danger); }
+
+[data-theme="dark"] .dados-val.pos { color: var(--green-300); }
+
+/* Barra de progresso */
+.progress-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--bg-2);
+  overflow: hidden;
+  margin: 6px 0;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--green-500);
+  transition: width 0.3s ease;
+}
+
+.progress-fill.aviso { background: var(--warn); }
+.progress-fill.ruim { background: var(--danger); }
+
+/* Grid de cards (2 colunas em desktop, 1 em mobile) */
+@media (min-width: 769px) {
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .cards-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* Detalhes colapsáveis dentro de card */
+.card-details {
+  margin-top: 12px;
+}
+
+.card-summary {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--bg-2);
+  font-weight: 600;
+  color: var(--green-700);
+  user-select: none;
+}
+
+[data-theme="dark"] .card-summary {
+  color: var(--green-300);
+}
+
+.card-summary:hover {
+  opacity: 0.8;
+}
+
+.card-summary::after {
+  content: '▼';
+  transition: transform 0.2s;
+  font-size: 10px;
+}
+
+.card-details[open] .card-summary::after {
+  transform: rotate(-180deg);
+}
+
+.card-content {
+  padding: 12px 0;
+  border-top: 1px solid var(--bg-2);
+  margin-top: 8px;
+}
+
+/* Três números numa linha */
+.tri-card {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.tri-card > div {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  flex: 1;
+  min-width: 80px;
+}
+
+.tri-card > div > b {
+  display: block;
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-bottom: 4px;
+}

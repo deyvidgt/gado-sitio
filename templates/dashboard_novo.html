@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Sítio Santo Antonio{% endblock %}
+
+{% block content %}
+
+<style>
+  .dashboard-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 60px; }
+</style>
+
+<div class="dashboard-container">
+
+  <!-- ═══ 1. RESUMO LEITEIRO (Prioridade Alta) ═════════════════════════════ -->
+  {% if resumo_leite %}
+  <div class="card-mobile">
+    <div class="card-mobile-header">
+      <div class="card-mobile-icon">🥛</div>
+      <div class="card-mobile-title">Resumo Leiteiro</div>
+    </div>
+    <div class="card-mobile-body">
+      <div class="tri-card">
+        <div><b>{{ resumo_leite.dia|br_num(1) }}</b>L hoje</div>
+        <div><b>{{ resumo_leite.semana|br_num(1) }}</b>L semana</div>
+        <div><b>{{ resumo_leite.mes|br_num(1) }}</b>L mês</div>
+      </div>
+      {% if resumo_leite.alertas %}
+        {% for alerta in resumo_leite.alertas %}
+        <div class="status-badge status-{{ alerta.tipo }}">{{ alerta.icon }} {{ alerta.msg }}</div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ═══ 2. PREVISÃO DO TEMPO ════════════════════════════════════════════ -->
+  {% if tempo and tempo.status != 'indisponível' %}
+  <div class="card-mobile">
+    <div class="card-mobile-header">
+      <div class="card-mobile-icon">☀️</div>
+      <div class="card-mobile-title">Previsão do Tempo</div>
+    </div>
+    <div class="card-mobile-body">
+      {% if tempo.atual %}
+      <div class="tri-card">
+        <div><b>{{ tempo.atual.temperatura|br_num(1) if tempo.atual.temperatura is not none else '—' }}</b>°C</div>
+        <div><b>{{ tempo.atual.umidade if tempo.atual.umidade is not none else '—' }}</b>% umidade</div>
+        <div><b>{{ tempo.atual.condicao }}</b>condição</div>
+      </div>
+      {% endif %}
+
+      {% if tempo.dias %}
+      <div class="grafico-barras" style="margin-top: 8px">
+        {% set max_temp = tempo.dias|map(attribute='temp_max')|max or 35 %}
+        {% for dia in tempo.dias[:5] %}
+        <div class="barra-col" style="height: {{ (dia.temp_max / max_temp * 100)|int }}%"
+             title="{{ dia.data }}: {{ dia.temp_max }}°C">
+          <div class="barra-label">{{ dia.data.split('/')[-1] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ═══ 3. AVISOS E ALERTAS (Consolidado) ════════════════════════════ -->
+  <div class="card-mobile">
+    <div class="card-mobile-header">
+      <div class="card-mobile-icon">🚨</div>
+      <div class="card-mobile-title">Avisos & Alertas</div>
+    </div>
+    <div class="card-mobile-body">
+      {% if avisos_consolidados %}
+        {% for aviso in avisos_consolidados[:5] %}
+        <div class="status-badge status-{{ aviso.status }}">
+          {{ aviso.icon }} {{ aviso.msg }}
+        </div>
+        {% endfor %}
+        {% if avisos_consolidados|length > 5 %}
+        <div style="padding: 8px 0; border-top: 1px solid var(--bg-2); margin-top: 8px">
+          <a href="{{ url_for('central_alertas') }}" style="color: var(--green-600); text-decoration: none; font-size: 12px; font-weight: 600">
+            Ver todos (+{{ avisos_consolidados|length - 5 }})
+          </a>
+        </div>
+        {% endif %}
+      {% else %}
+      <div style="text-align: center; padding: 16px; color: var(--text-3); font-size: 14px">
+        ✅ Nenhum alerta no momento
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ═══ 4. AGENDA DE MANEJO ═════════════════════════════════════════ -->
+  {% if tarefas_pendentes %}
+  <div class="card-mobile">
+    <div class="card-mobile-header">
+      <div class="card-mobile-icon">📋</div>
+      <div class="card-mobile-title">Agenda de Manejo</div>
+    </div>
+    <div class="card-mobile-body">
+      {% for tarefa in tarefas_pendentes[:5] %}
+      <div class="dados-linha">
+        <div class="dados-label">{{ tarefa.titulo }}</div>
+        <div class="dados-val" style="color: {% if tarefa.dias_atraso > 0 %}var(--danger){% elif tarefa.dias_ate == 0 %}var(--warn){% else %}var(--green-600){% endif %}">
+          {{ tarefa.status_label }}
+        </div>
+      </div>
+      {% endfor %}
+      {% if tarefas_pendentes|length > 5 %}
+      <div style="padding: 8px 0; border-top: 1px solid var(--bg-2); margin-top: 8px">
+        <a href="{{ url_for('tarefas') }}" style="color: var(--green-600); text-decoration: none; font-size: 12px; font-weight: 600">
+          Ver todas ({{ tarefas_pendentes|length }} pendentes)
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ═══ 5. ESTOQUE DE ALIMENTAÇÃO ════════════════════════════════════ -->
+  {% if estoque_info %}
+  <div class="card-mobile">
+    <div class="card-mobile-header">
+      <div class="card-mobile-icon">🧂</div>
+      <div class="card-mobile-title">Estoque Alimentação</div>
+    </div>
+    <div class="card-mobile-body">
+      {% for item in estoque_info %}
+      <div style="margin-bottom: 12px">
+        <div class="dados-linha" style="border-bottom: none; padding: 0">
+          <div class="dados-label">{{ item.nome }}</div>
+          <div class="dados-val">{{ item.quantidade }} sacos</div>
+        </div>
+        <div class="progress-bar {% if item.status == 'aviso' %}aviso{% elif item.status == 'ruim' %}ruim{% endif %}">
+          <div class="progress-fill {% if item.status == 'aviso' %}aviso{% elif item.status == 'ruim' %}ruim{% endif %}"
+               style="width: {{ item.percentual }}%"></div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-3); margin-top: 4px">
+          Acaba em {{ item.dias_faltam }} dias
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ═══ 6. CHUVAS (Mês) ══════════════════════════════════════════════ -->
+  {% if chuvas_mes %}
+  <div class="card-mobile">
+    <div class="card-mobile-header">
+      <div class="card-mobile-icon">🌧️</div>
+      <div class="card-mobile-title">Chuvas do Mês</div>
+    </div>
+    <div class="card-mobile-body">
+      <div class="tri-card">
+        <div><b>{{ chuvas_mes.total }} mm</b>este mês</div>
+        <div><b>{{ chuvas_mes.media }} mm</b>média histórica</div>
+      </div>
+      <div class="grafico-barras" style="margin-top: 8px">
+        {% if chuvas_mes.semanas %}
+          {% set max_rain = chuvas_mes.semanas|map(attribute='mm')|max or 50 %}
+          {% for semana in chuvas_mes.semanas %}
+          <div class="barra-col" style="height: {{ (semana.mm / max_rain * 100)|int }}%"
+               title="Semana {{ semana.num }}: {{ semana.mm }} mm">
+            <div class="barra-label">S{{ semana.num }}</div>
+          </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ═══ 7. COTAÇÃO DE MERCADO ════════════════════════════════════════ -->
+  {% if cotacao %}
+  <div class="card-mobile">
+    <div class="card-mobile-header">
+      <div class="card-mobile-icon">💰</div>
+      <div class="card-mobile-title">Cotação de Mercado</div>
+    </div>
+    <div class="card-mobile-body">
+      {% for item in cotacao %}
+      <div class="dados-linha">
+        <div class="dados-label">{{ item.nome }}</div>
+        <div class="dados-val">
+          {{ item.preco|brl }}
+          <span style="font-size: 11px; margin-left: 4px"
+                class="{% if item.variacao >= 0 %}pos{% else %}neg{% endif %}">
+            {{ item.variacao_symbol }} {{ item.variacao|abs }}%
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+      <div style="font-size: 10px; color: var(--text-3); margin-top: 8px; text-align: center">
+        Atualizado: {{ cotacao_data }}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ═══ 8. ESTADO DO SÍTIO (Resumo) ═══════════════════════════════════ -->
+  {% if estado_sitio %}
+  <div class="card-mobile" style="background: linear-gradient(135deg, var(--surface) 0%, var(--bg-2) 100%); border-top: 3px solid var(--green-600)">
+    <div class="card-mobile-header">
+      <div class="card-mobile-icon">🐄</div>
+      <div class="card-mobile-title">Estado do Sítio</div>
+    </div>
+    <div class="card-mobile-body">
+      <div class="tri-card">
+        <div><b>{{ estado_sitio.cabecas }}</b>cabeças</div>
+        <div><b>{{ resultado.resultado_realizado|brl }}</b>resultado</div>
+        <div><b>{{ '%.2f'|format(estado_sitio.lotacao or 0) }}</b>UA/ha</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ═══ Colapsáveis: Financeiro ════════════════════════════════════════ -->
+  <details class="card-detail">
+    <summary>
+      <span>💸 Financeiro</span>
+      <span style="font-size: 12px">▼</span>
+    </summary>
+    <div class="card-mobile-body">
+      {% if resultado %}
+      <div class="tri-card">
+        <div><b>{{ resultado.cmp|br_num(0) }}</b>compra média</div>
+        <div><b>{{ resultado.ctcab|brl }}</b>custo/cabeça</div>
+        <div><b>{{ resultado.gpcab|brl }}</b>gasto/cabeça</div>
+      </div>
+      <div style="border-top: 1px solid var(--bg-2); padding-top: 12px; margin-top: 12px">
+        <div class="dados-linha">
+          <div class="dados-label">Capital imobilizado</div>
+          <div class="dados-val">{{ resultado.capital_imobilizado|brl }}</div>
+        </div>
+        <div class="dados-linha">
+          <div class="dados-label">Resultado</div>
+          <div class="dados-val {% if resultado.resultado_realizado >= 0 %}pos{% else %}neg{% endif %}">
+            {{ resultado.resultado_realizado|brl }}
+          </div>
+        </div>
+      </div>
+      <div style="margin-top: 12px">
+        <a href="{{ url_for('relatorios') }}" class="btn btn-primary" style="width: 100%; text-align: center">
+          📈 Ver relatórios
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </details>
+
+  <!-- ═══ Colapsáveis: Estoque por Membro ═════════════════════════════════ -->
+  {% if estoque_por_membro %}
+  <details class="card-detail">
+    <summary>
+      <span>👥 Estoque por Membro</span>
+      <span style="font-size: 12px">▼</span>
+    </summary>
+    <div class="card-mobile-body">
+      {% for membro in estoque_por_membro %}
+      <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--bg-2)">
+        <div style="font-weight: 600; color: var(--text); margin-bottom: 8px">{{ membro.nome }}</div>
+        <div class="tri-card">
+          <div><b>{{ membro.cabecas }}</b>cabeças</div>
+          <div><b>{{ '%.0f'|format(membro.kg_vivo or 0) }}</b>kg vivo</div>
+          <div><b>{{ membro.resultado|brl }}</b>resultado</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
+
+</div>
+
+<!-- FAB: Nova Visita -->
+<a href="{{ url_for('nova_visita') }}" class="fab-primary" title="Registrar nova visita">
+  🌾
+</a>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Atualizar data ao carregar
+  document.addEventListener('DOMContentLoaded', () => {
+    const agora = new Date();
+    document.title = `Dashboard — ${agora.toLocaleDateString('pt-BR')}`;
+  });
+</script>
+{% endblock %}
