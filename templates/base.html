@@ -325,6 +325,20 @@
     .secao-titulo { font-size:20px; font-weight:700; color:var(--text); margin-bottom:16px; padding-bottom:12px; border-bottom:2px solid var(--green-500); }
     .secao-subtitulo { font-size:13px; color:var(--text-3); margin-top:-12px; margin-bottom:16px; }
 
+    /* v5.10: Listas formatadas (ícones, status, valores) */
+    .lista-items { list-style:none; padding:0; margin:0; }
+    .lista-item { display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--bg-2); transition:background 0.2s; }
+    .lista-item:last-child { border-bottom:none; }
+    .lista-item:hover { background:var(--green-50); }
+    .lista-item-icon { font-size:18px; flex-shrink:0; }
+    .lista-item-content { flex:1; min-width:0; }
+    .lista-item-label { font-weight:600; color:var(--text); font-size:13px; }
+    .lista-item-desc { font-size:12px; color:var(--text-3); margin-top:2px; }
+    .lista-item-valor { text-align:right; flex-shrink:0; font-weight:600; font-size:14px; color:var(--green-600); }
+    .lista-item-valor.aviso { color:var(--warn); }
+    .lista-item-valor.ruim { color:var(--danger); }
+    .lista-item.divider { padding:8px 14px; background:var(--surface-2); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-3); }
+
     /* Forms */
     .form-card { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:32px; max-width:640px; }
     .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
