@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}{{ nome_dono }} — Animais — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Animais de {{ nome_dono }} 🐄{% endblock %}
+
+{% block content %}
+<style>
+  .resumo-dono { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .card-resumo { padding: 12px; background: var(--surface); border-radius: 8px; text-align: center; }
+  .card-resumo .numero { font-size: 24px; font-weight: 700; color: var(--green-700); }
+  .card-resumo .label { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+  .lista-animais { display: grid; gap: 12px; }
+  .animal-card { padding: 12px; background: var(--surface); border-radius: 8px; display: flex; gap: 12px; align-items: center; }
+  .animal-brinco { width: 60px; height: 60px; border-radius: 50% 50% 50% 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; flex: none; }
+  .animal-info { flex: 1; }
+  .animal-nome { font-weight: 600; color: var(--text-1); }
+  .animal-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+  .animal-stats { display: flex; gap: 16px; margin-top: 6px; font-size: 12px; }
+  .animal-stat { display: flex; flex-direction: column; }
+  .animal-stat .valor { font-weight: 600; color: var(--green-700); }
+  .animal-stat .chave { color: var(--text-3); font-size: 10px; }
+
+  .animal-pasto { display: inline-block; padding: 4px 8px; background: rgba(82, 160, 68, 0.15); color: var(--green-700); border-radius: 12px; font-size: 11px; margin-top: 6px; }
+</style>
+
+<div class="resumo-dono">
+  <div class="card-resumo">
+    <div class="numero">{{ total }}</div>
+    <div class="label">Total</div>
+  </div>
+  <div class="card-resumo">
+    <div class="numero" style="color: var(--green-600)">{{ vivos }}</div>
+    <div class="label">Vivos</div>
+  </div>
+  <div class="card-resumo">
+    <div class="numero" style="color: var(--info)">{{ vendidos }}</div>
+    <div class="label">Vendidos</div>
+  </div>
+  <div class="card-resumo">
+    <div class="numero" style="color: var(--danger)">{{ mortos }}</div>
+    <div class="label">Mortos</div>
+  </div>
+  {% if peso_total %}
+  <div class="card-resumo">
+    <div class="numero" style="color: var(--blue-700)">{{ '%.0f' % peso_total }}</div>
+    <div class="label">kg Total</div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="lista-animais">
+  {% for item in animais %}
+  <a href="{{ url_for('ficha_animal', id_=item.linha.id) }}" style="text-decoration: none; color: inherit;">
+    <div class="animal-card" style="cursor: pointer; transition: all 0.2s; border-left: 3px solid {% if item.linha.status == 'Vivo' %}var(--green-600){% elif item.linha.status == 'Vendido' %}var(--info){% else %}var(--danger){% endif %}">
+      <div class="animal-brinco" style="background: {{ item.linha.hex }}; color: {{ '#222' if item.linha.cor in ['Amarelo','Branco','Rosa','Laranja'] else '#fff' }}">
+        {{ '%02d' % item.linha.num if item.linha.num is not none else '??' }}
+      </div>
+      <div class="animal-info">
+        <div class="animal-nome">{{ item.linha.brinco }}</div>
+        <div class="animal-meta">
+          {{ item.linha.categoria or 'Animal' }} · {{ {'F': 'Fêmea', 'M': 'Macho'}.get(item.linha.sexo, '?') }} · {{ item.linha.idade or '—' }}
+        </div>
+        <div class="animal-stats">
+          {% if item.peso.kg %}
+          <div class="animal-stat">
+            <span class="chave">Peso</span>
+            <span class="valor">{{ '%.0f' % item.peso.kg }} kg</span>
+          </div>
+          {% endif %}
+          {% if item.peso.gmd is not none %}
+          <div class="animal-stat">
+            <span class="chave">GMD</span>
+            <span class="valor" style="color: {% if item.peso.gmd >= 0 %}var(--green-600){% else %}var(--danger){% endif %}">{{ '%.2f' % item.peso.gmd }}</span>
+          </div>
+          {% endif %}
+          <div class="animal-stat">
+            <span class="chave">Status</span>
+            <span class="valor" style="color: {% if item.linha.status == 'Vivo' %}var(--green-600){% elif item.linha.status == 'Vendido' %}var(--info){% else %}var(--danger){% endif %}">
+              {% if item.linha.status == 'Vivo' %}Vivo{% elif item.linha.status == 'Vendido' %}Vendido{% else %}Morto{% endif %}
+            </span>
+          </div>
+        </div>
+        {% if item.pasto_nome %}
+        <div class="animal-pasto">📍 {{ item.pasto_nome }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{% if not animais %}
+<div class="card" style="text-align: center; padding: 40px 20px; background: var(--bg-2)">
+  <p style="color: var(--text-3); margin: 0">
+    {{ nome_dono }} não tem animais cadastrados.
+  </p>
+</div>
+{% endif %}
+{% endblock %}

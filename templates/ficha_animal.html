@@ -72,7 +72,7 @@
 <div class="two-col">
   <div class="card">
     <div class="card-title">Cadastro</div>
-    <div class="kv"><span class="kv-key">Dono</span><span>{{ NOMES.get(a.dono, a.dono) }}</span></div>
+    <div class="kv"><span class="kv-key">Dono</span><a href="{{ url_for('animais_por_dono', dono=a.dono) }}" style="color: var(--green-700); text-decoration: none; font-weight: 600; cursor: pointer;">{{ NOMES.get(a.dono, a.dono) }}</a></div>
     <div class="kv"><span class="kv-key">Sexo</span><span>{{ {'F':'Fêmea','M':'Macho'}.get(a.sexo, '—') }}</span></div>
     <div class="kv"><span class="kv-key">Raça</span><span>{{ a.raca or '—' }}</span></div>
     <div class="kv"><span class="kv-key">Pelagem</span><span>{{ a.pelagem or '—' }}</span></div>

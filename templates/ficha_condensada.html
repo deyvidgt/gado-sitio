@@ -118,7 +118,7 @@
     {% endif %}
     <div class="cond-campo">
       <span class="chave">Dono</span>
-      <span class="valor">{{ NOMES.get(a.dono, a.dono) }}</span>
+      <a href="{{ url_for('animais_por_dono', dono=a.dono) }}" style="color: var(--green-700); text-decoration: none; font-weight: 600; cursor: pointer;" class="valor">{{ NOMES.get(a.dono, a.dono) }}</a>
     </div>
     <div class="cond-campo">
       <span class="chave">Raça</span>

@@ -354,6 +354,67 @@ def ficha_animal(id_):
     return render_template(template, **ctx)
 
 
+@app.route("/animais/dono/<dono>")
+@login_required
+def animais_por_dono(dono):
+    """Lista todos os animais de um dono específico com informações resumidas."""
+    if dono not in MEMBROS:
+        flash(f"Dono '{dono}' não encontrado.", "error")
+        return redirect(url_for("animais"))
+
+    dados = _get_dados_cache()
+    df = A.carregar()
+    hoje = _agora()
+
+    # Filtra animais do dono
+    df_dono = df[df["Dono"] == dono]
+
+    # Formata animais com informações resumidas
+    animais_list = []
+    for _, animal in df_dono.iterrows():
+        animal_id = animal["ID"]
+        hist_peso = P.todas(dados["Manejo"]).get(animal_id, [])
+        peso_resumo = P.resumo(hist_peso, _rendimento())
+
+        # Pasto atual
+        pasto_id, _ = PA.pasto_do_animal(animal_id, dados["Manejo"])
+        pasto_nome = None
+        if pasto_id:
+            df_p = PA.carregar()
+            p = df_p[df_p["ID"] == pasto_id]
+            if not p.empty:
+                pasto_nome = p.iloc[0]["Nome"]
+
+        animais_list.append({
+            "linha": _linha_animal(animal, hoje),
+            "peso": peso_resumo,
+            "pasto_id": pasto_id,
+            "pasto_nome": pasto_nome,
+        })
+
+    # Contadores
+    vivos = len(df_dono[df_dono["Status"] == "Vivo"])
+    vendidos = len(df_dono[df_dono["Status"] == "Vendido"])
+    mortos = len(df_dono[df_dono["Status"] == "Morto"])
+
+    # Total de peso
+    peso_total = sum(a["peso"].kg for a in animais_list if a["peso"].kg)
+
+    ctx = {
+        "dono": dono,
+        "nome_dono": NOMES_MEMBROS.get(dono, dono),
+        "animais": sorted(animais_list, key=lambda x: (x["linha"]["cor"], x["linha"]["num"] or 999)),
+        "total": len(df_dono),
+        "vivos": vivos,
+        "vendidos": vendidos,
+        "mortos": mortos,
+        "peso_total": peso_total,
+        **_ctx_templates()
+    }
+
+    return render_template("animais_por_dono.html", **ctx)
+
+
 @app.route("/animais/<id_>/editar", methods=["GET", "POST"])
 @login_required
 def editar_animal(id_):
