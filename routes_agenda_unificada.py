@@ -5,12 +5,12 @@ routes_agenda_unificada.py — Agenda Unificada (Calendário + Tarefas) v5.10
 """
 
 from flask import render_template, request
-from extensions import app, login_required, _get_dados_cache, fmt_data
+from extensions import app, login_required, fmt_data
 from tarefas import carregar as tarefas_carregar, pendentes as tarefas_pendentes
 from routes_calendario import _eventos_mes
 from config import REPETICOES_TAREFA, NOMES_MEMBROS, MEMBROS
 from datetime import date, datetime, timedelta
-from calendar import monthrange
+from calendar import monthrange, month_name
 import pandas as pd
 
 
@@ -22,8 +22,6 @@ def _agora():
 @login_required
 def agenda_unificada():
     """Página unificada: calendário + tarefas + eventos operacionais."""
-    dados = _get_dados_cache()
-
     # Pega mês/ano dos parâmetros
     mes = request.args.get("mes", type=int, default=date.today().month)
     ano = request.args.get("ano", type=int, default=date.today().year)
@@ -33,8 +31,8 @@ def agenda_unificada():
 
     hoje = date.today()
 
-    # Eventos do mês
-    eventos_por_dia = _eventos_mes(dados, mes, ano)
+    # Eventos do mês (unificado com API manejo)
+    eventos_por_dia = _eventos_mes(mes, ano)
 
     # Gera grid de calendário
     primeiro_dia, dias_mes = monthrange(ano, mes)
@@ -121,8 +119,11 @@ def agenda_unificada():
                     "urgencia": evt.get("urgencia", "normal")
                 })
 
+    from routes_calendario import MESES_PT
+
     return render_template("agenda_unificada.html",
-                          mes=mes, ano=ano, hoje=hoje,
+                          mes=mes, ano=ano, mes_nome=MESES_PT.get(mes, month_name[mes]),
+                          hoje=hoje,
                           semanas=semanas,
                           tarefas_pendentes=tarefas_pend[:10],
                           proximos_14_dias=proximos[:20],

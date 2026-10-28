@@ -5,7 +5,8 @@ from calendar import monthrange, month_name
 import pandas as pd
 from flask import render_template, request, jsonify
 
-from extensions import app, _get_dados_cache, login_required
+from db import carregar_aba
+from extensions import app, _get_dados_cache, login_required, _safe, _agora
 
 # Tradução de meses para português
 MESES_PT = {
@@ -18,25 +19,16 @@ MESES_PT = {
 DIAS_SEMANA_PT = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
 
 
-def _data(valor):
-    """Converte para timestamp, normalized."""
-    d = pd.to_datetime(valor, dayfirst=True, errors="coerce")
-    return pd.NaT if pd.isna(d) else d.normalize()
+def _iso(ts):
+    """Converte timestamp para string ISO (YYYY-MM-DD)."""
+    if isinstance(ts, pd.Timestamp) and pd.notna(ts):
+        return ts.strftime("%Y-%m-%d")
+    return None
 
 
-def _texto(valor):
-    """Converte para string segura."""
-    return "" if valor is None or pd.isna(valor) else str(valor).strip()
-
-
-def _tipo_manejo(tipo):
-    """Classifica tipo de manejo."""
-    t = _texto(tipo).lower()
-    if "vacina" in t or "vermif" in t or "brucelose" in t:
-        return "saude"
-    if t in {"cobertura", "diagnóstico de gestação"}:
-        return "reproducao"
-    return "manejo"
+def _txt(v) -> str:
+    """Texto de célula sem 'nan'/None."""
+    return "" if v is None or (isinstance(v, float) and pd.isna(v)) else str(v).strip()
 
 
 def _urgencia(dias):
@@ -50,60 +42,127 @@ def _urgencia(dias):
     return "normal"
 
 
-def _eventos_mes(dados, mes, ano, hoje=None):
-    """Retorna {data: [eventos]} para o mês especificado."""
-    hoje = pd.Timestamp(hoje or date.today()).normalize()
+def _eventos_mes(mes, ano, hoje=None):
+    """Retorna {data: [eventos]} para o mês especificado, unificado com API manejo."""
+    hoje = pd.Timestamp(_agora()) if hoje is None else pd.Timestamp(hoje)
+    hoje_norm = hoje.normalize()
+
     inicio = pd.Timestamp(year=ano, month=mes, day=1)
     fim = pd.Timestamp(year=ano, month=mes, day=1) + pd.DateOffset(months=1) - timedelta(days=1)
 
     resultado = {}
 
-    # Manejo (saúde, reprodução)
-    df_man = dados.get("Manejo", pd.DataFrame()) if dados else pd.DataFrame()
-    if df_man is not None and not df_man.empty:
-        for _, row in df_man.iterrows():
-            d = _data(row.get("Data"))
+    # ── Manejo ──────────────────────────────────────────────────────────────
+    df_man = carregar_aba("Manejo")
+    if not df_man.empty and "Data" in df_man.columns:
+        for _, row in df_man[df_man["Data"].notna() & (df_man["Data"] >= inicio)].iterrows():
+            d = pd.Timestamp(row.get("Data")).normalize() if pd.notna(row.get("Data")) else pd.NaT
             if pd.isna(d) or not (inicio <= d <= fim):
                 continue
-            tipo = _tipo_manejo(row.get("Tipo"))
-            titulo = _texto(row.get("Tipo")) or "Manejo"
-            detalhe = _texto(row.get("Descrição")) or _texto(row.get("Produto"))
-            dias = (d - hoje).days
+            tipo = _txt(row.get("Tipo", "") or "")
+            dias = (d - hoje_norm).days
             urg = _urgencia(dias)
             resultado.setdefault(d.date(), []).append({
-                "tipo": tipo, "titulo": titulo, "detalhes": detalhe,
-                "urgencia": urg, "origem": "Manejo"
+                "categoria": "manejo",
+                "tipo": tipo,
+                "titulo": tipo or "Manejo",
+                "detalhes": " · ".join(x for x in (
+                    _txt(row.get("Produto")), _txt(row.get("Descrição"))) if x),
+                "urgencia": urg,
+                "cabecas": int(_safe(row.get("Qtd Cabeças"))),
             })
 
-    # Visitas
-    df_vis = dados.get("Visitas", pd.DataFrame()) if dados else pd.DataFrame()
-    if df_vis is not None and not df_vis.empty:
-        for _, row in df_vis.iterrows():
-            d = _data(row.get("Data"))
+    # ── Visitas ──────────────────────────────────────────────────────────────
+    df_vis = carregar_aba("Visitas")
+    if not df_vis.empty and "Data" in df_vis.columns:
+        for _, row in df_vis[df_vis["Data"].notna() & (df_vis["Data"] >= inicio)].iterrows():
+            d = pd.Timestamp(row.get("Data")).normalize() if pd.notna(row.get("Data")) else pd.NaT
             if pd.isna(d) or not (inicio <= d <= fim):
                 continue
-            dias = (d - hoje).days
+            dias = (d - hoje_norm).days
             urg = _urgencia(dias)
+            resp = _txt(row.get("Responsável", "") or "")
             resultado.setdefault(d.date(), []).append({
-                "tipo": "visita", "titulo": "Visita", "detalhes": _texto(row.get("Responsável")),
-                "urgencia": urg, "origem": "Visitas"
+                "categoria": "visita",
+                "tipo": "Visita",
+                "titulo": f"Visita — {resp}" if resp else "Visita",
+                "detalhes": resp,
+                "urgencia": urg,
+                "cabecas": int(_safe(row.get("Gado Contado"))),
             })
 
-    # Tarefas
-    df_tar = dados.get("Tarefas", pd.DataFrame()) if dados else pd.DataFrame()
-    if df_tar is not None and not df_tar.empty:
-        for _, row in df_tar.iterrows():
-            if _texto(row.get("Feito Em")):
-                continue
-            d = _data(row.get("Data"))
+    # ── Compras ──────────────────────────────────────────────────────────────
+    df_comp = carregar_aba("Compras")
+    if not df_comp.empty and "Data" in df_comp.columns:
+        for _, row in df_comp[df_comp["Data"].notna() & (df_comp["Data"] >= inicio)].iterrows():
+            d = pd.Timestamp(row.get("Data")).normalize() if pd.notna(row.get("Data")) else pd.NaT
             if pd.isna(d) or not (inicio <= d <= fim):
                 continue
-            dias = (d - hoje).days
+            qtd = int(_safe(row.get("Qtd Cabeças")))
+            resultado.setdefault(d.date(), []).append({
+                "categoria": "compra",
+                "tipo": "Compra",
+                "titulo": f"Compra — {qtd} cab.",
+                "detalhes": _txt(row.get("Descrição", "") or ""),
+                "urgencia": "normal",
+                "cabecas": qtd,
+            })
+
+    # ── Vendas ───────────────────────────────────────────────────────────────
+    df_vend = carregar_aba("Vendas")
+    if not df_vend.empty and "Data" in df_vend.columns:
+        for _, row in df_vend[df_vend["Data"].notna() & (df_vend["Data"] >= inicio)].iterrows():
+            d = pd.Timestamp(row.get("Data")).normalize() if pd.notna(row.get("Data")) else pd.NaT
+            if pd.isna(d) or not (inicio <= d <= fim):
+                continue
+            qtd = int(_safe(row.get("Qtd Cabeças")))
+            resultado.setdefault(d.date(), []).append({
+                "categoria": "venda",
+                "tipo": "Venda",
+                "titulo": f"Venda — {qtd} cab.",
+                "detalhes": _txt(row.get("Descrição", "") or ""),
+                "urgencia": "normal",
+                "cabecas": qtd,
+            })
+
+    # ── Gastos ───────────────────────────────────────────────────────────────
+    df_gast = carregar_aba("Gastos")
+    if not df_gast.empty and "Data" in df_gast.columns:
+        for _, row in df_gast[df_gast["Data"].notna() & (df_gast["Data"] >= inicio)].iterrows():
+            d = pd.Timestamp(row.get("Data")).normalize() if pd.notna(row.get("Data")) else pd.NaT
+            if pd.isna(d) or not (inicio <= d <= fim):
+                continue
+            tipo = _txt(row.get("Tipo", "") or "")
+            desc = _txt(row.get("Descrição", "") or "")
+            label = tipo or desc or "Gasto"
+            resultado.setdefault(d.date(), []).append({
+                "categoria": "gasto",
+                "tipo": "Gasto",
+                "titulo": label[:25],
+                "detalhes": desc if desc and desc != tipo else "",
+                "urgencia": "normal",
+                "cabecas": 0,
+            })
+
+    # ── Tarefas (pendentes) ──────────────────────────────────────────────────
+    df_tar = carregar_aba("Tarefas")
+    if not df_tar.empty and "Data" in df_tar.columns:
+        for _, row in df_tar[df_tar["Data"].notna() & (df_tar["Data"] >= inicio)].iterrows():
+            # Pular tarefas já concluídas
+            if _txt(row.get("Feito Em")):
+                continue
+            d = pd.Timestamp(row.get("Data")).normalize() if pd.notna(row.get("Data")) else pd.NaT
+            if pd.isna(d) or not (inicio <= d <= fim):
+                continue
+            dias = (d - hoje_norm).days
             urg = _urgencia(dias)
             resultado.setdefault(d.date(), []).append({
-                "tipo": "tarefa", "titulo": _texto(row.get("Título")),
-                "detalhes": _texto(row.get("Responsável")),
-                "urgencia": urg, "origem": "Tarefas"
+                "categoria": "tarefa",
+                "tipo": "Tarefa",
+                "titulo": _txt(row.get("Título")),
+                "detalhes": _txt(row.get("Responsável", "") or ""),
+                "urgencia": urg,
+                "cabecas": 0,
             })
 
     return resultado
@@ -121,10 +180,8 @@ def calendario_pagina():
     mes = max(1, min(12, mes))
     ano = max(2020, min(2100, ano))
 
-    dados = _get_dados_cache()
-
-    # Busca eventos do mês
-    eventos_por_dia = _eventos_mes(dados, mes, ano)
+    # Busca eventos do mês (unificado com API manejo)
+    eventos_por_dia = _eventos_mes(mes, ano)
 
     # Monta grid: semanas com dias da semana
     hoje = date.today()
@@ -210,15 +267,14 @@ def calendario_pagina():
 @app.route("/api/calendario/eventos")
 @login_required
 def api_calendario_eventos():
-    """Retorna eventos de um dia em JSON."""
+    """Retorna eventos de um dia em JSON (unificado com API manejo)."""
     data_str = request.args.get("data", "")
     try:
         d = datetime.strptime(data_str, "%Y-%m-%d").date()
     except (ValueError, TypeError):
         return jsonify({"erro": "Data inválida"}), 400
 
-    dados = _get_dados_cache()
-    eventos_por_dia = _eventos_mes(dados, d.month, d.year)
+    eventos_por_dia = _eventos_mes(d.month, d.year)
     eventos = eventos_por_dia.get(d, [])
 
     return jsonify({"data": str(d), "eventos": eventos})

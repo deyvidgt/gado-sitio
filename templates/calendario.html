@@ -278,13 +278,39 @@ document.querySelectorAll('.dia-box:not(.outro-mes)').forEach(dia => {
         } else {
           let html = '<div style="display:flex; flex-direction:column; gap:12px">';
           dados.eventos.forEach(evt => {
-            let icon = '📌';
-            if (evt.tipo === 'visita') icon = '🌾';
-            else if (evt.tipo === 'manejo' || evt.tipo === 'saude' || evt.tipo === 'reproducao') icon = '🩺';
+            // Ícone por categoria
+            const iconMap = {
+              'visita': '🌾',
+              'manejo': '🩺',
+              'compra': '📥',
+              'venda': '📤',
+              'gasto': '💸',
+              'tarefa': '✅'
+            };
+            let icon = iconMap[evt.categoria] || '📌';
 
-            let urgencia_class = '';
-            if (evt.urgencia === 'urgente') urgencia_class = 'color:#c0392b';
-            else if (evt.urgencia === 'aviso') urgencia_class = 'color:#f39c12';
+            // Link por categoria
+            let linkHref = '#';
+            let linkTexto = '→ Ver detalhes';
+            if (evt.categoria === 'manejo') {
+              linkHref = `/manejo/novo?data=${data}&tipo=${evt.tipo}`;
+              linkTexto = '→ Editar/Visualizar manejo';
+            } else if (evt.categoria === 'visita') {
+              linkHref = `/visitas?data=${data}`;
+              linkTexto = '→ Ver visitas';
+            } else if (evt.categoria === 'compra') {
+              linkHref = `/compras?data=${data}`;
+              linkTexto = '→ Ver compras';
+            } else if (evt.categoria === 'venda') {
+              linkHref = `/vendas?data=${data}`;
+              linkTexto = '→ Ver vendas';
+            } else if (evt.categoria === 'gasto') {
+              linkHref = `/gastos?data=${data}`;
+              linkTexto = '→ Ver gastos';
+            } else if (evt.categoria === 'tarefa') {
+              linkHref = `/tarefas?data=${data}`;
+              linkTexto = '→ Ver tarefas';
+            }
 
             html += `<div style="padding:12px; background:var(--bg-2); border-radius:8px; border-left:3px solid ${evt.urgencia === 'urgente' ? '#c0392b' : evt.urgencia === 'aviso' ? '#f39c12' : 'var(--green-600)'}">
               <div style="display:flex; gap:8px; margin-bottom:6px">
@@ -294,7 +320,7 @@ document.querySelectorAll('.dia-box:not(.outro-mes)').forEach(dia => {
                   <div style="font-size:12px; color:var(--text-3); margin-top:2px">${evt.detalhes || 'Sem detalhes'}</div>
                 </div>
               </div>
-              <a href="/manejo/novo?data=${data}&tipo=${evt.tipo}" style="display:inline-block; font-size:12px; color:var(--green-700); text-decoration:none; font-weight:600; margin-top:6px">→ Editar/Visualizar</a>
+              <a href="${linkHref}" style="display:inline-block; font-size:12px; color:var(--green-700); text-decoration:none; font-weight:600; margin-top:6px">${linkTexto}</a>
             </div>`;
           });
           html += '</div>';
