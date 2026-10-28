@@ -241,6 +241,8 @@ COLUNAS_ANIMAIS = [
     "Ref Compra", "Mãe", "Status", "Data Saída", "Observações", "Registrado Por",
     # NOVO v5.4: módulo leiteiro (leite.py) — "leite"/"ambos"/"corte", "lactação"/"seca", dd/mm/aaaa.
     "Uso Produtivo", "Situação Leite", "Último Parto",
+    # NOVO v5.10: genética (melhoramento) — Pai, Genótipo para simulação de endogamia
+    "Pai", "Genótipo",
 ]
 
 # v4.4 — Fotos dos animais (arquivos no Google Drive; aqui só os dados de cada foto).
@@ -412,6 +414,19 @@ COLUNAS_MORTALIDADE_BEZERROS = [
     "Data", "Período (mês/ano)", "Bezerros Nascidos", "Bezerros Mortos",
     "Taxa Mortalidade (%)", "Causa 1", "Causa 2", "Causa 3",
     "Idade Morte (dias)", "Observação", "Responsável", "ID Envio", "Criado Em",
+]
+
+# v5.10 — Confinamento: lotes simples com peso inicial/final e GMD
+COLUNAS_CONFINAMENTO_LOTES = [
+    "Data Entrada", "Data Saída", "Lote ID", "Brincos", "Quantidade", "Peso Inicial (kg)",
+    "Peso Final (kg)", "Dias Confinado", "GMD (kg/dia)", "Status", "Observação",
+    "Responsável", "ID Envio", "Criado Em",
+]
+
+# v5.10 — Genética: histórico de genealogia para cálculo de endogamia
+COLUNAS_GENETICA = [
+    "Animal ID", "Pai ID", "Mãe ID", "Genótipo", "Coeficiente Endogamia (%)",
+    "Data Registro", "Observação", "Responsável", "ID Envio",
 ]
 
 CORES = {

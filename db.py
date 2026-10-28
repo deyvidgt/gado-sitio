@@ -69,6 +69,8 @@ _SCHEMA_ABAS = {
     "GMD Lotação": COLUNAS_GMD_LOTACAO,  # v5.8
     "Ração Consumo": COLUNAS_RACAO_CONSUMO,  # v5.8
     "Mortalidade Bezerros": COLUNAS_MORTALIDADE_BEZERROS,  # v5.8
+    "Confinamento Lotes": COLUNAS_CONFINAMENTO_LOTES,  # v5.10
+    "Genética": COLUNAS_GENETICA,  # v5.10
 }
 
 # Caminho completo do arquivo de dados

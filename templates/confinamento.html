@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Confinamento — Sítio Santo Antonio{% endblock %}
+{% block page_title %}🏚️ Confinamento{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:20px">
+
+  {% if alertas %}
+  <div style="margin-bottom:20px">
+    {% for alerta in alertas %}
+    <div class="alert-strip {{ 'danger' if alerta.urgente else 'warning' }}" style="margin-bottom:8px">
+      {% if alerta.urgente %}🚨{% else %}⚠️{% endif %}
+      {{ alerta.texto }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <section class="card" style="margin-bottom:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h2>Lotes Ativos</h2>
+      <a href="{{ url_for('novo_lote_confinamento') }}" class="btn btn-primary">+ Novo Lote</a>
+    </div>
+
+    {% if lotes %}
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:var(--bg-2)">
+          <th style="padding:10px;text-align:left">Lote ID</th>
+          <th style="padding:10px;text-align:right">Qtd</th>
+          <th style="padding:10px;text-align:right">Peso Ini (kg)</th>
+          <th style="padding:10px;text-align:right">Peso Fim (kg)</th>
+          <th style="padding:10px;text-align:right">Dias</th>
+          <th style="padding:10px;text-align:right">GMD (kg/dia)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lote in lotes %}
+        <tr style="border-bottom:1px solid var(--bg-2);hover:background:var(--bg-2)">
+          <td style="padding:10px;font-weight:600">{{ lote.lote_id }}</td>
+          <td style="padding:10px;text-align:right">{{ lote.quantidade }} cab.</td>
+          <td style="padding:10px;text-align:right">{{ lote.peso_inicial|int }}</td>
+          <td style="padding:10px;text-align:right">{{ lote.peso_final|int }}</td>
+          <td style="padding:10px;text-align:right">{{ lote.dias }}</td>
+          <td style="padding:10px;text-align:right;font-weight:600" class="{{ 'pos' if lote.gmd >= 0.7 else 'neg' if lote.gmd > 0 else '' }}">
+            {{ '%.2f'|format(lote.gmd) }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-3);text-align:center;padding:20px">
+      Nenhum lote em confinamento. <a href="{{ url_for('novo_lote_confinamento') }}" style="color:var(--green-600)">Criar um novo →</a>
+    </p>
+    {% endif %}
+  </section>
+
+  <div style="margin-top:24px;text-align:center">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+  </div>
+
+</div>
+
+<style>
+  .pos { color: var(--green-700); }
+  .neg { color: var(--danger); }
+  .alert-strip { padding: 12px; border-radius: 4px; margin: 8px 0; color: white; font-weight: 600; }
+  .alert-strip.danger { background: #c62828; }
+  .alert-strip.warning { background: #ef6c00; }
+</style>
+{% endblock %}

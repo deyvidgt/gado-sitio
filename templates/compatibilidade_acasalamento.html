@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Compatibilidade de Acasalamento — Sítio Santo Antonio{% endblock %}
+{% block page_title %}🧬 Compatibilidade de Acasalamento{% endblock %}
+
+{% block content %}
+<div style="max-width:700px;margin:0 auto;padding:20px">
+
+  <section class="card" style="margin-bottom:24px">
+    <div class="card-title">Verificar Compatibilidade</div>
+    <form method="POST" style="margin-top:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="display:block;margin-bottom:6px;font-weight:600">Touro ID</label>
+          <input type="text" name="touro_id" value="{{ touro_id }}" placeholder="ex: A0001" required style="width:100%;padding:8px;border:1px solid var(--bg-2);border-radius:4px">
+        </div>
+        <div>
+          <label style="display:block;margin-bottom:6px;font-weight:600">Vaca ID</label>
+          <input type="text" name="vaca_id" value="{{ vaca_id }}" placeholder="ex: A0005" required style="width:100%;padding:8px;border:1px solid var(--bg-2);border-radius:4px">
+        </div>
+      </div>
+      <button type="submit" class="btn" style="background:var(--green-600);color:white;width:100%">🔍 Verificar</button>
+    </form>
+  </section>
+
+  {% if resultado %}
+  <section class="card" style="margin-bottom:24px;border-top:4px solid {{ '#c62828' if not resultado.compativel else '#388E3C' }}">
+    <div class="card-title">Resultado</div>
+
+    <div style="margin-top:16px;padding:16px;background:{{ '#FFCDD2' if not resultado.compativel else '#C8E6C9' }};border-radius:8px">
+      <div style="font-size:24px;font-weight:700;margin-bottom:8px;color:{{ '#c62828' if not resultado.compativel else '#388E3C' }}">
+        {% if resultado.compativel %}✅ COMPATÍVEL{% else %}❌ NÃO COMPATÍVEL{% endif %}
+      </div>
+      <div style="font-size:13px;color:var(--text-1)">{{ resultado.motivo }}</div>
+
+      {% if resultado.endogamia is defined %}
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.1);font-size:12px">
+        <span style="color:var(--text-3)">Coeficiente de endogamia:</span>
+        <span style="font-weight:700;margin-left:8px">{{ resultado.endogamia }}%</span>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="card" style="margin-bottom:24px">
+    <div class="card-title">ℹ️ Informações</div>
+    <div style="font-size:13px;color:var(--text-3);line-height:1.6">
+      <p><strong>Animal não encontrado?</strong> Verifique se o ID está correto na aba Animais (ex: A0001, A0002, …)</p>
+      <p><strong>Sem Pai/Mãe cadastrado?</strong> O sistema avisa apenas sobre consanguinidade óbvia (pai == mãe).</p>
+      <p style="margin-top:12px;color:var(--text-2)"><small>Dica: Use o autocomplete digitando na caixa de ID para encontrar o animal facilmente.</small></p>
+    </div>
+  </section>
+
+  <div style="margin-top:24px;text-align:center">
+    <a href="{{ url_for('genetica') }}" class="btn btn-outline">← Voltar à Genética</a>
+  </div>
+
+</div>
+{% endblock %}

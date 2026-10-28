@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Novo Lote — Sítio Santo Antonio{% endblock %}
+{% block page_title %}➕ Novo Lote de Confinamento{% endblock %}
+
+{% block content %}
+<div style="max-width:600px;margin:0 auto;padding:20px">
+
+  <form method="POST" class="card" style="margin-bottom:24px">
+
+    <div style="margin-bottom:16px">
+      <label style="display:block;margin-bottom:6px;font-weight:600">Data Entrada</label>
+      <input type="date" name="data_entrada" required style="width:100%;padding:8px;border:1px solid var(--bg-2);border-radius:4px">
+    </div>
+
+    <div style="margin-bottom:16px">
+      <label style="display:block;margin-bottom:6px;font-weight:600">Lote ID</label>
+      <input type="text" name="lote_id" placeholder="ex: L2026-001" required style="width:100%;padding:8px;border:1px solid var(--bg-2);border-radius:4px">
+    </div>
+
+    <div style="margin-bottom:16px">
+      <label style="display:block;margin-bottom:6px;font-weight:600">Brincos (separados por ;)</label>
+      <textarea name="brincos" placeholder="Amarelo 01 #A0001; Azul 05 #A0002" style="width:100%;padding:8px;border:1px solid var(--bg-2);border-radius:4px;min-height:80px"></textarea>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div>
+        <label style="display:block;margin-bottom:6px;font-weight:600">Quantidade</label>
+        <input type="number" name="quantidade" min="1" required style="width:100%;padding:8px;border:1px solid var(--bg-2);border-radius:4px">
+      </div>
+      <div>
+        <label style="display:block;margin-bottom:6px;font-weight:600">Peso Inicial (kg)</label>
+        <input type="number" name="peso_inicial" step="0.1" required style="width:100%;padding:8px;border:1px solid var(--bg-2);border-radius:4px">
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px">
+      <label style="display:block;margin-bottom:6px;font-weight:600">Observação</label>
+      <textarea name="observacao" style="width:100%;padding:8px;border:1px solid var(--bg-2);border-radius:4px;min-height:60px"></textarea>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <button type="submit" class="btn" style="background:var(--green-600);color:white">💾 Criar Lote</button>
+      <a href="{{ url_for('confinamento') }}" class="btn btn-outline">Cancelar</a>
+    </div>
+  </form>
+
+</div>
+{% endblock %}
