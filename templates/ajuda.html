@@ -48,6 +48,7 @@
 <div class="card indice" id="indice">
   <a href="#inicio">1. Primeiros passos</a>
   <a href="#painel">2. Painel (Dashboard)</a>
+  <a href="#calendario">2b. Calendário</a>
   <a href="#visita">3. Visita ao Sítio</a>
   <a href="#manejo">4. Novo Manejo</a>
   <a href="#compra">5. Nova Compra</a>
@@ -91,14 +92,15 @@
 <ul>
   <li>No celular o menu fica escondido: toque no botão <strong>☰</strong> no alto à esquerda.</li>
   <li>O botão 🌙/☀️ no alto troca entre tema claro e escuro.</li>
-  <li>O 🎤 no alto abre o <a href="#voz">Comando de Voz</a> de qualquer página.</li>
+  <li>O 🎤 no alto abre o <a href="#voz">Comando de Voz</a> de qualquer página (exceto da página de Voz, para não confundir).</li>
+  <li>A <strong>barra de busca 🔍 Procurar…</strong> no alto permite buscar rápido por animais, registros e funcionários.</li>
 </ul>
 {{ passo('c-menu.png', 'Menu aberto no celular') }}
 <a class="voltar" href="#indice">↑ voltar ao índice</a>
 
 <!-- ═════════════════════════════════════════════════════════════════════ -->
 <h2 id="painel">2. Painel (Dashboard)</h2>
-<p>É a primeira tela depois do login. Mostra um resumo de tudo:</p>
+<p>É a primeira tela depois do login. Mostra um resumo de tudo em cards e gráficos:</p>
 <ul>
   <li><strong>Financeiro Geral</strong>: quanto entrou com vendas, quanto custou o que foi vendido e o resultado.</li>
   <li><strong>Resultado por Membro</strong>: lucro ou prejuízo de cada dono (Geane, Deyvid e Nilson) e quantas cabeças cada um tem.</li>
@@ -119,6 +121,39 @@
 </ul>
 {{ passo('p-painel-1.png', 'Painel — resumo financeiro e rebanho') }}
 {{ passo('p-painel-2.png', 'Painel — agenda de manejo e insumos') }}
+<a class="voltar" href="#indice">↑ voltar ao índice</a>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<h2 id="calendario">2b. Calendário</h2>
+<p>O calendário mostra <strong>todos os eventos agendados</strong> (manejos, visitas e tarefas) em um mês visual.</p>
+<ol>
+  <li>Menu → <strong>📅 Calendário</strong>.</li>
+  <li>No lado esquerdo há um <strong>calendário em grid</strong> mostrando o mês inteiro, com cores indicando urgência:
+    <ul>
+      <li><strong>🔴 Vermelho</strong> = Urgente (≤ 3 dias)</li>
+      <li><strong>🟠 Laranja</strong> = Aviso (≤ 7 dias)</li>
+      <li><strong>🟢 Verde</strong> = Normal</li>
+      <li><strong>🟦 Fundo verde</strong> = Hoje (data atual)</li>
+    </ul>
+  </li>
+  <li>No lado direito temos as <strong>listas de eventos</strong>:
+    <ul>
+      <li><strong>📋 Eventos deste mês</strong>: todos os manejos, visitas e tarefas do mês</li>
+      <li><strong>⏰ Próximos 7 dias</strong>: o que está para vir na semana</li>
+      <li><strong>⚡ Ações rápidas</strong>: botões para Nova Visita, Novo Manejo, Tarefas e Histórico</li>
+    </ul>
+  </li>
+  <li>Toque em um dia no calendário para ver os detalhes dos eventos daquele dia.</li>
+</ol>
+{{ passo('p-calendario-1.png', 'Calendário — visão geral do mês') }}
+<p><strong>💡 Dica:</strong> O calendário combina três fontes de dados:</p>
+<ul>
+  <li><strong>Manejo</strong>: vacinas, vermífugos, pesagens, partos, nascimentos, cobertura, diagnóstico de gestação, movimentação de pasto</li>
+  <li><strong>Visitas</strong>: cada ida ao sítio registrada</li>
+  <li><strong>Tarefas</strong>: tarefas agendadas que ainda não foram feitas</li>
+</ul>
+<p>Use a <strong>navegação de mês</strong> (← Mês anterior / Hoje / Próximo mês →) para se mover entre meses.
+  Se preferir uma visão por agenda (lista em ordem temporal), vá a Menu → <strong>📅 Agenda</strong>.</p>
 <a class="voltar" href="#indice">↑ voltar ao índice</a>
 
 <!-- ═════════════════════════════════════════════════════════════════════ -->
@@ -400,6 +435,10 @@
     <ul>
       <li><code>vacina raiva amarelo 21 e 22 com Raivacel</code></li>
       <li><code>nasceu bezerra amarelo 22 nelore, mãe amarelo 08</code></li>
+      <li><code>amarelo 21 pario</code> (registra parto)</li>
+      <li><code>registrei 15 litros de leite amarelo 21</code> (módulo leiteiro)</li>
+      <li><code>nova tarefa ordenha amanhã</code> (cria tarefa com repetição)</li>
+      <li><code>mover amarelo 21 pro pasto norte</code> (movimentação de pasto)</li>
       <li><code>gastei 350 reais de sal, 10 sacos</code></li>
       <li><code>vendi amarelo 21 e azul 12 por 9 mil, arroba a 310</code></li>
       <li><code>visita contei 38 cabeças, choveu 20 milímetros, sal baixo</code></li>
