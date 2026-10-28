@@ -533,6 +533,11 @@
       <div class="header-title">{{ sitio_config.nome if sitio_config else 'Sítio SA' }}</div>
     </div>
     <div class="header-right">
+      {% if request.endpoint != 'voz' %}
+      <a href="{{ url_for('voz', ouvir=1) }}" class="btn-header" id="btn-voz-top" title="Comando de voz" aria-label="Comando de voz">
+        🎤
+      </a>
+      {% endif %}
       <button class="btn-header" id="theme-btn" onclick="toggleTheme()" title="Alternar tema" aria-label="Alternar tema">
         <span id="theme-icon">☀️</span>
       </button>
@@ -551,7 +556,9 @@
       <a href="{{ url_for('animais') }}" class="drawer-link">🐄 Animais</a>
       <a href="{{ url_for('pesagem') }}" class="drawer-link">⚖️ Pesagem</a>
       <a href="{{ url_for('reproducao') }}" class="drawer-link">🐮 Reprodução</a>
+      {% if 'pastos' in url_for.__self__.url_map._rules_by_endpoint %}
       <a href="{{ url_for('pastos') }}" class="drawer-link">🗺️ Pastos</a>
+      {% endif %}
       <a href="{{ url_for('manejo') }}" class="drawer-link">🌿 Manejo</a>
       <a href="{{ url_for('comparar_insumos') }}" class="drawer-link">🧂 Insumos</a>
       <a href="{{ url_for('visitas') }}" class="drawer-link">🗓️ Visitas</a>
