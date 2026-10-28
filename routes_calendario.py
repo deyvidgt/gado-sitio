@@ -32,8 +32,8 @@ def _txt(v) -> str:
 
 
 def _urgencia(dias):
-    """Retorna urgência por dias."""
-    if dias is None:
+    """Retorna urgência por dias (eventos passados são 'normal')."""
+    if dias is None or dias < 0:  # Passado ou sem data
         return "normal"
     if dias <= 3:
         return "urgente"
