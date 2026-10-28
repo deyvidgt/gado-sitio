@@ -4,6 +4,18 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado
+- **Previsão do Tempo: Município e Estado (v5.10.1):** exibe localização completa quando configurada:
+  - Novos campos `municipio` e `estado` no `sitio_config.json` (opcionais).
+  - Quando ambos preenchidos, exibe "Município, Estado" na previsão (ex: "Uberlândia, MG").
+  - Retrocompatível: sem configuração, exibe nome do sítio ou "Região do sítio".
+  - Atualiza também em tempo real ao usar geolocalização do celular.
+- **Registro de Estado do Colchão nas Visitas (v5.10.1):** novo campo para acompanhar conforto:
+  - Coluna "Estado Colchão" adicionada ao formulário de visitas com opções: OK / Alerta / Crítico.
+  - Gera sugestões automáticas: "Colchão em alerta — programar troca em breve" ou "Colchão crítico — TROCAR COM URGÊNCIA!"
+  - Campo gravado na aba Visitas para histórico de manutenção.
+  - Essencial para módulo leite (v5.4) acompanhar bem-estar dos animais.
+
 ## [5.10.0] — 2026-10-28
 
 ### Adicionado
