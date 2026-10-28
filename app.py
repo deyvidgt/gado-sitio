@@ -93,6 +93,9 @@ from routes_reconhecimento import *  # noqa: F401, F403
 # Calendário operacional consolidado (somente leitura)
 from routes_calendario import * # noqa: F401, F403
 
+# v5.10 — Agenda unificada (Calendário + Tarefas)
+from routes_agenda_unificada import * # noqa: F401, F403
+
 # v5.7 — Histórico de medicações (medicacoes.py)
 from routes_medicacoes import * # noqa: F401, F403
 

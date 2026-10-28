@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Agenda — Sítio Santo Antonio{% endblock %}
+{% block page_title %}📅 Agenda Unificada{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:16px">
+
+  <!-- ── Navegação de mês ── -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+    <h2 style="margin:0">{{ mes|monthname }} de {{ ano }}</h2>
+    <div style="display:flex;gap:8px">
+      <a href="{{ url_for('agenda_unificada', mes=mes-1 if mes > 1 else 12, ano=ano-1 if mes == 1 else ano) }}"
+         class="btn btn-outline btn-sm">← Mês anterior</a>
+      <a href="{{ url_for('agenda_unificada') }}" class="btn btn-outline btn-sm">Hoje</a>
+      <a href="{{ url_for('agenda_unificada', mes=mes+1 if mes < 12 else 1, ano=ano+1 if mes == 12 else ano) }}"
+         class="btn btn-outline btn-sm">Próximo mês →</a>
+    </div>
+  </div>
+
+  <div class="grid grid-2" style="gap:20px">
+
+    <!-- ── Calendário (esquerda) ── -->
+    <div class="card">
+      <style>
+        .calendario-grid {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 4px;
+          margin-top: 16px;
+        }
+
+        .dia-semana {
+          text-align: center;
+          font-weight: 600;
+          font-size: 12px;
+          color: var(--text-2);
+          padding: 8px 4px;
+          text-transform: uppercase;
+        }
+
+        .dia-box {
+          aspect-ratio: 1;
+          border: 1px solid var(--bg-2);
+          border-radius: 6px;
+          padding: 6px;
+          display: flex;
+          flex-direction: column;
+          cursor: pointer;
+          transition: all 0.2s;
+          font-size: 12px;
+          background: var(--surface);
+        }
+
+        .dia-box:hover {
+          background: var(--bg-2);
+          border-color: var(--green-600);
+        }
+
+        .dia-box.outro-mes {
+          opacity: 0.3;
+        }
+
+        .dia-box.hoje {
+          background: var(--green-100);
+          border: 2px solid var(--green-600);
+          font-weight: 600;
+        }
+
+        .dia-numero {
+          font-weight: 600;
+          margin-bottom: 2px;
+        }
+
+        .dia-eventos {
+          display: flex;
+          gap: 2px;
+          flex-wrap: wrap;
+        }
+
+        .evento-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: var(--green-600);
+        }
+
+        .evento-dot.urgente { background: #c0392b; }
+        .evento-dot.aviso { background: #f39c12; }
+
+        @media (max-width: 768px) {
+          .dia-box {
+            padding: 4px;
+            font-size: 11px;
+          }
+          .dia-numero {
+            margin-bottom: 1px;
+          }
+        }
+      </style>
+
+      <h3 style="margin-top:0">📅 Calendário</h3>
+
+      <div class="calendario-grid">
+        <!-- Dias da semana -->
+        <div class="dia-semana">Seg</div>
+        <div class="dia-semana">Ter</div>
+        <div class="dia-semana">Qua</div>
+        <div class="dia-semana">Qui</div>
+        <div class="dia-semana">Sex</div>
+        <div class="dia-semana">Sab</div>
+        <div class="dia-semana">Dom</div>
+
+        <!-- Dias do mês -->
+        {% for semana in semanas %}
+          {% for dia in semana %}
+            {% if dia %}
+              <div class="dia-box {% if dia.hoje %}hoje{% endif %}">
+                <div class="dia-numero">{{ dia.dia }}</div>
+                <div class="dia-eventos">
+                  {% for evt in dia.eventos %}
+                    <div class="evento-dot {% if evt.status == 'urgente' %}urgente{% elif evt.status == 'aviso' %}aviso{% endif %}"
+                         title="{{ evt.titulo }}"></div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% else %}
+              <div class="dia-box outro-mes"></div>
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+      </div>
+
+      <div style="margin-top:16px;font-size:12px;color:var(--text-3)">
+        <strong>Legenda:</strong><br>
+        <span style="display:inline-block;width:12px;height:12px;background:#c0392b;border-radius:50%;margin-right:6px;vertical-align:middle"></span> Urgente
+        <span style="display:inline-block;width:12px;height:12px;background:#f39c12;border-radius:50%;margin:0 6px 0 12px;vertical-align:middle"></span> Aviso
+        <span style="display:inline-block;width:12px;height:12px;background:var(--green-600);border-radius:50%;margin:0 6px 0 12px;vertical-align:middle"></span> Normal
+      </div>
+    </div>
+
+    <!-- ── Próximos eventos e tarefas (direita) ── -->
+    <div>
+      <!-- Próximos 14 dias -->
+      <div class="card" style="margin-bottom:16px">
+        <h3 style="margin-top:0">⏰ Próximos 14 dias</h3>
+        {% if proximos_14_dias %}
+          <ul class="lista-items">
+            {% for item in proximos_14_dias %}
+              <li class="lista-item">
+                <span class="lista-item-icon">{{ item.icon }}</span>
+                <div class="lista-item-content">
+                  <div class="lista-item-label">{{ item.titulo }}</div>
+                  <div class="lista-item-desc">
+                    {{ item.data|fmt_data }}
+                    {% if item.tipo == 'tarefa' and item.responsavel %}
+                      · {{ item.responsavel }}
+                    {% endif %}
+                  </div>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p style="color:var(--text-3);font-size:13px">Nada agendado nos próximos 14 dias.</p>
+        {% endif %}
+      </div>
+
+      <!-- Tarefas pendentes -->
+      <div class="card">
+        <h3 style="margin-top:0">📋 Tarefas pendentes</h3>
+        {% if tarefas_pendentes %}
+          <ul class="lista-items">
+            {% for tarefa in tarefas_pendentes[:5] %}
+              <li class="lista-item">
+                <span class="lista-item-icon">
+                  {% if tarefa.tipo == 'atrasada' %}🔴{% elif tarefa.tipo == 'hoje' %}🟡{% else %}🟢{% endif %}
+                </span>
+                <div class="lista-item-content" style="flex:1">
+                  <div class="lista-item-label">{{ tarefa.titulo }}</div>
+                  <div class="lista-item-desc">
+                    {% if tarefa.responsavel %}{{ tarefa.responsavel }} · {% endif %}
+                    {{ tarefa.data|fmt_data }}
+                  </div>
+                </div>
+                <form method="post" action="{{ url_for('concluir_tarefa', id_=tarefa.id) }}" style="display:inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button type="submit" class="btn btn-outline btn-sm" title="Marcar como feito">✓</button>
+                </form>
+              </li>
+            {% endfor %}
+          </ul>
+          {% if tarefas_pendentes|length > 5 %}
+            <p style="margin-top:12px;text-align:center">
+              <a href="{{ url_for('tarefas') }}" style="color:var(--green-600);text-decoration:none;font-weight:600">
+                Ver todas as tarefas →
+              </a>
+            </p>
+          {% endif %}
+        {% else %}
+          <p style="color:var(--text-3);font-size:13px">Nenhuma tarefa pendente!</p>
+        {% endif %}
+      </div>
+
+      <!-- Ações rápidas -->
+      <div class="card" style="margin-top:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <a href="{{ url_for('tarefas') }}" class="btn btn-secundario">📋 Gerenciar tarefas</a>
+          <a href="{{ url_for('manejo') }}" class="btn btn-secundario">🩺 Manejo</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// Helper para nome do mês
+function monthName(mes) {
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return meses[mes-1];
+}
+
+// Poder extrair o calendário dos dados
+const hoje = new Date('{{ hoje }}');
+</script>
+
+{% endblock %}
