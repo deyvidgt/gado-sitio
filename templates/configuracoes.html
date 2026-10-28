@@ -658,16 +658,31 @@ document.getElementById("btn-mais-donos").addEventListener("click", function () 
   </form>
 </div>
 
+<!-- ── Importar / Exportar dados ────────────────────────────────────────────── -->
+<div class="card" style="margin-top:24px">
+  <div class="card-title">⬆️ ⬇️ Importar / Exportar</div>
+  <p style="font-size:13px;color:var(--text-3);margin-bottom:16px">
+    <strong>Importar:</strong> Carregar dados de uma planilha antiga (abas por ano: 2024, 2025…).
+    Os registros são somados aos que já existem — faça um backup antes.
+  </p>
+  <p style="font-size:13px;color:var(--text-3);margin-bottom:16px">
+    <strong>Exportar:</strong> Baixe um relatório em Excel com todos os registros do período selecionado.
+  </p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap">
+    <a href="{{ url_for('importar') }}" class="btn btn-primary">⬆️ Importar Excel</a>
+    <a href="{{ url_for('exportar') }}" class="btn btn-outline">⬇️ Exportar Excel</a>
+  </div>
+</div>
+
 <!-- ── Backup / Cópia dos dados ──────────────────────────────────────────────── -->
 <div class="card" style="margin-top:24px">
   <div class="card-title">💾 Backup dos Dados</div>
   <p style="font-size:13px;color:var(--text-3);margin-bottom:16px">
-    Baixe uma cópia da planilha com todos os dados (compras, gastos, vendas, manejo, visitas).
-    Guarde em local seguro de tempos em tempos.
+    O sistema faz cópias de segurança automaticamente (todo dia e a cada hora de uso).
+    Você pode baixar qualquer uma das 30 últimas cópias, ou fazer um backup agora.
   </p>
   <div style="display:flex;gap:12px;flex-wrap:wrap">
-    <a href="{{ url_for('baixar_dados') }}" class="btn btn-primary">⬇️ Baixar cópia agora (Excel)</a>
-    <a href="{{ url_for('listar_backups') }}" class="btn btn-outline">📁 Ver backups automáticos</a>
+    <a href="{{ url_for('listar_backups') }}" class="btn btn-primary">💾 Gerenciar backups</a>
   </div>
 </div>
 
