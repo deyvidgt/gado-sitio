@@ -380,7 +380,26 @@
       </div>
     </div>
 
-    <!-- ── Seção 7: Observações ─────────────────────────────────────── -->
+    <!-- ── Seção 7: Estado do Colchão ─────────────────────────────────── -->
+    <div class="vis-section">
+      <h3>🛏️ Conforto — Estado do Colchão</h3>
+      <p style="font-size:12px;color:var(--text-3);margin:-6px 0 12px">
+        Registre o estado do colchão dos animais para acompanhar a necessidade de troca.
+      </p>
+      <div class="status-grid" style="grid-template-columns: 1fr 1fr 1fr">
+        <div class="status-item">
+          <label>Colchão</label>
+          <select name="estado_colchao" class="status-sel">
+            <option value="">— Não verificado</option>
+            <option value="OK">✅ OK — bom estado</option>
+            <option value="Alerta">🟡 Alerta — próximo de trocar</option>
+            <option value="Crítico">🚨 Crítico — trocar urgente!</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Seção 8: Observações ─────────────────────────────────────── -->
     <div class="vis-section">
       <h3>📝 Observações Livres</h3>
       <textarea name="observacoes" rows="4"

@@ -130,11 +130,23 @@ def _formatar(dados, cfg, salvo_em, desatualizado=False):
                 item[destino] = valores[i]
         item["condicao"] = _CODIGOS.get(item.get("codigo"), "Condição não informada")
         dias.append(item)
+
+    # Monta localização: nome do sítio ou "Município, Estado"
+    local = str(cfg.get("nome") or "Região do sítio")
+    municipio = cfg.get("municipio")
+    estado = cfg.get("estado")
+    if municipio and estado:
+        local = f"{municipio}, {estado}"
+    elif municipio:
+        local = municipio
+
     return {
         "status": "cache" if desatualizado else "atualizado",
         "desatualizado": bool(desatualizado),
         "mensagem": "Previsão em cache." if desatualizado else "Previsão atualizada.",
-        "local": str(cfg.get("nome") or "Região do sítio"),
+        "local": local,
+        "municipio": municipio or None,
+        "estado": estado or None,
         "consultado_em": salvo_em,
         "atual": {
             "temperatura": atual.get("temperature_2m"),

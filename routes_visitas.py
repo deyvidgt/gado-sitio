@@ -87,6 +87,10 @@ def _gerar_sugestoes_visita(f, estoque_esperado):
     elif choveu:              sug.append("🌧️ Chuva registrada — anotar os mm na próxima vez.")
     else:                     sug.append("☀️ Sem chuva — acompanhar estiagem.")
 
+    colchao = f.get("estado_colchao", "")
+    if colchao == "Alerta":    sug.append("🛏️ Colchão em alerta — programar troca em breve.")
+    elif colchao == "Crítico": sug.append("🚨 Colchão crítico — TROCAR COM URGÊNCIA!")
+
     if not sug:
         sug.append("✅ Visita sem pendências — sítio em boas condições!")
     return " | ".join(sug)
@@ -268,6 +272,7 @@ def _registrar_visita_sem_trava(f) -> dict:
     caixa_agua = f.get("caixa_agua", "Cheia")
     conteiner  = f.get("conteiner",  "Cheio")
     choveu   = "Sim" if f.get("choveu") == "sim" else "Não"
+    estado_colchao = f.get("estado_colchao", "")
 
     def _litros_safe(v):
         try:
@@ -309,6 +314,7 @@ def _registrar_visita_sem_trava(f) -> dict:
         conteiner, conteiner_litros,
         racao, sacos_racao,
         chave_envio,
+        estado_colchao or None,
     ])
 
     row = {
@@ -329,6 +335,7 @@ def _registrar_visita_sem_trava(f) -> dict:
         "Chuva mm":       chuva_mm if chuva_mm > 0 else 0,
         "Observações":    obs,
         "Sugestões":      sugestoes,
+        "Estado Colchão": estado_colchao or "Não verificado",
     }
     try:
         from alertas_whatsapp import montar_msg_nova_visita, guardar_aviso_pendente

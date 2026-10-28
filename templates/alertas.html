@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-head"><div><span class="eyebrow">Acompanhe o que pede atenção</span><h2>Central de alertas</h2></div></div>
 <div class="card" id="card-tempo">
-  <h3>Previsão do tempo{% if tempo.local %} · {{ tempo.local }}{% endif %}</h3>
+  <h3>Previsão do tempo{% if tempo.municipio and tempo.estado %} · {{ tempo.municipio }}, {{ tempo.estado }}{% elif tempo.local %} · {{ tempo.local }}{% endif %}</h3>
   <p>{{ tempo.mensagem or 'Previsão indisponível' }}</p>
   {% if tempo.pede_geo %}
   <button id="btn-geo" style="margin-top:12px; padding:10px 16px; background:var(--green-600); color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:500; transition:all .2s">📍 Usar minha localização</button>
@@ -80,8 +80,11 @@
             // Atualiza card de tempo com os novos dados
             const cardTempo = document.getElementById("card-tempo");
             if (dados.dias && dados.dias.length > 0) {
+              const localizacao = dados.municipio && dados.estado
+                ? `${dados.municipio}, ${dados.estado}`
+                : (dados.local || "Sua localização");
               cardTempo.innerHTML = `
-                <h3>Previsão do tempo · ${dados.local || "Sua localização"}</h3>
+                <h3>Previsão do tempo · ${localizacao}</h3>
                 <p>${dados.mensagem}</p>
                 ${dados.atual ? `
                 <div class="tri" style="margin-top:12px">
