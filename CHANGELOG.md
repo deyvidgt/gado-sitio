@@ -2,6 +2,17 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
+## [Não lançado]
+
+### Adicionado
+- **Coleta Automática de Indicadores (v5.8):** novas abas `Engorda Pastagem`, `GMD Lotação`, `Ração Consumo` agora preenchem automaticamente:
+  - Engorda Pastagem: ao registrar Movimentação de Pasto + Pesagem, sistema calcula GMD, lotação e dias no pasto automaticamente.
+  - GMD Lotação: histórico correlação GMD vs UA/ha com % ocupação, qualidade do pasto e clima.
+  - Ração Consumo: alimentação no módulo leiteiro dispara registro de ração oferecida vs consumida com cálculo de taxa de consumo e desperdício.
+  - Novo módulo `indicadores_coleta.py` com funções reutilizáveis para integração com pesagem automática, sensores IoT e relatórios.
+  - Integração em `routes_registros.py`: chamada automática `processar_manejo_automatico()` após salvar novo/editar manejo.
+  - Documentação completa em `docs/INDICADORES_COLETA.md` com exemplos de API.
+
 ## [5.10.1] — 2026-10-29
 
 ### Modificado
