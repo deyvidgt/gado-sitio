@@ -224,6 +224,8 @@ COLUNAS_VISITAS = [
     # NOVO v4.2: código único gerado no celular — evita gravar a mesma visita
     # duas vezes quando o envio offline é repetido.
     "ID Envio",
+    # NOVO v5.8: Estado do colchão (OK/Alerta/Crítico) registrado a cada visita.
+    "Estado Colchão",
 ]
 
 # ── Animais com brinco (v4.3) ────────────────────────────────────────────────
@@ -382,6 +384,34 @@ COLUNAS_VOLUMOSOS = [
 COLUNAS_CONSUMO_VOLUMOSOS = [
     "Data", "Tipo", "Quantidade consumida (kg)", "Local", "Observação",
     "ID Envio", "Criado Em",
+]
+
+# v5.8 — Indicadores de crescimento vs pastagem
+COLUNAS_ENGORDA_PASTAGEM = [
+    "Data", "Pasto ID", "Brincos", "Peso Inicial (kg)", "Peso Final (kg)",
+    "Dias no Pasto", "GMD (kg/dia)", "Lotação (UA/ha)", "Condição Pasto",
+    "Consumo Estimado (kg MS/dia)", "Observação", "Responsável", "ID Envio", "Criado Em",
+]
+
+# v5.8 — Histórico de GMD vs lotação (análise histórica)
+COLUNAS_GMD_LOTACAO = [
+    "Data", "Período (dias)", "Animais", "Peso Inicial (kg)", "Peso Final (kg)",
+    "GMD (kg/dia)", "Pasto ID", "Lotação (UA/ha)", "Capacidade (UA/ha)",
+    "% Ocupação", "Qualidade Pasto", "Clima", "Observação", "ID Envio", "Criado Em",
+]
+
+# v5.8 — Ração oferecida vs consumido (módulo leiteiro)
+COLUNAS_RACAO_CONSUMO = [
+    "Data", "Tipo Ração", "Quantidade Oferecida (kg)", "Quantidade Consumida (kg)",
+    "Taxa Consumo (%)", "Custo/kg", "Custo Total Oferecido (R$)", "Desperdício (kg)",
+    "% Desperdício", "Observação", "Responsável", "ID Envio", "Criado Em",
+]
+
+# v5.8 — Mortalidade de bezerros (%)
+COLUNAS_MORTALIDADE_BEZERROS = [
+    "Data", "Período (mês/ano)", "Bezerros Nascidos", "Bezerros Mortos",
+    "Taxa Mortalidade (%)", "Causa 1", "Causa 2", "Causa 3",
+    "Idade Morte (dias)", "Observação", "Responsável", "ID Envio", "Criado Em",
 ]
 
 CORES = {

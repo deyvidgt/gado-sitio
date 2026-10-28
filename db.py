@@ -40,6 +40,8 @@ from config import (
     COLUNAS_LEITE_ALIMENTACAO, COLUNAS_LEITE_NECESSIDADES, COLUNAS_LEITE_TRATAMENTOS,
     COLUNAS_LEITE_CONFORTO, COLUNAS_LEITE_COLCHAO,
     COLUNAS_VOLUMOSOS, COLUNAS_CONSUMO_VOLUMOSOS,
+    COLUNAS_ENGORDA_PASTAGEM, COLUNAS_GMD_LOTACAO, COLUNAS_RACAO_CONSUMO,
+    COLUNAS_MORTALIDADE_BEZERROS,
 )
 
 # Mapa aba → colunas esperadas, usado para migrar colunas novas sem perder dados.
@@ -63,6 +65,10 @@ _SCHEMA_ABAS = {
     "Leite Colchão": COLUNAS_LEITE_COLCHAO,
     "Volumosos": COLUNAS_VOLUMOSOS,
     "Consumo Volumosos": COLUNAS_CONSUMO_VOLUMOSOS,
+    "Engorda Pastagem": COLUNAS_ENGORDA_PASTAGEM,  # v5.8
+    "GMD Lotação": COLUNAS_GMD_LOTACAO,  # v5.8
+    "Ração Consumo": COLUNAS_RACAO_CONSUMO,  # v5.8
+    "Mortalidade Bezerros": COLUNAS_MORTALIDADE_BEZERROS,  # v5.8
 }
 
 # Caminho completo do arquivo de dados
