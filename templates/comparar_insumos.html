@@ -4,10 +4,18 @@
 
 {% block content %}
 <style>
-  .cmp-tab { width:100%; border-collapse:collapse; font-size:13.5px; }
+  .cmp-tab { width:100%; border-collapse:collapse; font-size:13.5px; overflow-x:auto; display:block; }
   .cmp-tab td, .cmp-tab th { padding:8px 6px; border-bottom:1px solid var(--border, #ddd); text-align:left; }
   .cmp-melhor { background:rgba(61,122,52,.10); font-weight:600; }
   .cmp-muted { color:var(--text-3); font-size:12px; }
+
+  @media (max-width: 768px) {
+    .cmp-tab { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .cmp-tab tr { display: grid; grid-template-columns: 1fr; gap: 8px; border: 1px solid var(--bg-2); padding: 12px; border-radius: 8px; background: var(--surface); }
+    .cmp-tab th { display: none; }
+    .cmp-tab td { border: none; padding: 0; }
+    .cmp-tab td::before { content: attr(data-label); display: block; font-weight: 600; font-size: 12px; color: var(--text-2); margin-bottom: 4px; }
+  }
 </style>
 
 <div class="card">
