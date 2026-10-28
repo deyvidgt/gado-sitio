@@ -3,81 +3,82 @@
 {% block page_title %}💰 Financeiro{% endblock %}
 
 {% block content %}
-<div style="max-width:1200px;margin:0 auto;padding:20px">
+<div style="max-width:1200px;margin:0 auto;padding:16px">
 
-  <div class="metrics">
-    <div class="metric">
-      <div class="metric-icon">🐄</div>
-      <div class="metric-label">Estoque Atual</div>
-      <div class="metric-val">{{ r.estoque }} cab.</div>
-      <div class="metric-sub">{{ r.cab_comp }} compradas / {{ r.cab_vend }} vendidas</div>
-    </div>
+  <!-- Alertas críticos -->
+  {% if r.perdas and r.perdas > 0 %}
+  <div class="alerta alerta-critico">
+    <span class="alerta-icon">⚠️</span>
+    <span>Perdas registradas: {{ r.cab_mortes }} cabeça(s) — {{ r.perdas | brl }}</span>
+  </div>
+  {% endif %}
 
-    <div class="metric gold">
-      <div class="metric-icon">💲</div>
-      <div class="metric-label">CTCab (Custo/Cabeça)</div>
-      <div class="metric-val">{{ r.ctcab | brl }}</div>
-      <div class="metric-sub">CMP {{ r.cmp | brl }} + Gastos {{ r.gpcab | brl }}</div>
-    </div>
+  {% if r.resultado_realizado < 0 %}
+  <div class="alerta alerta-aviso">
+    <span class="alerta-icon">📉</span>
+    <span>Resultado negativo: {{ r.resultado_realizado | brl }} (ROI {{ r.roi_realizado | pct }})</span>
+  </div>
+  {% endif %}
 
-    <div class="metric {% if r.resultado_realizado < 0 %}red{% endif %}">
-      <div class="metric-icon">📈</div>
-      <div class="metric-label">Resultado Realizado</div>
-      <div class="metric-val {{ 'pos' if r.resultado_realizado >= 0 else 'neg' }}">
-        {{ r.resultado_realizado | brl }}
+  <!-- KPIs Principais -->
+  <div class="secao">
+    <h2 class="secao-titulo">Indicadores Principais</h2>
+    <div class="grid grid-3">
+      <div class="metric">
+        <div class="metric-icon">🐄</div>
+        <div class="metric-label">Estoque Atual</div>
+        <div class="metric-val">{{ r.estoque }}<span style="font-size:14px;color:var(--text-3);font-weight:normal"> cab.</span></div>
+        <div class="metric-sub">{{ r.cab_comp }} compradas / {{ r.cab_vend }} vendidas</div>
       </div>
-      <div class="metric-sub">ROI {{ r.roi_realizado | pct }}</div>
-    </div>
 
-    <div class="metric blue">
-      <div class="metric-icon">🎯</div>
-      <div class="metric-label">Break-even do Estoque</div>
-      <div class="metric-val">{{ r.break_even | brl }}</div>
-      <div class="metric-sub">Preço mín. por cabeça</div>
-    </div>
+      <div class="metric gold">
+        <div class="metric-icon">💲</div>
+        <div class="metric-label">CTCab</div>
+        <div class="metric-val">{{ r.ctcab | brl }}</div>
+        <div class="metric-sub">CMP {{ r.cmp | brl }} + GPCab {{ r.gpcab | brl }}</div>
+      </div>
 
-    <div class="metric">
-      <div class="metric-icon">🎫</div>
-      <div class="metric-label">Ticket Médio Venda</div>
-      <div class="metric-val">{{ r.ticket_medio | brl }}</div>
-      <div class="metric-sub">Margem bruta {{ r.margem_bruta | pct }}</div>
+      <div class="metric {% if r.resultado_realizado < 0 %}red{% endif %}">
+        <div class="metric-icon">📈</div>
+        <div class="metric-label">Resultado</div>
+        <div class="metric-val {{ 'pos' if r.resultado_realizado >= 0 else 'neg' }}">{{ r.resultado_realizado | brl }}</div>
+        <div class="metric-sub">ROI {{ r.roi_realizado | pct }}</div>
+      </div>
     </div>
-
-    <div class="metric gold">
-      <div class="metric-icon">🏦</div>
-      <div class="metric-label">Capital Imobilizado</div>
-      <div class="metric-val">{{ r.capital_imobilizado | brl }}</div>
-      <div class="metric-sub">{{ r.estoque }} cab. × {{ r.ctcab | brl }}</div>
-    </div>
-
-    {% if r.perdas and r.perdas > 0 %}
-    <div class="metric red">
-      <div class="metric-icon">💀</div>
-      <div class="metric-label">Perdas (mortes)</div>
-      <div class="metric-val neg">{{ r.perdas | brl }}</div>
-      <div class="metric-sub">{{ r.cab_mortes }} cabeça(s) perdida(s)</div>
-    </div>
-    {% endif %}
   </div>
 
-  <div style="margin-top:24px;text-align:center">
-    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
-    <a href="{{ url_for('relatorios') }}" class="btn btn-outline">📈 Ver Relatórios</a>
+  <!-- KPIs Secundários -->
+  <div class="secao">
+    <h2 class="secao-titulo">Análise Financeira</h2>
+    <div class="grid grid-3">
+      <div class="metric blue">
+        <div class="metric-icon">🎯</div>
+        <div class="metric-label">Break-even</div>
+        <div class="metric-val">{{ r.break_even | brl }}</div>
+        <div class="metric-sub">Preço mín./cabeça</div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-icon">🎫</div>
+        <div class="metric-label">Ticket Médio</div>
+        <div class="metric-val">{{ r.ticket_medio | brl }}</div>
+        <div class="metric-sub">Margem bruta {{ r.margem_bruta | pct }}</div>
+      </div>
+
+      <div class="metric gold">
+        <div class="metric-icon">🏦</div>
+        <div class="metric-label">Capital Imobilizado</div>
+        <div class="metric-val">{{ r.capital_imobilizado | brl }}</div>
+        <div class="metric-sub">{{ r.estoque }} cab. ×{{ r.ctcab | brl }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ações -->
+  <div class="btn-group">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secundario">← Voltar ao Dashboard</a>
+    <a href="{{ url_for('relatorios') }}" class="btn btn-principal">📈 Ver Relatórios</a>
   </div>
 
 </div>
-
-<style>
-  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 20px 0; }
-  .metric { background: var(--surface); padding: 20px; border-radius: 8px; text-align: center; border-left: 4px solid var(--green-500); }
-  .metric.gold { border-left-color: var(--gold); }
-  .metric.blue { border-left-color: var(--info); }
-  .metric.red { border-left-color: var(--danger); }
-  .metric-icon { font-size: 32px; margin-bottom: 8px; }
-  .metric-label { font-size: 12px; color: var(--text-3); text-transform: uppercase; margin-bottom: 8px; }
-  .metric-val { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: var(--green-700); margin-bottom: 4px; }
-  .metric-val.pos { color: var(--green-700); }
-  .metric-val.neg { color: var(--danger); }
-  .metric-sub { font-size: 12px; color: var(--text-2); }
-</style>
 {% endblock %}
