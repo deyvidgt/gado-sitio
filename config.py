@@ -226,6 +226,8 @@ COLUNAS_VISITAS = [
     "ID Envio",
     # NOVO v5.8: Estado do colchão (OK/Alerta/Crítico) registrado a cada visita.
     "Estado Colchão",
+    # NOVO v5.10.2: Estado do colcho (armazenamento de sal, proteinado, silo, feno).
+    "Colcho",
 ]
 
 # ── Animais com brinco (v4.3) ────────────────────────────────────────────────

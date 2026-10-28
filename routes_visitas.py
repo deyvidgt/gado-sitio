@@ -273,6 +273,7 @@ def _registrar_visita_sem_trava(f) -> dict:
     conteiner  = f.get("conteiner",  "Cheio")
     choveu   = "Sim" if f.get("choveu") == "sim" else "Não"
     estado_colchao = f.get("estado_colchao", "")
+    colcho   = f.get("colcho", "")
 
     def _litros_safe(v):
         try:
@@ -315,6 +316,7 @@ def _registrar_visita_sem_trava(f) -> dict:
         racao, sacos_racao,
         chave_envio,
         estado_colchao or None,
+        colcho or None,
     ])
 
     row = {

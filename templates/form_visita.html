@@ -399,7 +399,26 @@
       </div>
     </div>
 
-    <!-- ── Seção 8: Observações ─────────────────────────────────────── -->
+    <!-- ── Seção 8: Infraestrutura — Colcho (Armazenamento) ────────── -->
+    <div class="vis-section">
+      <h3>📦 Infraestrutura — Colcho (Armazenamento)</h3>
+      <p style="font-size:12px;color:var(--text-3);margin:-6px 0 12px">
+        Registre o estado da área de armazenamento: sal, proteinado, silo, feno, equipamentos.
+      </p>
+      <div class="status-grid" style="grid-template-columns: 1fr 1fr 1fr">
+        <div class="status-item">
+          <label>Colcho (Armazenamento)</label>
+          <select name="colcho" class="status-sel">
+            <option value="">— Não verificado</option>
+            <option value="OK">✅ OK — tudo em ordem</option>
+            <option value="Alerta">🟡 Alerta — atenção necessária</option>
+            <option value="Crítico">🚨 Crítico — ação urgente!</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Seção 9: Observações ─────────────────────────────────────── -->
     <div class="vis-section">
       <h3>📝 Observações Livres</h3>
       <textarea name="observacoes" rows="4"
