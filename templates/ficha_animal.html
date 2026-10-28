@@ -60,6 +60,11 @@
     {% if a.status == 'Vivo' %}
     <a href="{{ url_for('pesagem', id=a.id) }}" class="btn btn-outline btn-sm">⚖️ Pesar</a>
     <a href="{{ url_for('novo_manejo', prefill=1, brincos=a.brinco, cabecas=1) }}" class="btn btn-primary btn-sm">🩺 Manejo neste animal</a>
+    {% if pasto_id %}
+    <a href="{{ url_for('pastos') }}#pasto-{{ pasto_id }}" class="btn btn-outline btn-sm">📍 {{ pasto_nome or 'Pasto' }}</a>
+    {% else %}
+    <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mov-pasto').scrollIntoView({behavior:'smooth'})">📍 Movimentar para pasto</button>
+    {% endif %}
     {% endif %}
   </div>
 </div>
@@ -207,6 +212,26 @@
 </div>
 
 {% if a.status == 'Vivo' %}
+<details class="card" style="margin-top:20px" id="mov-pasto">
+  <summary style="cursor:pointer;font-weight:600">📍 Movimentar para pasto</summary>
+  <form method="post" action="{{ url_for('novo_manejo', prefill=1, tipo='Movimentação de Pasto', brincos=a.brinco) }}" style="margin-top:14px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <p class="muted" style="margin-bottom:12px">Registre o pasto onde este animal está agora. A movimentação aparecerá no histórico e no mapa de pastos.</p>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" name="data" value="{{ hoje }}" required>
+      </div>
+      <div class="form-group full">
+        <label>Descrição (opcional)</label>
+        <input type="text" name="descricao" maxlength="160" placeholder="ex: movido pela manhã">
+      </div>
+    </div>
+    <button class="btn btn-primary btn-sm">Registrar movimentação</button>
+    <a href="{{ url_for('pastos') }}" class="btn btn-outline btn-sm">Ver todos os pastos</a>
+  </form>
+</details>
+
 <details class="card" style="margin-top:20px">
   <summary style="cursor:pointer;font-weight:600">📤 Dar baixa (vendido / morreu)</summary>
   <form method="post" action="{{ url_for('baixa_animal', id_=a.id) }}" style="margin-top:14px">

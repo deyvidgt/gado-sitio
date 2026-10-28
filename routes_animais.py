@@ -12,6 +12,7 @@ import animais as A
 import comando_voz as V
 import drive
 import fotos as F
+import pastos as PA
 import pesagem as P
 import peso_foto as PF
 from calculos import calcular_estoque, calcular_estoque_por_membro
@@ -314,6 +315,15 @@ def ficha_animal(id_):
     mae_id = (A.ids_de(a["Mãe"]) or [None])[0]
     hist_peso = P.todas(dados["Manejo"]).get(id_, [])
 
+    # Obtém pasto onde o animal está
+    pasto_id, _ = PA.pasto_do_animal(id_, dados["Manejo"])
+    pasto_nome = None
+    if pasto_id:
+        df_p = PA.carregar()
+        p = df_p[df_p["ID"] == pasto_id]
+        if not p.empty:
+            pasto_nome = p.iloc[0]["Nome"]
+
     # Detecta mobile por User-Agent ou query param
     eh_mobile = request.args.get("modo") == "mobile" or (
         "mobile" in request.headers.get("User-Agent", "").lower() or
@@ -331,6 +341,7 @@ def ficha_animal(id_):
         "fotos": F.listar(id_), "fotos_ativas": drive.configurado() or drive.cliente() is not None,
         "TIPOS_FOTO": TIPOS_FOTO,
         "ultimo_parto": fmt_data(a["Último Parto"]) if pd.notna(a["Último Parto"]) else "",
+        "pasto_id": pasto_id, "pasto_nome": pasto_nome,
         **_ctx_templates()
     }
 

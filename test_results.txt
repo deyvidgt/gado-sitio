@@ -1,0 +1,467 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0
+rootdir: F:\programa sitio
+configfile: pytest.ini
+plugins: anyio-4.13.0, langsmith-0.9.0, cov-7.1.0, mock-3.17.0, xdist-3.6.1
+collected 983 items
+
+tests\test_ajuda.py ........                                             [  0%]
+tests\test_ajuda_leite.py .                                              [  0%]
+tests\test_alertas_dinamicos.py ...                                      [  1%]
+tests\test_alertas_leite.py ..                                           [  1%]
+tests\test_alertas_tempo_detalhes.py .                                   [  1%]
+tests\test_animais.py .....................................              [  5%]
+tests\test_animais_filtros.py .                                          [  5%]
+tests\test_backup.py F...                                                [  5%]
+tests\test_brincos_arroba_imea.py .........                              [  6%]
+tests\test_busca.py .........                                            [  7%]
+tests\test_calculador_racao.py ...........                               [  8%]
+tests\test_calculos.py ....................                              [ 10%]
+tests\test_comando_voz.py ....................................F......... [ 15%]
+..............................................................           [ 21%]
+tests\test_confinamento_genetica.py ..............                       [ 23%]
+tests\test_dashboard_insumos.py ..                                       [ 23%]
+tests\test_dashboard_leite.py F                                          [ 23%]
+tests\test_dashboard_operacional.py F.                                   [ 23%]
+tests\test_fotos.py .........................................            [ 27%]
+tests\test_insumos.py ......                                             [ 28%]
+tests\test_layout_mapa.py F                                              [ 28%]
+tests\test_leite.py ....                                                 [ 28%]
+tests\test_leite_alimentacao.py ..                                       [ 29%]
+tests\test_leite_calculador_route.py .                                   [ 29%]
+tests\test_leite_edicao.py ..                                            [ 29%]
+tests\test_leite_ficha.py ..                                             [ 29%]
+tests\test_leite_indicadores.py ..                                       [ 29%]
+tests\test_leite_integracao.py .............                             [ 31%]
+tests\test_leite_migracao.py FF.                                         [ 31%]
+tests\test_leite_operacao.py ..                                          [ 31%]
+tests\test_leite_painel.py ..                                            [ 31%]
+tests\test_leite_relatorios.py ....                                      [ 32%]
+tests\test_leite_rotas.py ...                                            [ 32%]
+tests\test_lotes.py .........                                            [ 33%]
+tests\test_membros.py ...................................                [ 37%]
+tests\test_paginas.py .F............................................F... [ 42%]
+........................F........F..F................................... [ 49%]
+................                                                         [ 51%]
+tests\test_pastos.py .........................................F          [ 55%]
+tests\test_pesagem.py .......                                            [ 56%]
+tests\test_pesagem_crescimento.py ............                           [ 57%]
+tests\test_peso_foto.py .......................                          [ 59%]
+tests\test_reproducao.py ..........                                      [ 60%]
+tests\test_resumo_mensal.py .......                                      [ 61%]
+tests\test_revisao.py ...........                                        [ 62%]
+tests\test_rotas_novas_v510.py ...........                               [ 63%]
+tests\test_saude.py ............                                         [ 64%]
+tests\test_sitios.py ....F.........................                      [ 67%]
+tests\test_tarefas.py ...........                                        [ 69%]
+tests\test_tempo.py ........                                             [ 69%]
+tests\test_tempo_cache_sitio.py .                                        [ 69%]
+tests\test_tempo_config.py .                                             [ 70%]
+tests\test_v42.py .................                                      [ 71%]
+tests\test_v57_mobile.py .........                                       [ 72%]
+tests\test_v57_sprint3_bottom_nav.py ..........................          [ 75%]
+tests\test_v57_sprint4_accordion.py .................................... [ 79%]
+........                                                                 [ 79%]
+tests\test_v57_sprint4_forms.py ........................................ [ 83%]
+..................                                                       [ 85%]
+tests\test_v57_sprint4_integration.py ................................   [ 89%]
+tests\test_v57_sprint4_modal.py .................................        [ 92%]
+tests\test_v57_sprint4_toast.py ......................................   [ 96%]
+tests\test_visual_barras.py ..                                           [ 96%]
+tests\test_whatsapp_eventos.py ..........                                [ 97%]
+tests\test_whatsapp_prefs.py ............                                [ 98%]
+tests\test_whatsapp_semanal.py .............                             [100%]
+
+================================== FAILURES ===================================
+_______________ test_script_diario_faz_backup_na_pasta_de_dados _______________
+tests\test_backup.py:31: in test_script_diario_faz_backup_na_pasta_de_dados
+    assert not os.path.exists(os.path.join(RAIZ, "backups"))
+E   AssertionError: assert not True
+E    +  where True = <built-in function _path_exists>('F:\\programa sitio\\backups')
+E    +    where <built-in function _path_exists> = <module 'ntpath' (frozen)>.exists
+E    +      where <module 'ntpath' (frozen)> = os.path
+E    +    and   'F:\\programa sitio\\backups' = <function join at 0x000001EFCCBD53A0>('F:\\programa sitio', 'backups')
+E    +      where <function join at 0x000001EFCCBD53A0> = <module 'ntpath' (frozen)>.join
+E    +        where <module 'ntpath' (frozen)> = os.path
+___________ test_frase[mudei o gado de pasto para o pasto de cima] ____________
+tests\test_comando_voz.py:718: in test_frase
+    r = V.montar(V.analisar(frase, HOJE), CTX)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comando_voz.py:1353: in montar
+    if acao == "pasto" and re.search(r"\b(mover|moveu|movi|move|movimentacao)\b", n):
+                                                                                  ^
+E   NameError: name 'n' is not defined
+____________________ test_dashboard_exibe_resumo_leiteiro _____________________
+tests\test_dashboard_leite.py:14: in test_dashboard_exibe_resumo_leiteiro
+    assert "Resumo leiteiro" in html
+E   assert 'Resumo leiteiro' in '<!DOCTYPE html>\n<html lang="pt-BR" data-theme="light">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" co...omponents/accordion.js"></script>\n<script src="/static/js/components/form-validator.js"></script>\n\n</body>\n</html>'
+__________________ test_dashboard_exibe_blocos_operacionais ___________________
+tests\test_dashboard_operacional.py:6: in test_dashboard_exibe_blocos_operacionais
+    assert texto in html
+E   assert 'Estado do sítio' in '<!DOCTYPE html>\n<html lang="pt-BR" data-theme="light">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" co...omponents/accordion.js"></script>\n<script src="/static/js/components/form-validator.js"></script>\n\n</body>\n</html>'
+___________________ test_menu_lateral_fica_acima_do_leaflet ___________________
+tests\test_layout_mapa.py:6: in test_menu_lateral_fica_acima_do_leaflet
+    assert ".sidebar {" in html
+E   assert '.sidebar {' in '<!DOCTYPE html>\n<html lang="pt-BR" data-theme="light">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" co...omponents/accordion.js"></script>\n<script src="/static/js/components/form-validator.js"></script>\n\n</body>\n</html>'
+________________ test_migra_abas_leiteiras_com_colunas_exatas _________________
+tests\test_leite_migracao.py:27: in test_migra_abas_leiteiras_com_colunas_exatas
+    assert cabecalho == colunas
+E   AssertionError: assert ['Data', 'Loc...escanso', ...] == ['Data', 'Loc...escanso', ...]
+E     
+E     At index 9 diff: 'Observação' != 'Estado do Cocho'
+E     Use -v to get more diff
+_______________ test_aba_animais_ganha_colunas_do_leite_no_fim ________________
+tests\test_leite_migracao.py:41: in test_aba_animais_ganha_colunas_do_leite_no_fim
+    assert cabecalho[-3:] == ["Uso Produtivo", "Situação Leite", "Último Parto"]
+E   AssertionError: assert ['Último Part...', 'Genótipo'] == ['Uso Produti...Último Parto']
+E     
+E     At index 0 diff: 'Último Parto' != 'Uso Produtivo'
+E     Use -v to get more diff
+_____________________ test_pagina_abre_sem_erro[/agenda] ______________________
+tests\test_paginas.py:30: in test_pagina_abre_sem_erro
+    resp = cliente.get(rota)
+           ^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\testing.py:235: in open
+    response = super().open(
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+extensions.py:317: in decorated
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+routes_agenda_unificada.py:124: in agenda_unificada
+    return render_template("agenda_unificada.html",
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\templating.py:150: in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\jinja2\environment.py:1087: in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\jinja2\environment.py:1016: in get_template
+    return self._load_template(name, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\jinja2\environment.py:975: in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\jinja2\loaders.py:138: in load
+    code = environment.compile(source, name, filename)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\jinja2\environment.py:771: in compile
+    self.handle_exception(source=source_hint)
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\jinja2\environment.py:942: in handle_exception
+    raise rewrite_traceback_stack(source=source)
+templates\agenda_unificada.html:10: in template
+    <h2 style="margin:0">{{ mes|monthname }} de {{ ano }}</h2>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   jinja2.exceptions.TemplateAssertionError: No filter named 'monthname'.
+________________ test_pagina_abre_sem_erro[/doencas/registrar] ________________
+tests\test_paginas.py:30: in test_pagina_abre_sem_erro
+    resp = cliente.get(rota)
+           ^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\testing.py:235: in open
+    response = super().open(
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+extensions.py:317: in decorated
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+routes_doencas.py:109: in registrar_doenca
+    return render_template("doencas_registrar.html",
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\templating.py:151: in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\templating.py:132: in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\jinja2\environment.py:1295: in render
+    self.environment.handle_exception()
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\jinja2\environment.py:942: in handle_exception
+    raise rewrite_traceback_stack(source=source)
+templates\doencas_registrar.html:1: in top-level template code
+    {% extends "base.html" %}
+templates\base.html:748: in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+templates\doencas_registrar.html:9: in block 'content'
+    {{ csrf_token() }}
+E   TypeError: 'str' object is not callable
+___________________ test_pagina_abre_sem_erro[/leite/saude] ___________________
+tests\test_paginas.py:30: in test_pagina_abre_sem_erro
+    resp = cliente.get(rota)
+           ^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\testing.py:235: in open
+    response = super().open(
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+extensions.py:317: in decorated
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+routes_leite.py:658: in saude_leite
+    return render_template("leite_saude.html",
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\templating.py:151: in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\templating.py:132: in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\jinja2\environment.py:1295: in render
+    self.environment.handle_exception()
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\jinja2\environment.py:942: in handle_exception
+    raise rewrite_traceback_stack(source=source)
+templates\leite_saude.html:1: in top-level template code
+    {% extends "base.html" %}
+templates\base.html:748: in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+templates\leite_saude.html:95: in block 'content'
+    <a href="{{ url_for('registrar_ordenha') }}" class="btn" style="display:inline-block;background:var(--green-600);">\U0001f4dd Registrar Ordenha</a>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1121: in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1110: in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\routing\map.py:901: in build
+    raise BuildError(endpoint, values, method, self)
+E   werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'registrar_ordenha'. Did you mean 'registrar_doenca' instead?
+___________ test_pagina_abre_sem_erro[/nutri\xe7\xe3o/convers\xe3o] ___________
+tests\test_paginas.py:30: in test_pagina_abre_sem_erro
+    resp = cliente.get(rota)
+           ^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\testing.py:235: in open
+    response = super().open(
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+extensions.py:317: in decorated
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+routes_conversao_alimentar.py:26: in dashboard_conversao
+    return render_template("nutrição_conversão.html",
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\templating.py:151: in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\templating.py:132: in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\jinja2\environment.py:1295: in render
+    self.environment.handle_exception()
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\jinja2\environment.py:942: in handle_exception
+    raise rewrite_traceback_stack(source=source)
+templates\nutrição_conversão.html:1: in top-level template code
+    {% extends "base.html" %}
+templates\base.html:748: in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+templates\nutrição_conversão.html:14: in block 'content'
+    <div class="metric" style="border-left:3px solid {% if resumo.eficiencia_rebanho_percent >= 85 %}var(--green-600){% elif resumo.eficiencia_rebanho_percent >= 70 %}var(--orange-600){% else %}var(--red-600){% endif %};">
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'eficiencia_rebanho_percent'
+______________ test_pagina_abre_sem_erro[/pastos/ocupa\xe7\xe3o] ______________
+tests\test_paginas.py:30: in test_pagina_abre_sem_erro
+    resp = cliente.get(rota)
+           ^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\testing.py:235: in open
+    response = super().open(
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+extensions.py:317: in decorated
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+routes_pastos_ocupacao.py:29: in dashboard_ocupacao_pastos
+    return render_template("pastos_ocupação.html",
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\templating.py:151: in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\templating.py:132: in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\jinja2\environment.py:1295: in render
+    self.environment.handle_exception()
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\jinja2\environment.py:942: in handle_exception
+    raise rewrite_traceback_stack(source=source)
+templates\pastos_ocupação.html:1: in top-level template code
+    {% extends "base.html" %}
+templates\base.html:748: in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+templates\pastos_ocupação.html:107: in block 'content'
+    <a href="{{ url_for('dashboard_pastos') if 'pastos' in request.path else url_for('dashboard') }}" class="btn btn-outline">\u2190 Voltar</a>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1121: in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py:1110: in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\werkzeug\routing\map.py:901: in build
+    raise BuildError(endpoint, values, method, self)
+E   werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'dashboard_pastos'. Did you mean 'dashboard_ocupacao_pastos' instead?
+____________________ test_pagina_pastos_tem_controles_mapa ____________________
+tests\test_pastos.py:336: in test_pagina_pastos_tem_controles_mapa
+    assert "Mostrar selecionado" in html
+E   assert 'Mostrar selecionado' in '<!DOCTYPE html>\n<html lang="pt-BR" data-theme="light">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" co...omponents/accordion.js"></script>\n<script src="/static/js/components/form-validator.js"></script>\n\n</body>\n</html>'
+____________________ test_trocar_sitio_mostra_outros_dados ____________________
+tests\test_sitios.py:88: in test_trocar_sitio_mostra_outros_dados
+    assert "Geane" in pagina and "Sítio do João" in pagina   # seletor com os 2 sítios
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   assert ('Geane' in '<!DOCTYPE html>\n<html lang="pt-BR" data-theme="light">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" co...omponents/accordion.js"></script>\n<script src="/static/js/components/form-validator.js"></script>\n\n</body>\n</html>' and 'Sítio do João' in '<!DOCTYPE html>\n<html lang="pt-BR" data-theme="light">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" co...omponents/accordion.js"></script>\n<script src="/static/js/components/form-validator.js"></script>\n\n</body>\n</html>')
+============================== warnings summary ===============================
+tests/test_membros.py::test_pdf_e_exportar_com_quatro_donos
+  C:\Users\DEYVID-NOT\AppData\Local\Programs\Python\Python312\Lib\site-packages\reportlab\lib\rl_safe_eval.py:11: DeprecationWarning: ast.NameConstant is deprecated and will be removed in Python 3.14; use ast.Constant instead
+    haveNameConstant = hasattr(ast,'NameConstant')
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_backup.py::test_script_diario_faz_backup_na_pasta_de_dados
+FAILED tests/test_comando_voz.py::test_frase[mudei o gado de pasto para o pasto de cima]
+FAILED tests/test_dashboard_leite.py::test_dashboard_exibe_resumo_leiteiro - ...
+FAILED tests/test_dashboard_operacional.py::test_dashboard_exibe_blocos_operacionais
+FAILED tests/test_layout_mapa.py::test_menu_lateral_fica_acima_do_leaflet - a...
+FAILED tests/test_leite_migracao.py::test_migra_abas_leiteiras_com_colunas_exatas
+FAILED tests/test_leite_migracao.py::test_aba_animais_ganha_colunas_do_leite_no_fim
+FAILED tests/test_paginas.py::test_pagina_abre_sem_erro[/agenda] - jinja2.exc...
+FAILED tests/test_paginas.py::test_pagina_abre_sem_erro[/doencas/registrar]
+FAILED tests/test_paginas.py::test_pagina_abre_sem_erro[/leite/saude] - werkz...
+FAILED tests/test_paginas.py::test_pagina_abre_sem_erro[/nutri\xe7\xe3o/convers\xe3o]
+FAILED tests/test_paginas.py::test_pagina_abre_sem_erro[/pastos/ocupa\xe7\xe3o]
+FAILED tests/test_pastos.py::test_pagina_pastos_tem_controles_mapa - assert '...
+FAILED tests/test_sitios.py::test_trocar_sitio_mostra_outros_dados - assert (...
+============ 14 failed, 969 passed, 1 warning in 100.08s (0:01:40) ============

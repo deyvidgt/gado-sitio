@@ -418,3 +418,36 @@ def animais_por_pasto(df_man: pd.DataFrame, df_anim: pd.DataFrame | None = None)
             resultado[pasto_id].append(info)
 
     return resultado
+
+
+def pasto_do_animal(animal_id: str, df_man: pd.DataFrame) -> tuple[str | None, str | None]:
+    """Retorna (ID do pasto, nome do pasto) onde o animal está na última movimentação.
+
+    Percorre a aba Manejo de trás pra frente (mais recente primeiro) procurando
+    a última "Movimentação de Pasto" que contenha este animal_id nos Brincos.
+    Retorna (None, None) se nunca foi movido para pasto específico.
+    """
+    if df_man is None or df_man.empty:
+        return None, None
+
+    movs = df_man[(df_man["Tipo"] == TIPO_MOV) & df_man["Pasto"].apply(A._txt).ne("")].copy()
+    if movs.empty:
+        return None, None
+
+    # Ordena por data DESC (mais recente primeiro)
+    movs_ordenadas = movs.sort_values("Data", ascending=False, na_position="last")
+
+    for _, row in movs_ordenadas.iterrows():
+        brincos_str = row.get("Brincos", "")
+        pasto_id = A._txt(row.get("Pasto", ""))
+
+        # Se brincos vazio = toda a rebanho foi movida
+        if pd.isna(brincos_str) or not brincos_str or not str(brincos_str).strip():
+            return pasto_id, None  # Retorna só o ID, sem nome (não é animal específico)
+
+        # Busca o animal nesta movimentação
+        ids = A.ids_de(brincos_str)
+        if animal_id in ids:
+            return pasto_id, None  # Encontrou — retorna o pasto
+
+    return None, None  # Nunca foi movido
