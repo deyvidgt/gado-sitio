@@ -209,39 +209,47 @@ def sugerir_engorda_pastagem() -> dict:
         sugestao = {}
 
         # Último pasto onde houve movimento (últimos 7 dias)
-        df_manejo = carregar_aba("Manejo") or pd.DataFrame()
-        if not df_manejo.empty:
-            # Procura "Movimentação de Pasto" recente
-            moves = df_manejo[
-                (df_manejo["Tipo"] == "Movimentação de Pasto") &
-                (pd.notna(df_manejo["Data"])) &
-                (pd.notna(df_manejo["Pasto"]))
-            ].sort_values("Data", ascending=False)
+        try:
+            df_manejo = carregar_aba("Manejo")
+            if df_manejo is not None and isinstance(df_manejo, pd.DataFrame) and not df_manejo.empty:
+                # Procura "Movimentação de Pasto" recente
+                moves = df_manejo[
+                    (df_manejo["Tipo"] == "Movimentação de Pasto") &
+                    (pd.notna(df_manejo["Data"])) &
+                    (pd.notna(df_manejo["Pasto"]))
+                ].sort_values("Data", ascending=False)
 
-            if not moves.empty:
-                last_move = moves.iloc[0]
-                sugestao["pasto_id"] = str(last_move.get("Pasto", ""))
-                sugestao["brincos"] = str(last_move.get("Brincos", ""))
+                if not moves.empty:
+                    last_move = moves.iloc[0]
+                    sugestao["pasto_id"] = str(last_move.get("Pasto", ""))
+                    sugestao["brincos"] = str(last_move.get("Brincos", ""))
+        except Exception:
+            pass
 
         # Peso inicial (última pesagem)
-        todos_pesos = todas()
-        if todos_pesos:
-            sugestao["peso_inicial"] = todos_pesos[0]["peso"]
+        try:
+            todos_pesos = todas()
+            if isinstance(todos_pesos, list) and len(todos_pesos) > 0:
+                sugestao["peso_inicial"] = todos_pesos[0].get("peso", 0)
+        except Exception:
+            pass
 
         # Lotação do pasto sugerido
         if "pasto_id" in sugestao:
-            sit = situacao()
-            if sugestao["pasto_id"] in sit:
-                info = sit[sugestao["pasto_id"]]
-                sugestao["lotacao_ua_ha"] = info.get("ua_ha", 0)
+            try:
+                sit = situacao()
+                if sugestao["pasto_id"] in sit:
+                    info = sit[sugestao["pasto_id"]]
+                    sugestao["lotacao_ua_ha"] = info.get("ua_ha", 0)
+            except Exception:
+                pass
 
         # Dias estimados (30 dias é padrão)
         sugestao["dias_estimados"] = 30
 
         return sugestao
     except Exception as e:
-        print(f"⚠️ Sugestão engorda: {e}")
-        return {}
+        return {}  # silencioso em erro total
 
 
 def processar_manejo_automatico(tipo_manejo: str, brincos_str: str = "",
