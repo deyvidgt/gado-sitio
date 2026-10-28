@@ -651,7 +651,7 @@
   </div>
 
   <!-- Drawer Menu (Hidden, toggle com JS) -->
-  <div id="drawer-menu" style="display:none;position:fixed;top:48px;right:0;width:280px;max-height:calc(100vh-48px);background:var(--surface);border-left:1px solid var(--bg-2);overflow-y:auto;z-index:1000;box-shadow:var(--shadow)">
+  <div id="drawer-menu" style="display:none;position:fixed;top:48px;right:0;width:280px;bottom:0;background:var(--surface);border-left:1px solid var(--bg-2);overflow-y:auto;z-index:1000;box-shadow:var(--shadow)">
     <nav style="padding:16px 0">
       <a href="{{ url_for('dashboard') }}" class="drawer-link">🏠 Dashboard</a>
       {% if varios_sitios %}<a href="{{ url_for('familia') }}" class="drawer-link">👨‍👩‍👧 Família</a>{% endif %}
