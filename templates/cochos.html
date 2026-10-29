@@ -8,7 +8,17 @@
 
 {% block content %}
 <style>
-  .cochos-container { display: grid; gap: 24px; }
+  .cochos-container { display: grid; gap: 20px; }
+
+  .cocho-nivel {
+    padding: 14px;
+    margin-bottom: 16px;
+    border-radius: 12px;
+    background: var(--bg-2);
+  }
+
+  .cocho-acoes-principal { flex: 1 1 220px; }
+  .cocho-menu { flex: 0 0 auto; }
 
   .cocho-card {
     background: var(--surface);
@@ -158,6 +168,11 @@
     min-width: 140px;
   }
 
+  .resumo-compacto {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 0;
+  }
+
   .resumo-cochos {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -188,14 +203,17 @@
 
   @media (max-width: 768px) {
     .cocho-visual { grid-template-columns: 1fr; }
-    .cocho-stats { grid-template-columns: 1fr; }
-    .resumo-cochos { grid-template-columns: 1fr; }
+    .cocho-stats { grid-template-columns: repeat(3, 1fr); }
+    .resumo-compacto { grid-template-columns: repeat(2, 1fr); }
+    .cocho-acoes { align-items: stretch; }
+    .cocho-acoes-principal { flex-basis: 100%; }
+    .cocho-menu { flex: 1; }
   }
 </style>
 
 <div class="card">
   <h3>📊 Resumo dos Cochos</h3>
-  <div class="resumo-cochos">
+  <div class="resumo-cochos resumo-compacto">
     <div class="resumo-item">
       <div class="resumo-valor">{{ resumo.total_cochos }}</div>
       <div class="resumo-label">Total</div>
@@ -270,7 +288,7 @@
           {% endif %}
         </div>
 
-        <div class="cocho-barra-container">
+        <div class="cocho-barra-container cocho-nivel">
           <div class="cocho-barra">
             <div class="cocho-barra-fill" style="width: {{ cocho.percentual }}%">
               {% if cocho.percentual > 20 %}{{ cocho.percentual }}%{% endif %}
@@ -323,7 +341,7 @@
 
       <!-- Ações -->
       <div class="cocho-acoes">
-        <form method="post" action="{{ url_for('salgar_cocho', cocho_id=cocho.id) }}" style="flex: 1">
+        <form class="cocho-acoes-principal" method="post" action="{{ url_for('salgar_cocho', cocho_id=cocho.id) }}" data-acao="salgar">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="volume" value="{{ cocho.capacidade_kg }}">
           <button class="btn btn-primary btn-salgar" style="width: 100%">
@@ -331,7 +349,7 @@
           </button>
         </form>
 
-        <details style="flex: 1">
+        <details class="cocho-menu">
           <summary class="btn btn-outline" style="width: 100%; cursor: pointer">⋮ Menu</summary>
           <div style="margin-top: 8px; display: grid; gap: 8px">
             <button type="button" class="btn btn-outline btn-sm" onclick="editarCocho('{{ cocho.id }}')">
