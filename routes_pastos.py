@@ -36,31 +36,62 @@ def _capacidade_ua_ha() -> float:
         return 0.0
 
 
-def _extrair_animais_por_pasto(df_manejo):
-    """Extrai últimos brincos/animais registrados em cada pasto."""
+def _calcular_centroid(geojson):
+    """Calcula centroid de um polígono GeoJSON."""
+    try:
+        if geojson.get("type") == "Polygon":
+            coords = geojson.get("coordinates", [[]])[0]  # Exterior ring
+            if not coords:
+                return None
+            lat_sum = sum(c[1] for c in coords)
+            lng_sum = sum(c[0] for c in coords)
+            return [lat_sum / len(coords), lng_sum / len(coords)]
+    except:
+        pass
+    return None
+
+
+def _extrair_animais_por_pasto(df_manejo, df_animais=None):
+    """Extrai animais registrados em cada pasto com dados enriquecidos.
+
+    Retorna dict: {pasto_id: {"brincos": [...], "dados": [{brinco, dono_cor}, ...]}}
+    """
     animais_por_pasto = {}
     if df_manejo.empty or "Pasto" not in df_manejo.columns:
         return animais_por_pasto
 
-    # Últimas movimentações de pasto (ordenar por data DESC)
+    # Dicionário de cores por dono (de df_animais se disponível)
+    dono_cores = {}
+    if df_animais is not None and not df_animais.empty:
+        for _, animal in df_animais.iterrows():
+            brinco = f"{animal.get('Brinco Cor', '')} {animal.get('Brinco Nº', '')}".strip()
+            cor = animal.get("Cor Dono", "#999")
+            if brinco:
+                dono_cores[brinco] = cor
+
+    # Últimas movimentações de pasto
     df_mov = df_manejo[df_manejo["Pasto"].notna() & (df_manejo["Pasto"] != "")].copy()
     if df_mov.empty:
         return animais_por_pasto
 
     for pasto_id, grup in df_mov.groupby("Pasto"):
-        # Pega o registro mais recente de cada animal neste pasto
         if "Brincos" in grup.columns:
             brincos_set = set()
             for _, row in grup.sort_values("Data", ascending=False, na_position="last").iterrows():
                 brincos_str = str(row.get("Brincos", "")).strip()
                 if brincos_str and brincos_str != "":
-                    # Parse "Amarelo 21 #A0001, Azul 12 #A0002" → ["Amarelo 21", "Azul 12"]
                     for brinco in brincos_str.split(","):
-                        brinco_limpo = brinco.strip().split("#")[0].strip()  # Remove ID
+                        brinco_limpo = brinco.strip().split("#")[0].strip()
                         if brinco_limpo:
                             brincos_set.add(brinco_limpo)
             if brincos_set:
-                animais_por_pasto[pasto_id] = sorted(list(brincos_set))
+                brincos_list = sorted(list(brincos_set))
+                dados = [{"brinco": b, "cor": dono_cores.get(b, "#999")} for b in brincos_list]
+                animais_por_pasto[pasto_id] = {
+                    "brincos": brincos_list,
+                    "dados": dados,
+                    "total": len(brincos_list)
+                }
 
     return animais_por_pasto
 
@@ -74,14 +105,29 @@ def pastos():
                       _peso_medio(df_a, dados["Manejo"]), hoje=_agora())
     capacidade = _capacidade_ua_ha()
 
-    # Extrai animais por pasto
-    animais_por_pasto = _extrair_animais_por_pasto(dados["Manejo"])
+    # Extrai animais por pasto (enriquecido com cores de dono)
+    animais_por_pasto = _extrair_animais_por_pasto(dados["Manejo"], df_a)
 
-    lista = [{"id": p["ID"], "nome": p["Nome"], "area": float(p["Área (ha)"]), "cor": p["Cor"],
-              "geo": json.loads(p["Contorno"]), **sit[p["ID"]],
-              "nivel": PA.nivel(sit[p["ID"]]["ua_ha"], capacidade),
-              "animais": animais_por_pasto.get(p["ID"], [])}
-             for _, p in PA.ativos(df_p).iterrows()]
+    lista = []
+    for _, p in PA.ativos(df_p).iterrows():
+        geo = json.loads(p["Contorno"])
+        centroid = _calcular_centroid(geo)
+        animais_info = animais_por_pasto.get(p["ID"], {})
+
+        lista.append({
+            "id": p["ID"],
+            "nome": p["Nome"],
+            "area": float(p["Área (ha)"]),
+            "cor": p["Cor"],
+            "geo": geo,
+            "centroid": centroid,
+            **sit[p["ID"]],
+            "nivel": PA.nivel(sit[p["ID"]]["ua_ha"], capacidade),
+            "animais": animais_info.get("brincos", []),
+            "animais_dados": animais_info.get("dados", []),
+            "total_animais": animais_info.get("total", 0)
+        })
+
     return render_template("pastos.html", pastos=lista, sem_pasto=sit[None],
                            capacidade=capacidade, composicao=A.composicao(df_a, estoque),
                            hoje=pd.Timestamp(_agora()).strftime("%Y-%m-%d"))
