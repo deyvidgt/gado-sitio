@@ -377,7 +377,8 @@ def resumo_conversao_alimentar() -> Dict:
                 "animais_aviso": 0,
                 "animais_criticos": 0,
                 "consumo_total_kg": 0,
-                "ganho_total_kg": 0
+                "ganho_total_kg": 0,
+                "eficiencia_rebanho_percent": 0
             }
 
         alertas = gerar_alertas_conversao()
@@ -422,7 +423,8 @@ def resumo_conversao_alimentar() -> Dict:
             "animais_aviso": 0,
             "animais_criticos": 0,
             "consumo_total_kg": 0,
-            "ganho_total_kg": 0
+            "ganho_total_kg": 0,
+            "eficiencia_rebanho_percent": 0
         }
 
 
