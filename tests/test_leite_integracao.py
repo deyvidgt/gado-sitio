@@ -3,7 +3,7 @@ import pytest
 
 ROTAS = ["/leite", "/leite/ordenha", "/leite/animais", "/leite/alimentacao",
          "/leite/tratamentos", "/leite/conforto", "/leite/colchao",
-         "/leite/relatorios", "/alertas", "/ajuda", "/"]
+         "/leite/relatorios", "/leite/consumo", "/alertas", "/ajuda", "/"]
 
 
 @pytest.mark.parametrize("rota", ROTAS)
