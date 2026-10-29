@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Colchões — Leite{% endblock %}
 {% block content %}
+{% set leite_breadcrumb = 'Colchões' %}
+{% set leite_voltar_url = url_for('painel_leite') %}
+{% set leite_voltar_label = 'Painel do leite' %}
+{% include '_leite_nav.html' %}
 <div class="page-head"><div><span class="eyebrow">Descanso animal</span><h2>Colchões</h2></div><a class="btn btn-primary" href="{{ url_for('operacao_leite', tipo='colchao') }}">Registrar troca</a></div>
 
 <div class="card">

@@ -3,6 +3,10 @@
 {% block title %}Nutrição — Leite{% endblock %}
 
 {% block content %}
+{% set leite_breadcrumb = 'Alimentação / Nutrição' %}
+{% set leite_voltar_url = url_for('alimentacao_leite') %}
+{% set leite_voltar_label = 'Alimentação' %}
+{% include '_leite_nav.html' %}
 <div style="display: flex; gap: 1rem; margin: 1rem 0; flex-wrap: wrap;">
     <a href="{{ url_for('painel_leite') }}" style="flex: 1; min-width: 150px;">← Voltar ao Leite</a>
     <a href="{{ url_for('alimentacao_leite') }}" style="flex: 1; min-width: 150px;">📝 Gerenciar Rações</a>

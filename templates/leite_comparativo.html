@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Comparativo de Vacas — Leite{% endblock %}
 {% block content %}
+{% set leite_breadcrumb = 'Comparativo' %}
+{% set leite_voltar_url = url_for('painel_leite') %}
+{% set leite_voltar_label = 'Painel do leite' %}
+{% include '_leite_nav.html' %}
 <div class="page-head"><div><span class="eyebrow">Rebanho leiteiro</span><h2>Comparativo de Vacas</h2></div></div>
 
 <div class="card">
