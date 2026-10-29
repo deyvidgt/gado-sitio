@@ -42,7 +42,7 @@ from config import (
     COLUNAS_VOLUMOSOS, COLUNAS_CONSUMO_VOLUMOSOS,
     COLUNAS_ENGORDA_PASTAGEM, COLUNAS_GMD_LOTACAO, COLUNAS_RACAO_CONSUMO,
     COLUNAS_MORTALIDADE_BEZERROS,
-    COLUNAS_CONFINAMENTO_LOTES, COLUNAS_GENETICA, COLUNAS_INSUMOS,  # v5.10
+    COLUNAS_CONFINAMENTO_LOTES, COLUNAS_GENETICA, COLUNAS_INSUMOS, COLUNAS_COCHOS,  # v5.10
 )
 
 # Mapa aba → colunas esperadas, usado para migrar colunas novas sem perder dados.
@@ -74,6 +74,7 @@ _SCHEMA_ABAS = {
     "Confinamento Lotes": COLUNAS_CONFINAMENTO_LOTES,  # v5.10
     "Genética": COLUNAS_GENETICA,  # v5.10
     "Insumos": COLUNAS_INSUMOS,  # v5.10 — catálogo de insumos com nutrição
+    "Cochos": COLUNAS_COCHOS,   # v5.10 — comedouros: volume, consumo, salga
 }
 
 # Caminho completo do arquivo de dados
@@ -261,6 +262,7 @@ def inicializar():
         wb.create_sheet("Leite Colchão").append(COLUNAS_LEITE_COLCHAO)
         wb.create_sheet("Volumosos").append(COLUNAS_VOLUMOSOS)
         wb.create_sheet("Consumo Volumosos").append(COLUNAS_CONSUMO_VOLUMOSOS)
+        wb.create_sheet("Cochos").append(COLUNAS_COCHOS)
 
         wb.create_sheet("Resumo")
         wb.save(ARQUIVO_PATH)

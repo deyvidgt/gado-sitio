@@ -83,6 +83,10 @@
     }
     body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
 
+    /* Compatibilidade visual para páginas/mapas que verificam as camadas do menu. */
+    .sidebar { position:relative; z-index:1000; }
+    .sidebar-overlay { z-index:900; }
+
     /* ── Sidebar Removido — Mobile-First ─────────────────────────────────────── */
 
     /* ── Header Fixo ──────────────────────────────────────────────────────────── */
@@ -670,6 +674,15 @@
     </div>
 
     <div class="header-right">
+      {% if sitios_menu|length > 1 %}
+      <form method="post" action="{{ url_for('trocar_sitio') }}" style="display:flex;align-items:center">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label for="seletor-sitio" class="sr-only">Sítio atual</label>
+        <select id="seletor-sitio" name="sitio" onchange="this.form.submit()" aria-label="Sítio atual">
+          {% for slug, nome in sitios_menu %}<option value="{{ slug }}"{% if slug == sitio_atual %} selected{% endif %}>{{ nome }}</option>{% endfor %}
+        </select>
+      </form>
+      {% endif %}
       {% if request.endpoint != 'voz' %}
       <a href="{{ url_for('voz', ouvir=1) }}" class="btn-header" id="btn-voz-top" title="Comando de voz" aria-label="Comando de voz">
         🎤

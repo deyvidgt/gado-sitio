@@ -258,6 +258,10 @@ COLUNAS_PASTOS = ["ID", "Nome", "Área (ha)", "Contorno", "Cor", "Ativo", "Obser
 COLUNAS_TAREFAS = ["ID", "Data", "Título", "Responsável", "Repetir", "Feito Em",
                    "Observações", "Criado Por"]
 
+# v5.10 — Gerenciamento de cochos (comedouros). Rastreia volume, consumo e próxima salga.
+COLUNAS_COCHOS = ["ID", "Nome", "Tipo", "Local", "Capacidade (kg)", "Volume Atual (kg)",
+                  "Última Salga", "Observações", "Ativo", "Criado Por"]
+
 # v5.7 — Histórico de medicações por animal (medicacoes.py) — Leite e Corte
 COLUNAS_MEDICACOES = [
     "Data", "Brincos", "Tipo Medicação", "Princípio Ativo",
