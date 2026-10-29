@@ -11,7 +11,7 @@ from datetime import timedelta, date
 import pandas as pd
 
 import animais as A
-from config import COLUNAS_LEITE_COLCHAO, COLUNAS_LEITE_CONFORTO, COLUNAS_LEITE_TRATAMENTOS
+from config import COLUNAS_LEITE_COLCHAO, COLUNAS_LEITE_CONFORTO, COLUNAS_LEITE_TRATAMENTOS, MEMBROS, NOMES_MEMBROS
 from db import alterar_aba, carregar_aba, fazer_backup
 from extensions import _agora, _limpar_backups_antigos, _validar_csrf, app, login_required, salvar_linha, parse_valor
 from leite import _data, _numero, acumulados, contagens_rebanho, dias_em_lactacao, medias_periodo, producao_por_animal, serie_diaria, validar_producao, historico_colchao
