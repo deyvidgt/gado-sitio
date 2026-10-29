@@ -39,6 +39,11 @@ import db  # noqa: E402
 assert os.path.abspath(db.DATA_DIR) == os.path.abspath(DATA_DIR_TESTE), \
     "Os testes NÃO podem rodar fora da pasta temporária!"
 
+# Limpar pasta de backups da raiz do código se existir antes dos testes
+_backup_dir_code = os.path.join(RAIZ, "backups")
+if os.path.exists(_backup_dir_code):
+    shutil.rmtree(_backup_dir_code, ignore_errors=True)
+
 
 def pytest_sessionfinish(session, exitstatus):
     # Limpar pasta de dados de teste
