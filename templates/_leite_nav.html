@@ -1,0 +1,36 @@
+<nav class="leite-nav" aria-label="Navegação do módulo leiteiro">
+  <div class="leite-nav-head">
+    <div class="leite-breadcrumb"><a href="{{ url_for('painel_leite') }}">Leite</a>{% if leite_breadcrumb %}<span aria-hidden="true"> / </span><span>{{ leite_breadcrumb }}</span>{% endif %}</div>
+    {% if leite_voltar_url %}
+    <a class="btn btn-outline leite-nav-back" href="{{ leite_voltar_url }}" data-leite-back data-leite-back-url="{{ leite_voltar_url }}">← {{ leite_voltar_label or 'Voltar' }}</a>
+    {% endif %}
+  </div>
+  <div class="leite-nav-links" aria-label="Atalhos do leite">
+    <a href="{{ url_for('painel_leite') }}">Painel</a>
+    <a href="{{ url_for('ordenha_leite') }}">Ordenha</a>
+    <a href="{{ url_for('animais_leite') }}">Vacas</a>
+    <a href="{{ url_for('alimentacao_leite') }}">Alimentação</a>
+    <a href="{{ url_for('consumo_leite') }}">Consumo</a>
+    <a href="{{ url_for('nutricao_leite') }}">Nutrição</a>
+    <a href="{{ url_for('calculador_leite') }}">Calculador</a>
+    <a href="{{ url_for('saude_leite') }}">Saúde</a>
+    <a href="{{ url_for('operacao_leite', tipo='tratamentos') }}">Tratamentos</a>
+    <a href="{{ url_for('operacao_leite', tipo='conforto') }}">Conforto</a>
+    <a href="{{ url_for('listar_colchao') }}">Colchões</a>
+    <a href="{{ url_for('relatorios_leite') }}">Relatórios</a>
+    <a href="{{ url_for('comparativo_leite') }}">Comparativo</a>
+  </div>
+  <div class="leite-swipe-hint" data-leite-swipe-hint aria-live="polite" hidden>← Solte para voltar</div>
+</nav>
+<script src="{{ url_for('static', filename='leite_nav.js') }}"></script>
+<style>
+.leite-nav { margin: 0 0 16px; }
+.leite-nav-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.leite-breadcrumb { color:var(--text-secondary); font-size:.86rem; }
+.leite-breadcrumb a { color:var(--green-700, var(--green-600)); font-weight:600; text-decoration:none; }
+.leite-nav-links { display:flex; gap:6px; overflow-x:auto; padding:8px 0 3px; scrollbar-width:thin; }
+.leite-nav-links a { flex:0 0 auto; padding:7px 10px; border:1px solid var(--border); border-radius:999px; color:var(--text-secondary); font-size:.82rem; text-decoration:none; white-space:nowrap; }
+.leite-nav-links a:hover, .leite-nav-links a:focus-visible { color:var(--text-primary); border-color:var(--green-600, #3d7a34); }
+.leite-swipe-hint { position:fixed; left:16px; top:50%; z-index:1100; padding:9px 12px; border-radius:999px; background:var(--surface-1, #fff); box-shadow:0 4px 18px rgba(0,0,0,.18); color:var(--text-primary); font-size:.85rem; }
+@media (min-width:769px) { .leite-swipe-hint { display:none !important; } }
+</style>

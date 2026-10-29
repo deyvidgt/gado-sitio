@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Lançar ordenha — Leite{% endblock %}
 {% block content %}
+{% set leite_breadcrumb = 'Ordenha' %}
+{% set leite_voltar_url = url_for('painel_leite') %}
+{% set leite_voltar_label = 'Painel do leite' %}
+{% include '_leite_nav.html' %}
 <div class="page-head"><div><span class="eyebrow">Registro rápido</span><h2>Lançar ordenha</h2></div></div>
 <form method="post" class="card form-grid">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

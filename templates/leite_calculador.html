@@ -3,6 +3,10 @@
 {% block page_title %}Calculador de Ração 🥗{% endblock %}
 
 {% block content %}
+{% set leite_breadcrumb = 'Alimentação / Calculador' %}
+{% set leite_voltar_url = url_for('alimentacao_leite') %}
+{% set leite_voltar_label = 'Alimentação' %}
+{% include '_leite_nav.html' %}
 <div style="max-width:900px">
 
 <!-- Aviso de orientação -->

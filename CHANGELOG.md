@@ -5,6 +5,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
+- **Navegação do módulo leiteiro:** telas leiteiras agora compartilham atalhos, retorno contextual e gesto opcional de deslizar da borda esquerda no celular.
 - **Coleta Automática de Indicadores (v5.8):** novas abas `Engorda Pastagem`, `GMD Lotação`, `Ração Consumo` agora preenchem automaticamente:
   - Engorda Pastagem: ao registrar Movimentação de Pasto + Pesagem, sistema calcula GMD, lotação e dias no pasto automaticamente.
   - GMD Lotação: histórico correlação GMD vs UA/ha com % ocupação, qualidade do pasto e clima.

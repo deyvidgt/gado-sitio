@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Alimentação leiteira{% endblock %}
 {% block content %}
+{% set leite_breadcrumb = 'Alimentação' %}
+{% set leite_voltar_url = url_for('painel_leite') %}
+{% set leite_voltar_label = 'Painel do leite' %}
+{% include '_leite_nav.html' %}
 <div class="page-head"><div><span class="eyebrow">Nutrição</span><h2>Alimentação leiteira</h2></div></div>
 <div class="grid-2">
   <form method="post" class="card form-grid">

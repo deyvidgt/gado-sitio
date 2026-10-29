@@ -3,6 +3,10 @@
 {% block title %}Saúde do Leite — Mastite{% endblock %}
 
 {% block content %}
+{% set leite_breadcrumb = 'Saúde' %}
+{% set leite_voltar_url = url_for('painel_leite') %}
+{% set leite_voltar_label = 'Painel do leite' %}
+{% include '_leite_nav.html' %}
 <h1>🏥 Saúde do Leite — Controle de Mastite</h1>
 
 <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:20px;">

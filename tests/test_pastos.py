@@ -336,3 +336,23 @@ def test_pagina_pastos_tem_controles_mapa(cliente, dados_restaurados):
     assert "Mostrar selecionado" in html
     assert "Importar KMZ" in html
     assert "Ver no mapa" in html
+    assert "mapa-shell" in html
+    assert "legenda-lotacao" in html
+
+
+def test_pagina_pastos_nao_exibe_valores_invalidos(cliente, dados_restaurados):
+    PA.criar("Pasto Teste", json.dumps(_quadrado()))
+    html = cliente.get("/pastos").get_data(as_text=True).lower()
+    assert ">nan<" not in html
+    assert "nan cab" not in html
+
+
+def test_pagina_cochos_prioriza_salga_e_resumo_compacto(cliente, dados_restaurados):
+    import db
+    db.salvar_linha("Cochos", ["C01", "Cocho Teste", "sal", "Pasto", 100, 50, "", "", "Sim", "Deyvid"])
+    html = cliente.get("/cochos").get_data(as_text=True)
+    assert 'class="resumo-cochos resumo-compacto"' in html
+    assert 'cocho-nivel' in html
+    assert 'cocho-acoes-principal' in html
+    assert 'data-acao="salgar"' in html
+    assert 'cocho-menu' in html
