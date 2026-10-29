@@ -687,52 +687,89 @@
   <!-- Drawer Menu (Hidden, toggle com JS) -->
   <div id="drawer-menu" style="display:none;position:fixed;top:48px;right:0;width:280px;bottom:0;background:var(--surface);border-left:1px solid var(--bg-2);overflow-y:auto;z-index:1000;box-shadow:var(--shadow)">
     <nav style="padding:16px 0">
+      <!-- ═══ INÍCIO & ALERTAS ═══ -->
       <a href="{{ url_for('dashboard') }}" class="drawer-link">🏠 Dashboard</a>
       {% if varios_sitios %}<a href="{{ url_for('familia') }}" class="drawer-link">👨‍👩‍👧 Família</a>{% endif %}
       <a href="{{ url_for('central_alertas') }}" class="drawer-link">🔔 Avisos & Alertas</a>
+      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
+
+      <!-- ═══ ANIMAIS & GENEALOGIA ═══ -->
       <a href="{{ url_for('animais') }}" class="drawer-link">🐄 Animais</a>
       <a href="{{ url_for('pesagem') }}" class="drawer-link">⚖️ Pesagem</a>
+      <a href="{{ url_for('animais_leite') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🐮 Animais Leite</a>
+      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
+
+      <!-- ═══ SAÚDE & VETERINÁRIA ═══ -->
+      <a href="{{ url_for('saude_leite') }}" class="drawer-link">💊 Mastite & Qualidade</a>
+      <a href="{{ url_for('listar_doencas') }}" class="drawer-link">🩺 Doenças & Carência</a>
+      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
+
+      <!-- ═══ REPRODUÇÃO & PARTOS ═══ -->
       <a href="{{ url_for('reproducao') }}" class="drawer-link">🐮 Reprodução</a>
-      <a href="{{ url_for('pastos') }}" class="drawer-link">🗺️ Pastos</a>
-      <a href="{{ url_for('manejo') }}" class="drawer-link">🌿 Manejo</a>
-      <a href="{{ url_for('comparar_insumos') }}" class="drawer-link">🧂 Insumos</a>
-      <a href="{{ url_for('painel_volumosos') }}" class="drawer-link">🌾 Volumosos</a>
+      <a href="{{ url_for('calendario_partos') }}" class="drawer-link">🍼 Previsão de Partos</a>
+      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
+
+      <!-- ═══ NUTRIÇÃO & ALIMENTAÇÃO ═══ -->
       <a href="{{ url_for('painel_leite') }}" class="drawer-link">🥛 Painel Leite</a>
-      <a href="{{ url_for('animais_leite') }}" class="drawer-link">🐮 Animais Leite</a>
-      <a href="{{ url_for('saude_leite') }}" class="drawer-link">💊 Saúde do Leite</a>
-      <a href="{{ url_for('nutricao_leite') }}" class="drawer-link">🍽️ Nutrição</a>
-      <a href="{{ url_for('consumo_leite') }}" class="drawer-link">📊 Consumo</a>
-      <a href="{{ url_for('operacao_leite', tipo='conforto') }}" class="drawer-link">🏠 Conforto Térmico</a>
-      <a href="{{ url_for('operacao_leite', tipo='colchao') }}" class="drawer-link">🛏️ Colchão</a>
+      <a href="{{ url_for('nutricao_leite') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🍽️ Nutrição</a>
+      <a href="{{ url_for('consumo_leite') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📊 Consumo</a>
+      <a href="{{ url_for('painel_volumosos') }}" class="drawer-link">🌾 Volumosos</a>
+      <a href="{{ url_for('comparar_insumos') }}" class="drawer-link">🧂 Insumos & Estoque</a>
+      <a href="{{ url_for('calculador_racao_avancado') }}" class="drawer-link">🧮 Calculador Ração</a>
+      <a href="{{ url_for('dashboard_conversao') }}" class="drawer-link">📉 Conversão Alimentar</a>
+      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
+
+      <!-- ═══ PASTOS & MANEJO ═══ -->
+      <a href="{{ url_for('pastos') }}" class="drawer-link">🗺️ Pastos</a>
+      <a href="{{ url_for('dashboard_ocupacao_pastos') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📍 Ocupação & Rotação</a>
+      <a href="{{ url_for('manejo') }}" class="drawer-link">🌿 Manejo</a>
+      <a href="{{ url_for('operacao_leite', tipo='conforto') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🏠 Conforto Térmico</a>
+      <a href="{{ url_for('operacao_leite', tipo='colchao') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🛏️ Colchão</a>
+      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
+
+      <!-- ═══ CONFINAMENTO & ENGORDA ═══ -->
+      <a href="{{ url_for('confinamento') }}" class="drawer-link">🏚️ Confinamento</a>
+      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
+
+      <!-- ═══ GENÉTICA ═══ -->
+      <a href="{{ url_for('genetica') }}" class="drawer-link">🧬 Genética & Consanguinidade</a>
+      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
+
+      <!-- ═══ REGISTROS & EVENTOS ═══ -->
+      <a href="{{ url_for('compras') }}" class="drawer-link">📦 Compras</a>
+      <a href="{{ url_for('gastos') }}" class="drawer-link">💸 Gastos</a>
+      <a href="{{ url_for('vendas') }}" class="drawer-link">🤝 Vendas</a>
       <a href="{{ url_for('visitas') }}" class="drawer-link">🗓️ Visitas</a>
       <a href="{{ url_for('tarefas') }}" class="drawer-link">📋 Tarefas</a>
       <a href="{{ url_for('calendario_pagina') }}" class="drawer-link">📅 Calendário</a>
       <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
-      <a href="{{ url_for('compras') }}" class="drawer-link">📦 Compras</a>
-      <a href="{{ url_for('gastos') }}" class="drawer-link">💸 Gastos</a>
-      <a href="{{ url_for('vendas') }}" class="drawer-link">🤝 Vendas</a>
+
+      <!-- ═══ LOTES & INDICADORES ═══ -->
       <a href="{{ url_for('lotes') }}" class="drawer-link">📦 Lotes</a>
+      <a href="{{ url_for('indicadores_engorda_pastagem') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🌾 GMD vs Pastagem</a>
+      <a href="{{ url_for('indicadores_gmd_lotacao') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📊 GMD vs Lotação</a>
+      <a href="{{ url_for('indicadores_racao_consumo') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🥣 Ração Consumo</a>
+      <a href="{{ url_for('indicadores_mortalidade_bezerros') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🐂 Mortalidade</a>
       <a href="{{ url_for('relatorios') }}" class="drawer-link">📈 Relatórios</a>
-      <a href="{{ url_for('indicadores_engorda_pastagem') }}" class="drawer-link">🌾 Engorda vs Pastagem</a>
-      <a href="{{ url_for('indicadores_gmd_lotacao') }}" class="drawer-link">📊 GMD vs Lotação</a>
-      <a href="{{ url_for('indicadores_racao_consumo') }}" class="drawer-link">🥣 Ração Consumo</a>
-      <a href="{{ url_for('indicadores_mortalidade_bezerros') }}" class="drawer-link">🐂 Mortalidade Bezerros</a>
       <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
+
+      <!-- ═══ FINANCEIRO ═══ -->
       <a href="{{ url_for('financeiro') }}" class="drawer-link">💰 Financeiro</a>
-      <a href="{{ url_for('resultado') }}" class="drawer-link">📊 Resultado por Membro</a>
-      <a href="{{ url_for('comparativo_anual') }}" class="drawer-link">📈 Comparativo Anual</a>
-      <a href="{{ url_for('fluxo_caixa') }}" class="drawer-link">📊 Fluxo de Caixa</a>
-      <a href="{{ url_for('fluxo_animais') }}" class="drawer-link">🐄 Fluxo de Animais</a>
+      <a href="{{ url_for('resultado') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📊 Resultado Membro</a>
+      <a href="{{ url_for('comparativo_anual') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📈 Comparativo Anual</a>
+      <a href="{{ url_for('fluxo_caixa') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📊 Fluxo Caixa</a>
+      <a href="{{ url_for('fluxo_animais') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🐄 Fluxo Animais</a>
       <a href="{{ url_for('lembretes_whatsapp') }}" class="drawer-link">📲 Lembretes WhatsApp</a>
       <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
-      <a href="{{ url_for('confinamento') }}" class="drawer-link">🏚️ Confinamento</a>
-      <a href="{{ url_for('genetica') }}" class="drawer-link">🧬 Genética</a>
-      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
-      <a href="{{ url_for('nova_visita') }}" class="drawer-link">🌾 Registrar visita</a>
-      <a href="{{ url_for('voz') }}" class="drawer-link">🎤 Comando de voz</a>
+
+      <!-- ═══ UTILIDADES ═══ -->
+      <a href="{{ url_for('nova_visita') }}" class="drawer-link">➕ Registrar Visita</a>
+      <a href="{{ url_for('voz') }}" class="drawer-link">🎤 Comando de Voz</a>
       <a href="{{ url_for('ajuda') }}" class="drawer-link">❓ Ajuda</a>
       <a href="{{ url_for('tempo') }}" class="drawer-link">🌤️ Tempo</a>
       <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
+
+      <!-- ═══ ADMINISTRAÇÃO ═══ -->
       <a href="{{ url_for('configuracoes') }}" class="drawer-link">⚙️ Configurações</a>
       <a href="{{ url_for('logout') }}" class="drawer-link" style="color:var(--danger)">🚪 Sair</a>
     </nav>
