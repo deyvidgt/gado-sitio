@@ -41,7 +41,12 @@ assert os.path.abspath(db.DATA_DIR) == os.path.abspath(DATA_DIR_TESTE), \
 
 
 def pytest_sessionfinish(session, exitstatus):
+    # Limpar pasta de dados de teste
     shutil.rmtree(DATA_DIR_TESTE, ignore_errors=True)
+    # Limpar pasta de backups se foi criada na raiz do código (bug anterior)
+    backup_dir = os.path.join(RAIZ, "backups")
+    if os.path.exists(backup_dir):
+        shutil.rmtree(backup_dir, ignore_errors=True)
 
 
 @pytest.fixture(scope="session")

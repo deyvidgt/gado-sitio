@@ -65,9 +65,17 @@ def _chave_secreta() -> str:
 
 
 app.secret_key = _chave_secreta()
+
+# v5.11 — Configuração de segurança de sessão
 # Cookie de sessão não vai em POST vindo de outro site (proteção extra das rotas
 # /api/* em JSON, que não usam o token CSRF do formulário).
-app.config.update(SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_HTTPONLY=True)
+session_config = {
+    "SESSION_COOKIE_SAMESITE": "Lax",
+    "SESSION_COOKIE_HTTPONLY": True,
+    # Em produção (HTTPS), ativar SESSION_COOKIE_SECURE
+    "SESSION_COOKIE_SECURE": os.environ.get("SESSION_COOKIE_SECURE", "False").lower() == "true",
+}
+app.config.update(session_config)
 app.jinja_env.globals["enumerate"] = enumerate
 
 @app.before_request

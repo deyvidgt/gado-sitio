@@ -597,9 +597,8 @@ _ACOES = [
     ("leite",      r"\b(leite|ordenh\w*|produçao|producao|produz\w*)\b"),
     ("parto",      r"\b(pario|pariram|pariu|parto|pariu)\b"),
     ("tarefa",     r"\b(tarefa|tarefas|agend\w*|lembr\w*|programar?)\b"),
-    ("pasto",      r"\b(mover|movimentacao|pasto|moveu|movi|move|vou mover)\b"),
     ("manejo",     r"\b(vacin\w*|vermif\w*|pesagem|pesei|pesou|pesamos|pesar|peso|tratamento|"
-                   r"tratei|medicad\w*|medicamento|remedio|pasto|cobr\w*|diagnos\w*|prenha|vazia)\b"),
+                   r"tratei|medicad\w*|medicamento|remedio|pasto|mover|movimentacao|moveu|movi|move|cobr\w*|diagnos\w*|prenha|vazia)\b"),
     ("nascimento", r"\b(nasceu|nasceram|nascimento|pariu|nascida|nascido)\b"),
     ("compra",     r"\b(comprei|compramos|comprou|compra)\b"),
     ("cadastro",   r"\b(registrar|registra|registre|cadastrar|cadastra|cadastre|gravar|grava|grave|"
@@ -995,6 +994,8 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
     data_br = data.strftime("%d/%m/%Y") if data else ""
     data_iso = data.isoformat() if data else ""
     membro = ctx.get("membro") or ""
+    toks = tokenizar(intencao.get("texto", ""))
+    n = " ".join(t.n for t in toks)
 
     def resolver_alvos(alvos, dono=None):
         refs, ids = [], []
@@ -1163,7 +1164,11 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
         if not tipo:
             out["erros"].append("Não entendi o tipo de manejo (vacina, vermífugo, pesagem, tratamento…).")
             return out
-        out["titulo"] = {"Morte/Perda": "⚰️ Morte / perda"}.get(tipo, f"🩺 {tipo}")
+        titulos = {
+            "Morte/Perda": "⚰️ Morte / perda",
+            "Movimentação de Pasto": "🗺️ Movimentação de Pasto",
+        }
+        out["titulo"] = titulos.get(tipo, f"🩺 {tipo}")
         refs, ids = resolver_alvos(intencao.get("alvos") or [], intencao.get("dono"))
         produto = intencao.get("produto") or ""
         if tipo in TIPOS_COM_PRODUTO and not produto:
@@ -1186,6 +1191,7 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
             if not intencao.get("todos"):
                 out["avisos"].append(f"Nenhum brinco dito — registro para o rebanho todo ({qtd} cab.).")
         desc = intencao.get("descricao") or ""
+        pasto_nome = ""
         if tipo == "Pesagem":
             pesos = intencao.get("pesos") or []
             if refs:
@@ -1195,10 +1201,38 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
                 desc = f"Peso: {pesos[0]:g} kg"
             if not any(pesos):
                 out["avisos"].append("Não ouvi o peso (ex.: 320 quilos).")
+        elif tipo == "Movimentação de Pasto":
+            # Procura nome do pasto na frase ("pro pasto norte", "mover … pro norte", "mudei de pasto para cima")
+            # Prioriza "para/pro" (destino), depois procura por "pasto"
+            for i, t in enumerate(toks):
+                if t.n in ("para", "pro") and i + 1 < len(toks):
+                    # Pula fillers e encontra a primeira palavra que não é filler/número/cor/pasto
+                    for j in range(i + 1, len(toks)):
+                        if (toks[j].n not in _FILLER and toks[j].n != "pasto" and
+                            toks[j].v is None and toks[j].n not in _CORES):
+                            pasto_nome = toks[j].o
+                            break
+                    if pasto_nome:
+                        break
+            # Fallback: procurar por "pasto" seguido de um nome
+            if not pasto_nome:
+                for i, t in enumerate(toks):
+                    if t.n == "pasto" and i + 1 < len(toks):
+                        for j in range(i + 1, len(toks)):
+                            if (toks[j].n not in _FILLER and toks[j].n != "pasto" and
+                                toks[j].v is None and toks[j].n not in _CORES):
+                                pasto_nome = toks[j].o
+                                break
+                        if pasto_nome:
+                            break
+            if not pasto_nome:
+                out["avisos"].append("Nome do pasto não dito — complete no formulário.")
         out["campos"] += [["Data", data_br], ["Tipo", tipo], ["Animais", ", ".join(r.split(" #")[0] for r in refs) or "—"],
                           ["Cabeças", qtd]]
         if tipo in TIPOS_COM_PRODUTO:
             out["campos"].append(["Produto", produto or "—"])
+        if tipo == "Movimentação de Pasto":
+            out["campos"].append(["Pasto", pasto_nome or "—"])
         out["campos"].append(["Descrição", desc])
 
         if tipo == "Morte/Perda" and ids:
@@ -1217,10 +1251,15 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
                 from pesagem import fmt_pesos
                 pares = [(r, p) for r, p in zip(refs, intencao.get("pesos") or []) if p]
                 out["payload"]["linha"]["Pesos"] = fmt_pesos(pares)
-        out["url_form"] = "/manejo/novo?" + urlencode({
+            elif tipo == "Movimentação de Pasto":
+                out["payload"]["linha"]["Pasto"] = pasto_nome
+        url_form_dict = {
             "prefill": 1, "tipo": tipo, "cabecas": qtd, "produto": produto, "descricao": desc,
             "brincos": ", ".join(r.split(" #")[0] for r in refs), "data": data_iso,
-            "perda_de": intencao.get("dono") or ""})
+            "perda_de": intencao.get("dono") or ""}
+        if tipo == "Movimentação de Pasto":
+            url_form_dict["pasto"] = pasto_nome
+        out["url_form"] = "/manejo/novo?" + urlencode(url_form_dict)
         return out
 
     # ── Compra / Venda
@@ -1346,34 +1385,6 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
             "Responsável": membro, "Brincos": "; ".join(refs) if refs else ""}}
         out["url_form"] = "/manejo/novo?" + urlencode({"prefill": 1, "tipo": "Parto", "cabecas": 1,
                                                        "brincos": refs[0].split(" #")[0] if refs else "",
-                                                       "data": data_iso})
-        return out
-
-    # ── Pasto — movimentação (v5.10)
-    if acao == "pasto" and re.search(r"\b(mover|moveu|movi|move|movimentacao)\b", n):
-        out["titulo"] = "🗺️ Movimentação de Pasto"
-        alvos = _brincos(toks)
-        refs, ids = resolver_alvos(alvos)
-        # Procura nome do pasto na frase ("pro pasto norte", "mover … pro norte")
-        pasto_nome = ""
-        for i, t in enumerate(toks):
-            if t.n in ("pasto", "pro", "para") and i + 1 < len(toks):
-                prox = toks[i + 1].o
-                if toks[i + 1].n not in _FILLER and toks[i + 1].v is None and toks[i + 1].n not in _CORES:
-                    pasto_nome = prox
-                    break
-        if not ids and alvos:
-            out["avisos"].append("Brinco não confirmado — abra o Manejo para registrar.")
-        if not pasto_nome:
-            out["avisos"].append("Nome do pasto não dito — complete no formulário.")
-        out["campos"] += [["Data", data_br], ["Animais", ", ".join(r.split(" #")[0] for r in refs) or "—"],
-                         ["Pasto", pasto_nome or "—"]]
-        out["payload"] = {"acao": "manejo", "linha": {
-            "Data": data_iso, "Tipo": "Movimentação de Pasto", "Qtd Cabeças": len(refs) or 1,
-            "Pasto": pasto_nome, "Descrição": n, "Responsável": membro, "Brincos": "; ".join(refs)}}
-        out["url_form"] = "/manejo/novo?" + urlencode({"prefill": 1, "tipo": "Movimentação de Pasto",
-                                                       "cabecas": len(refs) or 1, "pasto": pasto_nome,
-                                                       "brincos": ", ".join(r.split(" #")[0] for r in refs),
                                                        "data": data_iso})
         return out
 

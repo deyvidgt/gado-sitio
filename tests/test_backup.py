@@ -17,6 +17,11 @@ from conftest import RAIZ, TEM_DADOS_REAIS
 
 @pytest.mark.skipif(not TEM_DADOS_REAIS, reason="sem gado_familia.xlsx para copiar")
 def test_script_diario_faz_backup_na_pasta_de_dados():
+    # Limpar qualquer pasta de backups na raiz que pode ter sido criada antes
+    backup_dir_raiz = os.path.join(RAIZ, "backups")
+    if os.path.exists(backup_dir_raiz):
+        shutil.rmtree(backup_dir_raiz, ignore_errors=True)
+
     pasta = tempfile.mkdtemp(prefix="gado_bkp_")
     try:
         shutil.copy2(db.ARQUIVO_PATH, os.path.join(pasta, "gado_familia.xlsx"))
