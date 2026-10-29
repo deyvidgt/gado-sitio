@@ -56,6 +56,10 @@
     display:inline-block; padding:2px 6px; border-radius:3px; color:#fff; font-weight:500;
     background:var(--tag-bg,#666); white-space:nowrap;
   }
+  .pin-animal { display:flex; flex-direction:column; align-items:center; filter:drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+  .pin-animal-corpo { width:38px; height:38px; border:3px solid #fff; border-radius:50% 50% 50% 0; transform:rotate(-45deg); display:flex; align-items:center; justify-content:center; }
+  .pin-animal-corpo span { transform:rotate(45deg); font-size:19px; }
+  .pin-animal-id { margin-top:4px; padding:2px 5px; border-radius:8px; background:rgba(0,0,0,.78); color:#fff; font-size:10px; font-weight:700; white-space:nowrap; }
 
   /* ── Mobile responsivo (< 768px) ── */
   @media (max-width: 768px) {
@@ -356,41 +360,36 @@
     camada.addTo(grupo);
     camadas[p.id] = camada;
 
-    // Adiciona marcadores de animais no centroid do pasto
+    // Sem GPS individual, distribui os pins de forma determinística dentro do pasto.
     if (p.centroid && p.animais_dados && p.animais_dados.length > 0) {
-      const [lat, lng] = p.centroid;
+      const coords = p.geo && p.geo.coordinates && p.geo.coordinates[0];
+      const pontos = (coords || []).filter(c => Array.isArray(c) && c.length >= 2)
+        .map(c => [Number(c[1]), Number(c[0])]);
+      const latitudes = pontos.map(c => c[0]);
+      const longitudes = pontos.map(c => c[1]);
+      const minLat = Math.min(...latitudes), maxLat = Math.max(...latitudes);
+      const minLng = Math.min(...longitudes), maxLng = Math.max(...longitudes);
+      const total = p.animais_dados.length;
 
-      // HTML customizado para o marcador (teardrop + silhueta)
-      const marcadorHtml = `
-        <div class="marcador-animal">
-          <div class="marcador-teardrop" style="--color-dono: ${p.cor}; --color-bg: ${p.cor}22">
-            <span class="marcador-icon">🐄</span>
-          </div>
-          <div class="marcador-numero">${p.total_animais}</div>
-        </div>
-      `;
-
-      // Popup com informações dos animais
-      let popupHtml = `<div class="marcador-popup"><div class="marcador-popup-titulo">${p.nome}</div><div class="marcador-popup-tags">`;
-      p.animais_dados.slice(0, 6).forEach(a => {
-        popupHtml += `<span class="marcador-popup-tag" style="background-color: ${a.cor || '#999'}">${a.brinco}</span>`;
+      p.animais_dados.forEach((animal, animalIndex) => {
+        const colunas = Math.max(1, Math.ceil(Math.sqrt(total)));
+        const linha = Math.floor(animalIndex / colunas);
+        const coluna = animalIndex % colunas;
+        const passoLat = (maxLat - minLat) / (Math.max(1, Math.ceil(total / colunas) + 1));
+        const passoLng = (maxLng - minLng) / (colunas + 1);
+        const lat = minLat + passoLat * (linha + 1);
+        const lng = minLng + passoLng * (coluna + 1);
+        const cor = animal.cor || p.cor || "#4363d8";
+        const marcadorHtml = `<div class="pin-animal"><div class="pin-animal-corpo" style="background:${cor}"><span>🐄</span></div><span class="pin-animal-id">${animal.brinco}</span></div>`;
+        const popupHtml = `<div class="marcador-popup"><div class="marcador-popup-titulo">${p.nome}</div><div class="marcador-popup-tags"><span class="marcador-popup-tag" style="background-color:${cor}">${animal.brinco}</span></div></div>`;
+        const icon = L.divIcon({
+          html: marcadorHtml, className: "leaflet-div-icon-custom",
+          iconSize: [90, 64], iconAnchor: [45, 58], popupAnchor: [0, -54]
+        });
+        L.marker([lat, lng], { icon, title: `${p.nome} · ${animal.brinco}` })
+          .bindPopup(popupHtml, { maxWidth: 200, className: "popup-animais" })
+          .addTo(marcadores);
       });
-      if (p.animais_dados.length > 6) {
-        popupHtml += `<span class="marcador-popup-tag" style="background-color: #999; font-size: 10px">+${p.animais_dados.length - 6}</span>`;
-      }
-      popupHtml += `</div></div>`;
-
-      const icon = L.divIcon({
-        html: marcadorHtml,
-        className: "leaflet-div-icon-custom",
-        iconSize: [52, 60],
-        iconAnchor: [26, 60],
-        popupAnchor: [0, -56]
-      });
-
-      const marker = L.marker([lat, lng], { icon, title: p.nome });
-      marker.bindPopup(popupHtml, { maxWidth: 200, className: "popup-animais" });
-      marker.addTo(marcadores);
     }
   });
 
