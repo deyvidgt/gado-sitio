@@ -11,5 +11,5 @@ def test_dashboard_exibe_resumo_leiteiro(cliente, monkeypatch):
         "Manejo": pd.DataFrame(), "Visitas": pd.DataFrame(),
     }.get(aba, pd.DataFrame()))
     html = cliente.get("/").get_data(as_text=True)
-    assert "Resumo leiteiro" in html
+    assert "Resumo Leiteiro" in html
     assert "24,0 L" in html
