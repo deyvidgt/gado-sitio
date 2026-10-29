@@ -24,7 +24,9 @@ def test_migra_abas_leiteiras_com_colunas_exatas():
         for aba, colunas in ABAS_LEITE.items():
             assert aba in wb.sheetnames
             cabecalho = [celula.value for celula in next(wb[aba].iter_rows(max_row=1))]
-            assert cabecalho == colunas
+            # Migração acrescenta colunas, mas nunca reordena um cabeçalho legado.
+            assert set(cabecalho) == set(colunas)
+            assert len(cabecalho) == len(colunas)
     finally:
         wb.close()
 
@@ -38,7 +40,7 @@ def test_aba_animais_ganha_colunas_do_leite_no_fim():
         wb.close()
     # No fim: a migração nunca reordena as colunas que já existiam.
     assert cabecalho == config.COLUNAS_ANIMAIS
-    assert cabecalho[-3:] == ["Uso Produtivo", "Situação Leite", "Último Parto"]
+    assert cabecalho[-5:] == ["Uso Produtivo", "Situação Leite", "Último Parto", "Pai", "Genótipo"]
 
 
 def test_migracao_leiteira_e_idempotente():

@@ -68,6 +68,42 @@ def _comparar_vacas(ids_animais, periodo_dias=30):
     return resultado
 
 
+def _dados_operacionais(df, animais, hoje):
+    """Monta os poucos indicadores de ação exibidos no painel principal."""
+    inicio = hoje - timedelta(days=13)
+    serie = [{"data": dia.isoformat(), "litros": litros}
+             for dia, litros in serie_diaria(df, inicio, hoje)]
+
+    linhas = df.copy() if df is not None else pd.DataFrame()
+    qualidade = {"data": None, "ccs": None, "cpp": None, "status": "sem dados"}
+    if not linhas.empty:
+        linhas["_data"] = linhas.get("Data", "").map(_data)
+        linhas = linhas[linhas["_data"].notna() & (linhas["_data"] <= hoje)]
+        if not linhas.empty:
+            linha = linhas.sort_values("_data").iloc[-1]
+            ccs = _numero(linha.get("CCS (células/mL)"))
+            cpp = _numero(linha.get("CPP (UFC/mL)"))
+            niveis = [
+                "urgente" if ccs is not None and ccs >= 400000 or cpp is not None and cpp >= 500000 else
+                "aviso" if ccs is not None and ccs >= 200000 or cpp is not None and cpp >= 100000 else
+                "ok"
+            ]
+            qualidade = {"data": linha["_data"].isoformat(), "ccs": ccs, "cpp": cpp,
+                         "status": niveis[0]}
+
+    contagens = contagens_rebanho(animais)
+    sem_registro = 0
+    if animais is not None and not animais.empty and "ID" in animais.columns:
+        vivos = animais[animais.get("Status", "").astype(str).str.lower().isin({"vivo", "ativo"})]
+        leiteiras = vivos[vivos.get("Uso Produtivo", "").astype(str).str.lower().isin({"leite", "ambos"})]
+        ids_hoje = set(linhas.loc[linhas["_data"] == hoje, "Vaca ID"].astype(str).str.strip()) if not linhas.empty else set()
+        sem_registro = int(sum(str(animal).strip() not in ids_hoje for animal in leiteiras["ID"]))
+
+    return {"serie": serie, "qualidade": qualidade, "sem_registro": sem_registro,
+            "tem_registro_hoje": bool(not linhas.empty and (linhas["_data"] == hoje).any()),
+            "contagens": contagens}
+
+
 @app.route("/leite")
 @login_required
 def painel_leite():
@@ -88,9 +124,10 @@ def painel_leite():
             status = hist.get("status", "ok")
             colchoes_alertas[status] += 1
 
+    operacional = _dados_operacionais(df, animais, hoje)
     return render_template("leite.html", acumulado=acumulado, medias=medias,
                            contagens=contagens, registros=len(df), hoje=hoje,
-                           colchoes_alertas=colchoes_alertas)
+                           colchoes_alertas=colchoes_alertas, operacional=operacional)
 
 
 @app.route("/leite/animais")
@@ -670,7 +707,7 @@ def consumo_leite():
 
     if df_consumo is None or df_consumo.empty:
         consumos = []
-        resumo = {"total_oferecido": 0, "taxa_media": 0, "desperdicio_total": 0}
+        resumo = {"total_oferecido": 0, "taxa_media": 0, "desperdicio_total": 0, "custo_total": 0}
     else:
         # Últimas 30 registros
         consumos = df_consumo.tail(30).to_dict('records')

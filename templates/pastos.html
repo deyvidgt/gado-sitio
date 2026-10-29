@@ -24,6 +24,38 @@
   .comp li { list-style:none; margin:3px 0; font-size:13.5px; }
   .comp .barra { display:inline-block; height:9px; border-radius:5px; background:var(--accent, #4363d8); vertical-align:1px; margin-right:5px; }
 
+  /* Marcador de animais customizado */
+  .marcador-animal {
+    display:flex; flex-direction:column; align-items:center; cursor:pointer;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  }
+  .marcador-teardrop {
+    position:relative; width:48px; height:56px;
+    background:linear-gradient(135deg, var(--color-bg,#fff) 0%, var(--color-bg,#fff) 100%);
+    border:2px solid var(--color-dono,#666); border-radius:50% 50% 50% 0; transform:rotate(-45deg);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 6px rgba(0,0,0,0.2);
+  }
+  .marcador-icon { font-size:20px; transform:rotate(45deg); }
+  .marcador-numero {
+    position:absolute; bottom:-18px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,0.75); color:#fff; padding:2px 6px; border-radius:12px;
+    font-weight:700; font-size:11px; white-space:nowrap;
+  }
+  .marcador-popup {
+    min-width:160px; padding:8px;
+  }
+  .marcador-popup-titulo {
+    font-weight:600; font-size:13px; margin-bottom:6px; border-bottom:1px solid #ddd; padding-bottom:4px;
+  }
+  .marcador-popup-tags {
+    display:flex; flex-wrap:wrap; gap:4px; font-size:11px;
+  }
+  .marcador-popup-tag {
+    display:inline-block; padding:2px 6px; border-radius:3px; color:#fff; font-weight:500;
+    background:var(--tag-bg,#666); white-space:nowrap;
+  }
+
   /* ── Mobile responsivo (< 768px) ── */
   @media (max-width: 768px) {
     #mapa { height: 40vh; min-height: 240px; }
@@ -76,9 +108,9 @@
       <option value="">🎯 Pasto...</option>
       {% for p in pastos %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}
     </select>
-    <button type="button" class="btn btn-outline btn-sm" id="btn-focar-pasto">🎯 Ver</button>
+    <button type="button" class="btn btn-outline btn-sm" id="btn-focar-pasto">🎯 Mostrar selecionado</button>
     {% endif %}
-    <button type="button" class="btn btn-outline btn-sm" id="btn-abrir-kmz">📂 KMZ</button>
+    <button type="button" class="btn btn-outline btn-sm" id="btn-abrir-kmz">📂 Importar KMZ</button>
     <span class="muted mapa-text" style="align-self:center">Novo: toque ⬟ ou importe .kmz</span>
   </div>
 
@@ -293,6 +325,8 @@
 
   const grupo = L.featureGroup().addTo(mapa);
   const camadas = {};
+  const marcadores = L.featureGroup().addTo(mapa);
+
   pastos.forEach(p => {
     // Contorno na cor do pasto; o preenchimento mostra a lotação (laranja/verde/amarelo/vermelho).
     const tinta = { baixa: "#e67e22", ideal: "#27ae60", atencao: "#f39c12", lotado: "#c0392b" }[p.nivel] || p.cor;
@@ -311,7 +345,45 @@
     camada.bindTooltip(txt, { permanent: true, direction: "center", className: "rotulo-pasto" });
     camada.addTo(grupo);
     camadas[p.id] = camada;
+
+    // Adiciona marcadores de animais no centroid do pasto
+    if (p.centroid && p.animais_dados && p.animais_dados.length > 0) {
+      const [lat, lng] = p.centroid;
+
+      // HTML customizado para o marcador (teardrop + silhueta)
+      const marcadorHtml = `
+        <div class="marcador-animal">
+          <div class="marcador-teardrop" style="--color-dono: ${p.cor}; --color-bg: ${p.cor}22">
+            <span class="marcador-icon">🐄</span>
+          </div>
+          <div class="marcador-numero">${p.total_animais}</div>
+        </div>
+      `;
+
+      // Popup com informações dos animais
+      let popupHtml = `<div class="marcador-popup"><div class="marcador-popup-titulo">${p.nome}</div><div class="marcador-popup-tags">`;
+      p.animais_dados.slice(0, 6).forEach(a => {
+        popupHtml += `<span class="marcador-popup-tag" style="background-color: ${a.cor || '#999'}">${a.brinco}</span>`;
+      });
+      if (p.animais_dados.length > 6) {
+        popupHtml += `<span class="marcador-popup-tag" style="background-color: #999; font-size: 10px">+${p.animais_dados.length - 6}</span>`;
+      }
+      popupHtml += `</div></div>`;
+
+      const icon = L.divIcon({
+        html: marcadorHtml,
+        className: "leaflet-div-icon-custom",
+        iconSize: [48, 56],
+        iconAnchor: [24, 56],
+        popupAnchor: [0, -56]
+      });
+
+      const marker = L.marker([lat, lng], { icon, title: p.nome });
+      marker.bindPopup(popupHtml, { maxWidth: 200, className: "popup-animais" });
+      marker.addTo(marcadores);
+    }
   });
+
   if (pastos.length) mapa.fitBounds(grupo.getBounds(), { padding: [20, 20] });
 
   function focarPasto(id) {

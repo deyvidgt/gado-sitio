@@ -16,7 +16,49 @@
   <div class="card"><strong>{{ contagens.vacas_leiteiras_ativas }}</strong><span>Vacas leiteiras ativas</span></div>
   <div class="card"><strong>{{ contagens.vacas_lactacao }}</strong><span>Vacas em lactação</span></div>
 </div>
-<div class="card">
+<div class="grid-3" style="margin-top:16px">
+  <div class="card"><strong>{{ '%.1f'|format(medias.media_por_animal_lactacao or 0)|replace('.', ',') }}</strong><span>Média por vaca em lactação (L)</span></div>
+  <div class="card"><strong>{{ operacional.sem_registro }}</strong><span>Vacas sem registro hoje</span></div>
+  <div class="card">
+    <strong class="badge badge-{{ 'ruim' if operacional.qualidade.status == 'urgente' else 'aviso' if operacional.qualidade.status in ('aviso', 'sem dados') else 'ok' }}">{{ operacional.qualidade.status|capitalize }}</strong>
+    <span>Qualidade mais recente</span>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <h3>Produção diária · últimos 14 dias</h3>
+    <a class="btn btn-small" href="{{ url_for('ordenha_leite') }}">Registrar hoje</a>
+  </div>
+  {% if operacional.serie %}
+  <div style="height:220px;margin-top:12px"><canvas id="grafico-producao" aria-label="Litros produzidos por dia"></canvas></div>
+  <table class="sr-only" aria-label="Tabela da produção diária">
+    <thead><tr><th>Data</th><th>Litros</th></tr></thead>
+    <tbody>{% for item in operacional.serie %}<tr><td>{{ item.data }}</td><td>{{ item.litros }}</td></tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<p class="muted">Ainda não há produção registrada nos últimos 14 dias.</p>{% endif %}
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <div><h3>Qualidade do leite</h3><p class="muted">Último registro: {{ operacional.qualidade.data or 'sem dados' }}</p></div>
+    <a class="btn btn-small" href="{{ url_for('saude_leite') }}">Ver saúde</a>
+  </div>
+  <div class="tri" style="margin-top:12px">
+    <div><strong>{{ operacional.qualidade.ccs or '—' }}</strong><small>CCS (células/mL)</small></div>
+    <div><strong>{{ operacional.qualidade.cpp or '—' }}</strong><small>CPP (UFC/mL)</small></div>
+    <div><strong>{{ operacional.sem_registro }}</strong><small>sem registro hoje</small></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3>Ações agora</h3>
+  <div class="linha" style="margin-top:8px"><span>{{ '⚠️ Há vacas sem registro hoje.' if operacional.sem_registro else '✅ Registro individual atualizado hoje.' }}</span><a href="{{ url_for('ordenha_leite') }}">Ordenha →</a></div>
+  <div class="linha"><span>{{ '⚠️ Qualidade exige atenção.' if operacional.qualidade.status in ('aviso', 'urgente') else '✅ Qualidade sem alerta no último registro.' }}</span><a href="{{ url_for('saude_leite') }}">Saúde →</a></div>
+  {% if colchoes_alertas.urgente or colchoes_alertas.aviso %}<div class="linha aviso"><span>🛏️ Colchão precisa de atenção.</span><a href="{{ url_for('listar_colchao') }}">Colchões →</a></div>{% endif %}
+</div>
+
+<div class="card" style="margin-top:16px">
   <h3>Médias de produção</h3>
   <div class="tri">
     <div><strong>{{ '%.1f'|format(medias.media_diaria or 0)|replace('.', ',') }}</strong><small>Média por dia (L)</small></div>
@@ -46,4 +88,26 @@
 </div>
 {% endif %}
 <div class="card"><span>{{ registros }} lançamentos registrados. Registros totais não entram no ranking individual.</span></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const dados = {{ operacional.serie|tojson }};
+  const canvas = document.getElementById('grafico-producao');
+  if (!canvas || !dados.length || typeof Chart === 'undefined') return;
+  new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: dados.map(item => item.data.split('-').reverse().join('/')),
+      datasets: [{label: 'Litros por dia', data: dados.map(item => item.litros),
+        borderColor: '#3d7a34', backgroundColor: 'rgba(61,122,52,.12)',
+        borderWidth: 2, pointRadius: 4, pointHoverRadius: 6, fill: true, tension: .25}]
+    },
+    options: {responsive: true, maintainAspectRatio: false,
+      plugins: {legend: {display: false}, tooltip: {callbacks: {label: ctx => `${ctx.parsed.y.toLocaleString('pt-BR')} L`}}},
+      scales: {y: {beginAtZero: true, title: {display: true, text: 'Litros'}}, x: {grid: {display: false}}}}
+  });
+})();
+</script>
 {% endblock %}

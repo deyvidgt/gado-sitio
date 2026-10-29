@@ -23,32 +23,72 @@
 </style>
 
 <div class="card">
-  <p class="cmp-muted">O saco mais barato nem sempre é o mais barato no fim do mês:
-    o que vale é quanto cada cabeça come por dia. Preencha o que o vendedor passou
-    e veja o custo real. <b>Nada é salvo</b> — é só uma conta.</p>
+  <div style="background:var(--bg-2);padding:16px;border-radius:8px;margin-bottom:16px;border-left:4px solid var(--accent)">
+    <h4 style="margin-top:0">💡 Como funciona</h4>
+    <p style="margin:8px 0;font-size:13px">
+      O <b>saco mais barato</b> nem sempre é o mais barato no fim do mês.
+      O que importa é <b>quanto cada cabeça come por dia</b>.
+    </p>
+    <p style="margin:8px 0;font-size:13px">
+      <strong>Exemplo:</strong> Um saco de 30kg a R$120 (R$4/kg) é mais caro que um saco de 25kg a R$80 (R$3,20/kg)?
+      Depende! Se o rebanho consome 500g/dia, o de 30kg sai a R$2 mais caro por mês.
+    </p>
+    <p style="margin:0;font-size:13px;color:var(--text-3)"><b>⚠️ Nada é salvo</b> — é só uma ferramenta de cálculo</p>
+  </div>
+
+  <p class="cmp-muted">Preencha os dados que o vendedor passou para cada opção:</p>
 
   <form method="get">
     <div class="form-grid">
-      <div class="form-group"><label>Cabeças no rebanho</label>
-        <input type="number" name="cabecas" min="0" value="{{ cabecas }}"></div>
+      <div class="form-group">
+        <label>🐄 Quantas cabeças vão comer?</label>
+        <input type="number" name="cabecas" min="1" value="{{ cabecas or 36 }}" required
+               style="font-size:16px" placeholder="36">
+        <small style="color:var(--text-3)">Se for só um lote, coloque só a quantidade do lote</small>
+      </div>
     </div>
-    <table class="cmp-tab">
-      <tr><th>Marca / fornecedor</th><th>R$ por saco</th><th>kg por saco</th><th>Consumo (g/cab/dia)</th></tr>
-      {% for i in linhas %}
-      <tr>
-        <td><input type="text" name="nome_{{ i }}" maxlength="40" value="{{ opcoes[i].nome }}"
-                   placeholder="Ex.: Proteinado 40 — Casa do Lavrador" style="width:100%"></td>
-        <td><input type="text" name="preco_saco_{{ i }}" inputmode="decimal" style="width:90px"
-                   value="{{ opcoes[i].preco_saco or '' }}" placeholder="120"></td>
-        <td><input type="text" name="kg_saco_{{ i }}" inputmode="decimal" style="width:80px"
-                   value="{{ opcoes[i].kg_saco or '' }}" placeholder="30"></td>
-        <td><input type="text" name="consumo_g_{{ i }}" inputmode="decimal" style="width:90px"
-                   value="{{ opcoes[i].consumo_g or '' }}" placeholder="{{ consumo_padrao }}"></td>
-      </tr>
-      {% endfor %}
-    </table>
-    <button class="btn btn-primary" style="margin-top:10px">🧮 Comparar</button>
+
+    <div style="margin-top:16px">
+      <h4 style="margin:0 0 12px;font-size:14px">📋 Opções que o vendedor passou</h4>
+      <table class="cmp-tab">
+        <tr><th>Marca / fornecedor</th><th title="Quanto custa cada saco">R$/saco</th><th title="Peso total do saco">kg/saco</th><th title="Quanto cada animal come por dia">Consumo/dia</th></tr>
+        {% for i in linhas %}
+        <tr>
+          <td data-label="Marca/fornecedor">
+            <input type="text" name="nome_{{ i }}" maxlength="50" value="{{ opcoes[i].nome }}"
+                   placeholder="Ex.: Proteinado 40 — Casa do Lavrador" style="width:100%;font-size:14px">
+          </td>
+          <td data-label="R$/saco">
+            <input type="text" name="preco_saco_{{ i }}" inputmode="decimal" style="width:90px;font-size:14px"
+                   value="{{ opcoes[i].preco_saco or '' }}" placeholder="120" title="Preço total do saco em R$">
+          </td>
+          <td data-label="kg/saco">
+            <input type="text" name="kg_saco_{{ i }}" inputmode="decimal" style="width:80px;font-size:14px"
+                   value="{{ opcoes[i].kg_saco or '' }}" placeholder="30" title="Peso total do saco em kg">
+          </td>
+          <td data-label="Consumo/dia">
+            <div style="display:flex;gap:4px;align-items:center">
+              <input type="text" name="consumo_g_{{ i }}" inputmode="decimal" style="width:75px;font-size:14px"
+                     value="{{ opcoes[i].consumo_g or '' }}" placeholder="{{ consumo_padrao }}" title="Gramas por cabeça por dia">
+              <span style="font-size:12px;color:var(--text-3)">g</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+
+    <button class="btn btn-primary" style="margin-top:16px;width:100%">🧮 Comparar e calcular</button>
   </form>
+
+  {% if not resultado %}
+  <div style="margin-top:16px;padding:12px;background:var(--bg-2);border-radius:8px;border-left:3px solid var(--accent)">
+    <p style="margin:0;font-size:13px;color:var(--text-2)">
+      💬 <strong>Dica:</strong> Preencha os dados e clique em "Comparar" para ver qual sai mais barato no mês.
+      Os consumos (g/cab/dia) aparecem preenchidos com padrões — ajuste se souber o consumo real.
+    </p>
+  </div>
+  {% endif %}
 
   {% if pagos %}
   <p class="cmp-muted" style="margin-top:10px">Último preço que vocês pagaram:
@@ -57,64 +97,66 @@
 </div>
 
 {% if resultado %}
-<div class="card" style="margin-top:var(--spacing-2xl)">
-  <h3>📊 Resultado da Comparação</h3>
+<div class="card" style="margin-top:24px">
+  <h3>📊 Comparação de Custos</h3>
 
-  <!-- Cards v5.7: Uma por insumo -->
-  <div style="display:grid; gap:var(--spacing-lg); margin-top:var(--spacing-lg)">
+  {% set melhor = resultado|first %}
+  <div style="background:var(--color-success-bg);padding:16px;border-radius:8px;margin-bottom:16px;border-left:4px solid var(--color-success-main)">
+    <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600;margin-bottom:4px">🏆 Melhor opção</div>
+    <div style="font-size:18px;font-weight:700;color:var(--color-success-main);margin-bottom:8px">{{ melhor.nome }}</div>
+    <div style="font-size:14px;color:var(--text-2)">
+      <b>{{ melhor.custo_cab_dia|brl }}/cabeça/dia</b>
+      ({{ melhor.custo_mes|brl }} por mês com {{ cabecas }} cabeças)
+    </div>
+  </div>
+
+  <!-- Comparação entre opções -->
+  <div style="display:grid; gap:12px; margin-top:16px">
     {% for o in resultado %}
-    <div class="card-status" style="border-left:4px solid {% if o.melhor %}var(--color-success-main){% else %}var(--color-border){% endif %}">
-      <!-- Header: Nome + Badge Melhor -->
-      <div class="card-status-header">
-        <span class="card-status-title">
-          {% if o.melhor %}✅ {% endif %}{{ o.nome }}
-        </span>
+    <div style="padding:12px;background:var(--surface);border:1px solid var(--bg-2);border-radius:8px;border-left:4px solid {% if o.melhor %}var(--color-success-main){% else %}var(--border){% endif %}">
+      <!-- Nome + Badge -->
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+        <div>
+          <div style="font-weight:600;font-size:14px">{{ o.nome }}</div>
+          <div style="font-size:12px;color:var(--text-3)">{{ o.custo_kg|brl }}/kg</div>
+        </div>
         {% if o.melhor %}
-        <span class="badge badge-success">Melhor opção</span>
+        <span style="background:var(--color-success-main);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">✅ MELHOR</span>
         {% endif %}
       </div>
 
-      <!-- Tri-coluna: R$/kg, R$/cab/dia, Custo/mês -->
-      <div class="tri-grid">
-        <div class="tri-item">
-          <div class="tri-number">{{ o.custo_kg|brl }}</div>
-          <div class="tri-label">R$/kg</div>
-        </div>
-        <div class="tri-item">
-          <div class="tri-number">
+      <!-- Métricas principais -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <div style="font-size:11px;color:var(--text-3);text-transform:uppercase">Custo/dia</div>
+          <div style="font-size:16px;font-weight:700;color:{% if o.melhor %}var(--color-success-main){% else %}inherit{% endif %}">
             {% if o.custo_cab_dia %}{{ o.custo_cab_dia|brl }}{% else %}—{% endif %}
           </div>
-          <div class="tri-label">R$/cab/dia</div>
         </div>
-        <div class="tri-item">
-          <div class="tri-number">
+        <div>
+          <div style="font-size:11px;color:var(--text-3);text-transform:uppercase">Custo/mês</div>
+          <div style="font-size:16px;font-weight:700">
             {% if o.custo_mes %}{{ o.custo_mes|brl }}{% else %}—{% endif %}
           </div>
-          <div class="tri-label">Mês ({{ cabecas }} cab)</div>
         </div>
       </div>
 
-      <!-- Diferença no mês (se não for melhor) -->
+      <!-- Diferença -->
       {% if not o.melhor and o.diferenca_mes %}
-      <div style="margin-top:var(--spacing-md); padding:var(--spacing-md); background:var(--color-warning-bg); border-radius:var(--radius-md)">
-        <div style="font-size:var(--text-label-size); color:var(--color-text-tertiary)">Custo adicional no mês</div>
-        <div style="font-size:var(--text-h3-size); font-weight:700; color:var(--color-warning-main)">+{{ o.diferenca_mes|brl }}</div>
-      </div>
-      {% elif o.melhor %}
-      <div style="margin-top:var(--spacing-md); padding:var(--spacing-md); background:var(--color-success-bg); border-radius:var(--radius-md)">
-        <div style="font-size:var(--text-label-size); color:var(--color-text-tertiary)">Economia potencial</div>
-        <div style="font-size:var(--text-h3-size); font-weight:700; color:var(--color-success-main)">Menor custo</div>
+      <div style="margin-top:8px;padding:8px;background:var(--color-warning-bg);border-radius:6px;font-size:12px">
+        <span style="color:var(--color-warning-main);font-weight:600">⚠️ +{{ o.diferenca_mes|brl }} a mais por mês</span> que a melhor opção
       </div>
       {% endif %}
     </div>
     {% endfor %}
   </div>
 
-  <p class="cmp-muted" style="margin-top:var(--spacing-2xl)">
-    <strong>Como interpretar:</strong> Mês = 30 dias com o rebanho todo comendo.
-    Se só um lote come o produto, troque o número de cabeças no filtro acima.
-    A métrica mais importante é <strong>R$/cab/dia</strong> — é o que sai do bolso de verdade.
-  </p>
+  <div style="margin-top:16px;padding:12px;background:var(--bg-2);border-radius:8px">
+    <p style="margin:0;font-size:12px;color:var(--text-2)">
+      <strong>📖 Como ler:</strong> A métrica mais importante é <b>R$/cabeça/dia</b> — é o que realmente sai do bolso.
+      O "Custo/mês" considera todo o rebanho ({{ cabecas }} cabeças) por 30 dias.
+    </p>
+  </div>
 </div>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+{% block title %}Cochos{% endblock %}
+{% block page_title %}Cochos 🍽️
+  <a href="/insumos/comparar" style="float:right; font-size:14px; padding:4px 12px; background:var(--bg-2); border-radius:4px; text-decoration:none; color:inherit">
+    💰 Comparar Preços
+  </a>
+{% endblock %}
+
+{% block content %}
+<style>
+  .cochos-container { display: grid; gap: 24px; }
+
+  .cocho-card {
+    background: var(--surface);
+    border: 1px solid var(--bg-2);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  .cocho-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+
+  .cocho-titulo {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-1);
+  }
+
+  .cocho-tipo {
+    font-size: 12px;
+    color: var(--text-3);
+    text-transform: capitalize;
+    margin-top: 4px;
+  }
+
+  .cocho-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .badge-vazio { background: #fff3cd; color: #856404; }
+  .badge-normal { background: #d4edda; color: #155724; }
+  .badge-cheio { background: #d1ecf1; color: #0c5460; }
+
+  .cocho-visual {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 16px;
+    margin-bottom: 20px;
+    align-items: center;
+  }
+
+  .cocho-icon {
+    font-size: 48px;
+    text-align: center;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  }
+
+  .cocho-barra-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .cocho-barra {
+    height: 24px;
+    background: var(--bg-2);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .cocho-barra-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #27ae60 0%, #2ecc71 100%);
+    transition: width 0.3s ease;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    min-width: 30px;
+  }
+
+  .cocho-barra-vazio .cocho-barra-fill {
+    background: linear-gradient(90deg, #f39c12 0%, #e67e22 100%);
+  }
+
+  .cocho-barra-cheio .cocho-barra-fill {
+    background: linear-gradient(90deg, #3498db 0%, #2980b9 100%);
+  }
+
+  .cocho-percentual {
+    font-size: 12px;
+    color: var(--text-3);
+    text-align: right;
+  }
+
+  .cocho-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .cocho-stat {
+    text-align: center;
+    padding: 12px;
+    background: var(--bg-2);
+    border-radius: 8px;
+  }
+
+  .cocho-stat-valor {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-1);
+  }
+
+  .cocho-stat-label {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .cocho-aviso {
+    padding: 12px;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    color: #856404;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  .cocho-aviso.show { display: block; }
+
+  .cocho-acoes {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btn-salgar {
+    flex: 1;
+    min-width: 140px;
+  }
+
+  .resumo-cochos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .resumo-item {
+    text-align: center;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--bg-2);
+    border-radius: 8px;
+  }
+
+  .resumo-valor {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-1);
+  }
+
+  .resumo-label {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 768px) {
+    .cocho-visual { grid-template-columns: 1fr; }
+    .cocho-stats { grid-template-columns: 1fr; }
+    .resumo-cochos { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="card">
+  <h3>📊 Resumo dos Cochos</h3>
+  <div class="resumo-cochos">
+    <div class="resumo-item">
+      <div class="resumo-valor">{{ resumo.total_cochos }}</div>
+      <div class="resumo-label">Total</div>
+    </div>
+    <div class="resumo-item" style="border-color: #d4edda">
+      <div class="resumo-valor" style="color: #155724">{{ resumo.cochos_normais }}</div>
+      <div class="resumo-label">Normais</div>
+    </div>
+    <div class="resumo-item" style="border-color: #fff3cd">
+      <div class="resumo-valor" style="color: #856404">{{ resumo.cochos_vazios }}</div>
+      <div class="resumo-label">Vazios</div>
+    </div>
+    <div class="resumo-item" style="border-color: #d1ecf1">
+      <div class="resumo-valor" style="color: #0c5460">{{ resumo.cochos_cheios }}</div>
+      <div class="resumo-label">Cheios</div>
+    </div>
+  </div>
+</div>
+
+{% if resumo.proximo_para_salgar %}
+<div class="card" style="border-left: 4px solid #f39c12">
+  <h3>⚠️ Próximo para Salgar</h3>
+  <div style="padding: 16px; background: var(--bg-2); border-radius: 8px">
+    <div style="font-size: 16px; font-weight: 700; margin-bottom: 8px">
+      {{ resumo.proximo_para_salgar.nome }}
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px">
+      <div>
+        <span style="color: var(--text-3)">Dias restantes:</span>
+        <div style="font-size: 18px; font-weight: 700; color: #f39c12">
+          {{ resumo.proximo_para_salgar.dias_restantes }}
+        </div>
+      </div>
+      <div>
+        <span style="color: var(--text-3)">Consumo/dia:</span>
+        <div style="font-size: 18px; font-weight: 700">
+          {{ resumo.proximo_para_salgar.consumo_dia_kg }} kg
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <h3>🍽️ Cochos</h3>
+
+  {% if cochos %}
+  <div class="cochos-container">
+    {% for cocho in cochos %}
+    <div class="cocho-card {% if cocho.estado == 'Vazio' %}cocho-barra-vazio{% elif cocho.estado == 'Cheio' %}cocho-barra-cheio{% endif %}">
+      <!-- Header: Nome + Badge Estado -->
+      <div class="cocho-header">
+        <div>
+          <div class="cocho-titulo">{{ cocho.nome }}</div>
+          <div class="cocho-tipo">{{ cocho.tipo }}</div>
+        </div>
+        <span class="cocho-badge badge-{{ cocho.estado.lower() }}">
+          {{ cocho.estado }}
+        </span>
+      </div>
+
+      <!-- Visual: Ícone + Barra de Preenchimento -->
+      <div class="cocho-visual">
+        <div class="cocho-icon">
+          {% if cocho.tipo == 'proteinado' %}🌾
+          {% elif cocho.tipo == 'sal' %}🧂
+          {% elif cocho.tipo == 'racao' %}🌽
+          {% elif cocho.tipo == 'silo' %}📦
+          {% elif cocho.tipo == 'feno' %}🌾
+          {% else %}🍽️
+          {% endif %}
+        </div>
+
+        <div class="cocho-barra-container">
+          <div class="cocho-barra">
+            <div class="cocho-barra-fill" style="width: {{ cocho.percentual }}%">
+              {% if cocho.percentual > 20 %}{{ cocho.percentual }}%{% endif %}
+            </div>
+          </div>
+          <div class="cocho-percentual">
+            {{ cocho.volume_kg }} / {{ cocho.capacidade_kg }} kg
+          </div>
+        </div>
+      </div>
+
+      <!-- Estatísticas: Volume, Consumo, Dias -->
+      <div class="cocho-stats">
+        <div class="cocho-stat">
+          <div class="cocho-stat-valor">{{ cocho.volume_kg }}</div>
+          <div class="cocho-stat-label">Volume Atual</div>
+        </div>
+        <div class="cocho-stat">
+          <div class="cocho-stat-valor">{{ cocho.consumo_dia_kg }}</div>
+          <div class="cocho-stat-label">Consumo/dia</div>
+        </div>
+        <div class="cocho-stat">
+          <div class="cocho-stat-valor">{{ cocho.dias_restantes }}</div>
+          <div class="cocho-stat-label">Dias Rest.</div>
+        </div>
+      </div>
+
+      <!-- Aviso se próximo a vencer -->
+      {% if cocho.dias_restantes <= 3 and cocho.dias_restantes > 0 %}
+      <div class="cocho-aviso show" style="background: #fff3cd; border-color: #ffc107; color: #856404">
+        ⚠️ <strong>Atenção:</strong> Este cocho acaba em {{ cocho.dias_restantes }} dia(s)
+      </div>
+      {% elif cocho.dias_restantes == 0 %}
+      <div class="cocho-aviso show" style="background: #f8d7da; border-color: #f5c6cb; color: #721c24">
+        🚨 <strong>Crítico:</strong> Cocho vazio ou com data inválida!
+      </div>
+      {% endif %}
+
+      <!-- Informações de Salga -->
+      {% if cocho.ultima_salga %}
+      <div style="padding: 12px; background: var(--bg-2); border-radius: 8px; margin-bottom: 16px; font-size: 13px">
+        <div style="color: var(--text-3); margin-bottom: 4px">Última salga</div>
+        <div style="font-weight: 600">{{ cocho.ultima_salga }}</div>
+        {% if cocho.proxima_salga_estimada %}
+        <div style="color: var(--text-3); margin-top: 8px; margin-bottom: 4px">Próxima salga estimada</div>
+        <div style="font-weight: 600">{{ cocho.proxima_salga_estimada }}</div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Ações -->
+      <div class="cocho-acoes">
+        <form method="post" action="{{ url_for('salgar_cocho', cocho_id=cocho.id) }}" style="flex: 1">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="volume" value="{{ cocho.capacidade_kg }}">
+          <button class="btn btn-primary btn-salgar" style="width: 100%">
+            ✨ Salgar Cocho
+          </button>
+        </form>
+
+        <details style="flex: 1">
+          <summary class="btn btn-outline" style="width: 100%; cursor: pointer">⋮ Menu</summary>
+          <div style="margin-top: 8px; display: grid; gap: 8px">
+            <button type="button" class="btn btn-outline btn-sm" onclick="editarCocho('{{ cocho.id }}')">
+              ✏️ Editar
+            </button>
+            <form method="post" action="{{ url_for('deletar_cocho', cocho_id=cocho.id) }}" onsubmit="return confirm('Remover este cocho?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button class="btn btn-outline btn-sm" style="width: 100%">🗑️ Remover</button>
+            </form>
+          </div>
+        </details>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p style="color: var(--text-3); text-align: center; padding: 24px">
+    Nenhum cocho cadastrado ainda.<br>
+    <a href="#" onclick="mostrarNovoCocho()">Clique aqui para criar o primeiro.</a>
+  </p>
+  {% endif %}
+</div>
+
+<!-- Formulário Novo Cocho (oculto por padrão) -->
+<div class="card" id="novo-cocho-form" style="display: none; margin-top: 16px">
+  <h3>➕ Novo Cocho</h3>
+  <form method="post" action="{{ url_for('novo_cocho') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>ID (ex.: C01)</label>
+        <input type="text" name="id" maxlength="10" required placeholder="C01">
+      </div>
+      <div class="form-group">
+        <label>Nome</label>
+        <input type="text" name="nome" required placeholder="Cocho Pasto Remanga">
+      </div>
+      <div class="form-group">
+        <label>Tipo</label>
+        <select name="tipo" required>
+          <option value="">Selecione...</option>
+          <option value="proteinado">Proteinado</option>
+          <option value="sal">Sal</option>
+          <option value="racao">Ração</option>
+          <option value="silo">Silo</option>
+          <option value="feno">Feno</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Local</label>
+        <input type="text" name="local" placeholder="Pasto da Mina">
+      </div>
+      <div class="form-group">
+        <label>Capacidade (kg)</label>
+        <input type="number" name="capacidade" step="0.1" required placeholder="500" value="500">
+      </div>
+      <div class="form-group">
+        <label>Volume Atual (kg)</label>
+        <input type="number" name="volume_atual" step="0.1" placeholder="500">
+      </div>
+      <div class="form-group" style="grid-column: 1/-1">
+        <label>Observações</label>
+        <input type="text" name="observacoes" placeholder="">
+      </div>
+    </div>
+    <button class="btn btn-primary">💾 Salvar Cocho</button>
+    <button type="button" class="btn btn-outline" onclick="esconderNovoCocho()">Cancelar</button>
+  </form>
+</div>
+
+<!-- Botão Flutuante para Novo Cocho -->
+<button class="btn btn-primary" onclick="mostrarNovoCocho()" id="btn-novo-cocho"
+        style="position: fixed; bottom: 24px; right: 24px; border-radius: 50%; width: 56px; height: 56px;
+               display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.15)">
+  ➕
+</button>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function mostrarNovoCocho() {
+  document.getElementById("novo-cocho-form").style.display = "block";
+  document.getElementById("btn-novo-cocho").style.display = "none";
+}
+
+function esconderNovoCocho() {
+  document.getElementById("novo-cocho-form").style.display = "none";
+  document.getElementById("btn-novo-cocho").style.display = "flex";
+}
+
+function editarCocho(id) {
+  alert("Edição em desenvolvimento");
+  // TODO: implementar modal de edição
+}
+</script>
+{% endblock %}
