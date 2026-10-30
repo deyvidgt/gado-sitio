@@ -47,6 +47,79 @@
     </div>
   </div>
 
+  <!-- ═══ GRÁFICOS FINANCEIROS (Onda 8.2 — v5.11) ════════════════════════════════ -->
+  {% if grafico_receita_custo %}
+  <div class="secao">
+    <h2 class="secao-titulo">💹 Receita vs Custo</h2>
+    <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+      <canvas id="grafico_receita_custo"></canvas>
+    </div>
+    <script defer>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof grafico_duplo_eixo === 'function') {
+        const ctx = document.getElementById('grafico_receita_custo').getContext('2d');
+        grafico_duplo_eixo(ctx, {{ grafico_receita_custo.labels|tojson }},
+          {{ grafico_receita_custo.receita|tojson }},
+          {{ grafico_receita_custo.custo|tojson }}, {
+          tema: localStorage.getItem('gado-theme') || 'light',
+          label1: 'Receita (R$)',
+          label2: 'Custo (R$)'
+        });
+      }
+    });
+    </script>
+  </div>
+  {% endif %}
+
+  {% if grafico_resultado_membro %}
+  <div class="secao">
+    <h2 class="secao-titulo">🎯 Resultado por Membro</h2>
+    <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+      <canvas id="grafico_resultado_membro"></canvas>
+    </div>
+    <script defer>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof grafico_pizza === 'function') {
+        const ctx = document.getElementById('grafico_resultado_membro').getContext('2d');
+        grafico_pizza(ctx, {{ grafico_resultado_membro.labels|tojson }},
+          {{ grafico_resultado_membro.data|tojson }}, {
+          tema: localStorage.getItem('gado-theme') || 'light',
+          colors: ['#8ba753', '#19316f', '#72b148']
+        });
+      }
+    });
+    </script>
+  </div>
+  {% endif %}
+
+  {% if tabela_membros %}
+  <div class="secao">
+    <h2 class="secao-titulo">📊 Status por Membro</h2>
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>Membro</th>
+          <th>Estoque</th>
+          <th>Resultado</th>
+          <th>Capital</th>
+          <th>CTCab</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in tabela_membros %}
+        <tr class="tabela-row-{{ row.status }}">
+          <td><strong>{{ row.emoji }} {{ row.membro }}</strong></td>
+          <td>{{ row.estoque }} cab.</td>
+          <td class="valor-{{ 'pos' if row.resultado >= 0 else 'neg' }}">{{ row.resultado | brl }}</td>
+          <td>{{ row.capital | brl }}</td>
+          <td>{{ row.ctcab | brl }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
   <!-- KPIs Secundários -->
   <div class="secao">
     <h2 class="secao-titulo">Análise Financeira</h2>
