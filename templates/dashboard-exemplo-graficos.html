@@ -1,0 +1,337 @@
+{# templates/dashboard-exemplo-graficos.html — Exemplo de integração dos novos gráficos #}
+{# Este é um template de referência para mostrar como usar os componentes v5.8 #}
+
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Exemplos de Gráficos v5.8{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1400px; margin: 0 auto; padding: 1rem;">
+
+  <h1>Exemplos de Componentes v5.8</h1>
+  <p style="color: var(--text-2); margin-bottom: 2rem;">Gráficos, Cards KPI e UI Refinements</p>
+
+  <!-- ──────────────────────────────────────────────────────────────── -->
+  <!-- SEÇÃO 1: KPI Grid com Cards Métrica -->
+  <!-- ──────────────────────────────────────────────────────────────── -->
+
+  <section style="margin-bottom: 3rem;">
+    <h2>1. Cards de Métricas (KPI Grid)</h2>
+
+    <div class="kpi-grid">
+      {% set metrics = [
+        {'value': '425', 'label': 'Animais Ativos', 'color': 'verde', 'icon': '🐄', 'trend': '+2.1'},
+        {'value': '220', 'label': 'Em Lactação', 'color': 'azul', 'icon': '🥛', 'trend': '+0.8'},
+        {'value': '175', 'label': 'Dias em Lactação', 'color': 'laranja', 'icon': '📅', 'trend': '+3.5'},
+        {'value': '12.4', 'label': 'Intervalo entre Partos', 'color': 'roxo', 'icon': '⏱️', 'trend': '-1.2'},
+      ] %}
+
+      {% for metric in metrics %}
+        <div class="card-metric card-metric--{{ metric.color }}">
+          <div class="card-metric__header">
+            <span class="card-metric__icon">{{ metric.icon }}</span>
+            <h3 class="card-metric__value">{{ metric.value }}</h3>
+          </div>
+          <p class="card-metric__label">{{ metric.label }}</p>
+          <div class="card-metric__trend {{ 'up' if metric.trend[0] != '-' else 'down' }}">
+            <span class="trend-icon">{{ '↑' if metric.trend[0] != '-' else '↓' }}</span>
+            <span class="trend-value">{{ metric.trend }}%</span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- ──────────────────────────────────────────────────────────────── -->
+  <!-- SEÇÃO 2: Gauges (Taxas %) -->
+  <!-- ──────────────────────────────────────────────────────────────── -->
+
+  <section style="margin-bottom: 3rem;">
+    <h2>2. Gauges — Taxas de Desempenho</h2>
+
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem;">
+      <!-- Gauge 1: Margem de Lucro -->
+      <div class="gauge-container" style="background: var(--surface); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow);">
+        <div class="gauge-wrapper" id="gauge-margem-lucro"></div>
+      </div>
+
+      <!-- Gauge 2: Taxa de Serviço -->
+      <div class="gauge-container" style="background: var(--surface); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow);">
+        <div class="gauge-wrapper" id="gauge-taxa-servico"></div>
+      </div>
+
+      <!-- Gauge 3: Taxa de Concepção -->
+      <div class="gauge-container" style="background: var(--surface); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow);">
+        <div class="gauge-wrapper" id="gauge-taxa-concepcao"></div>
+      </div>
+
+      <!-- Gauge 4: Taxa de Prenhez -->
+      <div class="gauge-container" style="background: var(--surface); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow);">
+        <div class="gauge-wrapper" id="gauge-taxa-prenhez"></div>
+      </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Aguardar Gauge estar disponível
+      if (typeof window.Gauge !== 'undefined') {
+        new Gauge('gauge-margem-lucro', {
+          value: 30.4,
+          max: 100,
+          label: 'Margem de Lucro',
+          unit: '%',
+          thresholds: [20, 50],
+          width: 300,
+          height: 180
+        });
+
+        new Gauge('gauge-taxa-servico', {
+          value: 45.1,
+          max: 100,
+          label: 'Taxa de Serviço',
+          unit: '%',
+          thresholds: [30, 70],
+          width: 300,
+          height: 180
+        });
+
+        new Gauge('gauge-taxa-concepcao', {
+          value: 65.8,
+          max: 100,
+          label: 'Taxa de Concepção',
+          unit: '%',
+          thresholds: [40, 80],
+          width: 300,
+          height: 180
+        });
+
+        new Gauge('gauge-taxa-prenhez', {
+          value: 82.3,
+          max: 100,
+          label: 'Taxa de Prenhez',
+          unit: '%',
+          thresholds: [50, 85],
+          width: 300,
+          height: 180
+        });
+      }
+    });
+    </script>
+  </section>
+
+  <!-- ──────────────────────────────────────────────────────────────── -->
+  <!-- SEÇÃO 3: Badges Semáforo -->
+  <!-- ──────────────────────────────────────────────────────────────── -->
+
+  <section style="margin-bottom: 3rem;">
+    <h2>3. Badges Semáforo (Status)</h2>
+
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+      <span style="
+        background: var(--green-50);
+        color: var(--green-600);
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      ">
+        🟢 OK / Disponível
+      </span>
+
+      <span style="
+        background: rgba(230,126,34,.1);
+        color: var(--warn);
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      ">
+        🟡 Aviso / Atenção
+      </span>
+
+      <span style="
+        background: rgba(192,57,43,.1);
+        color: var(--danger);
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      ">
+        🔴 Urgente / Erro
+      </span>
+
+      <span style="
+        background: rgba(41,128,185,.1);
+        color: var(--info);
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      ">
+        ℹ️ Info / Neutro
+      </span>
+    </div>
+  </section>
+
+  <!-- ──────────────────────────────────────────────────────────────── -->
+  <!-- SEÇÃO 4: Barras Comparativas (Minha Fazenda vs Mercado) -->
+  <!-- ──────────────────────────────────────────────────────────────── -->
+
+  <section style="margin-bottom: 3rem;">
+    <h2>4. Barras Comparativas — Minha Fazenda vs Mercado</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+      <!-- Barras: Ganho @/ha -->
+      <div style="background: var(--surface); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow);">
+        <h3 style="margin: 0 0 1rem 0; color: var(--text); font-size: 1rem;">Ganho @/ha Mensal</h3>
+        <canvas id="chart-ganho-ha" style="max-height: 300px;"></canvas>
+      </div>
+
+      <!-- Linhas: Produção Acumulada -->
+      <div style="background: var(--surface); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow);">
+        <h3 style="margin: 0 0 1rem 0; color: var(--text); font-size: 1rem;">Produção Leite Acumulada</h3>
+        <canvas id="chart-producao-leite" style="max-height: 300px;"></canvas>
+      </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Aguardar os charts estarem disponíveis
+      if (typeof window.ComparativeChart !== 'undefined') {
+        // Gráfico de barras comparativas
+        new ComparativeChart('chart-ganho-ha', {
+          title: 'Ganho @/ha',
+          labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai'],
+          myData: [18.5, 19.2, 17.8, 20.1, 21.5],
+          marketData: [16.0, 17.2, 15.9, 18.3, 19.0],
+          unit: '@/ha',
+          type: 'bar'
+        });
+      }
+
+      if (typeof window.LineChart !== 'undefined') {
+        // Gráfico de linhas com preenchimento
+        new LineChart('chart-producao-leite', {
+          title: 'Produção Leite',
+          labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5'],
+          data: [1250, 2480, 3920, 5150, 6450],
+          unit: 'L'
+        });
+      }
+    });
+    </script>
+  </section>
+
+  <!-- ──────────────────────────────────────────────────────────────── -->
+  <!-- SEÇÃO 5: Barras Empilhadas (Custo/Receita/Lucro) -->
+  <!-- ──────────────────────────────────────────────────────────────── -->
+
+  <section style="margin-bottom: 3rem;">
+    <h2>5. Barras Empilhadas — Destaque do Lote</h2>
+
+    <div style="background: var(--surface); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow);">
+      <canvas id="chart-lote-destaque" style="max-height: 350px;"></canvas>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof window.StackedBarChart !== 'undefined') {
+        new StackedBarChart('chart-lote-destaque', {
+          title: 'Destaque do Lote',
+          labels: ['Lote A (Nelore)', 'Lote B (Guzerá)', 'Lote C (Cruzado)', 'Lote D (Angus)'],
+          receita: [45000, 52000, 38000, 58000],
+          custo: [28000, 31000, 22000, 35000],
+          lucro: [17000, 21000, 16000, 23000]
+        });
+      }
+    });
+    </script>
+  </section>
+
+  <!-- ──────────────────────────────────────────────────────────────── -->
+  <!-- SEÇÃO 6: Tabela Responsiva (Preview) -->
+  <!-- ──────────────────────────────────────────────────────────────── -->
+
+  <section style="margin-bottom: 3rem;">
+    <h2>6. Tabela Responsiva (Desktop View)</h2>
+
+    <div style="overflow-x: auto;">
+      <table style="
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--surface);
+        border-radius: var(--radius);
+        overflow: hidden;
+      ">
+        <thead style="background: var(--green-50); border-bottom: 2px solid var(--green-200);">
+          <tr>
+            <th style="padding: 1rem; text-align: left; font-weight: 600; color: var(--green-700);">Identificador</th>
+            <th style="padding: 1rem; text-align: left; font-weight: 600; color: var(--green-700);">Raça</th>
+            <th style="padding: 1rem; text-align: left; font-weight: 600; color: var(--green-700);">Peso</th>
+            <th style="padding: 1rem; text-align: left; font-weight: 600; color: var(--green-700);">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for animal in [
+            {'id': 'Amarelo 21 #A0001', 'raca': 'Nelore', 'peso': '375 kg', 'status': 'OK'},
+            {'id': 'Branco 15 #A0002', 'raca': '3/4 Guzerá', 'peso': '420 kg', 'status': 'OK'},
+            {'id': 'Vermelho 08 #A0003', 'raca': 'Angus', 'peso': '515 kg', 'status': 'Aviso'},
+          ] %}
+            <tr style="border-bottom: 1px solid var(--green-100);">
+              <td style="padding: 1rem;">{{ animal.id }}</td>
+              <td style="padding: 1rem;">{{ animal.raca }}</td>
+              <td style="padding: 1rem;">{{ animal.peso }}</td>
+              <td style="padding: 1rem;">
+                <span style="
+                  background: {% if animal.status == 'OK' %}var(--green-50){% else %}rgba(230,126,34,.1){% endif %};
+                  color: {% if animal.status == 'OK' %}var(--green-600){% else %}var(--warn){% endif %};
+                  padding: 0.25rem 0.75rem;
+                  border-radius: 4px;
+                  font-size: 0.875rem;
+                  font-weight: 600;
+                ">
+                  {{ animal.status }}
+                </span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ──────────────────────────────────────────────────────────────── -->
+  <!-- Informações sobre os Componentes -->
+  <!-- ──────────────────────────────────────────────────────────────── -->
+
+  <section style="
+    background: var(--green-50);
+    border-left: 4px solid var(--green-600);
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    margin-top: 3rem;
+  ">
+    <h3 style="margin: 0 0 1rem 0; color: var(--green-700);">📚 Componentes Implementados</h3>
+    <ul style="margin: 0; padding-left: 1.5rem; color: var(--text-2);">
+      <li><strong>Card Métrica (KPI):</strong> Ícone + número grande + label + trend. Reutilizável, 5 cores.</li>
+      <li><strong>KPI Grid:</strong> Layout responsivo (4→3→2→1 colunas conforme tela).</li>
+      <li><strong>Gauge (Velocímetro):</strong> SVG interativo com temas light/dark automáticos.</li>
+      <li><strong>Badges Semáforo:</strong> Sempre com ícone + cor + texto (nunca só cor).</li>
+      <li><strong>Tabela Responsiva:</strong> Desktop normal, mobile cards-linha (em desenvolvimento).</li>
+    </ul>
+  </section>
+
+</div>
+{% endblock %}

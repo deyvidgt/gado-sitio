@@ -1,0 +1,29 @@
+<!-- templates/components/card-metric.html — Card KPI Reutilizável -->
+<!-- Uso simples: {% include "components/card-metric.html" with context %} -->
+<!-- Props: metric_value, metric_label, metric_icon, metric_color, metric_trend -->
+
+<div class="card-metric card-metric--{{ metric_color | default('verde') }}">
+  <div class="card-metric__header">
+    {% if metric_icon %}
+      <span class="card-metric__icon" data-icon="{{ metric_icon }}"></span>
+    {% endif %}
+    <h3 class="card-metric__value">{{ metric_value }}</h3>
+  </div>
+
+  <p class="card-metric__label">{{ metric_label }}</p>
+
+  {% if metric_trend %}
+    <div class="card-metric__trend {{ metric_trend_direction | default('up') }}">
+      <span class="trend-icon">
+        {% if metric_trend_direction == 'up' %}↑{% else %}↓{% endif %}
+      </span>
+      <span class="trend-value">{{ metric_trend }}%</span>
+    </div>
+  {% endif %}
+
+  {% if metric_action_label %}
+    <button class="card-metric__action" onclick="{{ metric_action_onclick }}">
+      {{ metric_action_label }}
+    </button>
+  {% endif %}
+</div>

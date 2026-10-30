@@ -89,6 +89,99 @@
   </div>
 </div>
 {% endif %}
+
+<!-- ═══ GRÁFICOS (Onda 8.3 — v5.11) ════════════════════════════════ -->
+{% if grafico_producao %}
+<div class="card" style="margin-top:16px">
+  <h3>📊 Produção (últimos 30 dias)</h3>
+  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+    <canvas id="grafico_producao_onda83"></canvas>
+  </div>
+  <script defer>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof grafico_linhas === 'function') {
+      const ctx = document.getElementById('grafico_producao_onda83').getContext('2d');
+      grafico_linhas(ctx, {{ grafico_producao.labels|tojson }}, [
+        { label: 'Litros', data: {{ grafico_producao.data|tojson }}, color: '#72b148' }
+      ], {
+        tema: localStorage.getItem('gado-theme') || 'light',
+        legend: false
+      });
+    }
+  });
+  </script>
+</div>
+{% endif %}
+
+{% if grafico_qualidade %}
+<div class="card" style="margin-top:16px">
+  <h3>🧪 CCS/CPP Trending</h3>
+  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+    <canvas id="grafico_qualidade"></canvas>
+  </div>
+  <script defer>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof grafico_linhas === 'function') {
+      const ctx = document.getElementById('grafico_qualidade').getContext('2d');
+      const datasets = [];
+      if ({{ grafico_qualidade.ccs|tojson }}.some(v => v !== null)) {
+        datasets.push({ label: 'CCS (células/mL)', data: {{ grafico_qualidade.ccs|tojson }}, color: '#19316f' });
+      }
+      if ({{ grafico_qualidade.cpp|tojson }}.some(v => v !== null)) {
+        datasets.push({ label: 'CPP (UFC/mL)', data: {{ grafico_qualidade.cpp|tojson }}, color: '#e74c3c' });
+      }
+      if (datasets.length > 0) {
+        grafico_linhas(ctx, {{ grafico_qualidade.labels|tojson }}, datasets, {
+          tema: localStorage.getItem('gado-theme') || 'light'
+        });
+      }
+    }
+  });
+  </script>
+</div>
+{% endif %}
+
+{% if grafico_top_vacas %}
+<div class="card" style="margin-top:16px">
+  <h3>🐄 Top 10 Vacas (últimos 30 dias)</h3>
+  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+    <canvas id="grafico_top_vacas"></canvas>
+  </div>
+  <script defer>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof grafico_barras_horizontal === 'function') {
+      const ctx = document.getElementById('grafico_top_vacas').getContext('2d');
+      grafico_barras_horizontal(ctx, {{ grafico_top_vacas.labels|tojson }},
+        {{ grafico_top_vacas.data|tojson }}, {
+        tema: localStorage.getItem('gado-theme') || 'light',
+        label: 'Litros',
+        colors: ['#8ba753']
+      });
+    }
+  });
+  </script>
+</div>
+{% endif %}
+
+{% if grafico_saude %}
+<div class="card" style="margin-top:16px">
+  <h3>❤️ Saúde Geral</h3>
+  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+    <canvas id="grafico_saude"></canvas>
+  </div>
+  <p class="muted" style="margin-top:8px">{{ grafico_saude.saudaveis }}/{{ grafico_saude.total }} vacas saudáveis (CCS < 200k E CPP < 100k)</p>
+  <script defer>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof grafico_gauge === 'function') {
+      const ctx = document.getElementById('grafico_saude').getContext('2d');
+      grafico_gauge(ctx, {{ grafico_saude.valor }}, 100, {
+        tema: localStorage.getItem('gado-theme') || 'light'
+      });
+    }
+  });
+  </script>
+</div>
+{% endif %}
 <div class="card"><span>{{ registros }} lançamentos registrados. Registros totais não entram no ranking individual.</span></div>
 {% endblock %}
 

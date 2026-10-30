@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}GMD & Desempenho — Sítio Santo Antonio{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>📊 GMD & Desempenho</h1>
+
+  <!-- TAB 1: GMD vs Pastagem -->
+  <div class="secao">
+    <h2>🌾 Engorda vs Pastagem</h2>
+
+    {% if resumo_pastagem.erro %}
+      <div class="alerta alerta-aviso">
+        Erro ao carregar dados: {{ resumo_pastagem.erro }}
+      </div>
+    {% else %}
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Lotes Ativos</div>
+          <div class="metric-valor">{{ resumo_pastagem.lotes_ativos }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Ganho Médio (kg/dia)</div>
+          <div class="metric-valor">{{ resumo_pastagem.ganho_medio }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Melhor Lote</div>
+          <div class="metric-valor">{{ resumo_pastagem.melhor_lote.pasto or '—' }}</div>
+          <div class="metric-info">GMD: {{ resumo_pastagem.melhor_lote.gmd }} kg/dia</div>
+        </div>
+      </div>
+
+      {% if resumo_pastagem.tabela %}
+      <h3>Histórico (últimas 10 entradas)</h3>
+      <table class="tabela">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Pasto</th>
+            <th>Dias</th>
+            <th>GMD (kg/dia)</th>
+            <th>Lotação (UA/ha)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for linha in resumo_pastagem.tabela %}
+          <tr>
+            <td>{{ linha.get('Data', '—') }}</td>
+            <td>{{ linha.get('Pasto ID', '—') }}</td>
+            <td>{{ linha.get('Dias no Pasto', '—') }}</td>
+            <td>{{ linha.get('GMD (kg/dia)', '—') }}</td>
+            <td>{{ linha.get('Lotação (UA/ha)', '—') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <!-- TAB 2: GMD vs Lotação -->
+  <div class="secao">
+    <h2>📈 Histórico de GMD vs Lotação</h2>
+
+    {% if analise_lotacao.erro %}
+      <div class="alerta alerta-aviso">
+        Erro ao carregar dados: {{ analise_lotacao.erro }}
+      </div>
+    {% else %}
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Correlação GMD/Lotação</div>
+          <div class="metric-valor">{{ analise_lotacao.correlacao }}</div>
+          <div class="metric-info">{% if analise_lotacao.correlacao < -0.3 %}Negativa{% elif analise_lotacao.correlacao > 0.3 %}Positiva{% else %}Neutra{% endif %}</div>
+        </div>
+      </div>
+
+      <div class="recomendacao">
+        <h3>💡 Recomendação</h3>
+        <p>{{ analise_lotacao.recomendacao }}</p>
+      </div>
+
+      {% if analise_lotacao.periodos %}
+      <h3>Análise (últimos 12 meses)</h3>
+      <table class="tabela">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Período</th>
+            <th>GMD (kg/dia)</th>
+            <th>Lotação (UA/ha)</th>
+            <th>% Ocupação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for linha in analise_lotacao.periodos %}
+          <tr>
+            <td>{{ linha.get('Data', '—') }}</td>
+            <td>{{ linha.get('Período (dias)', '—') }} dias</td>
+            <td>{{ linha.get('GMD (kg/dia)', '—') }}</td>
+            <td>{{ linha.get('Lotação (UA/ha)', '—') }}</td>
+            <td>{{ linha.get('% Ocupação', '—') }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <!-- ═══ GRÁFICOS (Onda 8.5 — v5.11) ════════════════════════════════ -->
+  {% if grafico_gmd_linhas %}
+  <div class="secao">
+    <h2>📈 GMD vs Tempo</h2>
+    <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+      <canvas id="grafico_gmd_linhas"></canvas>
+    </div>
+    <script defer>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof grafico_linhas === 'function') {
+        const ctx = document.getElementById('grafico_gmd_linhas').getContext('2d');
+        grafico_linhas(ctx, {{ grafico_gmd_linhas.labels|tojson }}, [
+          { label: 'GMD (kg/dia)', data: {{ grafico_gmd_linhas.data|tojson }}, color: '#8ba753' }
+        ], {
+          tema: localStorage.getItem('gado-theme') || 'light'
+        });
+      }
+    });
+    </script>
+  </div>
+  {% endif %}
+
+  {% if grafico_lotacao_barras %}
+  <div class="secao">
+    <h2>📊 Comparativo Lotação</h2>
+    <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+      <canvas id="grafico_lotacao_barras"></canvas>
+    </div>
+    <script defer>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof grafico_colunas === 'function') {
+        const ctx = document.getElementById('grafico_lotacao_barras').getContext('2d');
+        grafico_colunas(ctx, {{ grafico_lotacao_barras.labels|tojson }},
+          {{ grafico_lotacao_barras.data|tojson }}, {
+          tema: localStorage.getItem('gado-theme') || 'light',
+          label: 'UA/ha',
+          colors: ['#19316f']
+        });
+      }
+    });
+    </script>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  h1, h2, h3 { margin-top: 20px; }
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin: 20px 0; }
+  .metric { background: var(--surface); padding: 16px; border-radius: 8px; text-align: center; }
+  .metric-label { font-size: 12px; color: var(--text-3); text-transform: uppercase; }
+  .metric-valor { font-size: 28px; font-weight: 600; margin: 8px 0; }
+  .metric-info { font-size: 12px; color: var(--text-2); }
+  .recomendacao { background: var(--surface); padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid var(--green-600); }
+  .recomendacao h3 { margin: 0 0 8px 0; }
+  .recomendacao p { margin: 0; }
+  .tabela { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  .tabela th, .tabela td { padding: 12px; text-align: left; border-bottom: 1px solid var(--bg-2); }
+  .tabela th { background: var(--bg-2); font-weight: 600; }
+  .alerta { padding: 12px; border-radius: 4px; margin: 16px 0; }
+  .alerta-aviso { background: var(--warn); color: var(--text); }
+  .secao { margin-bottom: 40px; }
+</style>
+{% endblock %}

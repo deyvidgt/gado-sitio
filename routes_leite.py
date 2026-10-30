@@ -17,6 +17,155 @@ from extensions import _agora, _limpar_backups_antigos, _validar_csrf, app, logi
 from leite import _data, _numero, acumulados, contagens_rebanho, dias_em_lactacao, medias_periodo, producao_por_animal, serie_diaria, validar_producao, historico_colchao
 
 
+def _grafico_producao_leite(df_producao, hoje, dias=30):
+    """Linhas: Produção dia/semana/mês. Onda 8.3.1"""
+    try:
+        if df_producao is None or df_producao.empty:
+            return None
+
+        from datetime import timedelta
+        inicio = hoje - timedelta(days=dias)
+
+        producao_dia = {}
+        for _, row in df_producao.iterrows():
+            data = _data(row.get("Data"))
+            litros = _numero(row.get("Litros", 0)) or 0
+            if data and data >= inicio and data <= hoje:
+                data_str = data.isoformat()
+                producao_dia[data_str] = producao_dia.get(data_str, 0) + litros
+
+        if not producao_dia:
+            return None
+
+        datas = sorted(producao_dia.keys())
+        labels = [pd.to_datetime(d).strftime("%d/%m") for d in datas]
+        data = [producao_dia[d] for d in datas]
+
+        return {"labels": labels, "data": data}
+    except Exception as e:
+        app.logger.debug(f"Gráfico produção leite falhou: {e}")
+        return None
+
+
+def _grafico_ccs_cpp(df_producao, dias=60):
+    """Linhas: CCS/CPP trending (qualidade do leite). Onda 8.3.2"""
+    try:
+        if df_producao is None or df_producao.empty:
+            return None
+
+        from datetime import timedelta
+        hoje = _agora().date()
+        inicio = hoje - timedelta(days=dias)
+
+        ccs_data = {}
+        cpp_data = {}
+
+        for _, row in df_producao.iterrows():
+            data = _data(row.get("Data"))
+            ccs = _numero(row.get("CCS (células/mL)"))
+            cpp = _numero(row.get("CPP (UFC/mL)"))
+
+            if data and data >= inicio and data <= hoje:
+                data_str = data.isoformat()
+                if ccs:
+                    ccs_data[data_str] = ccs
+                if cpp:
+                    cpp_data[data_str] = cpp
+
+        if not ccs_data and not cpp_data:
+            return None
+
+        # Últimos 15 pontos
+        datas = sorted(set(list(ccs_data.keys()) + list(cpp_data.keys())))[-15:]
+        labels = [pd.to_datetime(d).strftime("%d/%m") for d in datas]
+
+        return {
+            "labels": labels,
+            "ccs": [ccs_data.get(d, None) for d in datas],
+            "cpp": [cpp_data.get(d, None) for d in datas],
+        }
+    except Exception as e:
+        app.logger.debug(f"Gráfico CCS/CPP falhou: {e}")
+        return None
+
+
+def _grafico_top_vacas(df_producao, df_animais, dias=30):
+    """Barras: Produção por vaca (top 10). Onda 8.3.3"""
+    try:
+        if df_producao is None or df_producao.empty:
+            return None
+
+        from datetime import timedelta
+        hoje = _agora().date()
+        inicio = hoje - timedelta(days=dias)
+
+        producao_vaca = {}
+
+        for _, row in df_producao.iterrows():
+            data = _data(row.get("Data"))
+            vaca_id = str(row.get("Vaca ID", "")).strip()
+            litros = _numero(row.get("Litros", 0)) or 0
+
+            if data and data >= inicio and data <= hoje and vaca_id:
+                producao_vaca[vaca_id] = producao_vaca.get(vaca_id, 0) + litros
+
+        if not producao_vaca:
+            return None
+
+        # Top 10
+        top = sorted(producao_vaca.items(), key=lambda x: x[1], reverse=True)[:10]
+        labels = [item[0][:15] for item in top]
+        data = [item[1] for item in top]
+
+        return {"labels": labels, "data": data}
+    except Exception as e:
+        app.logger.debug(f"Gráfico top vacas falhou: {e}")
+        return None
+
+
+def _grafico_saude_leite(df_producao):
+    """Gauge: Saúde geral (% vacas saudáveis). Onda 8.3.4"""
+    try:
+        if df_producao is None or df_producao.empty:
+            return None
+
+        hoje = _agora().date()
+
+        # Últimas medições de cada vaca
+        ultimas = {}
+        for _, row in df_producao.iterrows():
+            data = _data(row.get("Data"))
+            vaca_id = str(row.get("Vaca ID", "")).strip()
+            ccs = _numero(row.get("CCS (células/mL)"))
+            cpp = _numero(row.get("CPP (UFC/mL)"))
+
+            if data and data <= hoje and vaca_id and (ccs or cpp):
+                if vaca_id not in ultimas or data > _data(ultimas[vaca_id].get("Data", "")):
+                    ultimas[vaca_id] = {"data": data, "ccs": ccs, "cpp": cpp}
+
+        if not ultimas:
+            return None
+
+        saudaveis = 0
+        for vaca_data in ultimas.values():
+            ccs = vaca_data.get("ccs")
+            cpp = vaca_data.get("cpp")
+
+            # Saudável: CCS < 200k E CPP < 100k
+            ccs_ok = ccs is None or ccs < 200000
+            cpp_ok = cpp is None or cpp < 100000
+
+            if ccs_ok and cpp_ok:
+                saudaveis += 1
+
+        pct_saudaveis = (saudaveis / len(ultimas) * 100) if ultimas else 0
+
+        return {"valor": pct_saudaveis, "total": len(ultimas), "saudaveis": saudaveis}
+    except Exception as e:
+        app.logger.debug(f"Gráfico saúde leite falhou: {e}")
+        return None
+
+
 def _comparar_vacas(ids_animais, periodo_dias=30):
     """Compara até 3 vacas leiteiras no período."""
     hoje = date.today()
@@ -125,9 +274,20 @@ def painel_leite():
             colchoes_alertas[status] += 1
 
     operacional = _dados_operacionais(df, animais, hoje)
+
+    # Gráficos Onda 8.3
+    grafico_producao = _grafico_producao_leite(df, hoje)
+    grafico_qualidade = _grafico_ccs_cpp(df)
+    grafico_top_vacas = _grafico_top_vacas(df, animais)
+    grafico_saude = _grafico_saude_leite(df)
+
     return render_template("leite.html", acumulado=acumulado, medias=medias,
                            contagens=contagens, registros=len(df), hoje=hoje,
-                           colchoes_alertas=colchoes_alertas, operacional=operacional)
+                           colchoes_alertas=colchoes_alertas, operacional=operacional,
+                           grafico_producao=grafico_producao,
+                           grafico_qualidade=grafico_qualidade,
+                           grafico_top_vacas=grafico_top_vacas,
+                           grafico_saude=grafico_saude)
 
 
 @app.route("/leite/animais")

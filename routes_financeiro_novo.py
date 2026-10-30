@@ -22,14 +22,135 @@ import os
 import json
 
 
+def _grafico_receita_vs_custo(dados, r, meses=12):
+    """Gráfico duplo-eixo: Receita (esquerda) vs Custo (direita) últimos N meses.
+
+    Usa o resumo anual já calculado para extrair receita e custo por mês.
+    """
+    try:
+        from calculos import calcular_resultado_anual
+        r_anual = calcular_resultado_anual()
+        resultado_por_mes = r_anual.get("resultado_por_mes", {})
+        caixa_por_mes = r_anual.get("caixa_por_mes", {})
+
+        if not resultado_por_mes or not caixa_por_mes:
+            return None
+
+        # Ordena por mês
+        meses_pt = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+                    "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+        labels = []
+        receita = []
+        custo = []
+
+        for mes_num in range(1, meses + 1):
+            mes_str = str(mes_num).zfill(2)
+            if mes_str in resultado_por_mes:
+                labels.append(meses_pt[mes_num - 1])
+                # Receita = resultado + custo (estimado)
+                resultado = resultado_por_mes[mes_str]
+                caixa = caixa_por_mes.get(mes_str, 0)
+                receita.append(max(caixa, 0))  # Entrada de caixa
+                custo.append(max(r.get("ctcab", 0) * (r.get("estoque", 0) / 12), 0))  # Custo médio
+
+        if not labels:
+            return None
+
+        return {"labels": labels, "receita": receita, "custo": custo}
+    except Exception as e:
+        app.logger.debug(f"Gráfico receita vs custo falhou: {e}")
+        return None
+
+
+def _grafico_resultado_por_membro(membros_dict, r_membros):
+    """Gráfico de pizza: Resultado por membro (composição do resultado total).
+
+    r_membros vem de calculos.calcular_todos_membros().
+    """
+    try:
+        if not r_membros:
+            return None
+
+        labels = []
+        data = []
+
+        for membro in MEMBROS:
+            res = r_membros.get(membro, {}).get("resultado_realizado", 0)
+            if res != 0:  # Só mostra membros com resultado
+                nome = NOMES_MEMBROS.get(membro, membro)
+                labels.append(nome)
+                data.append(res)
+
+        if not labels:
+            return None
+
+        return {"labels": labels, "data": data}
+    except Exception as e:
+        app.logger.debug(f"Gráfico resultado por membro falhou: {e}")
+        return None
+
+
+def _tabela_status_membros(r_membros):
+    """Tabela com cores: Estoque, Resultado, Capital, Índices por membro.
+
+    Retorna lista de dicts com status e cor para renderizar no template.
+    """
+    try:
+        if not r_membros:
+            return None
+
+        rows = []
+        for membro in MEMBROS:
+            res = r_membros.get(membro, {})
+            resultado = res.get("resultado_realizado", 0)
+
+            # Status de cor: verde (positivo), amarelo (zero), vermelho (negativo)
+            if resultado > 0:
+                status = "ok"
+            elif resultado == 0:
+                status = "aviso"
+            else:
+                status = "critico"
+
+            rows.append({
+                "membro": NOMES_MEMBROS.get(membro, membro),
+                "emoji": EMOJIS_MEMBROS.get(membro, ""),
+                "estoque": res.get("estoque", 0),
+                "resultado": resultado,
+                "capital": res.get("capital_imobilizado", 0),
+                "ctcab": res.get("ctcab", 0),
+                "status": status,
+            })
+
+        return rows
+    except Exception as e:
+        app.logger.debug(f"Tabela status membros falhou: {e}")
+        return None
+
+
 @app.route("/financeiro")
 @login_required
 def financeiro():
-    """Página de indicadores financeiros completos."""
+    """Página de indicadores financeiros completos com gráficos Onda 8.2."""
     dados = _get_dados_cache()
     r = _get_resumo_cache()  # resumo geral
+    membros_dict = _get_membros_cache()
 
-    return render_template("financeiro.html", r=r)
+    # Calcular resultado por membro
+    from calculos import calcular_todos_membros
+    r_membros = calcular_todos_membros(dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"])
+
+    # Gráficos Onda 8.2 (Financeiro)
+    grafico_receita_custo = _grafico_receita_vs_custo(dados, r)
+    grafico_resultado_membro = _grafico_resultado_por_membro(membros_dict, r_membros)
+    tabela_membros = _tabela_status_membros(r_membros)
+
+    return render_template("financeiro.html", r=r,
+                          grafico_receita_custo=grafico_receita_custo,
+                          grafico_resultado_membro=grafico_resultado_membro,
+                          tabela_membros=tabela_membros,
+                          r_membros=r_membros,
+                          MEMBROS=MEMBROS, NOMES_MEMBROS=NOMES_MEMBROS, EMOJIS_MEMBROS=EMOJIS_MEMBROS)
 
 
 @app.route("/resultado")

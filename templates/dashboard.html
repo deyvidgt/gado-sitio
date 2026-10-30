@@ -127,6 +127,74 @@
 {% endif %}
 <!-- ════════════════════════════════════════════════════════════════════════ -->
 
+<!-- ═══ GRÁFICOS FINANCEIROS (Onda 8.2 — v5.11) ════════════════════════════════ -->
+{% if grafico_resultado %}
+<section class="card" style="margin-bottom:20px">
+  <div class="card-title">📊 Resultado — Últimos 12 Meses</div>
+  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+    <canvas id="grafico_resultado"></canvas>
+  </div>
+</section>
+
+<script defer>
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof grafico_colunas === 'function') {
+    const ctx = document.getElementById('grafico_resultado').getContext('2d');
+    grafico_colunas(ctx, {{ grafico_resultado.labels|tojson }}, {{ grafico_resultado.data|tojson }}, {
+      tema: localStorage.getItem('gado-theme') || 'light',
+      label: 'Resultado (R$)',
+      colors: ['#8ba753']
+    });
+  }
+});
+</script>
+{% endif %}
+
+{% if grafico_cmp_gpcab %}
+<section class="card" style="margin-bottom:20px">
+  <div class="card-title">📈 Evolução CMP & GPCab</div>
+  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+    <canvas id="grafico_cmp_gpcab"></canvas>
+  </div>
+</section>
+
+<script defer>
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof grafico_linhas === 'function') {
+    const ctx = document.getElementById('grafico_cmp_gpcab').getContext('2d');
+    const datasets = [
+      { label: 'CMP (R$/cab)', data: {{ grafico_cmp_gpcab.cmp|tojson }}, color: '#8ba753' },
+      { label: 'GPCab (R$/cab)', data: {{ grafico_cmp_gpcab.gpcab|tojson }}, color: '#19316f' }
+    ];
+    grafico_linhas(ctx, {{ grafico_cmp_gpcab.labels|tojson }}, datasets, {
+      tema: localStorage.getItem('gado-theme') || 'light'
+    });
+  }
+});
+</script>
+{% endif %}
+
+{% if grafico_gastos %}
+<section class="card" style="margin-bottom:20px">
+  <div class="card-title">💸 Gastos por Tipo</div>
+  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+    <canvas id="grafico_gastos"></canvas>
+  </div>
+</section>
+
+<script defer>
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof grafico_pizza === 'function') {
+    const ctx = document.getElementById('grafico_gastos').getContext('2d');
+    grafico_pizza(ctx, {{ grafico_gastos.labels|tojson }}, {{ grafico_gastos.data|tojson }}, {
+      tema: localStorage.getItem('gado-theme') || 'light',
+      colors: ['#8ba753', '#19316f', '#72b148', '#e67e22', '#95a5a6']
+    });
+  }
+});
+</script>
+{% endif %}
+
 <!-- Gráfico de Entrada/Saída foi para /fluxo-animais (v5.10) -->
 
 <section class="card" style="margin-bottom:20px">
