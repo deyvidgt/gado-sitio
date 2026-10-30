@@ -216,6 +216,7 @@ def test_criar_pela_tela(cliente, dados_restaurados):
 
 def test_mover_pela_tela(cliente, dados_restaurados):
     import db
+    db.salvar_linha("Compras", ["01/01/2026", 1, 100, 100, 1, 0, 0, "Teste", "Deyvid"])
     id_ = PA.criar("Pasto Mover", json.dumps(_quadrado()))
     antes = len(db.carregar_aba("Manejo"))
     _post(cliente, "/pastos/mover", pasto=id_, data="2026-10-20", quem="todos")

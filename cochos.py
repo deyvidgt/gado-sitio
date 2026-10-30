@@ -132,7 +132,7 @@ def calcular_situacao_cochos(df_cochos, df_visitas) -> Dict[str, Dict]:
     }
     """
 
-    if df_cochos.empty or df_visitas.empty:
+    if df_cochos.empty:
         return {}
 
     consumo_visitas = extrair_consumo_visitas(df_visitas, dias=60)

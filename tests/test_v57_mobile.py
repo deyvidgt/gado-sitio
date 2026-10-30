@@ -2,8 +2,12 @@
 """
 Testes para v5.7 — integração incremental de Mobile Refinements, Dark Mode, Gestures
 """
+import os
+
 import pytest
 from flask import session
+
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def test_mobile_css_loaded(cliente):
@@ -57,19 +61,19 @@ def test_main_pages_load(cliente):
 def test_css_files_exist():
     """Arquivos CSS v5.7 existem"""
     import os
-    assert os.path.exists("F:\\programa sitio\\static\\css\\mobile.css"), "mobile.css não encontrado"
-    assert os.path.exists("F:\\programa sitio\\static\\css\\dark-mode.css"), "dark-mode.css não encontrado"
+    assert os.path.exists(os.path.join(RAIZ, "static", "css", "mobile.css")), "mobile.css não encontrado"
+    assert os.path.exists(os.path.join(RAIZ, "static", "css", "dark-mode.css")), "dark-mode.css não encontrado"
 
 
 def test_js_files_exist():
     """Arquivo JS v5.7 existe"""
     import os
-    assert os.path.exists("F:\\programa sitio\\static\\js\\gestures.js"), "gestures.js não encontrado"
+    assert os.path.exists(os.path.join(RAIZ, "static", "js", "gestures.js")), "gestures.js não encontrado"
 
 
 def test_base_html_includes_v57(cliente):
     """base.html inclui comentários v5.7"""
-    with open("F:\\programa sitio\\templates\\base.html", encoding="utf-8") as f:
+    with open(os.path.join(RAIZ, "templates", "base.html"), encoding="utf-8") as f:
         html = f.read()
     assert 'v5.7' in html, "Comentários v5.7 não encontrados em base.html"
 
