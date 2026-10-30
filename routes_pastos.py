@@ -36,6 +36,73 @@ def _capacidade_ua_ha() -> float:
         return 0.0
 
 
+def _grafico_ocupacao_pastos(df_pastos, df_animais, df_manejo):
+    """Gráfico barras: Ocupação por pasto (UA/ha vs capacidade ideal).
+
+    Onda 8.4.1 — Pastos
+    """
+    try:
+        import pastos as PA
+        sit = PA.situacao(df_pastos, df_animais, df_manejo, 0, 0)
+        if not sit:
+            return None
+
+        labels = []
+        data = []
+        capacidade = _capacidade_ua_ha()
+
+        for pasto_id, pasto_sit in sit.items():
+            ua_ha = pasto_sit.get("ua_ha", 0)
+            labels.append(pasto_id[:15])  # Trunca se muito longo
+            data.append(ua_ha)
+
+        if not labels:
+            return None
+
+        return {"labels": labels, "data": data, "capacidade": capacidade}
+    except Exception as e:
+        app.logger.debug(f"Gráfico ocupação pastos falhou: {e}")
+        return None
+
+
+def _grafico_evolucao_lotacao(df_manejo):
+    """Gráfico área: Evolução lotação últimos 30 dias.
+
+    Onda 8.4.2 — Pastos
+    """
+    try:
+        from datetime import timedelta
+        hoje = _agora().date()
+        inicio = hoje - timedelta(days=30)
+
+        lotacao_dia = {}
+
+        for _, row in df_manejo.iterrows():
+            try:
+                data = pd.to_datetime(row.get("Data")).date()
+                if data < inicio or pd.isna(data):
+                    continue
+                data_str = data.isoformat()
+                if data_str not in lotacao_dia:
+                    lotacao_dia[data_str] = 0
+                # Conta cabeças (assume 1 cab por linha de manejo)
+                lotacao_dia[data_str] += 1
+            except Exception:
+                pass
+
+        if not lotacao_dia:
+            return None
+
+        datas = sorted(lotacao_dia.keys())
+        labels = [pd.to_datetime(d).strftime("%d/%m") for d in datas]
+        data = [lotacao_dia[d] for d in datas]
+
+        return {"labels": labels, "data": data}
+    except Exception as e:
+        app.logger.debug(f"Gráfico evolução lotação falhou: {e}")
+        return None
+
+
 def _calcular_centroid(geojson):
     """Calcula centroid de um polígono GeoJSON."""
     try:
@@ -135,6 +202,8 @@ def pastos():
 
     return render_template("pastos.html", pastos=lista, sem_pasto=sit[None],
                            capacidade=capacidade, composicao=A.composicao(df_a, estoque),
+                           grafico_ocupacao=_grafico_ocupacao_pastos(df_p, df_a, dados["Manejo"]),
+                           grafico_evolucao=_grafico_evolucao_lotacao(dados["Manejo"]),
                            hoje=pd.Timestamp(_agora()).strftime("%Y-%m-%d"))
 
 

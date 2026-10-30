@@ -63,6 +63,50 @@
   </div>
 </div>
 
+<!-- ═══ GRÁFICOS (Onda 8.4 — v5.11) ════════════════════════════════ -->
+{% if grafico_composicao %}
+<div class="card" style="margin-top:16px">
+  <h3>📊 Composição Reprodutivo</h3>
+  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+    <canvas id="grafico_composicao"></canvas>
+  </div>
+  <script defer>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof grafico_pizza === 'function') {
+      const ctx = document.getElementById('grafico_composicao').getContext('2d');
+      grafico_pizza(ctx, {{ grafico_composicao.labels|tojson }},
+        {{ grafico_composicao.data|tojson }}, {
+        tema: localStorage.getItem('gado-theme') || 'light',
+        colors: ['#19316f', '#72b148', '#95a5a6', '#e74c3c']
+      });
+    }
+  });
+  </script>
+</div>
+{% endif %}
+
+{% if grafico_partos %}
+<div class="card" style="margin-top:16px">
+  <h3>📈 Próximos Partos</h3>
+  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+    <canvas id="grafico_partos"></canvas>
+  </div>
+  <script defer>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof grafico_colunas === 'function') {
+      const ctx = document.getElementById('grafico_partos').getContext('2d');
+      grafico_colunas(ctx, {{ grafico_partos.labels|tojson }},
+        {{ grafico_partos.data|tojson }}, {
+        tema: localStorage.getItem('gado-theme') || 'light',
+        label: 'Partos previstos',
+        colors: ['#e74c3c']
+      });
+    }
+  });
+  </script>
+</div>
+{% endif %}
+
 <div class="card" style="margin-top:16px">
   <h3>Vacas ({{ situacoes|length }})</h3>
   {% for v in situacoes %}

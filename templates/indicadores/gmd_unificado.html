@@ -107,6 +107,50 @@
       {% endif %}
     {% endif %}
   </div>
+
+  <!-- ═══ GRÁFICOS (Onda 8.5 — v5.11) ════════════════════════════════ -->
+  {% if grafico_gmd_linhas %}
+  <div class="secao">
+    <h2>📈 GMD vs Tempo</h2>
+    <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+      <canvas id="grafico_gmd_linhas"></canvas>
+    </div>
+    <script defer>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof grafico_linhas === 'function') {
+        const ctx = document.getElementById('grafico_gmd_linhas').getContext('2d');
+        grafico_linhas(ctx, {{ grafico_gmd_linhas.labels|tojson }}, [
+          { label: 'GMD (kg/dia)', data: {{ grafico_gmd_linhas.data|tojson }}, color: '#8ba753' }
+        ], {
+          tema: localStorage.getItem('gado-theme') || 'light'
+        });
+      }
+    });
+    </script>
+  </div>
+  {% endif %}
+
+  {% if grafico_lotacao_barras %}
+  <div class="secao">
+    <h2>📊 Comparativo Lotação</h2>
+    <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+      <canvas id="grafico_lotacao_barras"></canvas>
+    </div>
+    <script defer>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof grafico_colunas === 'function') {
+        const ctx = document.getElementById('grafico_lotacao_barras').getContext('2d');
+        grafico_colunas(ctx, {{ grafico_lotacao_barras.labels|tojson }},
+          {{ grafico_lotacao_barras.data|tojson }}, {
+          tema: localStorage.getItem('gado-theme') || 'light',
+          label: 'UA/ha',
+          colors: ['#19316f']
+        });
+      }
+    });
+    </script>
+  </div>
+  {% endif %}
 </div>
 
 <style>

@@ -321,6 +321,51 @@
   </div>
   {% else %}<p class="muted">Nenhuma cabeça no rebanho.</p>{% endif %}
 </div>
+
+<!-- ═══ GRÁFICOS (Onda 8.4 — v5.11) ════════════════════════════════ -->
+{% if grafico_ocupacao %}
+<div class="card" style="margin-top:16px">
+  <h3>📊 Ocupação por Pasto</h3>
+  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+    <canvas id="grafico_ocupacao"></canvas>
+  </div>
+  <script defer>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof grafico_barras_horizontal === 'function') {
+      const ctx = document.getElementById('grafico_ocupacao').getContext('2d');
+      grafico_barras_horizontal(ctx, {{ grafico_ocupacao.labels|tojson }},
+        {{ grafico_ocupacao.data|tojson }}, {
+        tema: localStorage.getItem('gado-theme') || 'light',
+        label: 'UA/ha',
+        colors: ['#72b148']
+      });
+    }
+  });
+  </script>
+</div>
+{% endif %}
+
+{% if grafico_evolucao %}
+<div class="card" style="margin-top:16px">
+  <h3>📈 Evolução Lotação (30 dias)</h3>
+  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
+    <canvas id="grafico_evolucao"></canvas>
+  </div>
+  <script defer>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof grafico_linhas === 'function') {
+      const ctx = document.getElementById('grafico_evolucao').getContext('2d');
+      grafico_linhas(ctx, {{ grafico_evolucao.labels|tojson }}, [
+        { label: 'Cabeças', data: {{ grafico_evolucao.data|tojson }}, color: '#8ba753' }
+      ], {
+        tema: localStorage.getItem('gado-theme') || 'light',
+        legend: false
+      });
+    }
+  });
+  </script>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
