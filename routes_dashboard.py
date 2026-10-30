@@ -563,6 +563,13 @@ def dashboard_novo_view():
                              erro=f"Dashboard novo temporariamente indisponível: {str(e)}")
 
 
+@app.route('/dashboard-exemplo-graficos')
+def dashboard_exemplo_graficos():
+    """Página de exemplos dos componentes gráficos v5.8 (Gauge, Cards, Barras, Linhas)."""
+    return render_template("dashboard-exemplo-graficos.html")
+
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 
 

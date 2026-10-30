@@ -21,8 +21,13 @@
   <link rel="stylesheet" href="/static/css/components/accordion.css">
   <link rel="stylesheet" href="/static/css/components/form-validator.css">
   <link rel="stylesheet" href="/static/css/skeleton.css">
+  <!-- v5.8 Sprint 1: Gráficos + Cards + UI -->
+  <link rel="stylesheet" href="/static/css/components/gauge.css">
+  <link rel="stylesheet" href="/static/css/components/card-metric.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script defer src="/static/js/lazy-images.js"></script>
+  <script defer src="/static/js/charts-gauge.js"></script>
+  <script defer src="/static/js/charts-extended.js"></script>
 
   <script>
     (function() {
@@ -759,8 +764,7 @@
 
       <!-- ═══ LOTES & INDICADORES ═══ -->
       <a href="{{ url_for('lotes') }}" class="drawer-link">📦 Lotes</a>
-      <a href="{{ url_for('indicadores_engorda_pastagem') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🌾 GMD vs Pastagem</a>
-      <a href="{{ url_for('indicadores_gmd_lotacao') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📊 GMD vs Lotação</a>
+      <a href="{{ url_for('indicadores_gmd') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📊 GMD & Desempenho</a>
       <a href="{{ url_for('indicadores_racao_consumo') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🥣 Ração Consumo</a>
       <a href="{{ url_for('indicadores_mortalidade_bezerros') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🐂 Mortalidade</a>
       <a href="{{ url_for('relatorios') }}" class="drawer-link">📈 Relatórios</a>
@@ -772,11 +776,9 @@
       <a href="{{ url_for('comparativo_anual') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📈 Comparativo Anual</a>
       <a href="{{ url_for('fluxo_caixa') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📊 Fluxo Caixa</a>
       <a href="{{ url_for('fluxo_animais') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🐄 Fluxo Animais</a>
-      <a href="{{ url_for('lembretes_whatsapp') }}" class="drawer-link">📲 Lembretes WhatsApp</a>
       <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
 
       <!-- ═══ UTILIDADES ═══ -->
-      <a href="{{ url_for('nova_visita') }}" class="drawer-link">➕ Registrar Visita</a>
       <a href="{{ url_for('voz') }}" class="drawer-link">🎤 Comando de Voz</a>
       <a href="{{ url_for('ajuda') }}" class="drawer-link">❓ Ajuda</a>
       <a href="{{ url_for('tempo') }}" class="drawer-link">🌤️ Tempo</a>

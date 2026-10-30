@@ -1,0 +1,28 @@
+{# templates/components/gauge.html — Componente Gauge (Velocímetro) #}
+{# Uso: {% include "components/gauge.html" with context %} em loop ou direto #}
+
+<div class="gauge-container">
+  <div class="gauge-wrapper" id="gauge-{{ gauge_id }}"></div>
+</div>
+
+<script>
+(function() {
+  const gaugeId = '{{ gauge_id }}';
+  const elementId = 'gauge-' + gaugeId;
+
+  // Aguardar Gauge estar disponível
+  if (typeof window.Gauge !== 'undefined') {
+    new Gauge(elementId, {
+      value: {{ gauge_value | default(0) }},
+      max: {{ gauge_max | default(100) }},
+      label: '{{ gauge_label }}',
+      unit: '{{ gauge_unit | default("%") }}',
+      thresholds: [{{ gauge_threshold_low | default(30) }}, {{ gauge_threshold_high | default(70) }}],
+      width: {{ gauge_width | default(300) }},
+      height: {{ gauge_height | default(180) }}
+    });
+  } else {
+    console.warn('Gauge library not loaded for ' + elementId);
+  }
+})();
+</script>

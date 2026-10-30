@@ -1,0 +1,79 @@
+/* static/css/components/gauge.css — Gauge (velocímetro) v5.8 */
+
+.gauge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.gauge-wrapper {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.gauge-wrapper svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Dual gauge (lado a lado em desktop) */
+.gauge-duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 768px) {
+  .gauge-duo {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+/* Gauge dentro de card KPI */
+.card-gauge {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.card-gauge .gauge-wrapper {
+  flex: 1;
+}
+
+/* Animação suave ao carregar */
+@keyframes gaugeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.gauge-container {
+  animation: gaugeIn 0.4s ease-out;
+}
+
+/* Responsividade: gauge menor em mobile */
+@media (max-width: 600px) {
+  .gauge-container {
+    padding: 1rem;
+  }
+
+  .gauge-wrapper {
+    max-width: 240px;
+  }
+}

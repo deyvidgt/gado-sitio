@@ -17,28 +17,35 @@ from indicadores_v58 import (
 )
 
 
+@app.route("/indicadores/gmd")
+@login_required
+def indicadores_gmd():
+    """Indicadores unificados de GMD: vs pastagem e vs lotação."""
+    dados = _get_dados_cache()
+    resumo_pastagem = engorda_pastagem_resumo(dados)
+    analise_lotacao = gmd_lotacao_analise(dados)
+    return render_template(
+        "indicadores/gmd_unificado.html",
+        resumo_pastagem=resumo_pastagem,
+        analise_lotacao=analise_lotacao
+    )
+
+
+# Manter rotas antigas para compatibilidade (redirecionam)
 @app.route("/indicadores/engorda-pastagem")
 @login_required
 def indicadores_engorda_pastagem():
-    """Indicadores de engorda vs pastagem."""
-    dados = _get_dados_cache()
-    resumo = engorda_pastagem_resumo(dados)
-    return render_template(
-        "indicadores/engorda_pastagem.html",
-        resumo=resumo
-    )
+    """Redireciona para a rota unificada."""
+    from flask import redirect, url_for
+    return redirect(url_for('indicadores_gmd'), code=301)
 
 
 @app.route("/indicadores/gmd-lotacao")
 @login_required
 def indicadores_gmd_lotacao():
-    """Histórico de GMD vs lotação."""
-    dados = _get_dados_cache()
-    analise = gmd_lotacao_analise(dados)
-    return render_template(
-        "indicadores/gmd_lotacao.html",
-        analise=analise
-    )
+    """Redireciona para a rota unificada."""
+    from flask import redirect, url_for
+    return redirect(url_for('indicadores_gmd'), code=301)
 
 
 @app.route("/indicadores/racao-consumo")
