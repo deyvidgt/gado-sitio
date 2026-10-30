@@ -5,7 +5,7 @@ routes_agenda_unificada.py — Agenda Unificada (Calendário + Tarefas) v5.10
 """
 
 from flask import render_template, request
-from extensions import app, login_required, fmt_data
+from extensions import app, login_required, fmt_data, _agora
 from tarefas import carregar as tarefas_carregar, pendentes as tarefas_pendentes
 from routes_calendario import _eventos_mes
 from config import REPETICOES_TAREFA, NOMES_MEMBROS, MEMBROS
@@ -14,22 +14,17 @@ from calendar import monthrange, month_name
 import pandas as pd
 
 
-def _agora():
-    return datetime.now()
-
-
 @app.route("/agenda")
 @login_required
 def agenda_unificada():
     """Página unificada: calendário + tarefas + eventos operacionais."""
+    hoje = _agora().date()
     # Pega mês/ano dos parâmetros
-    mes = request.args.get("mes", type=int, default=date.today().month)
-    ano = request.args.get("ano", type=int, default=date.today().year)
+    mes = request.args.get("mes", type=int, default=hoje.month)
+    ano = request.args.get("ano", type=int, default=hoje.year)
 
     mes = max(1, min(12, mes))
     ano = max(2020, min(2100, ano))
-
-    hoje = date.today()
 
     # Eventos do mês (unificado com API manejo)
     eventos_por_dia = _eventos_mes(mes, ano)

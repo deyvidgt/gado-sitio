@@ -283,9 +283,10 @@ def tarefas_pendentes(dados: dict = None) -> list:
         tarefas_obj = tarefas.pendentes(_agora().date())
         resultado = []
 
+        hoje = _agora().date()
         for t in tarefas_obj[:5]:
-            dias_atraso = max(0, (datetime.now().date() - t.get("data_vencimento", datetime.now().date())).days)
-            dias_ate = (t.get("data_vencimento", datetime.now().date()) - datetime.now().date()).days
+            dias_atraso = max(0, (hoje - t.get("data_vencimento", hoje)).days)
+            dias_ate = (t.get("data_vencimento", hoje) - hoje).days
 
             if dias_atraso > 0:
                 status_label = f"⏰ {dias_atraso}d atrasada"

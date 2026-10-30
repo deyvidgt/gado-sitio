@@ -18,6 +18,7 @@ from calculos import (
     partes_iguais,
     calcular_resumo_financeiro, calcular_todos_membros, calcular_fluxo_caixa,
 )
+from extensions import _agora
 
 
 # ── Exportar relatório Excel ──────────────────────────────────────────────────
@@ -29,7 +30,7 @@ def exportar_relatorio_excel() -> str:
     df_v  = dados["Vendas"]
     df_m  = dados["Manejo"]
 
-    nome_arquivo = f"relatorio_gado_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    nome_arquivo = f"relatorio_gado_{_agora().strftime('%Y%m%d_%H%M%S')}.xlsx"
     nome = os.path.join(db.DATA_DIR, nome_arquivo)
     wb   = Workbook()
 
@@ -353,4 +354,4 @@ def importar_excel_antigo():
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _now() -> str:
-    return datetime.now().strftime("%d/%m/%Y %H:%M")
+    return _agora().strftime("%d/%m/%Y %H:%M")

@@ -535,9 +535,10 @@ def dashboard_novo_view():
             app.logger.debug(f"Estoque por membro falhou: {e}")
             estoque_membro = []
 
+        lot = (_lotacao_e_composicao(dados, r).get("lotacao") or {})
         estado_sitio = {
             "cabecas": r.get("estoque", 0),
-            "lotacao": 0,  # TODO: integrar com pastos.nivel()
+            "lotacao": lot.get("ua_ha") or 0,
         }
 
         # Renderizar template
