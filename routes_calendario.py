@@ -173,8 +173,8 @@ def _eventos_mes(mes, ano, hoje=None):
 def calendario_pagina():
     """Mostra grid de calendário com eventos do mês."""
     # Pega mês/ano dos parâmetros ou usa hoje
-    mes = request.args.get("mes", type=int, default=date.today().month)
-    ano = request.args.get("ano", type=int, default=date.today().year)
+    mes = request.args.get("mes", type=int, default=_agora().date().month)
+    ano = request.args.get("ano", type=int, default=_agora().date().year)
 
     # Valida mês/ano
     mes = max(1, min(12, mes))
@@ -184,7 +184,7 @@ def calendario_pagina():
     eventos_por_dia = _eventos_mes(mes, ano)
 
     # Monta grid: semanas com dias da semana
-    hoje = date.today()
+    hoje = _agora().date()
     primeiro_dia, dias_mes = monthrange(ano, mes)
 
     # Cria lista de semanas [0-6], sendo 0=seg, 6=dom
@@ -240,7 +240,7 @@ def calendario_pagina():
 
     # Próximos 7 dias
     proximos_7_dias = []
-    data_inicio = date.today()
+    data_inicio = _agora().date()
     data_fim = data_inicio + timedelta(days=7)
     for d in sorted(eventos_por_dia.keys()):
         if data_inicio <= d < data_fim:

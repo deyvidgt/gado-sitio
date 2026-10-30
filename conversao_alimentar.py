@@ -9,6 +9,15 @@ Detecta desperdício (>15%) e sugere otimizações.
 """
 import pandas as pd
 from datetime import date, datetime, timedelta
+
+
+def _hoje_br():
+    """Hoje no fuso de Brasília (o servidor pode estar em UTC)."""
+    try:
+        from extensions import _agora
+        return _agora().date()
+    except Exception:
+        return date.today()
 from typing import Dict, List, Tuple, Optional
 
 import animais
@@ -74,7 +83,7 @@ def obter_historico_consumo(animal_id: str, dias: int = 60) -> Dict:
             return {"animal_id": animal_id, "registros": [], "consumo_total_kg": 0}
 
         # Filtra por data (últimos N dias)
-        data_limite = date.today() - timedelta(days=dias)
+        data_limite = _hoje_br() - timedelta(days=dias)
         df_manejo['_data'] = df_manejo.get('Data', '').apply(_data)
         df_filtro = df_manejo[df_manejo['_data'].notna()]
         df_filtro = df_filtro[df_filtro['_data'] >= data_limite]
@@ -180,7 +189,7 @@ def obter_ganho_peso(animal_id: str, dias: int = 60) -> Dict:
 
         # Peso final (mais recente) e inicial (há N dias)
         peso_final = registros_animal[-1].get('peso_kg')
-        data_limite = date.today() - timedelta(days=dias)
+        data_limite = _hoje_br() - timedelta(days=dias)
 
         peso_inicial = None
         for item in registros_animal:
@@ -199,8 +208,8 @@ def obter_ganho_peso(animal_id: str, dias: int = 60) -> Dict:
             ganho = peso_final - peso_inicial
             if ganho > 0:
                 # Calcula dias entre primeiro e último registro
-                primeiro = registros_animal[0].get('data', date.today())
-                ultimo = registros_animal[-1].get('data', date.today())
+                primeiro = registros_animal[0].get('data', _hoje_br())
+                ultimo = registros_animal[-1].get('data', _hoje_br())
                 dias_com_dados = (ultimo - primeiro).days + 1
                 ganho_dia = ganho / dias_com_dados if dias_com_dados > 0 else 0
 

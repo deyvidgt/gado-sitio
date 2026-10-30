@@ -366,7 +366,8 @@ def verificar_alertas():
     dados = carregar_todas()
     df_man = dados["Manejo"]
     alertas = []
-    hoje = datetime.now()
+    from extensions import _agora
+    hoje = _agora()
 
     # Alertas de saúde
     from db import get_alertas_saude

@@ -23,6 +23,16 @@ def _data(valor):
         return None
 
 
+def _hoje_br():
+    """Hoje no fuso de Brasília — date.today() usa o fuso do servidor (UTC no
+    PythonAnywhere) e adiantava/atrasava os cálculos de 'hoje' pela manhã."""
+    try:
+        from extensions import _agora
+        return _agora().date()
+    except Exception:
+        return date.today()
+
+
 def _numero(valor):
     if isinstance(valor, (int, float)):
         return float(valor)
@@ -165,7 +175,7 @@ def contagens_rebanho(animais):
 
 def dias_em_lactacao(data_parto, referencia=None):
     parto = _data(data_parto)
-    referencia = _data(referencia) or date.today()
+    referencia = _data(referencia) or _hoje_br()
     if parto is None or parto > referencia:
         return None
     return (referencia - parto).days
@@ -192,7 +202,7 @@ def historico_colchao(df_colchao, local=None, referencia=None):
         Se local não fornecido:
             dict de local → status (acima)
     """
-    ref = _data(referencia) or date.today()
+    ref = _data(referencia) or _hoje_br()
 
     if df_colchao is None or df_colchao.empty:
         if local:

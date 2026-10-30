@@ -11,6 +11,15 @@ Aprimora cálculos de UA/ha com:
 """
 import pandas as pd
 from datetime import date, datetime, timedelta
+
+
+def _hoje_br():
+    """Hoje no fuso de Brasília (o servidor pode estar em UTC)."""
+    try:
+        from extensions import _agora
+        return _agora().date()
+    except Exception:
+        return date.today()
 from typing import Dict, List, Optional
 
 import pastos
@@ -214,7 +223,7 @@ def recomendar_rotacao(pasto_id: str) -> Dict:
         taxa_ocupacao = estimativa.get('taxa_ocupacao_percent', 0)
         
         plano = []
-        data_inicio = date.today()
+        data_inicio = _hoje_br()
         
         # Simula 3 ciclos de rotação
         for ciclo in range(3):

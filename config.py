@@ -348,42 +348,6 @@ OPCOES_LEITE = {
     "estado_colchao": ["Bom", "Regular", "Ruim"],
 }
 
-# v5.4 — Módulo leiteiro (gestão de leite, ordenha, calculador de ração)
-COLUNAS_LEITE_PRODUCAO = [
-    "Data", "Vaca ID", "Brinco", "Modo Registro", "Ordenha", "Litros",
-    "CCS (células/mL)", "CPP (UFC/mL)", "Qualidade", "Temperatura",
-    "Observação", "Responsável", "ID Envio", "Criado Em",
-]
-COLUNAS_LEITE_CONFIG = [
-    "Preço por Litro", "Meta Litros por Vaca", "Queda de Alerta (%)",
-    "Dias sem Registro", "Número de Ordenhas", "Dias até Secagem", "Observações",
-]
-COLUNAS_LEITE_ALIMENTACAO = [
-    "Produto", "Fabricante", "Categoria", "Peso Saco (kg)",
-    "Proteína Bruta (%)", "NDT/Energia (%)", "Fibra (%)", "Cálcio (%)",
-    "Fósforo (%)", "Consumo Recomendado (g/cab/dia)", "Preço por Saco (R$)",
-    "Lote", "Validade", "Observação", "Ativo",
-]
-COLUNAS_LEITE_NECESSIDADES = [
-    "Categoria Produtiva", "Nutriente ou Item", "Valor Diário", "Unidade",
-    "Fonte", "Data Revisão", "Observação", "Ativo",
-]
-COLUNAS_LEITE_TRATAMENTOS = [
-    "Data", "Vaca ID", "Brinco", "Tipo", "Descrição", "Produto/Serviço",
-    "Quantidade", "Unidade", "Custo (R$)", "Responsável", "Período de Carência",
-    "Observação", "ID Envio", "Criado Em",
-]
-COLUNAS_LEITE_CONFORTO = [
-    "Data", "Local", "Sombra", "Água Disponível", "Ventilação",
-    "Área de Descanso", "Lotação", "Estresse Térmico", "Descanso Observado",
-    "Estado do Cocho", "Observação", "Responsável", "ID Envio", "Criado Em",
-]
-COLUNAS_LEITE_COLCHAO = [
-    "Data", "Local", "Material", "Quantidade", "Unidade", "Custo (R$)",
-    "Fornecedor", "Condição", "Estado", "Próxima Troca", "Observação", "Foto Antes",
-    "Foto Depois", "Responsável", "ID Envio", "Criado Em",
-]
-
 # v5.10 Onda 2 — Histórico de Doenças e Tratamentos (todas as abas)
 COLUNAS_TRATAMENTOS = [
     "ID Animal", "Data", "Brinco", "Tipo Doença", "Tratamento", "Medicamento",

@@ -102,7 +102,7 @@ def agenda_unificada():
 
     # Próximos 7 dias (para o novo calendário)
     proximos_7_dias = []
-    data_inicio = date.today()
+    data_inicio = _agora().date()
     data_fim = data_inicio + timedelta(days=7)
     for d in sorted(eventos_por_dia.keys()):
         if data_inicio <= d < data_fim:

@@ -5,7 +5,7 @@ from datetime import date, timedelta
 
 import pandas as pd
 
-from leite import _data, _numero, contagens_rebanho, _sem_duplicidade, historico_colchao
+from leite import _data, _numero, contagens_rebanho, _sem_duplicidade, historico_colchao, _hoje_br
 
 
 def _item(origem, titulo, detalhe, prioridade="aviso", acao="Abrir módulo", rota=None):
@@ -37,7 +37,7 @@ def _colchao_alertas(colchao, referencia):
         return []
 
     itens = []
-    ref = _data(referencia) or date.today()
+    ref = _data(referencia) or _hoje_br()
     historicos = historico_colchao(colchao, referencia=ref)
 
     for local, hist in historicos.items():
@@ -95,6 +95,48 @@ def _colchao_alertas(colchao, referencia):
     return itens
 
 
+def _qualidade_leite_alertas(producao, referencia):
+    """CCS/CPP da última leitura: CCS > 400k (urgente) / 200k (aviso),
+    CPP > 500k (urgente) / 100k (aviso)."""
+    if producao is None or producao.empty:
+        return []
+
+    linhas = producao.copy()
+    linhas["_data"] = linhas.get("Data", "").map(_data)
+    linhas = linhas[linhas["_data"].notna()]
+    if referencia is not None:
+        linhas = linhas[linhas["_data"] <= referencia]
+    if linhas.empty:
+        return []
+
+    linha = linhas.sort_values("_data").iloc[-1]
+    ccs = _numero(linha.get("CCS (células/mL)"))
+    cpp = _numero(linha.get("CPP (UFC/mL)"))
+    if ccs is None and cpp is None:
+        return []
+
+    itens = []
+    # short: média do rebanho esconde vaca ruim — alerta pela pior leitura do dia.
+    for valor, limites, nome, unidade, rota in (
+        (ccs, (200_000, 400_000), "CCS", "células/mL", "/leite/producao"),
+        (cpp, (100_000, 500_000), "CPP", "UFC/mL", "/leite/producao"),
+    ):
+        if valor is None:
+            continue
+        aviso, urgente = limites
+        if valor >= urgente:
+            prioridade = "urgente"
+        elif valor >= aviso:
+            prioridade = "aviso"
+        else:
+            continue
+        itens.append(_item("qualidade", f"🥛 {nome} alto",
+                           f"Última leitura de {nome}: {int(valor):,} {unidade} "
+                           f"({prioridade}).",
+                           prioridade, "Ver produção", rota))
+    return itens
+
+
 def _nutricao_alertas(alimentacao):
     if alimentacao is None or alimentacao.empty:
         return [_item("nutrição", "Nutrição e consumo",
@@ -116,7 +158,7 @@ def _nutricao_alertas(alimentacao):
 
 def todos(*, producao=None, animais=None, tratamentos=None, colchao=None,
            alimentacao=None, referencia=None):
-    referencia = _data(referencia) or date.today()
+    referencia = _data(referencia) or _hoje_br()
     itens = []
     contagens = contagens_rebanho(animais)
     if producao is not None and contagens["vacas_lactacao"]:
@@ -127,6 +169,7 @@ def todos(*, producao=None, animais=None, tratamentos=None, colchao=None,
                                f"Há {contagens['vacas_lactacao']} vaca(s) em lactação sem registro desde o último dia.",
                                "urgente", "Registrar ordenha", "/leite/producao"))
     itens.extend(_carencia(tratamentos, referencia))
+    itens.extend(_qualidade_leite_alertas(producao, referencia))
     itens.extend(_colchao_alertas(colchao, referencia))
     itens.extend(_nutricao_alertas(alimentacao))
     if not any(item["origem"] == "conforto" for item in itens):

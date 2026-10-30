@@ -30,6 +30,26 @@ def test_alertas_detecta_tratamento_em_carencia():
     assert "A0001" in carencia["detalhe"]
 
 
+def test_alertas_detecta_qualidade_do_leite_por_ccs_e_cpp():
+    """CLAUDE.md documenta _qualidade_leite_alertas (CCS 200k/400k, CPP 100k/500k)."""
+    casos = [
+        ({"CCS (células/mL)": "450000"}, "urgente"),
+        ({"CCS (células/mL)": "250000"}, "aviso"),
+        ({"CCS (células/mL)": "100000"}, None),
+        ({"CPP (UFC/mL)": "600000"}, "urgente"),
+        ({"CPP (UFC/mL)": "200000"}, "aviso"),
+    ]
+    for campos, esperado in casos:
+        producao = pd.DataFrame([dict(campos, Data="25/10/2026", Litros=18,
+                                      **{"Modo Registro": "total"})])
+        itens = alertas.todos(producao=producao, referencia=date(2026, 10, 26))
+        achou = [i for i in itens if i["origem"] == "qualidade"]
+        if esperado is None:
+            assert not achou, campos
+        else:
+            assert achou and achou[0]["prioridade"] == esperado, campos
+
+
 def test_alertas_detecta_colchao_vencido_e_ficha_nutricional_incompleta():
     colchao = pd.DataFrame([{
         "Data": "20/10/2026", "Local": "Baia", "Condição": "suja",

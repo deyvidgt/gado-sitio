@@ -61,6 +61,16 @@ from datetime import datetime
 from config import MEMBROS, NOMES_MEMBROS
 
 
+def _hoje_br():
+    """Hoje no fuso de Brasília — o servidor pode estar em UTC e o dia virar
+    antes da hora no cálculo de janelas mensais/anuais."""
+    try:
+        from extensions import _agora
+        return _agora().date()
+    except Exception:
+        return datetime.now().date()
+
+
 def _normalizar_membro(valor) -> str | None:
     """
     Converte um texto de "Perda De"/dono para a CHAVE interna do membro.
@@ -1293,8 +1303,8 @@ def fluxo_caixa_mensal(df_comp, df_gast, df_vend, meses=None):
     from datetime import date
     
     meses = meses or 12
-    hoje = date.today()
-    inicio = pd.Timestamp(year=hoje.year - (1 if meses > 12 else 0), 
+    hoje = _hoje_br()
+    inicio = pd.Timestamp(year=hoje.year - (1 if meses > 12 else 0),
                          month=hoje.month - (meses % 12) or 12, day=1)
     
     def _valor_por_mes(df, coluna_valor="Valor Total (R$)"):
@@ -1344,8 +1354,9 @@ def comparativo_anual(df_comp, df_gast, df_vend, df_man, df_anim=None):
     """
     import pandas as pd
     from datetime import date, timedelta
-    
-    hoje = date.today()
+    from extensions import _agora
+
+    hoje = _agora().date()
     ano_atual_inicio = pd.Timestamp(year=hoje.year, month=1, day=1)
     ano_anterior_inicio = pd.Timestamp(year=hoje.year - 1, month=1, day=1)
     ano_anterior_fim = pd.Timestamp(year=hoje.year - 1, month=12, day=31)

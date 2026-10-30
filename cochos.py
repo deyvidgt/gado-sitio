@@ -11,6 +11,15 @@ Integra visitas com alimentação para rastrear:
 """
 
 from datetime import datetime, date, timedelta
+
+
+def _hoje_br():
+    """Hoje no fuso de Brasília (o servidor pode estar em UTC)."""
+    try:
+        from extensions import _agora
+        return _agora().date()
+    except Exception:
+        return date.today()
 from typing import Dict, List, Optional, Tuple
 import pandas as pd
 
@@ -73,7 +82,7 @@ def extrair_consumo_visitas(df_visitas, dias: int = 60) -> Dict[str, Dict]:
     # Filtra por data (últimos N dias)
     df_visitas = df_visitas.copy()
     df_visitas["_data"] = df_visitas.get("Data", "").apply(_normalizar_data)
-    data_limite = date.today() - timedelta(days=dias)
+    data_limite = _hoje_br() - timedelta(days=dias)
     df_filtro = df_visitas[df_visitas["_data"].notna()]
     df_filtro = df_filtro[df_filtro["_data"] >= data_limite]
 

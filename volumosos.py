@@ -2,6 +2,15 @@
 """Gestão de volumosos (feno, silo, etc) — entrada e consumo."""
 
 from datetime import date, datetime, timedelta
+
+
+def _hoje_br():
+    """Hoje no fuso de Brasília (o servidor pode estar em UTC)."""
+    try:
+        from extensions import _agora
+        return _agora().date()
+    except Exception:
+        return date.today()
 import pandas as pd
 
 
@@ -81,7 +90,7 @@ def dias_faltam(tipo, hoje=None):
     """Dias até acabar volumoso (baseado em última entrada e consumo médio últimos 7 dias)."""
     from db import carregar_aba
 
-    hoje = _data(hoje) or date.today()
+    hoje = _data(hoje) or _hoje_br()
     df_vol = carregar_aba("Volumosos")
     df_cons = carregar_aba("Consumo Volumosos")
 
@@ -105,7 +114,7 @@ def situacao_volumosos(hoje=None):
     """Status de todos os volumosos: estoque, dias faltam, alerta."""
     from db import carregar_aba
 
-    hoje = _data(hoje) or date.today()
+    hoje = _data(hoje) or _hoje_br()
     df_vol = carregar_aba("Volumosos")
 
     if df_vol is None or df_vol.empty:

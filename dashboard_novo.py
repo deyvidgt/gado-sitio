@@ -197,15 +197,17 @@ def alertas_consolidados(dados: dict) -> list:
     # CCS e mastite (v5.4)
     try:
         leite_prod = dados.get("Leite Produção") or carregar_aba("Leite Produção")
-        if not leite_prod.empty and "CCS" in leite_prod.columns:
-            altos_ccs = leite_prod[
-                (leite_prod["CCS"] > 200000) |
-                (leite_prod["CPP"] > 100000)
-            ].tail(5)
+        # Nomes reais da aba (config.COLUNAS_LEITE_PRODUCAO). Com "CCS"/"CPP" puro
+        # o `if` nunca era verdadeiro e este alerta nunca aparecia.
+        col_ccs, col_cpp = "CCS (células/mL)", "CPP (UFC/mL)"
+        if not leite_prod.empty and col_ccs in leite_prod.columns:
+            ccs_num = pd.to_numeric(leite_prod[col_ccs], errors="coerce")
+            cpp_num = pd.to_numeric(leite_prod.get(col_cpp), errors="coerce")
+            altos_ccs = leite_prod[(ccs_num > 200000) | (cpp_num > 100000)].tail(5)
 
             for _, row in altos_ccs.iterrows():
-                vaca = row.get("Vaca", "")
-                ccs = row.get("CCS", 0)
+                vaca = row.get("Vaca ID") or row.get("Brinco", "")
+                ccs = pd.to_numeric(row.get(col_ccs), errors="coerce") or 0
                 if ccs > 400000:
                     alertas.append({
                         "icon": "⚠️",

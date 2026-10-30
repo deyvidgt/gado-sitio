@@ -161,11 +161,15 @@ def resultado():
     dados = _get_dados_cache()
     membros_dict = _get_membros_cache()
     resumo_geral = calcular_resumo_financeiro(dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"])
+    # O resultado por membro não traz estoque (só o que já foi vendido); a página
+    # mostra "Estoque" por dono, que vem da conta de entradas/saídas por membro.
+    estoque = calcular_estoque_por_membro(dados["Compras"], dados["Vendas"], dados["Manejo"])
 
     return render_template(
         "resultado.html",
         resumo_geral=resumo_geral,
         membros=membros_dict,
+        estoque_membros=estoque,
         MEMBROS=MEMBROS,
         NOMES_MEMBROS=NOMES_MEMBROS,
         EMOJIS_MEMBROS=EMOJIS_MEMBROS,
@@ -295,9 +299,12 @@ def _calcular_fluxo_animais(compras, vendas, manejo, dias=90):
             if not v.empty:
                 saida += int(pd.to_numeric(v["Qtd Cabeças"], errors="coerce").sum())
         if not manejo.empty:
-            m = manejo[(manejo["Tipo"].isin(["Morte", "Perda"])) &
+            # O tipo na aba é "Morte/Perda" (config.TIPOS_MANEJO) — com ["Morte","Perda"]
+            # nenhuma morte entrava na saída.
+            m = manejo[(manejo["Tipo"].astype(str).str.strip().isin(["Morte/Perda", "Morte", "Perda"])) &
                       (pd.to_datetime(manejo["Data"], format="%d/%m/%Y", errors="coerce").dt.date == data.date())]
-            saida += len(m)
+            if not m.empty:
+                saida += int(pd.to_numeric(m["Qtd Cabeças"], errors="coerce").fillna(0).sum())
 
         entrada_total += entrada
         saida_total += saida

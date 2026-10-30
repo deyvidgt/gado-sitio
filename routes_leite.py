@@ -168,7 +168,7 @@ def _grafico_saude_leite(df_producao):
 
 def _comparar_vacas(ids_animais, periodo_dias=30):
     """Compara até 3 vacas leiteiras no período."""
-    hoje = date.today()
+    hoje = _agora().date()
     inicio = hoje - timedelta(days=periodo_dias)
 
     df_producao = carregar_aba("Leite Produção")
@@ -203,8 +203,12 @@ def _comparar_vacas(ids_animais, periodo_dias=30):
             }
         else:
             litros_total = sum(_numero(r.get("Litros", 0)) or 0 for _, r in registros.iterrows())
-            ccs_ultim = registros[registros.get("CCS") != ""].tail(1).get("CCS").values
-            cpp_ultim = registros[registros.get("CPP") != ""].tail(1).get("CPP").values
+            # Nomes reais das colunas (config.COLUNAS_LEITE_PRODUCAO); "CCS"/"CPP"
+            # puro não existe na aba e o filtro virava KeyError → 500.
+            ccs_col = registros.get("CCS (células/mL)", pd.Series("", index=registros.index))
+            cpp_col = registros.get("CPP (UFC/mL)", pd.Series("", index=registros.index))
+            ccs_ultim = registros[ccs_col.astype(str).str.strip() != ""].tail(1).get("CCS (células/mL)").values
+            cpp_ultim = registros[cpp_col.astype(str).str.strip() != ""].tail(1).get("CPP (UFC/mL)").values
             resultado[vaca_id] = {
                 "producao_litros_dia": round(litros_total / max(len(registros), 1), 2),
                 "custo_diario": 0.0,
