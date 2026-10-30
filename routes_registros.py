@@ -516,6 +516,10 @@ def editar_venda(idx):
 def manejo():
     dados = _get_dados_cache()
     df = dados["Manejo"]
+    ordem = request.args.get("ordem", "desc")
+    if not df.empty and "Data" in df.columns:
+        df = df.sort_values("Data", ascending=(ordem == "asc"), na_position="last")
+
     rows = []
     for real_idx, row in (df.iterrows() if not df.empty else []):
         d = row.to_dict()
@@ -523,13 +527,6 @@ def manejo():
         d["Brincos"] = _brincos_legiveis(d.get("Brincos"))
         d["_idx"] = int(real_idx)
         rows.append(d)
-
-    # Ordenação por data
-    ordem = request.args.get("ordem", "desc")
-    if ordem == "asc":
-        rows.sort(key=lambda x: str(x.get("Data", "")))
-    else:
-        rows.sort(key=lambda x: str(x.get("Data", "")), reverse=True)
 
     return render_template("lista.html", titulo="Manejo 🩺", secao="manejo", aba="Manejo",
                            colunas=["Data","Tipo","Qtd Cabeças","Produto","Brincos","Descrição","Responsável","Perda De","Nascimento De"],

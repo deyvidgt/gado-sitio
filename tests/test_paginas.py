@@ -287,7 +287,8 @@ def test_listas_mostram_cabecas_como_inteiro(cliente):
         assert not re.search(r"<td>\s*\d+\.0\s*</td>", html), rota
 
 
-def test_lista_tem_dados_para_total_filtrado(cliente):
+def test_lista_tem_dados_para_total_filtrado(cliente, dados_restaurados):
+    db.salvar_linha("Gastos", ["01/01/2026", "Outro", "Teste", 100, 1, 100, "Deyvid", "", ""])
     html = cliente.get("/gastos").get_data(as_text=True)
     assert 'id="total-valor"' in html and "data-valor=" in html
 
@@ -330,7 +331,8 @@ def test_tela_de_login_tem_tema_e_aviso_de_senha(flask_app):
 
 
 @pytest.mark.parametrize("url", ["/vendas/nova", "/compras/nova", "/gastos/novo"])
-def test_faixa_de_info_do_formulario_nao_vira_colunas(cliente, url):
+def test_faixa_de_info_do_formulario_nao_vira_colunas(cliente, url, dados_restaurados):
+    db.salvar_linha("Compras", ["01/01/2026", 1, 100, 100, 1, 0, 0, "Teste", "Deyvid"])
     """A faixa azul é flex: cada pedaço de texto solto virava uma coluna e, no
     celular, passava da largura da tela. O texto tem que estar num só <span>."""
     import re

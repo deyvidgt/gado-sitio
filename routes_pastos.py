@@ -64,7 +64,12 @@ def _extrair_animais_por_pasto(df_manejo, df_animais=None):
     dono_cores = {}
     if df_animais is not None and not df_animais.empty:
         for _, animal in df_animais.iterrows():
-            brinco = f"{animal.get('Brinco Cor', '')} {animal.get('Brinco Nº', '')}".strip()
+            partes = []
+            for campo in ("Brinco Cor", "Brinco Nº"):
+                valor = animal.get(campo, "")
+                if pd.notna(valor) and str(valor).strip().lower() != "nan":
+                    partes.append(str(valor).strip())
+            brinco = " ".join(partes)
             cor = animal.get("Cor Dono", "#999")
             if brinco:
                 dono_cores[brinco] = cor
@@ -82,7 +87,7 @@ def _extrair_animais_por_pasto(df_manejo, df_animais=None):
                 if brincos_str and brincos_str != "":
                     for brinco in brincos_str.split(","):
                         brinco_limpo = brinco.strip().split("#")[0].strip()
-                        if brinco_limpo:
+                        if brinco_limpo and brinco_limpo.lower() != "nan":
                             brincos_set.add(brinco_limpo)
             if brincos_set:
                 brincos_list = sorted(list(brincos_set))
