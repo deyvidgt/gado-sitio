@@ -170,6 +170,103 @@ def _entrada_saida_timeline(dados, dias=90):
     }
 
 
+def _grafico_resultado_mensal(r_anual):
+    """Gráfico de colunas: Resultado nos últimos 12 meses.
+
+    r_anual vem de calculos.calcular_resultado_anual() e tem a chave 'resultado_por_mes'.
+    """
+    try:
+        resultado_por_mes = r_anual.get("resultado_por_mes", {})
+        if not resultado_por_mes:
+            return None
+
+        # Ordena por mês (jan-dez)
+        meses_pt = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+                    "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+        labels = []
+        data = []
+
+        for mes_num in range(1, 13):
+            mes_str = str(mes_num).zfill(2)
+            if mes_str in resultado_por_mes:
+                labels.append(meses_pt[mes_num - 1])
+                data.append(resultado_por_mes[mes_str])
+
+        if not labels:
+            return None
+
+        return {"labels": labels, "data": data}
+    except Exception as e:
+        app.logger.debug(f"Gráfico resultado mensal falhou: {e}")
+        return None
+
+
+def _grafico_cmp_gpcab_evolucao(r_timeline):
+    """Gráfico de linhas: Evolução CMP e GPCab últimos 12 meses.
+
+    r_timeline vem de calculos._build_cmp_timeline() e _build_gpcab_timeline().
+    """
+    try:
+        from calculos import _build_cmp_timeline, _build_gpcab_timeline
+        cmp_timeline = _build_cmp_timeline()
+        gpcab_timeline = _build_gpcab_timeline()
+
+        if not cmp_timeline or not gpcab_timeline:
+            return None
+
+        # Últimos 12 pontos
+        meses_pt = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+                    "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+        labels = meses_pt[-12:] if len(meses_pt) >= 12 else meses_pt
+
+        return {
+            "labels": labels,
+            "cmp": cmp_timeline[-12:] if len(cmp_timeline) >= 12 else cmp_timeline,
+            "gpcab": gpcab_timeline[-12:] if len(gpcab_timeline) >= 12 else gpcab_timeline,
+        }
+    except Exception as e:
+        app.logger.debug(f"Gráfico CMP/GPCab falhou: {e}")
+        return None
+
+
+def _grafico_gastos_por_tipo(dados):
+    """Gráfico de pizza: Composição de gastos por tipo (últimos 30 dias).
+
+    Agrupa por tipo de gasto (Alimentação, Saúde, Manutenção, etc).
+    """
+    try:
+        from datetime import timedelta
+        df_gastos = dados.get("Gastos")
+        if df_gastos is None or df_gastos.empty:
+            return None
+
+        hoje = _agora().date()
+        inicio = hoje - timedelta(days=30)
+
+        gastos_por_tipo = {}
+        for _, row in df_gastos.iterrows():
+            try:
+                data = pd.to_datetime(row.get("Data")).date()
+                if data < inicio:
+                    continue
+                tipo = row.get("Tipo", "Outro") or "Outro"
+                valor = float(row.get("Valor Total (R$)", 0) or 0)
+                gastos_por_tipo[tipo] = gastos_por_tipo.get(tipo, 0) + valor
+            except Exception:
+                pass
+
+        if not gastos_por_tipo:
+            return None
+
+        labels = list(gastos_por_tipo.keys())
+        data = list(gastos_por_tipo.values())
+
+        return {"labels": labels, "data": data}
+    except Exception as e:
+        app.logger.debug(f"Gráfico gastos por tipo falhou: {e}")
+        return None
+
+
 @app.route("/")
 @login_required
 def dashboard():
@@ -271,6 +368,11 @@ def dashboard():
     # Previsão do tempo (v5.9)
     tempo_previsao = tempo_mod.previsao()
 
+    # Gráficos da Onda 8.2 (Dashboard)
+    grafico_resultado = _grafico_resultado_mensal(r)
+    grafico_cmp_gpcab = _grafico_cmp_gpcab_evolucao(r)
+    grafico_gastos = _grafico_gastos_por_tipo(dados)
+
     return render_template("dashboard.html", r=r, membros=membros_r, insumos=insumos,
                            estoque_membro=estoque_membro, recentes=recentes[:6],
                            alertas=alertas, indicadores=indicadores, rebanho_est=rebanho_est,
@@ -278,6 +380,8 @@ def dashboard():
                            atencao_agora=atencao_agora, ocorrencias=recentes[:6],
                            resumo_leite=resumo_leite, saude_leite=saude_leite, tendencia_peso=[], cards=cards,
                            entrada_saida=entrada_saida, tempo=tempo_previsao, pastos_disponivel=pastos_disponivel,
+                           grafico_resultado=grafico_resultado, grafico_cmp_gpcab=grafico_cmp_gpcab,
+                           grafico_gastos=grafico_gastos,
                            **extras, NOMES=NOMES_MEMBROS, EMOJIS=EMOJIS_MEMBROS, MEMBROS=MEMBROS)
 
 
