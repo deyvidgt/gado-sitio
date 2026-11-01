@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}🤖 IA Preditiva{% endblock %}
+{% block content %}
+<h1>🤖 IA Preditiva</h1>
+<p class="muted">Previsões de risco de morte, cio e consanguinidade. Atualizado em {{ timestamp }}.</p>
+
+<div class="metrics">
+  <div class="metric">
+    <span class="valor">{{ urgentes|length }}</span>
+    <span class="rotulo">🚨 Urgentes</span>
+  </div>
+  <div class="metric">
+    <span class="valor">{{ avisos|length }}</span>
+    <span class="rotulo">⚠️ Avisos</span>
+  </div>
+</div>
+
+{% if not urgentes and not avisos %}
+  <div class="card">
+    <p>Nenhum risco detectado — ou os modelos ainda não foram treinados.</p>
+    <p class="muted">Para treinar: <code>python scripts/train_ia_modelos.py</code></p>
+  </div>
+{% endif %}
+
+{% if urgentes %}
+<div class="card">
+  <h2>🚨 Urgentes</h2>
+  {% for u in urgentes %}
+  <div class="linha">
+    <strong>{{ u.tipo }}</strong>
+    <span>{{ u.animal }}</span>
+    <span class="badge badge-ruim">{{ u.get('prob', u.get('dias', '')) }}</span>
+    <small>{{ u.acao }}</small>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if avisos %}
+<div class="card">
+  <h2>⚠️ Avisos</h2>
+  {% for a in avisos %}
+  <div class="linha">
+    <strong>{{ a.tipo }}</strong>
+    <span>{{ a.animal }}</span>
+    <span class="badge badge-aviso">{{ a.get('avk', a.get('prob', '')) }}</span>
+    <small>{{ a.acao }}</small>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

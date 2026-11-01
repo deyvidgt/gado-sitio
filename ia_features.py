@@ -39,7 +39,7 @@ def extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje=None):
     features = {}
 
     # === AGE ===
-    data_nasc = pd.to_datetime(animal.get('Data Nascimento', None), errors='coerce', dayfirst=True)
+    data_nasc = pd.to_datetime(animal.get('Nascimento', None), errors='coerce', dayfirst=True)
     if pd.isna(data_nasc):
         data_nasc = hoje - timedelta(days=365 * 2)  # Default: 2 years old
     idade_dias = max(0, (hoje - data_nasc).days)
@@ -77,9 +77,13 @@ def extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje=None):
     features['dias_ultimo_trat_norm'] = min(dias_trat / 180, 1.0)
 
     # === INBREEDING (AVK) ===
-    # Simple heuristic: check if pai_id and mae_id start with same character
-    pai_id = str(animal.get('Pai', '')).strip() if 'Pai' in animal.index else ''
-    mae_id = str(animal.get('Mãe', '')).strip() if 'Mãe' in animal.index else ''
+    # Aceita 'Pai'/'Mãe' (planilha real) e 'pai_id'/'mae_id' (dados sintéticos).
+    pai_id = str(animal.get('Pai', animal.get('pai_id', '')) or '').strip()
+    mae_id = str(animal.get('Mãe', animal.get('mae_id', '')) or '').strip()
+    if pai_id.lower() in ('none', 'nan'):
+        pai_id = ''
+    if mae_id.lower() in ('none', 'nan'):
+        mae_id = ''
 
     if pai_id and mae_id and pai_id[0] == mae_id[0]:
         features['inbreeding_avk'] = 0.15  # High inbreeding indicator
@@ -87,7 +91,15 @@ def extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje=None):
         features['inbreeding_avk'] = 0.05
 
     # === WEIGHT ===
-    peso_atual = animal.get('Peso Estimado (kg)', np.nan)
+    # Peso vem da aba Manejo (balança), não do cadastro: pesagem.todas() -> {ID: [(data, kg)]}
+    peso_atual = np.nan
+    try:
+        from pesagem import todas as _pesos
+        hist = _pesos(df_manejo).get(animal_id) or []
+        if hist:
+            peso_atual = hist[-1][1]
+    except Exception:
+        pass
     if pd.isna(peso_atual):
         peso_atual = 400.0
     peso_esperado = 400.0 if features['sexo'] == 1.0 else 450.0

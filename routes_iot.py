@@ -1,131 +1,88 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""routes_iot.py — 4 endpoints IoT: pesagem, temperatura, consumo, sync"""
+"""routes_iot.py — 4 endpoints IoT: pesagem, temperatura, consumo, sync.
 
-from flask import Blueprint, request, jsonify
-from datetime import datetime
-import pandas as pd
+Grava na aba Manejo pelo helper A._linha_manejo (posicional, ordem de COLUNAS_MANEJO).
+"""
 import logging
+from datetime import datetime
+
+from flask import jsonify, request
+
+from extensions import app, login_required
 
 logger = logging.getLogger(__name__)
 
-bp = Blueprint('iot', __name__, url_prefix='/api/iot')
+# Tipos de manejo aceitos pelo módulo IoT (existem em config.TIPOS_MANEJO).
+_TIPOS_IOT = {
+    'pesagem': 'Pesagem',
+    'temperatura': 'Temperatura',
+    'consumo': 'Consumo',
+}
 
 
-def _salvar_manejo(tipo, dados, brinco='IoT'):
-    """Salva leitura em Manejo aba."""
+def _salvar_manejo(tipo, dados, brincos=''):
+    """Grava a leitura em Manejo. Devolve True/False."""
+    nome_tipo = _TIPOS_IOT.get(tipo)
+    if not nome_tipo:
+        return False
     try:
-        from db import ler_aba, salvar_linha
-        df = ler_aba('Manejo')
-        if df is None:
-            df = pd.DataFrame()
+        import animais as A
+        import db
+        from extensions import _membro_logado
 
-        nova_linha = {
-            'Tipo': tipo,
-            'Data': dados.get('timestamp', datetime.now().isoformat()),
-            'Brincos': brinco,
-            'Descrição': f"IoT: {dados}",
-        }
-        salvar_linha('Manejo', list(nova_linha.values()))
+        data = dados.get('timestamp') or datetime.now().strftime('%d/%m/%Y %H:%M')
+        descricao = f"IoT {dados.get('sensor_id', '')}: {dados}".strip()
+        db.salvar_linha("Manejo", A._linha_manejo(
+            data, nome_tipo, 1, descricao, _membro_logado(), brincos=brincos))
         return True
     except Exception as e:
-        logger.error(f"Erro salvar Manejo: {e}")
+        logger.error("Erro ao salvar leitura IoT em Manejo: %s", e)
         return False
 
 
-@bp.route('/pesagem', methods=['POST'])
+def _receber(campo, tipo):
+    """POST comum: valida o campo e grava. Devolve (json, status)."""
+    dados = request.get_json(silent=True) or {}
+    valor = dados.get(campo)
+    if valor is None:
+        return {'sucesso': False, 'msg': f'Falta o campo {campo}'}, 400
+    if _salvar_manejo(tipo, dados, brincos=str(dados.get('brincos') or '')):
+        return {'sucesso': True, 'msg': f'{tipo} registrado ({valor})'}, 201
+    return {'sucesso': False, 'msg': 'Falha ao gravar no Manejo'}, 500
+
+
+@app.route('/api/iot/pesagem', methods=['POST'])
+@login_required
 def iot_pesagem():
-    """POST /api/iot/pesagem — salva peso do animal."""
-    try:
-        data = request.get_json()
-        peso = data.get('valor')
-        sensor_id = data.get('sensor_id', 'balanca_1')
-        timestamp = data.get('timestamp', datetime.now().isoformat())
-
-        if peso is None:
-            return jsonify({'sucesso': False, 'msg': 'Falta valor peso'}), 400
-
-        # Salva em Manejo com tipo "Pesagem"
-        _salvar_manejo('Pesagem', {
-            'peso_kg': peso,
-            'sensor_id': sensor_id,
-            'timestamp': timestamp
-        })
-
-        return jsonify({'sucesso': True, 'msg': f'Peso {peso}kg salvo'}), 201
-    except Exception as e:
-        logger.error(f"Erro pesagem: {e}")
-        return jsonify({'sucesso': False, 'msg': str(e)}), 500
+    """Peso da balança. Body: {valor, sensor_id, brincos?, timestamp?}"""
+    return _receber('valor', 'pesagem')
 
 
-@bp.route('/temperatura', methods=['POST'])
+@app.route('/api/iot/temperatura', methods=['POST'])
+@login_required
 def iot_temperatura():
-    """POST /api/iot/temperatura — salva temperatura do colar."""
-    try:
-        data = request.get_json()
-        temp = data.get('temperatura')
-        sensor_id = data.get('sensor_id', 'colar_1')
-        timestamp = data.get('timestamp', datetime.now().isoformat())
-
-        if temp is None:
-            return jsonify({'sucesso': False, 'msg': 'Falta valor temperatura'}), 400
-
-        _salvar_manejo('Temperatura', {
-            'temp_c': temp,
-            'sensor_id': sensor_id,
-            'timestamp': timestamp
-        })
-
-        return jsonify({'sucesso': True, 'msg': f'Temp {temp}°C salva'}), 201
-    except Exception as e:
-        logger.error(f"Erro temperatura: {e}")
-        return jsonify({'sucesso': False, 'msg': str(e)}), 500
+    """Temperatura do colar. Body: {temperatura, sensor_id, brincos?, timestamp?}"""
+    return _receber('temperatura', 'temperatura')
 
 
-@bp.route('/consumo', methods=['POST'])
+@app.route('/api/iot/consumo', methods=['POST'])
+@login_required
 def iot_consumo():
-    """POST /api/iot/consumo — salva consumo do comedouro."""
-    try:
-        data = request.get_json()
-        consumo = data.get('consumo_kg')
-        sensor_id = data.get('sensor_id', 'comedouro_1')
-        timestamp = data.get('timestamp', datetime.now().isoformat())
-
-        if consumo is None:
-            return jsonify({'sucesso': False, 'msg': 'Falta valor consumo'}), 400
-
-        _salvar_manejo('Consumo', {
-            'consumo_kg': consumo,
-            'sensor_id': sensor_id,
-            'timestamp': timestamp
-        })
-
-        return jsonify({'sucesso': True, 'msg': f'Consumo {consumo}kg salvo'}), 201
-    except Exception as e:
-        logger.error(f"Erro consumo: {e}")
-        return jsonify({'sucesso': False, 'msg': str(e)}), 500
+    """Consumo do comedouro. Body: {consumo_kg, sensor_id, brincos?, timestamp?}"""
+    return _receber('consumo_kg', 'consumo')
 
 
-@bp.route('/sync', methods=['POST'])
+@app.route('/api/iot/sync', methods=['POST'])
+@login_required
 def iot_sync():
-    """POST /api/iot/sync — sincroniza fila offline."""
-    try:
-        data = request.get_json()
-        itens = data.get('itens', [])
-
-        processados = 0
-        for item in itens:
-            tipo = item.get('tipo')
-            dados = item.get('dados')
-            if tipo in ['pesagem', 'temperatura', 'consumo']:
-                if _salvar_manejo(tipo, dados):
-                    processados += 1
-
-        return jsonify({
-            'sucesso': True,
-            'processados': processados,
-            'total': len(itens)
-        }), 200
-    except Exception as e:
-        logger.error(f"Erro sync: {e}")
-        return jsonify({'sucesso': False, 'msg': str(e)}), 500
+    """Sincroniza a fila offline do celular. Body: {itens: [{tipo, dados}]}"""
+    dados = request.get_json(silent=True) or {}
+    itens = dados.get('itens') or []
+    processados = sum(
+        1 for item in itens
+        if isinstance(item, dict) and _salvar_manejo(
+            item.get('tipo'), item.get('dados') or {},
+            brincos=str((item.get('dados') or {}).get('brincos') or ''))
+    )
+    return jsonify({'sucesso': True, 'processados': processados, 'total': len(itens)}), 200

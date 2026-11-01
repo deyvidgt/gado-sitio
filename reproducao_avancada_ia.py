@@ -7,11 +7,24 @@ reproducao_avancada.py — Add alertas_ia_preditiva() function for Onda 19
 import pandas as pd
 import pickle
 import logging
+from pathlib import Path
 from datetime import datetime
 from ia_features import extrair_features
 from ia_modelos import calcular_inbreeding_avk
 
 logger = logging.getLogger(__name__)
+
+# Modelos ficam ao lado do código, não no cwd (o app roda de qualquer pasta).
+MODELOS_DIR = Path(__file__).parent / "data" / "ia_models"
+
+
+def _ref_animal(animal):
+    """Nome curto do animal: 'Amarelo 21 #A0003' (colunas reais da aba Animais)."""
+    cor = str(animal.get('Brinco Cor') or '').strip()
+    num = str(animal.get('Brinco Nº') or '').strip()
+    aid = str(animal.get('ID') or animal.get('animal_id') or '').strip()
+    base = f"{cor} {num}".strip()
+    return f"{base} #{aid}".strip() if aid else (base or "animal")
 
 
 def alertas_ia_preditiva(df_animais, df_manejo, df_compras, df_vendas, hoje=None):
@@ -25,9 +38,9 @@ def alertas_ia_preditiva(df_animais, df_manejo, df_compras, df_vendas, hoje=None
 
     # Carrega modelos (cache em memória)
     try:
-        with open('data/ia_models/modelo_morte.pkl', 'rb') as f:
+        with open(MODELOS_DIR / 'modelo_morte.pkl', 'rb') as f:
             modelo_morte = pickle.load(f)
-        with open('data/ia_models/modelo_cio.pkl', 'rb') as f:
+        with open(MODELOS_DIR / 'modelo_cio.pkl', 'rb') as f:
             modelo_cio = pickle.load(f)
     except FileNotFoundError:
         logger.warning("❌ Modelos IA não encontrados. Execute: python scripts/train_ia_modelos.py")
@@ -36,20 +49,29 @@ def alertas_ia_preditiva(df_animais, df_manejo, df_compras, df_vendas, hoje=None
     alertas_urgentes = []
     alertas_avisos = []
 
-    # Itera animais vivos
+    # Itera animais vivos (Status vazio/NaN = vivo, como no resto do app)
     id_col = 'animal_id' if 'animal_id' in df_animais.columns else 'ID'
-    animais_vivos = df_animais[
-        (df_animais['Status'].isin(['Vivo', '']) | df_animais['Status'].isna())
-    ]
+    status = df_animais.get('Status')
+    if status is None:
+        animais_vivos = df_animais
+    else:
+        vivo = status.isna() | status.astype(str).str.strip().str.lower().isin(['', 'vivo', 'nan', 'none'])
+        animais_vivos = df_animais[vivo]
 
     for _, animal in animais_vivos.iterrows():
         animal_id = animal[id_col]
-        ref_animal = f"{animal.get('Brinco', '')} {animal.get('Numero', '?')}"
+        ref_animal = _ref_animal(animal)
 
-        # MORTE (todos os animais)
+        # Features uma vez por animal (usadas por morte e cio)
+        features = None
         try:
             features = extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje)
-            if features:
+        except Exception as e:
+            logger.debug(f"Erro ao extrair features de {animal_id}: {e}")
+
+        # MORTE (todos os animais)
+        if features:
+            try:
                 pred_morte = modelo_morte.prever(features)
 
                 if pred_morte['prob_morte'] > 70:
@@ -68,11 +90,11 @@ def alertas_ia_preditiva(df_animais, df_manejo, df_compras, df_vendas, hoje=None
                         "prob": pred_morte['prob_morte'],
                         "prioridade": 3,
                     })
-        except Exception as e:
-            logger.debug(f"Erro ao prever morte {animal_id}: {e}")
+            except Exception as e:
+                logger.debug(f"Erro ao prever morte {animal_id}: {e}")
 
         # CIO (fêmeas)
-        if str(animal.get('Sexo', 'M')).upper() in ['F', 'FÊMEA']:
+        if features and str(animal.get('Sexo', 'M')).upper().startswith('F'):
             try:
                 pred_cio = modelo_cio.prever(features)
 

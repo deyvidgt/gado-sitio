@@ -76,6 +76,12 @@ from routes_tarefas import *    # noqa: F401, F403
 # v5.3 — Reprodução (cobertura, toque, parto previsto)
 from routes_reproducao import * # noqa: F401, F403
 
+# v5.13 — IA preditiva (Onda 19): painel de previsões
+from routes_ia import *         # noqa: F401, F403
+
+# v5.13 — IoT básico (Onda 16): endpoints dos sensores
+from routes_iot import *        # noqa: F401, F403
+
 # v5.3 — Painel econômico por lote
 from routes_lotes import *      # noqa: F401, F403
 

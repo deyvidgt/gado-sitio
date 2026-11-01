@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""routes_ia.py — Painel da IA preditiva (Onda 19).
+
+Somente leitura: lê os modelos de data/ia_models/ e mostra as previsões.
+Se os modelos não foram treinados, explica como treinar.
+"""
+import logging
+
+from flask import render_template
+
+import animais as A
+import db
+from extensions import app, login_required
+from reproducao_avancada_ia import alertas_ia_preditiva
+
+logger = logging.getLogger(__name__)
+
+
+@app.route("/reproducao/ia-predicoes")
+@login_required
+def ia_predicoes():
+    """Previsões de morte, cio e consanguinidade por animal."""
+    df_an = A.carregar()
+    df_man = db.carregar_aba("Manejo")
+    df_compras = db.carregar_aba("Compras")
+    df_vendas = db.carregar_aba("Vendas")
+
+    resultado = alertas_ia_preditiva(df_an, df_man, df_compras, df_vendas)
+
+    return render_template("ia_predicoes.html",
+                           urgentes=resultado.get("urgentes", []),
+                           avisos=resultado.get("avisos", []),
+                           total=resultado.get("total", 0),
+                           timestamp=resultado.get("timestamp", ""))

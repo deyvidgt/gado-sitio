@@ -161,6 +161,8 @@ TIPOS_MANEJO = [
     "Sincronização IATF",        # NOVO v5.12 Onda 12: protocolo IATF (GnRH → P4 → PGF2α → inseminação)
     "Observação de Cio",         # NOVO v5.12 Onda 12: observação manual de cio (intensidade 1-5)
     "Medicação",                 # NOVO v5.12 Onda 12.X: registrar medicação por animal + quarentena leite
+    "Temperatura",               # NOVO v5.13 Onda 16: leitura do colar IoT (°C)
+    "Consumo",                   # NOVO v5.13 Onda 16: consumo do comedouro IoT (kg)
     "Outro",
 ]
 
