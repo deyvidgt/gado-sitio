@@ -157,7 +157,8 @@ def _nutricao_alertas(alimentacao):
 
 
 def todos(*, producao=None, animais=None, tratamentos=None, colchao=None,
-           alimentacao=None, referencia=None):
+           alimentacao=None, referencia=None, df_manejo=None, df_compras=None, df_vendas=None):
+    """Agregador de alertas: módulo leiteiro + IA preditiva (Onda 19)."""
     referencia = _data(referencia) or _hoje_br()
     itens = []
     contagens = contagens_rebanho(animais)
@@ -176,4 +177,23 @@ def todos(*, producao=None, animais=None, tratamentos=None, colchao=None,
         itens.append(_item("conforto", "Conforto térmico",
                            "Registre sombra, água, ventilação e descanso observado.",
                            "aviso", "Ir para conforto", "/leite/conforto"))
+
+    # IA Preditiva (Onda 19): morte, cio, inbreeding
+    if animais is not None and not animais.empty:
+        try:
+            from reproducao_avancada_ia import alertas_ia_preditiva
+            ia_result = alertas_ia_preditiva(animais, df_manejo or pd.DataFrame(),
+                                            df_compras or pd.DataFrame(),
+                                            df_vendas or pd.DataFrame(), hoje=referencia)
+            for ua in ia_result.get("urgentes", []):
+                itens.append(_item("ia_morte_cio", ua["tipo"],
+                                  f"{ua['animal']}: {ua.get('motivos', ua.get('dias', ''))}",
+                                  "urgente", ua.get("acao", "Abrir painel"), "/reproducao/ia-predicoes"))
+            for av in ia_result.get("avisos", []):
+                itens.append(_item("ia_inbreeding", av["tipo"],
+                                  f"{av['animal']}: {av.get('avk', av.get('prob', ''))}",
+                                  "aviso", av.get("acao", "Abrir painel"), "/reproducao/ia-predicoes"))
+        except (ImportError, FileNotFoundError):
+            pass  # Modelos não treinados ainda
+
     return itens

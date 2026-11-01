@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+reproducao_avancada.py — Add alertas_ia_preditiva() function for Onda 19
+"""
+
+import pandas as pd
+import pickle
+import logging
+from datetime import datetime
+from ia_features import extrair_features
+from ia_modelos import calcular_inbreeding_avk
+
+logger = logging.getLogger(__name__)
+
+
+def alertas_ia_preditiva(df_animais, df_manejo, df_compras, df_vendas, hoje=None):
+    """
+    Orquestra 3 modelos preditivos → alertas consolidados.
+
+    Returns:
+        {urgentes: [...], avisos: [...], total: int, timestamp: str}
+    """
+    hoje = pd.Timestamp(hoje or datetime.now()).normalize()
+
+    # Carrega modelos (cache em memória)
+    try:
+        with open('data/ia_models/modelo_morte.pkl', 'rb') as f:
+            modelo_morte = pickle.load(f)
+        with open('data/ia_models/modelo_cio.pkl', 'rb') as f:
+            modelo_cio = pickle.load(f)
+    except FileNotFoundError:
+        logger.warning("❌ Modelos IA não encontrados. Execute: python scripts/train_ia_modelos.py")
+        return {"urgentes": [], "avisos": [], "total": 0, "timestamp": hoje.isoformat()}
+
+    alertas_urgentes = []
+    alertas_avisos = []
+
+    # Itera animais vivos
+    id_col = 'animal_id' if 'animal_id' in df_animais.columns else 'ID'
+    animais_vivos = df_animais[
+        (df_animais['Status'].isin(['Vivo', '']) | df_animais['Status'].isna())
+    ]
+
+    for _, animal in animais_vivos.iterrows():
+        animal_id = animal[id_col]
+        ref_animal = f"{animal.get('Brinco', '')} {animal.get('Numero', '?')}"
+
+        # MORTE (todos os animais)
+        try:
+            features = extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje)
+            if features:
+                pred_morte = modelo_morte.prever(features)
+
+                if pred_morte['prob_morte'] > 70:
+                    alertas_urgentes.append({
+                        "tipo": "🚨 MORTE PREVISTA",
+                        "animal": ref_animal,
+                        "prob": pred_morte['prob_morte'],
+                        "motivos": pred_morte['motivos'],
+                        "acao": pred_morte['acao'],
+                        "prioridade": 1,
+                    })
+                elif pred_morte['prob_morte'] > 50:
+                    alertas_avisos.append({
+                        "tipo": "⚠️ RISCO MORTE",
+                        "animal": ref_animal,
+                        "prob": pred_morte['prob_morte'],
+                        "prioridade": 3,
+                    })
+        except Exception as e:
+            logger.debug(f"Erro ao prever morte {animal_id}: {e}")
+
+        # CIO (fêmeas)
+        if str(animal.get('Sexo', 'M')).upper() in ['F', 'FÊMEA']:
+            try:
+                pred_cio = modelo_cio.prever(features)
+
+                if pred_cio['alertar']:
+                    alertas_urgentes.append({
+                        "tipo": "🔥 CIO EM",
+                        "animal": ref_animal,
+                        "dias": pred_cio['dias_ate_cio'],
+                        "data": pred_cio['data_prevista'],
+                        "confianca": pred_cio['confianca'],
+                        "acao": f"INSEMINAR EM {pred_cio['dias_ate_cio'] - 1} DIAS",
+                        "prioridade": 2,
+                    })
+            except Exception as e:
+                logger.debug(f"Erro ao prever cio {animal_id}: {e}")
+
+        # INBREEDING (todos)
+        try:
+            avk = calcular_inbreeding_avk(animal_id, df_animais)
+
+            if avk > 0.15:
+                alertas_avisos.append({
+                    "tipo": "⚠️ INBREEDING CRÍTICO",
+                    "animal": ref_animal,
+                    "avk": round(avk * 100, 1),
+                    "acao": "🚫 NÃO CRUZAR COM PARENTES PRÓXIMOS",
+                    "prioridade": 3,
+                })
+            elif avk > 0.10:
+                alertas_avisos.append({
+                    "tipo": "⚠️ INBREEDING ALTO",
+                    "animal": ref_animal,
+                    "avk": round(avk * 100, 1),
+                    "acao": "Considerar cruzamento com genética externa",
+                    "prioridade": 4,
+                })
+        except Exception as e:
+            logger.debug(f"Erro ao calcular inbreeding {animal_id}: {e}")
+
+    # Ordena por prioridade
+    alertas_urgentes.sort(key=lambda x: x.get('prioridade', 99))
+    alertas_avisos.sort(key=lambda x: x.get('prioridade', 99))
+
+    return {
+        "urgentes": alertas_urgentes,
+        "avisos": alertas_avisos,
+        "total": len(alertas_urgentes) + len(alertas_avisos),
+        "timestamp": hoje.isoformat(),
+    }
