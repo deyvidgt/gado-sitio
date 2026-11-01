@@ -1,0 +1,161 @@
+<div id="iot_modal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <h2>📡 Pareamento IoT</h2>
+    <p>Selecione sensores e tipo de conexão.</p>
+
+    <!-- BALANÇA -->
+    <div class="card">
+      <h3>⚖️ Balança</h3>
+      <label>
+        <input type="radio" name="balanca_tipo" value="bluetooth"> Bluetooth (real)
+      </label>
+      <label>
+        <input type="radio" name="balanca_tipo" value="emulador" checked> Emulador
+      </label>
+      <input type="range" id="balanca_peso" min="200" max="600" value="400" style="width:100%;">
+      <span id="balanca_peso_label">400 kg</span>
+      <button onclick="lerBalanca()">📖 Ler Agora</button>
+    </div>
+
+    <!-- COLAR -->
+    <div class="card">
+      <h3>🌡️ Colar (Temp)</h3>
+      <label>
+        <input type="radio" name="colar_tipo" value="bluetooth"> Bluetooth (real)
+      </label>
+      <label>
+        <input type="radio" name="colar_tipo" value="emulador" checked> Emulador
+      </label>
+      <input type="range" id="colar_temp" min="30" max="42" value="38.5" step="0.1" style="width:100%;">
+      <span id="colar_temp_label">38.5 °C</span>
+      <button onclick="lerColar()">🌡️ Ler Agora</button>
+    </div>
+
+    <!-- COMEDOURO -->
+    <div class="card">
+      <h3>🍽️ Comedouro</h3>
+      <label>
+        <input type="radio" name="comedouro_tipo" value="bluetooth"> Bluetooth (real)
+      </label>
+      <label>
+        <input type="radio" name="comedouro_tipo" value="emulador" checked> Emulador
+      </label>
+      <input type="range" id="comedouro_consumo" min="0" max="10" value="2.5" step="0.1" style="width:100%;">
+      <span id="comedouro_consumo_label">2.5 kg</span>
+      <button onclick="lerComedouro()">📖 Ler Agora</button>
+    </div>
+
+    <div style="margin-top:20px;">
+      <button onclick="salvarConfiguracao()" class="btn-primary">💾 Salvar</button>
+      <button onclick="fecharModal()" class="btn-secondary">❌ Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Sliders atualizam labels
+document.getElementById('balanca_peso').addEventListener('input', (e) => {
+  document.getElementById('balanca_peso_label').innerText = e.target.value + ' kg';
+  const sensor = window.iotManager.sensores['balanca_balanca_1'] ?
+    new BalancaEmulador('balanca_1') : null;
+  if (sensor) sensor.setPeso(parseFloat(e.target.value));
+});
+
+document.getElementById('colar_temp').addEventListener('input', (e) => {
+  document.getElementById('colar_temp_label').innerText = e.target.value + ' °C';
+});
+
+document.getElementById('comedouro_consumo').addEventListener('input', (e) => {
+  document.getElementById('comedouro_consumo_label').innerText = e.target.value + ' kg';
+});
+
+async function lerBalanca() {
+  const tipo = document.querySelector('input[name="balanca_tipo"]:checked').value;
+  const peso = parseFloat(document.getElementById('balanca_peso').value);
+
+  let sensor = tipo === 'emulador' ?
+    new BalancaEmulador('balanca_1') : new BalancaBluetooth('balanca_1');
+
+  if (tipo === 'emulador') sensor.setPeso(peso);
+
+  const result = await sensor.conectar();
+  if (!result.sucesso) {
+    alert('❌ ' + result.msg);
+    return;
+  }
+
+  const leitura = await sensor.ler();
+  alert('✅ Peso: ' + leitura.valor + 'kg @ ' + new Date(leitura.timestamp).toLocaleTimeString());
+  window.iotManager.adicionarFila('balanca', leitura);
+}
+
+async function lerColar() {
+  const tipo = document.querySelector('input[name="colar_tipo"]:checked').value;
+  const temp = parseFloat(document.getElementById('colar_temp').value);
+
+  let sensor = tipo === 'emulador' ?
+    new ColarEmulador('colar_1') : new ColarBluetooth('colar_1');
+
+  if (tipo === 'emulador') sensor.setTemperatura(temp);
+
+  const result = await sensor.conectar();
+  if (!result.sucesso) {
+    alert('❌ ' + result.msg);
+    return;
+  }
+
+  const leitura = await sensor.ler();
+  alert('✅ Temp: ' + leitura.temperatura + '°C @ ' + new Date(leitura.timestamp).toLocaleTimeString());
+  window.iotManager.adicionarFila('colar', leitura);
+}
+
+async function lerComedouro() {
+  const tipo = document.querySelector('input[name="comedouro_tipo"]:checked').value;
+  const consumo = parseFloat(document.getElementById('comedouro_consumo').value);
+
+  let sensor = tipo === 'emulador' ?
+    new ComedoroEmulador('comedouro_1') : new ComedoroBluetooth('comedouro_1');
+
+  if (tipo === 'emulador') sensor.setConsumo(consumo);
+
+  const result = await sensor.conectar();
+  if (!result.sucesso) {
+    alert('❌ ' + result.msg);
+    return;
+  }
+
+  const leitura = await sensor.ler();
+  alert('✅ Consumo: ' + leitura.consumo_kg + 'kg @ ' + new Date(leitura.timestamp).toLocaleTimeString());
+  window.iotManager.adicionarFila('comedouro', leitura);
+}
+
+function salvarConfiguracao() {
+  window.iotManager.sensores = {
+    'balanca_1': {tipo_conexao: document.querySelector('input[name="balanca_tipo"]:checked').value},
+    'colar_1': {tipo_conexao: document.querySelector('input[name="colar_tipo"]:checked').value},
+    'comedouro_1': {tipo_conexao: document.querySelector('input[name="comedouro_tipo"]:checked').value}
+  };
+  window.iotManager.salvarConfiguracao();
+  window.iotManager.iniciarSyncAutomatico();
+  alert('✅ Configuração salva + sync automático iniciado');
+  fecharModal();
+}
+
+function fecharModal() {
+  document.getElementById('iot_modal').style.display = 'none';
+}
+
+function abrirModalIoT() {
+  document.getElementById('iot_modal').style.display = 'flex';
+}
+</script>
+
+<style>
+.modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:999; }
+.modal-content { background:white; padding:20px; border-radius:8px; max-width:600px; max-height:80vh; overflow-y:auto; }
+.card { border:1px solid #ddd; padding:15px; margin:15px 0; border-radius:4px; }
+input[type="range"] { margin:10px 0; }
+button { padding:8px 16px; margin:5px; border-radius:4px; cursor:pointer; }
+.btn-primary { background:#4CAF50; color:white; }
+.btn-secondary { background:#888; color:white; }
+</style>
