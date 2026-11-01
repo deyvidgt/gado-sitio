@@ -2,9 +2,13 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
-## [Não lançado]
+## [5.14.0] — 2026-11-01
 
 ### Adicionado
+- **Ponto de corte e relatórios avançados (v5.14 Onda 14):** dois módulos que existiam no código mas não tinham tela agora estão no menu:
+  - `/ponto-corte`: simula vender o animal hoje ou em 7/14/30 dias (peso × rendimento ÷ 15 = arrobas × preço da arroba), descontando o custo diário, e diz o melhor dia. GMD vem da pesagem; preço da arroba e rendimento vêm do `sitio_config.json`. Só cálculo, não grava.
+  - `/relatorios/avancados`: 6 PDFs de verdade (anual, vendas, sanitário, reprodutivo, leite, financeiro), no mesmo visual do relatório antigo. Antes o `exportar_pdf_relatorio` despejava o dicionário cru num arquivo `.pdf`.
+
 - **IA Preditiva (v5.13 Onda 19):** modelo machine learning para prognóstico de morte, cio e consanguinidade:
   - Modelos treinados: RandomForest (morte 30d), GradientBoosting (cio próximo), pedigree AVK (inbreeding).
   - Pipeline: 5k animais sintéticos + 25 features normalizadas → modelos pkl + integração em alertas.
@@ -28,6 +32,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   - Novo módulo `indicadores_coleta.py` com funções reutilizáveis para integração com pesagem automática, sensores IoT e relatórios.
   - Integração em `routes_registros.py`: chamada automática `processar_manejo_automatico()` após salvar novo/editar manejo.
   - Documentação completa em `docs/INDICADORES_COLETA.md` com exemplos de API.
+
+### Corrigido
+- **Relatório de leite** lia `"Produção (litros)"` e `"CPP (ufc/mL)"`, colunas que não existem (as reais são `Litros` e `CPP (UFC/mL)`) — saía tudo zero.
+- **Relatório financeiro** subtraía as compras do resultado, contando o custo do gado duas vezes. Agora é receita − gastos; o custo da cabeça aparece na venda, pela média móvel.
+- **`ponto_corte.py`** chamava funções com assinatura errada (`pesagem.todas()` sem argumento, `pesagem.peso_animal()`, `calculos._build_gastos_timeline()`) e não rodava.
+- **`/leite/comparativo` dava 500:** a lista de vacas fazia `situacao.lower()` e a célula vazia de "Situação Leite" chega do Excel como NaN (`float`). Agora converte para texto antes.
+- **Editar animal disparava FutureWarning do pandas** ao gravar `""` numa coluna que o Excel leu como número (`animais.py`). A coluna passa a `object` antes da escrita — na versão 3 do pandas isso vira erro.
 
 ## [5.10.1] — 2026-10-29
 
