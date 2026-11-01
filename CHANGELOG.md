@@ -5,6 +5,21 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
+- **IA Preditiva (v5.13 Onda 19):** modelo machine learning para prognóstico de morte, cio e consanguinidade:
+  - Modelos treinados: RandomForest (morte 30d), GradientBoosting (cio próximo), pedigree AVK (inbreeding).
+  - Pipeline: 5k animais sintéticos + 25 features normalizadas → modelos pkl + integração em alertas.
+  - Alertas automáticos: morte urgente (>70% prob), cio ≤7 dias, inbreeding >10%.
+  - Dashboard `/reproducao/ia-predicoes` com previsões por animal.
+  - Integração em `alertas.todos()` — IA + leiteiro + IoT alertas consolidados.
+  - Treinamento: `python scripts/train_ia_modelos.py` (reproducível, seed=42).
+- **IoT Básico (v5.13 Onda 16):** sensores Bluetooth + emuladores com fila offline PWA:
+  - 6 classes sensor: Balança/Colar/Comedouro × Real/Emulador (Web Bluetooth API).
+  - IoTManager: pareamento, leitura, fila offline (max 100 itens localStorage), sync automático.
+  - 4 endpoints Flask: POST `/api/iot/pesagem`, `temperatura`, `consumo`, `sync`.
+  - Modal configuração (`iot_modal_pareamento.html`): sliders emulador, toggle Bluetooth.
+  - Alertas IoT: queda peso >5% em 7 dias, temperatura fora faixa [18-28°C].
+  - localStorage keys: `iot_devices` (config), `iot_fila_offline` (fila offline).
+  - Fallback: iOS emulador sempre; Android Web Bluetooth + emulador.
 - **Navegação do módulo leiteiro:** telas leiteiras agora compartilham atalhos, retorno contextual e gesto opcional de deslizar da borda esquerda no celular.
 - **Coleta Automática de Indicadores (v5.8):** novas abas `Engorda Pastagem`, `GMD Lotação`, `Ração Consumo` agora preenchem automaticamente:
   - Engorda Pastagem: ao registrar Movimentação de Pasto + Pesagem, sistema calcula GMD, lotação e dias no pasto automaticamente.
