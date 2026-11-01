@@ -195,20 +195,28 @@ def calcular_inbreeding_avk(animal_id, df_animais, max_depth=5):
 
     Args:
         animal_id: String like 'A0001'
-        df_animais: DataFrame with ID, Pai, Mãe columns
+        df_animais: DataFrame with ID/animal_id, Pai/pai_id, Mãe/mae_id columns
         max_depth: Max generations to trace (default 5)
 
     Returns:
         float in [0, 1]; 0 if no pedigree data, up to 0.25 for high inbreeding
     """
-    if df_animais.empty or animal_id not in df_animais['ID'].values:
+    if df_animais.empty:
+        return 0.0
+
+    # Detect ID column (real data uses 'ID', synthetic uses 'animal_id')
+    id_col = 'ID' if 'ID' in df_animais.columns else 'animal_id'
+    pai_col = 'Pai' if 'Pai' in df_animais.columns else 'pai_id'
+    mae_col = 'Mãe' if 'Mãe' in df_animais.columns else 'mae_id'
+
+    if animal_id not in df_animais[id_col].values:
         return 0.0
 
     # Find animal
-    animal = df_animais[df_animais['ID'] == animal_id].iloc[0]
+    animal = df_animais[df_animais[id_col] == animal_id].iloc[0]
 
-    pai_id = str(animal.get('Pai', '')).strip() if 'Pai' in df_animais.columns else ''
-    mae_id = str(animal.get('Mãe', '')).strip() if 'Mãe' in df_animais.columns else ''
+    pai_id = str(animal.get(pai_col, '')).strip() if pai_col in df_animais.columns else ''
+    mae_id = str(animal.get(mae_col, '')).strip() if mae_col in df_animais.columns else ''
 
     # If either parent missing, no inbreeding signal
     if not pai_id or not mae_id or pai_id == 'None' or mae_id == 'None':
