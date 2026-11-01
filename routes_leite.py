@@ -815,8 +815,9 @@ def comparativo_leite():
     for _, animal in animais.iterrows():
         id_animal = str(animal.get("ID", "")).strip()
         brinco = f"{animal.get('Brinco Cor', '')} {animal.get('Brinco Nº', '')}".strip()
-        situacao = animal.get("Situação Leite", "")
-        if id_animal and situacao and situacao.lower() in {"lactação", "lactacao"}:
+        # Célula vazia no Excel chega como NaN (float) — str() evita o .lower() explodir.
+        situacao = str(animal.get("Situação Leite") or "").strip().lower()
+        if id_animal and situacao in {"lactação", "lactacao"}:
             vacas_opcoes.append({"id": id_animal, "brinco": brinco})
 
     resultado = {}

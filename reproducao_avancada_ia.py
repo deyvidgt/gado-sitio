@@ -50,7 +50,10 @@ def alertas_ia_preditiva(df_animais, df_manejo, df_compras, df_vendas, hoje=None
     alertas_avisos = []
 
     # Itera animais vivos (Status vazio/NaN = vivo, como no resto do app)
-    id_col = 'animal_id' if 'animal_id' in df_animais.columns else 'ID'
+    # Sem coluna de ID não há como ligar features/histórico: não inventa alerta.
+    id_col = next((c for c in ('animal_id', 'ID') if c in df_animais.columns), None)
+    if id_col is None:
+        return {"urgentes": [], "avisos": [], "total": 0, "timestamp": hoje.isoformat()}
     status = df_animais.get('Status')
     if status is None:
         animais_vivos = df_animais

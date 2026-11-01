@@ -377,6 +377,10 @@ def atualizar(id_: str, dados: dict):
         if c in ("Brinco Nº",):
             df.at[i, c] = reg[c]
         else:
+            # Coluna numérica lida do Excel vira float64; gravar "" nela é deprecated
+            # no pandas e vira erro na versão 3. Objeto aceita texto e número.
+            if df[c].dtype != object:
+                df[c] = df[c].astype(object)
             df.at[i, c] = reg.get(c, "")
     _gravar(df)
     return avisos
