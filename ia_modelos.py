@@ -33,6 +33,22 @@ class ModeloMorte:
         )
         self.scaler = StandardScaler()
         self.feature_names = None
+        # Limiares calibráveis: com base de morte baixa o modelo nunca chega a 70%,
+        # e o alerta urgente virava código morto (prob máx. observada: 0.69).
+        self.limiar_urgente = 0.70
+        self.limiar_aviso = 0.50
+
+    def calibrar_limiares(self, X, y=None, pct_urgente=0.99, pct_aviso=0.90):
+        """Define os limiares pelos percentis do próprio modelo (não por chute fixo).
+
+        Assim o alerta pega sempre o grupo de maior risco, independente da escala
+        de probabilidade que o treino produziu.
+        """
+        X_scaled = self.scaler.transform(X)
+        prob = self.modelo.predict_proba(X_scaled)[:, 1]
+        self.limiar_urgente = float(np.quantile(prob, pct_urgente))
+        self.limiar_aviso = float(np.quantile(prob, pct_aviso))
+        return self.limiar_urgente, self.limiar_aviso
 
     def treinar(self, X, y):
         """Train on (n_samples, n_features) and binary labels (0=vivo, 1=morte)."""
@@ -72,11 +88,11 @@ class ModeloMorte:
                 'acao': 'Contate suporte'
             }
 
-        # Thresholds: >70% = URGENTE, >50% = AVISO, else OK
-        if prob > 0.70:
+        # Thresholds calibrados no treino (padrão: 70%/50%)
+        if prob > self.limiar_urgente:
             urgencia = "URGENTE"
             acao = "🚨 VENDER AGORA ou TRATAR INTENSIVO"
-        elif prob > 0.50:
+        elif prob > self.limiar_aviso:
             urgencia = "AVISO"
             acao = "⚠️ MONITORAR DIÁRIO + INVESTIGAR"
         else:

@@ -71,6 +71,35 @@ def test_train_script_fits_models():
     assert modelo_cio.modelo is not None
 
 
+def test_treino_produz_modelo_que_alerta_animal_novo(tmp_path, monkeypatch):
+    """O modelo salvo tem que disparar URGENTE em animal que não viu no treino.
+
+    Regressão: o script normalizava as features antes de treinar() — que
+    normaliza de novo — então o modelo aprendia z-scores e prever() recebia
+    valores crus. Todas as probabilidades caíam numa faixa estreita e o alerta
+    URGENTE nunca disparava em produção.
+    """
+    from scripts import train_ia_modelos as T
+    from ia_features import extrair_features
+    from ia_sintetico import gerar_sintetico
+    import pickle
+
+    monkeypatch.setattr("sys.argv", ["train", "--n-animais", "400", "--output", str(tmp_path)])
+    T.main()
+
+    with open(tmp_path / "modelo_morte.pkl", "rb") as f:
+        modelo = pickle.load(f)
+
+    # Dados novos (seed diferente do treino): o alerta precisa disparar em algum
+    df = gerar_sintetico(n_animais=400, anos=3, seed=99)
+    urgencias = [
+        modelo.prever(f)['urgencia']
+        for _, r in df.iterrows()
+        if (f := extrair_features(r['animal_id'], df, pd.DataFrame(), pd.DataFrame()))
+    ]
+    assert 'URGENTE' in urgencias
+
+
 def test_train_script_reproducible_with_seed():
     """Training with seed=42 produces same model outputs."""
     from ia_sintetico import gerar_sintetico

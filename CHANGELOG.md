@@ -8,7 +8,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - **IA Preditiva (v5.13 Onda 19):** modelo machine learning para prognóstico de morte, cio e consanguinidade:
   - Modelos treinados: RandomForest (morte 30d), GradientBoosting (cio próximo), pedigree AVK (inbreeding).
   - Pipeline: 5k animais sintéticos + 25 features normalizadas → modelos pkl + integração em alertas.
-  - Alertas automáticos: morte urgente (>70% prob), cio ≤7 dias, inbreeding >10%.
+  - Alertas automáticos: morte urgente (limiares calibrados nos percentis 99/90 do modelo), cio ≤7 dias, inbreeding >10%.
   - Dashboard `/reproducao/ia-predicoes` com previsões por animal.
   - Integração em `alertas.todos()` — IA + leiteiro + IoT alertas consolidados.
   - Treinamento: `python scripts/train_ia_modelos.py` (reproducível, seed=42).
@@ -44,6 +44,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   antes só existiam como rota, sem nenhum link para chegar nelas.
 
 ### Corrigido
+- **IA preditiva não previa nada (Onda 19):** o pipeline de treino normalizava as features
+  com `preprocessar_batch()` e passava o resultado para `treinar()`, que normaliza de novo.
+  O modelo aprendia z-scores enquanto `prever()` mandava valores crus — todas as
+  probabilidades caíam entre 22% e 56% e o alerta **URGENTE nunca disparava**. O treino
+  agora entrega features cruas, mede acurácia/AUC em holdout de 20% e calibra os limiares
+  pelos percentis do próprio holdout (1.1% urgentes, 11% avisos em animais novos).
+  Também corrigidos: o gerador sintético sorteava morte independente dos fatores de risco
+  (AUC ~0,60 = quase chute) e o alvo do modelo de cio era a própria feature de ciclo
+  (vazamento) — agora é `dias_ate_cio`, coluna nova do gerador.
 - **Restauração das Ondas 11/12/12.X/16/19:** o commit `de79f73` sobrescreveu módulos que
   já funcionavam e deixou 16 testes quebrados. Restaurado o estado anterior e corrigido:
   - `cochos.py` / `routes_cochos.py`: voltaram as funções de consumo por visita e o template

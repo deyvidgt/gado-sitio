@@ -74,7 +74,7 @@ def alertas_ia_preditiva(df_animais, df_manejo, df_compras, df_vendas, hoje=None
             try:
                 pred_morte = modelo_morte.prever(features)
 
-                if pred_morte['prob_morte'] > 70:
+                if pred_morte['urgencia'] == 'URGENTE':
                     alertas_urgentes.append({
                         "tipo": "🚨 MORTE PREVISTA",
                         "animal": ref_animal,
@@ -83,7 +83,7 @@ def alertas_ia_preditiva(df_animais, df_manejo, df_compras, df_vendas, hoje=None
                         "acao": pred_morte['acao'],
                         "prioridade": 1,
                     })
-                elif pred_morte['prob_morte'] > 50:
+                elif pred_morte['urgencia'] == 'AVISO':
                     alertas_avisos.append({
                         "tipo": "⚠️ RISCO MORTE",
                         "animal": ref_animal,

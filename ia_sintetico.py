@@ -51,12 +51,6 @@ def gerar_sintetico(n_animais=5000, anos=3, seed=42):
             pai_id = None
             mae_id = None
 
-        # Event type: weighted (6% morte ≈ 2%/year over 3 years)
-        evento_tipo = np.random.choice(
-            ['VIVO', 'MORTE', 'PARTO', 'TRATAMENTO'],
-            p=[0.64, 0.06, 0.15, 0.15]
-        )
-
         # Event date: within history
         evento_data = hoje - timedelta(days=np.random.randint(0, dias_historico))
 
@@ -65,15 +59,40 @@ def gerar_sintetico(n_animais=5000, anos=3, seed=42):
         if idade_dias_evento < 0:
             idade_dias_evento = 0
 
-        # Status
-        status_vivo = 'Vivo' if evento_tipo != 'MORTE' else 'Morto'
-
         # Weight estimate: 200-450kg (Gaussian centered at 350)
         peso_estimado_kg = np.random.normal(350, 50)
         peso_estimado_kg = max(150, min(550, peso_estimado_kg))
 
         # Treatments in last 90d
         num_tratamentos_90d = np.random.poisson(0.5)
+
+        # Inbreeding (AVK simple heuristic): 0-30% in synthetic
+        inbreeding_avk_pct = np.random.uniform(0, 0.25)
+
+        # Event type: weighted (6% morte ≈ 2%/year over 3 years)
+        # A morte DEPENDE dos fatores de risco — se for sorteada solta, o modelo
+        # não tem sinal nenhum para aprender (era o que acontecia: acurácia 24%).
+        # Idade HOJE (não na data do evento): é o que ia_features.extrair_features
+        # calcula a partir de Nascimento. Usar a idade do evento aqui e a de hoje
+        # lá deixava o sinal fraco (AUC ~0.60 mesmo com risco bem separado).
+        idade_norm = min(max(0, dias_desde_nascimento) / (dias_historico + 365), 1.0)
+        inb_norm = min(inbreeding_avk_pct / 0.25, 1.0)
+        trat_norm = min(num_tratamentos_90d / 3.0, 1.0)
+        peso_norm = max(0.0, 1.0 - peso_estimado_kg / 350.0)
+        risco = (0.35 * idade_norm + 0.25 * inb_norm
+                 + 0.20 * trat_norm + 0.20 * peso_norm)
+
+        # Base alta + curva: sem isso quase ninguém morre, o modelo só acerta a
+        # classe majoritária e o AUC fica em ~0.55 (chute).
+        morreu = np.random.random() < (0.02 + 0.45 * risco ** 2)
+        if morreu:
+            evento_tipo = 'MORTE'
+        else:
+            evento_tipo = np.random.choice(
+                ['VIVO', 'PARTO', 'TRATAMENTO'], p=[0.68, 0.16, 0.16])
+
+        # Status
+        status_vivo = 'Vivo' if evento_tipo != 'MORTE' else 'Morto'
 
         # Days since last birth (fêmeas only)
         if sexo == 'F':
@@ -88,12 +107,18 @@ def gerar_sintetico(n_animais=5000, anos=3, seed=42):
         else:
             iep_dias = None
 
-        # Estrus cycle: ~21 days for cattle
-        ciclo_cio_dias = int(np.random.normal(21, 2))
+        # Estrus cycle: ~21 days for cattle. Varia com inbreeding e idade —
+        # sorteado solto daria R²=0 (nenhum modelo aprende ruído puro).
+        ciclo_cio_dias = int(round(21 + 6 * inb_norm - 3 * idade_norm
+                                   + np.random.normal(0, 1.5)))
         ciclo_cio_dias = max(17, min(25, ciclo_cio_dias))
 
-        # Inbreeding (AVK simple heuristic): 0-30% in synthetic
-        inbreeding_avk_pct = np.random.uniform(0, 0.25)
+        # Dias até o PRÓXIMO cio: alvo do modelo, distinto do ciclo observado
+        # (se o alvo fosse o próprio ciclo, a feature homônima seria vazamento).
+        # Depende de fatores que o extrator também enxerga — senão não há o que aprender.
+        dias_ate_cio = int(round(10 + 8 * inb_norm - 3 * idade_norm
+                                 + np.random.normal(0, 2.0)))
+        dias_ate_cio = max(1, min(25, dias_ate_cio))
 
         # Weight ratio to expected
         peso_ratio_esperado = peso_estimado_kg / 350.0
@@ -117,6 +142,7 @@ def gerar_sintetico(n_animais=5000, anos=3, seed=42):
             'dias_desde_parto': dias_desde_parto,
             'iep_dias': iep_dias,
             'ciclo_cio_dias': ciclo_cio_dias,
+            'dias_ate_cio': dias_ate_cio,
             'inbreeding_avk_pct': inbreeding_avk_pct,
             'peso_ratio_esperado': peso_ratio_esperado,
             'num_parentes_mortos': num_parentes_mortos,
