@@ -158,13 +158,20 @@ def medias_periodo(df, inicio, fim, animais_lactacao=0):
     }
 
 
+def _serie(df, nome, padrao=""):
+    """Coluna como texto; aba sem a coluna vira o padrão (nunca um str solto)."""
+    col = df[nome] if nome in df.columns else pd.Series(padrao, index=df.index)
+    return col.astype(str).str.strip()
+
+
 def contagens_rebanho(animais):
     if animais is None or animais.empty:
         return {"animais_ativos": 0, "vacas_leiteiras_ativas": 0, "vacas_lactacao": 0}
-    vivos = animais[animais.get("Status", "").astype(str).str.strip().str.lower().isin({"vivo", "ativo"})]
-    uso = vivos.get("Uso Produtivo", "").astype(str).str.strip().str.lower()
-    sexo = vivos.get("Sexo", "").astype(str).str.strip().str.upper()
-    situacao = vivos.get("Situação Leite", "").astype(str).str.strip().str.lower()
+    # Sem a coluna Status a cabeça conta como viva (mesma convenção de animais.py).
+    vivos = animais[_serie(animais, "Status", "vivo").str.lower().isin({"vivo", "ativo"})]
+    uso = _serie(vivos, "Uso Produtivo").str.lower()
+    sexo = _serie(vivos, "Sexo").str.upper()
+    situacao = _serie(vivos, "Situação Leite").str.lower()
     leiteiras = (sexo == "F") & uso.isin({"leite", "ambos"})
     return {
         "animais_ativos": int(len(vivos)),

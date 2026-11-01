@@ -13,6 +13,21 @@ from datetime import datetime, timedelta
 from sklearn.preprocessing import StandardScaler
 
 
+def _v(animal, real, sint, default=None):
+    """Valor da coluna da planilha (real) ou do nome sintético (treino).
+
+    Sem isso o treino lia tudo no default: o gerador sintético usa
+    'data_nascimento'/'sexo'/'peso_estimado_kg' e a extração só conhecia
+    'Nascimento'/'Sexo' — 24 das 25 features saíam constantes.
+    """
+    for k in (real, sint):
+        if k and k in animal.index:
+            v = animal.get(k)
+            if v is not None and not (isinstance(v, float) and pd.isna(v)):
+                return v
+    return default
+
+
 def extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje=None):
     """
     Extract 25 normalized features for one animal.
@@ -39,14 +54,15 @@ def extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje=None):
     features = {}
 
     # === AGE ===
-    data_nasc = pd.to_datetime(animal.get('Nascimento', None), errors='coerce', dayfirst=True)
+    data_nasc = pd.to_datetime(_v(animal, 'Nascimento', 'data_nascimento'),
+                               errors='coerce', dayfirst=True)
     if pd.isna(data_nasc):
         data_nasc = hoje - timedelta(days=365 * 2)  # Default: 2 years old
     idade_dias = max(0, (hoje - data_nasc).days)
     features['idade_dias_norm'] = min(idade_dias / 3650, 1.0)  # Max 10 years
 
     # === SEX ===
-    sexo_str = str(animal.get('Sexo', 'M')).upper()
+    sexo_str = str(_v(animal, 'Sexo', 'sexo', 'M')).upper()
     features['sexo'] = 1.0 if 'F' in sexo_str else 0.0
 
     # === HEALTH HISTORY ===
@@ -67,6 +83,10 @@ def extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje=None):
         tratamentos_90d = pd.DataFrame()
 
     num_trat = len(tratamentos_90d)
+    # O gerador sintético já traz o dado pronto por animal; usar o mesmo extrator
+    # nos dois lados é o que faz o modelo aprender sinal em vez de ruído.
+    if 'num_tratamentos_90d' in animal.index:
+        num_trat = int(animal.get('num_tratamentos_90d') or 0)
     features['num_tratamentos_90d_norm'] = min(num_trat / 5, 1.0)
 
     # Days since last treatment
@@ -85,7 +105,11 @@ def extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje=None):
     if mae_id.lower() in ('none', 'nan'):
         mae_id = ''
 
-    if pai_id and mae_id and pai_id[0] == mae_id[0]:
+    if 'inbreeding_avk_pct' in animal.index:
+        # Só o sintético tem o coeficiente pronto; na planilha real o parentesco
+        # é estimado abaixo pelo par Pai/Mãe.
+        features['inbreeding_avk'] = min(float(animal.get('inbreeding_avk_pct') or 0), 1.0)
+    elif pai_id and mae_id and pai_id[0] == mae_id[0]:
         features['inbreeding_avk'] = 0.15  # High inbreeding indicator
     else:
         features['inbreeding_avk'] = 0.05
@@ -100,6 +124,8 @@ def extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje=None):
             peso_atual = hist[-1][1]
     except Exception:
         pass
+    if pd.isna(peso_atual) and 'peso_estimado_kg' in animal.index:
+        peso_atual = float(animal.get('peso_estimado_kg') or 0) or np.nan
     if pd.isna(peso_atual):
         peso_atual = 400.0
     peso_esperado = 400.0 if features['sexo'] == 1.0 else 450.0
@@ -125,6 +151,13 @@ def extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje=None):
         else:
             dias_parto = 9999
             iep = 365
+
+        # Dados prontos por animal do gerador sintético (mesma ordem de preferência
+        # do resto do extrator: o dado explícito vence o derivado do Manejo).
+        if 'dias_desde_parto' in animal.index and pd.notna(animal.get('dias_desde_parto')):
+            dias_parto = int(animal.get('dias_desde_parto'))
+        if 'iep_dias' in animal.index and pd.notna(animal.get('iep_dias')):
+            iep = int(animal.get('iep_dias'))
 
         features['dias_parto_norm'] = min(dias_parto / 450, 1.0)
         features['num_partos_norm'] = min(num_partos / 10, 1.0)
@@ -168,7 +201,9 @@ def extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje=None):
         features['stress_score'] = 0.3
 
     # === MORTALITY RISK FACTORS ===
-    num_parentes_mortos = 0  # Placeholder
+    num_parentes_mortos = 0
+    if 'num_parentes_mortos' in animal.index:
+        num_parentes_mortos = int(animal.get('num_parentes_mortos') or 0)
     features['num_parentes_mortos_norm'] = min(num_parentes_mortos / 5, 1.0)
 
     # Death events in manejo
@@ -216,7 +251,10 @@ def extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje=None):
     features['num_eventos_90d_norm'] = min(num_eventos / 10, 1.0)
 
     # Estrus cycle length (typical 21 days for cattle, normalized 17-25)
-    features['ciclo_cio_dias_norm'] = 0.8  # 21 / 25 = 0.84
+    ciclo = 21
+    if 'ciclo_cio_dias' in animal.index and pd.notna(animal.get('ciclo_cio_dias')):
+        ciclo = float(animal.get('ciclo_cio_dias'))
+    features['ciclo_cio_dias_norm'] = min(max(ciclo, 17), 25) / 25.0
 
     # Health status (0=sick/risky, 1=healthy)
     if num_trat > 3 or (len(mortes) > 0):

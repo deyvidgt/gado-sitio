@@ -29,7 +29,7 @@ def _salvar_manejo(tipo, dados, brincos=''):
     try:
         import animais as A
         import db
-        from extensions import _membro_logado
+        from routes_animais import _membro_logado
 
         data = dados.get('timestamp') or datetime.now().strftime('%d/%m/%Y %H:%M')
         descricao = f"IoT {dados.get('sensor_id', '')}: {dados}".strip()

@@ -182,9 +182,10 @@ def todos(*, producao=None, animais=None, tratamentos=None, colchao=None,
     if animais is not None and not animais.empty:
         try:
             from reproducao_avancada_ia import alertas_ia_preditiva
-            ia_result = alertas_ia_preditiva(animais, df_manejo or pd.DataFrame(),
-                                            df_compras or pd.DataFrame(),
-                                            df_vendas or pd.DataFrame(), hoje=referencia)
+            ia_result = alertas_ia_preditiva(
+                animais, df_manejo if df_manejo is not None else pd.DataFrame(),
+                df_compras if df_compras is not None else pd.DataFrame(),
+                df_vendas if df_vendas is not None else pd.DataFrame(), hoje=referencia)
             for ua in ia_result.get("urgentes", []):
                 itens.append(_item("ia_morte_cio", ua["tipo"],
                                   f"{ua['animal']}: {ua.get('motivos', ua.get('dias', ''))}",

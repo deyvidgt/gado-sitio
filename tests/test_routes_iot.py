@@ -5,29 +5,12 @@
 import pytest
 import json
 from datetime import datetime
-from flask import Flask
 
 
 @pytest.fixture
-def app():
-    """Flask test app com routes_iot registradas"""
-    app = Flask(__name__)
-    app.config['TESTING'] = True
-
-    # Registra blueprint IoT
-    try:
-        from routes_iot import bp
-        app.register_blueprint(bp)
-    except ImportError:
-        pytest.skip("routes_iot.py não disponível")
-
-    return app
-
-
-@pytest.fixture
-def client(app):
-    """Flask test client"""
-    return app.test_client()
+def client(cliente):
+    """Endpoints reais do app (routes_iot.py registra direto no app, sem blueprint)."""
+    return cliente
 
 
 class TestIoTEndpointsIntegration:

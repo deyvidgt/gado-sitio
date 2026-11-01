@@ -10,7 +10,7 @@
   <!-- Formulário Observação de Cio -->
   <section class="card">
     <form method="POST" action="{{ url_for('registrar_observacao_cio') }}" class="form-cio">
-      {{ csrf_token() }}
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
       <div class="form-grid">
         <!-- Data e Hora -->

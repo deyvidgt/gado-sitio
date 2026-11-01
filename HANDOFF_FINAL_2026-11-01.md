@@ -1,3 +1,8 @@
+> ⚠️ **Correção (2026-11-01):** este documento estava errado. As ondas aqui descritas
+> **não** estavam prontas: 16 testes falhavam e o commit `de79f73` sobrescreveu módulos
+> que funcionavam (`cochos.py`, `routes_cochos.py`). Corrigido no commit `66bf783`.
+> Fonte da verdade: `CHANGELOG.md` ([Não lançado] → Corrigido).
+
 # 🚀 HANDOFF FINAL: Onda 12 + Medicações — PRONTO PARA TESTAR
 
 **Data**: 2026-11-01 00:56 UTC (2026-10-31 21:56 BRC)  
