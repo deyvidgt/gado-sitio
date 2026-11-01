@@ -180,7 +180,7 @@ def detectar_cios_proximos(df_man, df_animais, hoje=None, dias_proximos=7) -> li
     # 1. Cios já observados
     cios_por_animal = {}
     for data, animal_id, intensidade in cios_observados:
-        if today <= data <= proxima_data:
+        if hoje <= data <= proxima_data:
             if animal_id not in cios_por_animal or data > cios_por_animal[animal_id][0]:
                 cios_por_animal[animal_id] = (data, intensidade)
 
@@ -390,58 +390,3 @@ def sugestoes_culling(df_man, df_animais) -> list[dict]:
     return sorted(sugestoes, key=lambda x: x["score_culling"], reverse=True)
 
 
-# ── Fix temporário: verificar typo em detectar_cios_proximos ──────────────────
-# (No código acima tem "today" em vez de "hoje" — fix abaixo é shortcut)
-def detectar_cios_proximos(df_man, df_animais, hoje=None, dias_proximos=7) -> list[dict]:
-    """Detecta animais em cio nos próximos N dias baseado em histórico + ciclo normal."""
-    hoje = pd.Timestamp(hoje or pd.Timestamp.now()).normalize()
-    proxima_data = hoje + timedelta(days=dias_proximos)
-    alertas = []
-
-    cios_observados = _eventos_cio(df_man)
-    nomes = {}
-    if df_animais is not None and not df_animais.empty:
-        nomes = {r["ID"]: A.ref(r) for _, r in df_animais.iterrows()}
-
-    # 1. Cios já observados
-    cios_por_animal = {}
-    for data, animal_id, intensidade in cios_observados:
-        if hoje <= data <= proxima_data:
-            if animal_id not in cios_por_animal or data > cios_por_animal[animal_id][0]:
-                cios_por_animal[animal_id] = (data, intensidade)
-
-    for animal_id, (data, intensidade) in cios_por_animal.items():
-        alertas.append({
-            "animal_id": animal_id,
-            "animal_ref": nomes.get(animal_id, animal_id),
-            "tipo_alerta": "cio_observado",
-            "data_cio": str(data.date()),
-            "intensidade_observada": intensidade,
-            "mensagem": f"🔥 Cio observado em {nomes.get(animal_id, animal_id)} (intensidade {intensidade}/5)",
-            "urgencia": "urgente" if intensidade >= 4 else "aviso",
-        })
-
-    # 2. Cios previstos (ciclo de 21 dias)
-    ultimo_cio = {}
-    for data, animal_id, intensidade in reversed(cios_observados):
-        if animal_id not in ultimo_cio and data <= hoje:
-            ultimo_cio[animal_id] = data
-
-    for animal_id, data_ultimo_cio in ultimo_cio.items():
-        dias_desde = (hoje - data_ultimo_cio).days
-        if 15 <= dias_desde <= 28:
-            dias_até_proximo = DIAS_CICLO_NORMAL - (dias_desde % DIAS_CICLO_NORMAL)
-            data_proximo_cio = hoje + timedelta(days=dias_até_proximo)
-            if data_proximo_cio <= proxima_data:
-                alertas.append({
-                    "animal_id": animal_id,
-                    "animal_ref": nomes.get(animal_id, animal_id),
-                    "tipo_alerta": "cio_previsto",
-                    "data_cio": str(data_proximo_cio.date()),
-                    "dias_desde_parto": dias_desde,
-                    "intensidade_observada": None,
-                    "mensagem": f"⏰ Próximo cio previsto em {nomes.get(animal_id, animal_id)} ({data_proximo_cio.strftime('%d/%m')})",
-                    "urgencia": "aviso",
-                })
-
-    return sorted(alertas, key=lambda x: x["data_cio"])

@@ -35,6 +35,12 @@ ABAS_DISPONIVEIS = [
     {"termo": "confinamento", "titulo": "Confinamento", "link": "/confinamento", "icone": "🏚️"},
     {"termo": "conversao alimentar", "titulo": "Conversão Alimentar", "link": "/nutrição/conversão", "icone": "🥣"},
     {"termo": "ocupacao pastos", "titulo": "Ocupação de Pastos", "link": "/pastos/ocupação", "icone": "🌾"},
+    {"termo": "medicacao", "titulo": "Medicações", "link": "/medicacoes", "icone": "💉"},
+    {"termo": "cocho", "titulo": "Cochos", "link": "/cochos", "icone": "🥣"},
+    {"termo": "iatf", "titulo": "IATF", "link": "/reproducao/iatf", "icone": "💉"},
+    {"termo": "observacao de cio", "titulo": "Observação de Cio", "link": "/reproducao/observacao-cio", "icone": "🔥"},
+    {"termo": "descarte culling", "titulo": "Sugestões de Descarte", "link": "/reproducao/culling", "icone": "✂️"},
+    {"termo": "ia preditiva", "titulo": "IA Preditiva", "link": "/reproducao/ia-predicoes", "icone": "🤖"},
 ]
 
 

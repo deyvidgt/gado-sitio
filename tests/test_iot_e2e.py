@@ -3,6 +3,7 @@
 """tests/test_iot_e2e.py — E2E + smoke tests para Onda 16"""
 
 import pytest
+import asyncio
 import json
 from datetime import datetime
 import sys
@@ -12,9 +13,9 @@ sys.path.insert(0, '.')
 class TestIoTEndpoints:
     """E2E: sensores → manager → endpoints → sync"""
 
-    def test_pesagem_endpoint(self, client):
+    def test_pesagem_endpoint(self, cliente):
         """POST /api/iot/pesagem salva peso."""
-        response = client.post('/api/iot/pesagem', json={
+        response = cliente.post('/api/iot/pesagem', json={
             'valor': 420.5,
             'sensor_id': 'balanca_1',
             'timestamp': datetime.now().isoformat()
@@ -22,9 +23,9 @@ class TestIoTEndpoints:
         assert response.status_code == 201
         assert response.json['sucesso'] is True
 
-    def test_temperatura_endpoint(self, client):
+    def test_temperatura_endpoint(self, cliente):
         """POST /api/iot/temperatura salva temp."""
-        response = client.post('/api/iot/temperatura', json={
+        response = cliente.post('/api/iot/temperatura', json={
             'temperatura': 38.5,
             'sensor_id': 'colar_1',
             'timestamp': datetime.now().isoformat()
@@ -32,9 +33,9 @@ class TestIoTEndpoints:
         assert response.status_code == 201
         assert response.json['sucesso'] is True
 
-    def test_consumo_endpoint(self, client):
+    def test_consumo_endpoint(self, cliente):
         """POST /api/iot/consumo salva consumo."""
-        response = client.post('/api/iot/consumo', json={
+        response = cliente.post('/api/iot/consumo', json={
             'consumo_kg': 3.2,
             'sensor_id': 'comedouro_1',
             'timestamp': datetime.now().isoformat()
@@ -42,13 +43,13 @@ class TestIoTEndpoints:
         assert response.status_code == 201
         assert response.json['sucesso'] is True
 
-    def test_sync_endpoint(self, client):
+    def test_sync_endpoint(self, cliente):
         """POST /api/iot/sync sincroniza fila."""
         fila = [
             {'tipo': 'pesagem', 'dados': {'valor': 420, 'sensor_id': 'b1'}},
             {'tipo': 'temperatura', 'dados': {'temperatura': 38.5, 'sensor_id': 'c1'}},
         ]
-        response = client.post('/api/iot/sync', json={'itens': fila})
+        response = cliente.post('/api/iot/sync', json={'itens': fila})
         assert response.status_code == 200
         assert response.json['sucesso'] is True
         assert response.json['processados'] >= 0
@@ -75,9 +76,10 @@ class TestIoTEndpoints:
                 return {'sucesso': True, 'valor': 420}
 
         sensor = SensorTest()
-        result = sensor.ler.__self__.ler()  # Hack para async
+        result = asyncio.run(sensor.ler())
         # Verifica que retorna dict com sucesso=False
         assert isinstance(result, dict)
+        assert result['sucesso'] is False
 
     def test_localStorage_schema(self):
         """localStorage keys exatos: iot_devices, iot_fila_offline"""
@@ -101,15 +103,3 @@ class TestIoTEndpoints:
 
         assert len(fila) == 1
         assert fila[0]['dados']['valor'] == 420
-
-
-@pytest.fixture
-def client():
-    """Flask test client"""
-    try:
-        from app import app
-        app.config['TESTING'] = True
-        with app.test_client() as client:
-            yield client
-    except ImportError:
-        pytest.skip("app.py não disponível")

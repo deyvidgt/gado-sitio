@@ -1,249 +1,217 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-medicacoes.py — Histórico de medicações por animal + quarentena leite (v5.12 Onda 12.X)
+medicacoes.py — Histórico de medicações por animal (Leite e Corte)
 
-Rastreia qual medicação foi dada a qual animal, quando, dosagem, e impacto em quarentena de leite.
-Integra com Manejo (tipo "Medicação") e alertas de quarentena.
-
-Dados: Aba Excel "Medicações" com colunas:
-  Data, Brincos, Tipo Medicação, Princípio Ativo, Dosagem, Via, Motivo,
-  Quarentena Leite (dias), Data Liberação, Responsável, ID Envio, Criado Em
+Rastreia qual medicação foi dada a qual animal, quando, e impacto em quarentena de leite.
+Integra com Animais (brinco) e alertas de qualidade de leite.
 """
-
-from __future__ import annotations
 
 import pandas as pd
 from datetime import datetime, timedelta
-
-import animais as A
-
-# ── Tipos de medicação ──────────────────────────────────────────────────────────
-TIPOS_MEDICACAO = [
-    "Antibiótico IM",
-    "Antibiótico IV",
-    "Antibiótico Oral",
-    "Antiparasitário",
-    "Anti-inflamatório",
-    "Vitaminas",
-    "Estimulante Rúmen",
-    "Outro",
-]
-
-VIAS_APLICACAO = ["IM", "IV", "Oral", "Tópico", "Intra-mamária"]
-
-# ── Quarentena padrão por tipo (dias) ──────────────────────────────────────────
-QUARENTENA_PADRAO = {
-    "Antibiótico IM": 3,
-    "Antibiótico IV": 3,
-    "Antibiótico Oral": 3,
-    "Antiparasitário": 0,
-    "Anti-inflamatório": 1,
-    "Vitaminas": 0,
-    "Estimulante Rúmen": 0,
-    "Outro": 1,
-}
-
-MOTIVOS_MEDICACAO = [
-    "Mastite",
-    "Metrite",
-    "Ferida/Abcesso",
-    "Controle Parasitário",
-    "Reposição Vitamínica",
-    "Doença Respiratória",
-    "Diarreia",
-    "Outro",
-]
+import db
+from config import COLUNAS_MEDICACOES
 
 
-def registrar_medicacao(data: str, brincos_str: str, tipo: str, principio: str,
-                       dosagem: str, via: str, motivo: str, quarentena_leite: int,
-                       responsavel: str = "") -> dict:
-    """Registra nova medicação por animal.
+def registrar_medicacao(data: str, brincos: str, tipo: str, principio: str,
+                       dosagem: str, via: str, motivo: str, quarentena_dias: int,
+                       custo: float = 0, observacoes: str = "") -> bool:
+    """
+    Registra medicação para um ou mais animais.
 
-    Retorna: {"sucesso": bool, "msg": str, "data_liberacao": str}
+    Args:
+        data: dd/mm/aaaa
+        brincos: "Amarelo 01 #A0001; Azul 05 #A0003" (mesmo formato de Vendas)
+        tipo: "Antibiótico IM", "Antiparasitário", "Antiinflamatório", etc.
+        principio: "Penicilina benzatina", "Ivermectina", etc.
+        dosagem: "20 mL", "1 comprimido"
+        via: "IM", "IV", "Oral", "Tópico"
+        motivo: "Mastite", "Metrite", "Ferida", "Controle parasitário"
+        quarentena_dias: dias até liberação de leite (min 3 antibiótico, 0 outros)
+        custo: R$ gasto
+        observacoes: notas extras
 
-    shortcut: não valida tipo/princípio/motivo contra enum (dados do usuário variam)
+    Returns:
+        True se gravou, False se erro
     """
     try:
-        data_obj = pd.Timestamp(data).normalize()
-        if data_obj > pd.Timestamp.now().normalize():
-            raise ValueError("Data não pode ser futura")
-
-        # Validar brincos (devem existir em Animais)
-        ids_animais = A.ids_de(brincos_str)
-        if not ids_animais:
-            raise ValueError("Nenhum animal encontrado nos brincos informados")
-
-        # Quarentena deve ser >= 0
-        if not isinstance(quarentena_leite, int) or quarentena_leite < 0:
-            raise ValueError("Quarentena deve ser número não-negativo")
-
-        data_liberacao = data_obj + timedelta(days=quarentena_leite)
-
-        return {
-            "sucesso": True,
-            "msg": f"✅ Medicação registrada para {len(ids_animais)} animal(is)",
-            "data_liberacao": str(data_liberacao.date()),
-            "ids_animais": ids_animais,
-            "data_liberacao_obj": data_liberacao,
-        }
-    except Exception as e:
-        return {"sucesso": False, "msg": f"❌ Erro: {str(e)}"}
-
-
-def historico_animal(df_medicacoes, animal_id: str) -> list[dict]:
-    """Retorna todas as medicações de um animal (por brinco ID).
-
-    Retorna: [{"data": "2026-10-31", "tipo": "Mastite", "via": "IM", "quarentena": 3, ...}]
-    """
-    if df_medicacoes is None or df_medicacoes.empty:
-        return []
-
-    registros = []
-    for _, row in df_medicacoes.iterrows():
-        brincos_str = A._txt(row.get("Brincos", ""))
-        if animal_id not in A.ids_de(brincos_str):
-            continue
-
-        registros.append({
-            "data": A._txt(row.get("Data", "")),
-            "tipo_medicacao": A._txt(row.get("Tipo Medicação", "")),
-            "principio_ativo": A._txt(row.get("Princípio Ativo", "")),
-            "dosagem": A._txt(row.get("Dosagem", "")),
-            "via": A._txt(row.get("Via", "")),
-            "motivo": A._txt(row.get("Motivo", "")),
-            "quarentena_leite": row.get("Quarentena Leite (dias)", 0),
-            "data_liberacao": A._txt(row.get("Data Liberação", "")),
-            "responsavel": A._txt(row.get("Responsável", "")),
-        })
-
-    # Ordenar por data (descendente — mais recente primeiro)
-    registros.sort(key=lambda x: x["data"], reverse=True)
-    return registros
-
-
-def animais_em_quarentena(df_medicacoes, df_animais, hoje=None) -> list[dict]:
-    """Retorna animais com leite em quarentena HOJE.
-
-    Retorna: [{"animal_ref": "Preta 23 #A0042", "data_liberacao": "2026-11-02", "dias_restantes": 1}]
-    """
-    hoje = pd.Timestamp(hoje or pd.Timestamp.now()).normalize()
-
-    if df_medicacoes is None or df_medicacoes.empty:
-        return []
-
-    em_quarentena = {}  # animal_id → (data_liberacao mais recente, dias_restantes)
-
-    for _, row in df_medicacoes.iterrows():
+        # Validar data
         try:
-            data_lib = pd.Timestamp(row.get("Data Liberação", "")).normalize()
-            if pd.isna(data_lib) or data_lib < hoje:
-                continue  # liberação já passou
+            data_obj = pd.to_datetime(data, format='%d/%m/%Y')
+        except:
+            print(f"❌ Data inválida: {data}")
+            return False
 
-            brincos_str = A._txt(row.get("Brincos", ""))
-            for animal_id in A.ids_de(brincos_str):
-                dias_restantes = (data_lib - hoje).days
-                # Manter a liberação mais próxima (a que libera por último)
-                if animal_id not in em_quarentena or data_lib > em_quarentena[animal_id][0]:
-                    em_quarentena[animal_id] = (data_lib, dias_restantes)
-        except (ValueError, TypeError):
-            continue
-
-    # Montar resposta com referência do animal
-    nomes = {}
-    if df_animais is not None and not df_animais.empty:
-        nomes = {r["ID"]: A.ref(r) for _, r in df_animais.iterrows()}
-
-    alertas = []
-    for animal_id, (data_lib, dias_restantes) in em_quarentena.items():
-        alertas.append({
-            "animal_id": animal_id,
-            "animal_ref": nomes.get(animal_id, animal_id),
-            "data_liberacao": str(data_lib.date()),
-            "dias_restantes": dias_restantes,
-            "urgencia": "urgente" if dias_restantes <= 1 else "aviso",
-        })
-
-    # Ordenar por dias restantes (mais urgentes primeiro)
-    alertas.sort(key=lambda x: x["dias_restantes"])
-    return alertas
-
-
-def alertas_quarentena(df_medicacoes, df_animais, hoje=None) -> list[dict]:
-    """Gera alertas de quarentena leite para WhatsApp/dashboard.
-
-    Retorna: [{"animal_ref": "Preta 23", "mensagem": "🚫 Leite em quarentena até 02/11"}]
-    """
-    em_quarentena = animais_em_quarentena(df_medicacoes, df_animais, hoje)
-
-    alertas = []
-    for q in em_quarentena:
-        if q["urgencia"] == "urgente":
-            icone = "🚫"
-            msg = f"LEITE LIBERADO AMANHÃ ({q['data_liberacao']})"
+        # Validar brincos (existem?)
+        if brincos.strip():
+            brincos_lista = [b.strip() for b in brincos.split(';') if b.strip()]
         else:
-            icone = "⏰"
-            msg = f"Leite em quarentena até {q['data_liberacao']} ({q['dias_restantes']} dias)"
+            print("❌ Brincos obrigatórios")
+            return False
 
-        alertas.append({
-            "animal_ref": q["animal_ref"],
-            "animal_id": q["animal_id"],
-            "mensagem": f"{icone} {q['animal_ref']}: {msg}",
-            "urgencia": q["urgencia"],
-            "data_liberacao": q["data_liberacao"],
-        })
+        # Calcular data de liberação
+        data_liberacao = (data_obj + timedelta(days=int(quarentena_dias))).strftime('%d/%m/%Y')
 
-    return alertas
+        # Montar linha
+        linha = [
+            data,
+            brincos,
+            tipo,
+            principio,
+            dosagem,
+            via,
+            motivo,
+            str(quarentena_dias),
+            data_liberacao,
+            str(custo),
+            "Sistema",  # Responsável (admin)
+            observacoes,
+        ]
+
+        # Gravar
+        db.salvar_linha("Medicações", linha)
+        print(f"✅ Medicação registrada: {brincos} em {data}")
+        return True
+
+    except Exception as e:
+        print(f"❌ Erro ao registrar medicação: {e}")
+        return False
 
 
-def dashboard_medicacoes(df_medicacoes, df_animais, hoje=None) -> dict:
-    """Resumo para dashboard: total medicações este mês, em quarentena, etc.
-
-    Retorna: {
-        "total_mes": int,
-        "em_quarentena_hoje": int,
-        "liberando_amanha": int,
-        "tipos_mais_comuns": [...],
-    }
+def historico_animal(brinco_id: str) -> list:
     """
-    hoje = pd.Timestamp(hoje or pd.Timestamp.now()).normalize()
-    mes_inicio = hoje.replace(day=1)
+    Retorna histórico de medicações de um animal.
 
-    if df_medicacoes is None or df_medicacoes.empty:
+    Args:
+        brinco_id: Identificador único (ex: "A0001")
+
+    Returns:
+        Lista de dicts com medicações
+    """
+    try:
+        df = db.carregar_aba("Medicações")
+        if df.empty:
+            return []
+
+        # Filtrar por brinco (buscar substring no formato "Amarelo 01 #A0001")
+        df_filtrado = df[df['Brincos'].str.contains(brinco_id, na=False)]
+
+        return df_filtrado.to_dict('records')
+
+    except Exception as e:
+        print(f"❌ Erro ao ler histórico: {e}")
+        return []
+
+
+def alertas_quarentena(hoje: str = None) -> dict:
+    """
+    Retorna animais em quarentena de leite HOJE.
+
+    Args:
+        hoje: dd/mm/aaaa (default: hoje)
+
+    Returns:
+        {
+            "total": int,
+            "por_liberar": [{"brinco": "", "liberacao": "", "dias_falta": int}, ...],
+            "por_vencer_hoje": [...]
+        }
+    """
+    if not hoje:
+        hoje = datetime.now().strftime('%d/%m/%Y')
+
+    try:
+        data_obj = pd.to_datetime(hoje, format='%d/%m/%Y')
+    except:
+        return {"total": 0, "por_liberar": [], "por_vencer_hoje": []}
+
+    try:
+        df = db.carregar_aba("Medicações")
+        if df.empty:
+            return {"total": 0, "por_liberar": [], "por_vencer_hoje": []}
+
+        # Converter Data Liberação para datetime
+        df['Data_Liberacao_obj'] = pd.to_datetime(df['Data Liberação'], format='%d/%m/%Y', errors='coerce')
+
+        # Filtrar medicações que ainda estão em quarentena (Data_Liberacao >= hoje)
+        df_quaren = df[df['Data_Liberacao_obj'] >= data_obj].copy()
+
+        if df_quaren.empty:
+            return {"total": 0, "por_liberar": [], "por_vencer_hoje": []}
+
+        # Calcular dias faltantes
+        df_quaren['dias_falta'] = (df_quaren['Data_Liberacao_obj'] - data_obj).dt.days
+
+        # Separar por vencer hoje (dias_falta == 0) e ainda faltando
+        por_vencer = df_quaren[df_quaren['dias_falta'] == 0].copy()
+        por_liberar = df_quaren[df_quaren['dias_falta'] > 0].copy()
+
         return {
-            "total_mes": 0,
-            "em_quarentena_hoje": 0,
-            "liberando_amanha": 0,
-            "tipos_mais_comuns": [],
+            "total": len(df_quaren),
+            "por_liberar": [
+                {
+                    "brinco": row['Brincos'],
+                    "liberacao": row['Data Liberação'],
+                    "dias_falta": int(row['dias_falta']),
+                    "motivo": row['Motivo'],
+                } for _, row in por_liberar.iterrows()
+            ],
+            "por_vencer_hoje": [
+                {
+                    "brinco": row['Brincos'],
+                    "liberacao": row['Data Liberação'],
+                    "motivo": row['Motivo'],
+                } for _, row in por_vencer.iterrows()
+            ],
         }
 
-    # Total este mês
-    df_mes = df_medicacoes[
-        (pd.to_datetime(df_medicacoes["Data"], errors="coerce") >= mes_inicio) &
-        (pd.to_datetime(df_medicacoes["Data"], errors="coerce") <= hoje)
-    ]
-    total_mes = len(df_mes) if not df_mes.empty else 0
+    except Exception as e:
+        print(f"❌ Erro ao calcular quarentena: {e}")
+        return {"total": 0, "por_liberar": [], "por_vencer_hoje": []}
 
-    # Em quarentena hoje
-    quarentena = animais_em_quarentena(df_medicacoes, df_animais, hoje)
-    em_quarentena_hoje = len(quarentena)
 
-    # Liberando amanhã
-    amanha = hoje + timedelta(days=1)
-    liberando_amanha = sum(1 for q in quarentena if pd.Timestamp(q["data_liberacao"]).normalize() == amanha)
+def medicacoes_recentes(dias: int = 30) -> list:
+    """
+    Retorna medicações dos últimos N dias.
+    """
+    try:
+        df = db.carregar_aba("Medicações")
+        if df.empty:
+            return []
 
-    # Tipos mais comuns
-    tipos_cont = {}
-    for _, row in df_medicacoes.iterrows():
-        tipo = A._txt(row.get("Tipo Medicação", "Outro"))
-        tipos_cont[tipo] = tipos_cont.get(tipo, 0) + 1
+        data_limite = pd.to_datetime(datetime.now() - timedelta(days=dias), format='%Y-%m-%d')
+        df['Data_obj'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce')
+        df_recentes = df[df['Data_obj'] >= data_limite].copy()
 
-    tipos_mais_comuns = sorted(tipos_cont.items(), key=lambda x: x[1], reverse=True)[:3]
+        return df_recentes.to_dict('records')
+
+    except Exception as e:
+        print(f"❌ Erro ao ler recentes: {e}")
+        return []
+
+
+def relatorio_medicacoes_animal(brinco_id: str, ano: int = None) -> dict:
+    """
+    Relatório de medicações de um animal em um ano.
+    """
+    if not ano:
+        ano = datetime.now().year
+
+    historico = historico_animal(brinco_id)
+
+    if not historico:
+        return {"animal": brinco_id, "ano": ano, "total": 0, "por_tipo": {}}
+
+    df = pd.DataFrame(historico)
+    df['ano'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce').dt.year
+    df_ano = df[df['ano'] == ano]
+
+    por_tipo = df_ano['Tipo Medicação'].value_counts().to_dict()
 
     return {
-        "total_mes": total_mes,
-        "em_quarentena_hoje": em_quarentena_hoje,
-        "liberando_amanha": liberando_amanha,
-        "tipos_mais_comuns": [{"tipo": t, "count": c} for t, c in tipos_mais_comuns],
+        "animal": brinco_id,
+        "ano": ano,
+        "total": len(df_ano),
+        "por_tipo": por_tipo,
+        "medicacoes": df_ano.to_dict('records'),
     }

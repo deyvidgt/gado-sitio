@@ -721,11 +721,16 @@
       <!-- ═══ SAÚDE & VETERINÁRIA ═══ -->
       <a href="{{ url_for('saude_leite') }}" class="drawer-link">💊 Mastite & Qualidade</a>
       <a href="{{ url_for('listar_doencas') }}" class="drawer-link">🩺 Doenças & Carência</a>
+      <a href="{{ url_for('medicacoes_dashboard') }}" class="drawer-link">💉 Medicações</a>
       <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
 
       <!-- ═══ REPRODUÇÃO & PARTOS ═══ -->
       <a href="{{ url_for('reproducao') }}" class="drawer-link">🐮 Reprodução</a>
       <a href="{{ url_for('calendario_partos') }}" class="drawer-link">🍼 Previsão de Partos</a>
+      <a href="{{ url_for('reproducao_iatf') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  💉 IATF</a>
+      <a href="{{ url_for('reproducao_observacao_cio') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🔥 Observação de Cio</a>
+      <a href="{{ url_for('reproducao_culling') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  ✂️ Sugestões de Descarte</a>
+      <a href="{{ url_for('ia_predicoes') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🤖 IA Preditiva</a>
       <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
 
       <!-- ═══ NUTRIÇÃO & ALIMENTAÇÃO ═══ -->
@@ -742,6 +747,7 @@
       <a href="{{ url_for('pastos') }}" class="drawer-link">🗺️ Pastos</a>
       <a href="{{ url_for('dashboard_ocupacao_pastos') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📍 Ocupação & Rotação</a>
       <a href="{{ url_for('manejo') }}" class="drawer-link">🌿 Manejo</a>
+      <a href="{{ url_for('cochos') }}" class="drawer-link">🥣 Cochos</a>
       <a href="{{ url_for('operacao_leite', tipo='conforto') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🏠 Conforto Térmico</a>
       <a href="{{ url_for('operacao_leite', tipo='colchao') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🛏️ Colchão</a>
       <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">

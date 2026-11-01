@@ -39,6 +39,27 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   - Modal do calendário: ícones diferentes por categoria (🌾 visita, 🩺 manejo, 📥 compra, 📤 venda, 💸 gasto, ✅ tarefa).
   - Links contextuais: cada evento vai para a página certa (/manejo/novo, /visitas, /compras, etc.).
   - Cada evento agora tem campo `categoria` para filtragem correta.
+- **Telas das Ondas 11/12/12.X/19 no menu:** Medicações, Cochos, IATF, Observação de Cio,
+  Sugestões de Descarte e IA Preditiva agora aparecem no menu lateral e na busca global —
+  antes só existiam como rota, sem nenhum link para chegar nelas.
+
+### Corrigido
+- **Restauração das Ondas 11/12/12.X/16/19:** o commit `de79f73` sobrescreveu módulos que
+  já funcionavam e deixou 16 testes quebrados. Restaurado o estado anterior e corrigido:
+  - `cochos.py` / `routes_cochos.py`: voltaram as funções de consumo por visita e o template
+    `cochos.html` (o rewrite renderizava templates que nunca existiram → 500).
+  - `medicacoes.py`: usava `db.ler_aba()`, que nunca existiu (só `carregar_aba`) — a
+    quarentena aparecia sempre vazia, sem erro.
+  - `routes_medicacoes.py`: adicionada validação de CSRF no POST e criado o template
+    `medicacoes/historico.html`, que faltava (a página do animal dava 500).
+  - `reproducao_avancada.py`: removida cópia duplicada de `detectar_cios_proximos()`
+    (a primeira usava `today` indefinido) — agora existe uma só.
+  - `routes_iot.py`: importava `_membro_logado` de `extensions` (não existe) → os 4
+    endpoints IoT respondiam 500; agora vem de `routes_animais`.
+  - `leite.py` / `alertas.py`: dados sem coluna `Status` e DataFrame vazio não estouram
+    mais (`AttributeError` / "truth value is ambiguous").
+  - Templates: `{{ csrf_token() }}` (o token é string, não função) e `url_for('registrar_manejo')`
+    (endpoint inexistente) corrigidos em `reproducao_observacao_cio.html` e `reproducao_iatf.html`.
 
 ### Adicionado
 - **Animais Agrupados por Dono (v5.10):** nova página `/animais/dono/<dono>` mostra todos os animais de um dono:
