@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+
+{% block title %}Observação de Cio — Reprodução{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>🔥 Registrar Observação de Cio</h1>
+  <p class="subtitle">Detecção manual com sinais clínicos + sugestão de inseminação</p>
+
+  <!-- Formulário Observação de Cio -->
+  <section class="card">
+    <form method="POST" action="{{ url_for('registrar_observacao_cio') }}" class="form-cio">
+      {{ csrf_token() }}
+
+      <div class="form-grid">
+        <!-- Data e Hora -->
+        <div class="form-group">
+          <label for="data">Data da Observação</label>
+          <input type="date" id="data" name="data" required>
+        </div>
+
+        <div class="form-group">
+          <label for="hora">Hora (aprox.)</label>
+          <input type="time" id="hora" name="hora">
+        </div>
+
+        <!-- Animal -->
+        <div class="form-group">
+          <label for="brincos">Animal (brinco)</label>
+          <input type="text" id="brincos" name="brincos" placeholder="Ex: Preta 23 #A0042" required>
+        </div>
+
+        <!-- Intensidade (1-5) -->
+        <div class="form-group">
+          <label for="intensidade">Intensidade do Cio (1-5)</label>
+          <div class="intensidade-slider">
+            <input type="range" id="intensidade" name="intensidade" min="1" max="5" value="3"
+                   oninput="atualizar_intensidade(this.value)">
+            <div class="intensidade-display">
+              <span id="intensidade-valor">3</span>/5
+            </div>
+          </div>
+          <small>1=Leve | 2=Moderado | 3=Normal | 4=Intenso | 5=Muito Intenso</small>
+        </div>
+
+        <!-- Sinais Clínicos (checkboxes) -->
+        <div class="form-group form-full">
+          <label>Sinais Clínicos Observados</label>
+          <div class="sinais-checkboxes">
+            <label class="checkbox">
+              <input type="checkbox" name="sinais" value="postura">
+              <span>🐄 Postura de monta (aceita ser montada)</span>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" name="sinais" value="corrimento">
+              <span>💧 Corrimento vaginal abundante</span>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" name="sinais" value="mucosa">
+              <span>🔴 Mucosa avermelhada/inchada</span>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" name="sinais" value="vulva">
+              <span>🔴 Vulva edemaciada</span>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" name="sinais" value="inquietude">
+              <span>⚡ Inquietude/comportamento alterado</span>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" name="sinais" value="tansao">
+              <span>🎯 Tansão (eriçamento de pelos)</span>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" name="sinais" value="balido">
+              <span>🔊 Balido/Vocalização</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Observação -->
+        <div class="form-group form-full">
+          <label for="observacao">Observações Adicionais</label>
+          <textarea id="observacao" name="observacao" rows="3"
+                    placeholder="Ex: Animal com mais inquietude que normal, corrimento claro..."></textarea>
+        </div>
+
+        <!-- Responsável -->
+        <div class="form-group">
+          <label for="responsavel">Responsável</label>
+          <input type="text" id="responsavel" name="responsavel" value="{{ usuario_atual }}" readonly>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">🔥 Registrar Cio</button>
+    </form>
+  </section>
+
+  <!-- Recomendação de Inseminação (gerada automaticamente após submit) -->
+  {% if sugestao_inseminacao %}
+  <section class="card" style="border-left: 4px solid var(--ok); background: rgba(0, 128, 0, 0.05);">
+    <h2>✅ Sugestão de Inseminação</h2>
+    <div class="sugestao-ia">
+      <p style="font-size: 16px; font-weight: bold;">
+        🎯 <strong>{{ sugestao_inseminacao.animal_ref }}</strong>
+      </p>
+      <p style="font-size: 14px;">
+        <strong>Inseminar em:</strong>
+        <span style="color: var(--danger); font-weight: bold;">
+          {{ sugestao_inseminacao.data_inseminacao }} às {{ sugestao_inseminacao.hora_inseminacao }}
+        </span>
+      </p>
+      <p style="font-size: 13px; color: var(--text-secondary);">
+        {{ sugestao_inseminacao.motivo }}
+      </p>
+      <div style="margin-top: 12px;">
+        <a href="{{ url_for('reproducao') }}" class="btn btn-small">
+          ➕ Agendar Inseminação
+        </a>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Histórico de Cios (últimos 21 dias) -->
+  <section class="card">
+    <h2>📋 Histórico de Cios (últimos 21 dias)</h2>
+    {% if historico_cios %}
+    <div style="overflow-x: auto;">
+      <table class="tabela-cios">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Animal</th>
+            <th>Intensidade</th>
+            <th>Sinais</th>
+            <th>Sugestão IA</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cio in historico_cios %}
+          <tr>
+            <td>{{ cio.data }}{% if cio.hora %} {{ cio.hora }}{% endif %}</td>
+            <td><strong>{{ cio.animal_ref }}</strong></td>
+            <td>
+              <div class="intensidade-badge">
+                {% for i in range(1, cio.intensidade + 1) %}🔥{% endfor %}
+                ({{ cio.intensidade }}/5)
+              </div>
+            </td>
+            <td>
+              <small>
+                {% if cio.sinais %}
+                  {{ cio.sinais|join(", ") }}
+                {% else %}
+                  —
+                {% endif %}
+              </small>
+            </td>
+            <td>
+              {% if cio.data_inseminacao_sugerida %}
+              <small>
+                <strong>{{ cio.data_inseminacao_sugerida }}{% if cio.hora_inseminacao %} {{ cio.hora_inseminacao }}{% endif %}</strong>
+              </small>
+              {% else %}
+              —
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="color: var(--text-secondary);">Nenhuma observação de cio registrada nos últimos 21 dias.</p>
+    {% endif %}
+  </section>
+
+  <!-- Referência: Sinais de Cio -->
+  <section class="card">
+    <h2>ℹ️ Guia: Como Reconhecer Cio em Bovinos</h2>
+    <div class="guia-cios">
+      <div class="guia-item">
+        <strong>🟢 Sinais Primários (mais confiáveis):</strong>
+        <ul>
+          <li><strong>Postura de monta</strong> — aceita ser montada (90-95% precisão)</li>
+          <li><strong>Corrimento vaginal</strong> — mucosa viscosa e brilhante</li>
+          <li><strong>Vulva edemaciada</strong> — aumentada de tamanho</li>
+        </ul>
+      </div>
+      <div class="guia-item">
+        <strong>🟡 Sinais Secundários (apoiam diagnóstico):</strong>
+        <ul>
+          <li>Inquietude e mudança de comportamento</li>
+          <li>Eriçamento de pelos (tansão)</li>
+          <li>Vocalizações aumentadas</li>
+          <li>Queda de produção leite (transitória)</li>
+        </ul>
+      </div>
+      <div class="guia-item">
+        <strong>⏰ Duração Típica:</strong>
+        <ul>
+          <li>Cio dura 12-18 horas em média</li>
+          <li>Ciclo reprodutivo = 21 dias (19-23 dias)</li>
+          <li>Melhor momento IA: 12 horas antes do fim do cio</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Voltar -->
+  <div style="margin-top: 20px;">
+    <a href="{{ url_for('reproducao_iatf') }}" class="btn btn-secondary">← Voltar para IATF</a>
+  </div>
+</div>
+
+<style>
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.form-full {
+  grid-column: 1 / -1;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font: inherit;
+}
+
+.form-group textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.form-group small {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.intensidade-slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.intensidade-slider input[type="range"] {
+  flex: 1;
+  height: 6px;
+  cursor: pointer;
+}
+
+.intensidade-display {
+  font-weight: bold;
+  font-size: 14px;
+  min-width: 35px;
+}
+
+.sinais-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.sugestao-ia {
+  padding: 12px;
+  background: rgba(0, 128, 0, 0.1);
+  border-radius: 4px;
+}
+
+.tabela-cios {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.tabela-cios th, .tabela-cios td {
+  border: 1px solid var(--border-color);
+  padding: 10px;
+  text-align: left;
+  font-size: 13px;
+}
+
+.tabela-cios th {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+}
+
+.tabela-cios tbody tr:nth-child(even) {
+  background: var(--bg-secondary);
+}
+
+.intensidade-badge {
+  display: inline-block;
+}
+
+.guia-cios {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.guia-item {
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  border-left: 4px solid var(--primary);
+}
+
+.guia-item strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.guia-item ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.guia-item li {
+  padding: 4px 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+@media (max-width: 610px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tabela-cios {
+    font-size: 11px;
+  }
+
+  .tabela-cios th, .tabela-cios td {
+    padding: 6px;
+  }
+
+  .guia-cios {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+<script>
+function atualizar_intensidade(valor) {
+  document.getElementById('intensidade-valor').textContent = valor;
+}
+</script>
+{% endblock %}

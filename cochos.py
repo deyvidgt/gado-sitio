@@ -1,244 +1,190 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-cochos.py — Gerenciamento de cochos (comedouros) e rastreamento de alimentação (v5.10)
+cochos.py — Gestão de comedouros/bebedouros por pasto (v5.12 Onda 11 expandida)
 
-Integra visitas com alimentação para rastrear:
-- Consumo diário por cocho (proteinado, sal, ração, silo, feno)
-- Dias estimados até acabar
-- Estado do cocho (Vazio, Normal, Cheio)
-- Próxima salga/reposição
+Cadastro, manutenção, alertas de reposição (ração/água/sal).
+Dados: aba Excel "Cochos" com colunas:
+  ID, Pasto, Tipo, Localização GPS, Data Instalação, Última Manutenção,
+  Frequência Limpeza (dias), Status, Observações, Criado Em
 """
 
-from datetime import datetime, date, timedelta
+from __future__ import annotations
 
-
-def _hoje_br():
-    """Hoje no fuso de Brasília (o servidor pode estar em UTC)."""
-    try:
-        from extensions import _agora
-        return _agora().date()
-    except Exception:
-        return date.today()
-from typing import Dict, List, Optional, Tuple
 import pandas as pd
+from datetime import datetime, timedelta
 
-from db import carregar_aba
+import animais as A
+
+TIPOS_COCHO = ["Cocho (ração)", "Bebedouro (água)", "Saleiro (sal)"]
+
+STATUS_COCHO = ["Ativo", "Manutenção", "Danificado", "Fora de Serviço"]
 
 
-def carregar():
-    """Carrega aba 'Cochos' do Excel."""
+def registrar_cocho(pasto_id: str, tipo: str, lat: float, lng: float,
+                   freq_limpeza: int = 7, observacoes: str = "") -> dict:
+    """Registra novo cocho/bebedouro."""
     try:
-        df = carregar_aba("Cochos")
-        return df if df is not None else pd.DataFrame()
-    except Exception:
-        return pd.DataFrame()
+        if tipo not in TIPOS_COCHO:
+            return {"sucesso": False, "msg": f"Tipo inválido: {tipo}"}
 
+        if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+            return {"sucesso": False, "msg": "Coordenadas GPS inválidas"}
 
-def _normalizar_data(valor):
-    """Normaliza data em vários formatos."""
-    if isinstance(valor, datetime):
-        return valor.date()
-    if isinstance(valor, date):
-        return valor
-    if valor is None or str(valor).strip() == "":
-        return None
-    try:
-        texto = str(valor).strip()[:10]
-        if "-" in texto:
-            return datetime.strptime(texto, "%Y-%m-%d").date()
-        return datetime.strptime(texto, "%d/%m/%Y").date()
-    except ValueError:
-        return None
+        cocho_id = f"C{pd.Timestamp.now().strftime('%Y%m%d%H%M%S')}"
 
-
-def _normalizar_numero(valor):
-    """Normaliza número em vários formatos."""
-    if isinstance(valor, (int, float)):
-        return float(valor)
-    if valor is None or str(valor).strip() == "":
-        return None
-    try:
-        return float(str(valor).replace(",", "."))
-    except (TypeError, ValueError):
-        return None
-
-
-def extrair_consumo_visitas(df_visitas, dias: int = 60) -> Dict[str, Dict]:
-    """
-    Extrai consumo de alimentação das visitas dos últimos N dias.
-
-    Retorna: {
-        "proteinado": {"sacos": X, "kg": Y, "media_dia": Z},
-        "sal": {...},
-        "racao": {...},
-        "silo": {...},
-        "feno": {...}
-    }
-    """
-    if df_visitas.empty:
-        return {}
-
-    # Filtra por data (últimos N dias)
-    df_visitas = df_visitas.copy()
-    df_visitas["_data"] = df_visitas.get("Data", "").apply(_normalizar_data)
-    data_limite = _hoje_br() - timedelta(days=dias)
-    df_filtro = df_visitas[df_visitas["_data"].notna()]
-    df_filtro = df_filtro[df_filtro["_data"] >= data_limite]
-
-    if df_filtro.empty:
-        return {}
-
-    consumo = {}
-
-    # Proteinado
-    sacos_prot = df_filtro["Sacos Proteinado"].apply(_normalizar_numero).sum() or 0
-    consumo["proteinado"] = {
-        "sacos": int(sacos_prot),
-        "kg": round(sacos_prot * 25, 2),  # Assume 25 kg por saco
-        "dias_com_dados": len(df_filtro),
-        "media_dia": round((sacos_prot * 25) / dias, 2) if dias > 0 else 0
-    }
-
-    # Sal/Ração (legado)
-    sacos_sal = df_filtro["Sacos Sal/Ração"].apply(_normalizar_numero).sum() or 0
-    consumo["sal_racao"] = {
-        "sacos": int(sacos_sal),
-        "kg": round(sacos_sal * 25, 2),
-        "dias_com_dados": len(df_filtro),
-        "media_dia": round((sacos_sal * 25) / dias, 2) if dias > 0 else 0
-    }
-
-    # Ração (separado)
-    sacos_racao = df_filtro["Sacos Ração"].apply(_normalizar_numero).sum() or 0
-    consumo["racao"] = {
-        "sacos": int(sacos_racao),
-        "kg": round(sacos_racao * 25, 2),
-        "dias_com_dados": len(df_filtro),
-        "media_dia": round((sacos_racao * 25) / dias, 2) if dias > 0 else 0
-    }
-
-    return consumo
-
-
-def calcular_situacao_cochos(df_cochos, df_visitas) -> Dict[str, Dict]:
-    """
-    Calcula situação de cada cocho: volume, dias restantes, próxima salga.
-
-    Retorna: {
-        "cocho_id": {
-            "nome": "Cocho Pasto Remanga",
-            "tipo": "proteinado",
-            "volume_kg": 432,
-            "capacidade_kg": 500,
-            "percentual": 86,
-            "estado": "Cheio",
-            "consumo_dia_kg": 108,
-            "dias_restantes": 4,
-            "ultima_salga": "2026-06-26",
-            "proxima_salga_estimada": "2026-06-30"
+        return {
+            "sucesso": True,
+            "msg": f"✅ Cocho registrado: {cocho_id}",
+            "cocho_id": cocho_id,
+            "pasto_id": pasto_id,
+            "tipo": tipo,
+            "coordenadas": {"lat": lat, "lng": lng},
         }
-    }
-    """
+    except Exception as e:
+        return {"sucesso": False, "msg": f"❌ Erro: {str(e)}"}
 
-    if df_cochos.empty:
-        return {}
 
-    consumo_visitas = extrair_consumo_visitas(df_visitas, dias=60)
-    situacao = {}
+def historico_manutencoes(df_cochos, cocho_id: str) -> list[dict]:
+    """Retorna manutenções de um cocho."""
+    if df_cochos is None or df_cochos.empty:
+        return []
 
-    for _, cocho in df_cochos.iterrows():
-        cocho_id = str(cocho.get("ID", "")).strip()
-        if not cocho_id:
+    manutencoes = []
+    for _, row in df_cochos.iterrows():
+        if A._txt(row.get("ID")) != cocho_id:
             continue
 
-        nome = str(cocho.get("Nome", "Cocho")).strip()
-        tipo = str(cocho.get("Tipo", "")).lower().strip()  # proteinado, sal, ração, etc.
-        capacidade = _normalizar_numero(cocho.get("Capacidade (kg)")) or 500
-        volume_atual = _normalizar_numero(cocho.get("Volume Atual (kg)")) or 0
-        ultima_salga = _normalizar_data(cocho.get("Última Salga"))
+        data_ult_manut = A._txt(row.get("Última Manutenção", ""))
+        if data_ult_manut:
+            manutencoes.append({
+                "data": data_ult_manut,
+                "tipo": "Limpeza/Manutenção",
+                "observacoes": A._txt(row.get("Observações", "")),
+            })
 
-        # Busca consumo médio diário do tipo de cocho
-        consumo_info = consumo_visitas.get(tipo, {})
-        consumo_dia = consumo_info.get("media_dia", 0)
-
-        # Calcula dias restantes
-        dias_restantes = 0
-        if consumo_dia > 0 and volume_atual > 0:
-            dias_restantes = round(volume_atual / consumo_dia)
-
-        proxima_salga = None
-        if ultima_salga and consumo_dia > 0:
-            proxima_salga = (ultima_salga + timedelta(days=dias_restantes)).strftime("%Y-%m-%d")
-
-        # Estado visual do cocho
-        percentual = round((volume_atual / capacidade * 100)) if capacidade > 0 else 0
-        if percentual <= 25:
-            estado = "Vazio"
-        elif percentual <= 75:
-            estado = "Normal"
-        else:
-            estado = "Cheio"
-
-        situacao[cocho_id] = {
-            "nome": nome,
-            "tipo": tipo,
-            "volume_kg": round(volume_atual, 1),
-            "capacidade_kg": round(capacidade, 1),
-            "percentual": int(percentual),
-            "estado": estado,
-            "consumo_dia_kg": round(consumo_dia, 2),
-            "dias_restantes": dias_restantes,
-            "ultima_salga": ultima_salga.strftime("%Y-%m-%d") if ultima_salga else None,
-            "proxima_salga_estimada": proxima_salga
-        }
-
-    return situacao
+    return sorted(manutencoes, key=lambda x: x["data"], reverse=True)
 
 
-def resumo_cochos(df_cochos, df_visitas) -> Dict:
-    """Retorna resumo geral dos cochos."""
-    sit = calcular_situacao_cochos(df_cochos, df_visitas)
+def alertas_manutencao(df_cochos, hoje=None) -> list[dict]:
+    """Alertas de cochos pendentes manutenção."""
+    hoje = pd.Timestamp(hoje or pd.Timestamp.now()).normalize()
 
-    if not sit:
-        return {
-            "total_cochos": 0,
-            "cochos_cheios": 0,
-            "cochos_normais": 0,
-            "cochos_vazios": 0,
-            "proximo_para_salgar": None
-        }
+    if df_cochos is None or df_cochos.empty:
+        return []
 
-    estados = [c["estado"] for c in sit.values()]
+    alertas = []
+    for _, row in df_cochos.iterrows():
+        try:
+            freq = int(row.get("Frequência Limpeza (dias)", 7))
+            data_ult = pd.Timestamp(row.get("Última Manutenção", ""))
 
-    # Encontra próximo cocho para salgar (menor dias restantes)
-    proximo = min(
-        [c for c in sit.values() if c["dias_restantes"] > 0],
-        key=lambda x: x["dias_restantes"],
-        default=None
-    )
+            if pd.isna(data_ult):
+                data_ult = pd.Timestamp(row.get("Data Instalação", hoje))
+
+            dias_desde = (hoje - data_ult).days
+
+            if dias_desde >= freq:
+                cocho_id = A._txt(row.get("ID"))
+                tipo = A._txt(row.get("Tipo"))
+                pasto = A._txt(row.get("Pasto"))
+
+                alertas.append({
+                    "cocho_id": cocho_id,
+                    "tipo": tipo,
+                    "pasto": pasto,
+                    "dias_atraso": dias_desde - freq,
+                    "mensagem": f"🚨 {tipo} em {pasto} pendente limpeza ({dias_desde} dias)",
+                    "urgencia": "urgente" if dias_desde >= freq * 1.5 else "aviso",
+                })
+        except (ValueError, TypeError):
+            continue
+
+    return sorted(alertas, key=lambda x: x["dias_atraso"], reverse=True)
+
+
+def alertas_reposicao(df_cochos, insumo_type: str = "ração") -> list[dict]:
+    """Alertas de reposição (ração/água/sal) baseado em tipo de cocho."""
+    if df_cochos is None or df_cochos.empty:
+        return []
+
+    alertas = []
+    tipo_mapa = {
+        "ração": "Cocho (ração)",
+        "água": "Bebedouro (água)",
+        "sal": "Saleiro (sal)",
+    }
+    tipo_buscado = tipo_mapa.get(insumo_type, "Cocho (ração)")
+
+    for _, row in df_cochos.iterrows():
+        tipo = A._txt(row.get("Tipo"))
+        if tipo != tipo_buscado:
+            continue
+
+        status = A._txt(row.get("Status", "Ativo"))
+        if status != "Ativo":
+            continue
+
+        cocho_id = A._txt(row.get("ID"))
+        pasto = A._txt(row.get("Pasto"))
+
+        alertas.append({
+            "cocho_id": cocho_id,
+            "pasto": pasto,
+            "tipo": insumo_type.upper(),
+            "mensagem": f"🔔 Reposição de {insumo_type} em {pasto} ({cocho_id})",
+        })
+
+    return alertas
+
+
+def dashboard_cochos(df_cochos) -> dict:
+    """Resumo para dashboard."""
+    if df_cochos is None or df_cochos.empty:
+        return {"total": 0, "por_tipo": {}, "em_manutencao": 0}
+
+    por_tipo = {}
+    em_manutencao = 0
+
+    for _, row in df_cochos.iterrows():
+        tipo = A._txt(row.get("Tipo", "Outro"))
+        por_tipo[tipo] = por_tipo.get(tipo, 0) + 1
+
+        status = A._txt(row.get("Status", "Ativo"))
+        if status == "Manutenção":
+            em_manutencao += 1
 
     return {
-        "total_cochos": len(sit),
-        "cochos_cheios": estados.count("Cheio"),
-        "cochos_normais": estados.count("Normal"),
-        "cochos_vazios": estados.count("Vazio"),
-        "proximo_para_salgar": proximo
+        "total": len(df_cochos),
+        "por_tipo": por_tipo,
+        "em_manutencao": em_manutencao,
     }
 
 
-if __name__ == "__main__":
-    df_cochos = carregar()
-    from db import carregar_aba
-    df_visitas = carregar_aba("Visitas")
+def cochos_por_pasto(df_cochos, pasto_id: str) -> list[dict]:
+    """Lista cochos de um pasto específico com coordenadas para mapa."""
+    if df_cochos is None or df_cochos.empty:
+        return []
 
-    print("=== Situação dos Cochos ===")
-    sit = calcular_situacao_cochos(df_cochos, df_visitas)
-    for cocho_id, info in sit.items():
-        print(f"\n{info['nome']} ({cocho_id})")
-        print(f"  Volume: {info['volume_kg']}/{info['capacidade_kg']} kg ({info['percentual']}%)")
-        print(f"  Estado: {info['estado']}")
-        print(f"  Consumo: {info['consumo_dia_kg']} kg/dia")
-        print(f"  Dias restantes: {info['dias_restantes']}")
-        if info['proxima_salga_estimada']:
-            print(f"  Próxima salga: {info['proxima_salga_estimada']}")
+    cochos = []
+    for _, row in df_cochos.iterrows():
+        if A._txt(row.get("Pasto")) != pasto_id:
+            continue
+
+        try:
+            lat = float(row.get("Localização GPS", "").split(",")[0])
+            lng = float(row.get("Localização GPS", "").split(",")[1])
+        except (ValueError, IndexError, AttributeError):
+            lat, lng = 0, 0
+
+        cochos.append({
+            "id": A._txt(row.get("ID")),
+            "tipo": A._txt(row.get("Tipo")),
+            "status": A._txt(row.get("Status", "Ativo")),
+            "lat": lat,
+            "lng": lng,
+            "frequencia_limpeza": int(row.get("Frequência Limpeza (dias)", 7)),
+            "observacoes": A._txt(row.get("Observações", "")),
+        })
+
+    return cochos

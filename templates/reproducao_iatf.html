@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}IATF — Reprodução{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>🔬 Protocolo IATF (Sincronização)</h1>
+  <p class="subtitle">Alertas de protocolo + detecção de cio automática</p>
+
+  <!-- Alertas IATF (Urgentes) -->
+  {% if alertas_iatf %}
+  <section class="card">
+    <h2>⚠️ Ações Necessárias Hoje/Amanhã</h2>
+    <div class="alertas-iatf">
+      {% for alerta in alertas_iatf %}
+      <div class="alerta-item {% if alerta.urgencia == 'urgente' %}alerta-urgente{% else %}alerta-aviso{% endif %}">
+        <div class="alerta-header">
+          <strong>{{ alerta.animal_ref }}</strong>
+          <span class="badge badge-{% if alerta.urgencia == 'urgente' %}ruim{% else %}aviso{% endif %}">
+            {{ alerta.urgencia.upper() }}
+          </span>
+        </div>
+        <p>{{ alerta.mensagem }}</p>
+        <small>Data: {{ alerta.data_acao }}</small>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% else %}
+  <div class="card" style="background: var(--ok); color: var(--text-on-success);">
+    <p>✅ Nenhum alerta IATF hoje. Próximas ações amanhã ou depois.</p>
+  </div>
+  {% endif %}
+
+  <!-- Cios Detectados/Previstos (Próximos 7 dias) -->
+  {% if cios_proximos %}
+  <section class="card">
+    <h2>🔥 Cios Detectados/Previstos (Próximos 7 dias)</h2>
+    <div class="cios-lista">
+      {% for cio in cios_proximos %}
+      <div class="cio-item">
+        <div class="cio-header">
+          <strong>{{ cio.animal_ref }}</strong>
+          <span class="badge badge-{% if cio.tipo_alerta == 'cio_observado' %}ruim{% else %}aviso{% endif %}">
+            {% if cio.tipo_alerta == 'cio_observado' %}Cio Observado{% else %}Cio Previsto{% endif %}
+          </span>
+          {% if cio.intensidade_observada %}
+          <span style="margin-left: 10px; font-size: 14px;">🔥 Intensidade {{ cio.intensidade_observada }}/5</span>
+          {% endif %}
+        </div>
+        <p>{{ cio.mensagem }}</p>
+        <small>Data: {{ cio.data_cio }}</small>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Informações IATF -->
+  <section class="card">
+    <h2>ℹ️ Protocolo IATF Padrão (7 Dias)</h2>
+    <table class="tabela-iatf">
+      <tr>
+        <th>Dia</th>
+        <th>Ação</th>
+        <th>Descrição</th>
+      </tr>
+      <tr>
+        <td><strong>0</strong></td>
+        <td>GnRH + P4</td>
+        <td>Aplicar GnRH + inserir progesterona (CIDR)</td>
+      </tr>
+      <tr>
+        <td><strong>7</strong></td>
+        <td>PGF2α</td>
+        <td>Aplicar prostaglandina (PGF2α)</td>
+      </tr>
+      <tr>
+        <td><strong>8</strong></td>
+        <td>Remover P4</td>
+        <td>Remover progesterona (CIDR)</td>
+      </tr>
+      <tr>
+        <td><strong>9</strong></td>
+        <td>GnRH + IA</td>
+        <td>GnRH final + inseminação em tempo fixo</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- Novo IATF Button -->
+  <div style="margin-top: 20px; text-align: center;">
+    <a href="{{ url_for('registrar_manejo') }}?tipo=Sincronização+IATF" class="btn btn-primary">
+      ➕ Novo Protocolo IATF
+    </a>
+  </div>
+</div>
+
+<style>
+.alertas-iatf, .cios-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.alerta-item, .cio-item {
+  padding: 12px;
+  border-left: 4px solid var(--primary);
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.alerta-urgente {
+  border-left-color: var(--danger);
+  background: rgba(255, 0, 0, 0.05);
+}
+
+.alerta-aviso {
+  border-left-color: var(--warning);
+  background: rgba(255, 165, 0, 0.05);
+}
+
+.alerta-header, .cio-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tabela-iatf {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.tabela-iatf th, .tabela-iatf td {
+  border: 1px solid var(--border-color);
+  padding: 10px;
+  text-align: left;
+}
+
+.tabela-iatf th {
+  background: var(--primary);
+  color: white;
+}
+
+.tabela-iatf tr:nth-child(even) {
+  background: var(--bg-secondary);
+}
+
+@media (max-width: 610px) {
+  .tabela-iatf {
+    font-size: 12px;
+  }
+  .tabela-iatf td, .tabela-iatf th {
+    padding: 6px;
+  }
+}
+</style>
+{% endblock %}

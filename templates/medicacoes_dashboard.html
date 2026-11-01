@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Medicações — Quarentena Leite{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>💊 Medicações & Quarentena Leite</h1>
+  <p class="subtitle">Rastreamento de medicações + alertas de liberação</p>
+
+  <!-- Resumo -->
+  <div class="cards-resumo">
+    <div class="card metric">
+      <div class="valor">{{ resumo.total_mes }}</div>
+      <div class="label">Medicações (este mês)</div>
+    </div>
+    <div class="card metric">
+      <div class="valor">{{ resumo.em_quarentena_hoje }}</div>
+      <div class="label">Em Quarentena Hoje</div>
+    </div>
+    <div class="card metric">
+      <div class="valor">{{ resumo.liberando_amanha }}</div>
+      <div class="label">Liberando Amanhã</div>
+    </div>
+  </div>
+
+  <!-- Animais em Quarentena HOJE -->
+  {% if quarentena %}
+  <section class="card">
+    <h2>🚫 Leite em Quarentena</h2>
+    <div class="quarentena-lista">
+      {% for q in quarentena %}
+      <div class="quarentena-item {% if q.dias_restantes <= 1 %}urgente{% endif %}">
+        <div class="quarentena-header">
+          <strong>{{ q.animal_ref }}</strong>
+          <span class="badge badge-{% if q.dias_restantes == 0 %}ruim{% elif q.dias_restantes == 1 %}aviso{% else %}aviso{% endif %}">
+            {% if q.dias_restantes == 0 %}LIBERA HOJE{% elif q.dias_restantes == 1 %}LIBERA AMANHÃ{% else %}{{ q.dias_restantes }} dias{% endif %}
+          </span>
+        </div>
+        <p>📅 Liberação: <strong>{{ q.data_liberacao }}</strong></p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% else %}
+  <div class="card" style="background: var(--ok); color: var(--text-on-success);">
+    <p>✅ Nenhum leite em quarentena hoje.</p>
+  </div>
+  {% endif %}
+
+  <!-- Tipos Mais Comuns -->
+  {% if resumo.tipos_mais_comuns %}
+  <section class="card">
+    <h2>📊 Medicações Mais Utilizadas (este mês)</h2>
+    <ul style="list-style: none; padding: 0;">
+      {% for item in resumo.tipos_mais_comuns %}
+      <li style="padding: 8px; border-bottom: 1px solid var(--border-color);">
+        <strong>{{ item.tipo }}</strong>: {{ item.count }} aplicações
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <!-- Formulário Nova Medicação -->
+  <section class="card">
+    <h2>➕ Registrar Nova Medicação</h2>
+    <form method="POST" action="{{ url_for('registrar_medicacao') }}" class="form-medicacao">
+      {{ csrf_token() }}
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="data">Data</label>
+          <input type="date" id="data" name="data" required>
+        </div>
+
+        <div class="form-group">
+          <label for="brincos">Animal(is) (brincos)</label>
+          <input type="text" id="brincos" name="brincos" placeholder="Ex: Preta 23 #A0042" required>
+        </div>
+
+        <div class="form-group">
+          <label for="tipo_medicacao">Tipo de Medicação</label>
+          <select id="tipo_medicacao" name="tipo_medicacao" required>
+            <option value="">— Selecionar —</option>
+            {% for tipo in tipos_medicacao %}
+            <option value="{{ tipo }}">{{ tipo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="principio_ativo">Princípio Ativo</label>
+          <input type="text" id="principio_ativo" name="principio_ativo" placeholder="Ex: Penicilina benzatina" required>
+        </div>
+
+        <div class="form-group">
+          <label for="dosagem">Dosagem</label>
+          <input type="text" id="dosagem" name="dosagem" placeholder="Ex: 20 mL, 1 comprimido" required>
+        </div>
+
+        <div class="form-group">
+          <label for="via">Via de Aplicação</label>
+          <select id="via" name="via" required>
+            <option value="">— Selecionar —</option>
+            {% for via in vias %}
+            <option value="{{ via }}">{{ via }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="motivo">Motivo</label>
+          <select id="motivo" name="motivo" required>
+            <option value="">— Selecionar —</option>
+            {% for motivo in motivos %}
+            <option value="{{ motivo }}">{{ motivo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="quarentena_leite">Quarentena Leite (dias)</label>
+          <input type="number" id="quarentena_leite" name="quarentena_leite" value="3" min="0" required>
+          <small>Padrão: 3 dias para antibióticos</small>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">💊 Registrar</button>
+    </form>
+  </section>
+
+  <!-- Atalho para histórico por animal -->
+  <div style="margin-top: 20px; text-align: center;">
+    <p>Buscar histórico de um animal?</p>
+    <a href="#" class="btn btn-secondary" onclick="buscar_animal()">🔍 Histórico por Animal</a>
+  </div>
+</div>
+
+<style>
+.cards-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.cards-resumo .metric {
+  text-align: center;
+}
+
+.quarentena-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quarentena-item {
+  padding: 12px;
+  border-left: 4px solid var(--warning);
+  background: rgba(255, 165, 0, 0.05);
+  border-radius: 4px;
+}
+
+.quarentena-item.urgente {
+  border-left-color: var(--danger);
+  background: rgba(255, 0, 0, 0.1);
+}
+
+.quarentena-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.form-medicacao {
+  margin-top: 12px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.form-group input,
+.form-group select {
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font: inherit;
+}
+
+.form-group small {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+@media (max-width: 610px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+<script>
+function buscar_animal() {
+  const animal_id = prompt("ID do animal (ex: A0042):");
+  if (animal_id) {
+    window.location.href = `/medicacoes/animal/${animal_id}`;
+  }
+}
+</script>
+{% endblock %}

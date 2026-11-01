@@ -158,6 +158,9 @@ TIPOS_MANEJO = [
     "Movimentação de Pasto",
     "Cobertura",                 # monta ou inseminação (reproducao.py)
     "Diagnóstico de Gestação",   # resultado do toque: Prenha/Vazia
+    "Sincronização IATF",        # NOVO v5.12 Onda 12: protocolo IATF (GnRH → P4 → PGF2α → inseminação)
+    "Observação de Cio",         # NOVO v5.12 Onda 12: observação manual de cio (intensidade 1-5)
+    "Medicação",                 # NOVO v5.12 Onda 12.X: registrar medicação por animal + quarentena leite
     "Outro",
 ]
 

@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Culling — Reprodução{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>🔴 Sugestões de Descarte (Culling)</h1>
+  <p class="subtitle">Vacas com problemas reprodutivos ou IEP crítico</p>
+
+  <!-- Resumo -->
+  <div class="cards-resumo">
+    <div class="card metric">
+      <div class="valor">{{ resumo.vacas_analisadas }}</div>
+      <div class="label">Vacas com Histórico</div>
+    </div>
+    <div class="card metric">
+      <div class="valor">{{ resumo.candidatas_culling }}</div>
+      <div class="label">Candidatas Culling</div>
+    </div>
+    <div class="card metric">
+      <div class="valor">{{ resumo.iep_medio }}</div>
+      <div class="label">IEP Médio (dias)</div>
+    </div>
+  </div>
+
+  <!-- Tabela de Culling (Ordenada por Score) -->
+  {% if culling %}
+  <section class="card">
+    <h2>⚠️ Análise de Descarte (Score 0-100)</h2>
+    <div class="tabela-culling">
+      {% for sugestao in culling %}
+      <div class="culling-row" data-score="{{ sugestao.score_culling }}">
+        <div class="culling-animal">
+          <strong>{{ sugestao.animal_ref }}</strong>
+          <span class="badge badge-ruim">{{ sugestao.score_culling }}/100</span>
+        </div>
+        <div class="culling-motivo">
+          <p>{{ sugestao.motivo }}</p>
+        </div>
+        <div class="culling-dados">
+          <div class="dado">
+            <span class="label">IEP:</span>
+            <span class="valor">{{ sugestao.dados.iep_media }} dias</span>
+          </div>
+          <div class="dado">
+            <span class="label">Taxa Prenhez:</span>
+            <span class="valor">{{ (sugestao.dados.taxa * 100)|int }}%</span>
+          </div>
+          <div class="dado">
+            <span class="label">Coberturas:</span>
+            <span class="valor">{{ sugestao.dados.coberturas_analisadas }}</span>
+          </div>
+        </div>
+        <div class="culling-acao">
+          <a href="{{ url_for('reproducao_vaca', animal_id=sugestao.animal_id) }}" class="btn btn-small">
+            Ver Ficha Completa
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% else %}
+  <div class="card" style="background: var(--ok); color: var(--text-on-success);">
+    <p>✅ Nenhuma vaca candidata a culling no momento. Parabéns!</p>
+  </div>
+  {% endif %}
+
+  <!-- Tabela de IEP por Vaca (Todas) -->
+  <section class="card">
+    <h2>📊 Histórico Reprodutivo (Todas as Vacas com 2+ Partos)</h2>
+    {% if ieps %}
+    <div style="overflow-x: auto;">
+      <table class="tabela-iep">
+        <thead>
+          <tr>
+            <th>Vaca</th>
+            <th>IEP Médio</th>
+            <th>Partos</th>
+            <th>Status</th>
+            <th>Recomendação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for animal_id, dados in ieps.items() %}
+          <tr class="status-{{ dados.iep_status }}">
+            <td><strong>{{ dados.animal_ref }}</strong></td>
+            <td>{{ dados.iep_media }} dias</td>
+            <td>{{ dados.partos|length }}</td>
+            <td>
+              <span class="badge badge-{% if dados.iep_status == 'excelente' %}ok{% elif dados.iep_status == 'bom' %}aviso{% elif dados.iep_status == 'ruim' %}aviso{% else %}ruim{% endif %}">
+                {{ dados.iep_status|upper }}
+              </span>
+            </td>
+            <td>
+              <small>{{ dados.recomendacao }}</small>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p>Sem dados de IEP (necessário 2+ partos por vaca)</p>
+    {% endif %}
+  </section>
+
+  <!-- Referência IEP -->
+  <section class="card">
+    <h2>ℹ️ Referência de IEP</h2>
+    <div class="iep-referencia">
+      <div class="ref-item ref-ok">
+        <strong>Excelente</strong>: ≤ 365 dias
+        <p>Ideal para reprodução contínua</p>
+      </div>
+      <div class="ref-item ref-bom">
+        <strong>Bom</strong>: 365 – 400 dias
+        <p>Aceitável, monitorar</p>
+      </div>
+      <div class="ref-item ref-ruim">
+        <strong>Ruim</strong>: 400 – 420 dias
+        <p>Investigar causas</p>
+      </div>
+      <div class="ref-item ref-critico">
+        <strong>Crítico</strong>: > 420 dias
+        <p>Candidata a culling</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<style>
+.cards-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.cards-resumo .metric {
+  text-align: center;
+}
+
+.culling-row {
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+}
+
+.culling-animal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+.culling-motivo {
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.culling-motivo p {
+  margin: 0;
+}
+
+.culling-dados {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.culling-dados .dado {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+.culling-dados .label {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.culling-dados .valor {
+  color: var(--text-primary);
+}
+
+.culling-acao {
+  text-align: right;
+}
+
+.tabela-iep {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.tabela-iep th, .tabela-iep td {
+  border: 1px solid var(--border-color);
+  padding: 10px;
+  text-align: left;
+}
+
+.tabela-iep th {
+  background: var(--primary);
+  color: white;
+}
+
+.tabela-iep tbody tr:nth-child(even) {
+  background: var(--bg-secondary);
+}
+
+.tabela-iep tr.status-excelente {
+  background: rgba(0, 128, 0, 0.05);
+}
+
+.tabela-iep tr.status-bom {
+  background: rgba(255, 165, 0, 0.05);
+}
+
+.tabela-iep tr.status-ruim {
+  background: rgba(255, 100, 100, 0.05);
+}
+
+.tabela-iep tr.status-crítico {
+  background: rgba(255, 0, 0, 0.1);
+}
+
+.iep-referencia {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.ref-item {
+  padding: 12px;
+  border-radius: 4px;
+  border-left: 4px solid;
+  font-size: 13px;
+}
+
+.ref-item p {
+  margin: 4px 0 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ref-ok {
+  border-left-color: var(--ok);
+  background: rgba(0, 128, 0, 0.05);
+}
+
+.ref-bom {
+  border-left-color: var(--warning);
+  background: rgba(255, 165, 0, 0.05);
+}
+
+.ref-ruim {
+  border-left-color: var(--danger);
+  background: rgba(255, 100, 100, 0.05);
+}
+
+.ref-critico {
+  border-left-color: var(--danger);
+  background: rgba(255, 0, 0, 0.1);
+}
+
+@media (max-width: 610px) {
+  .cards-resumo {
+    grid-template-columns: 1fr;
+  }
+
+  .culling-dados {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .tabela-iep {
+    font-size: 12px;
+  }
+
+  .tabela-iep th, .tabela-iep td {
+    padding: 6px;
+  }
+}
+</style>
+{% endblock %}

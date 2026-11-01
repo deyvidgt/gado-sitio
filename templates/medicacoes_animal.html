@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Medicações — {{ animal_ref }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>💊 Histórico de Medicações: {{ animal_ref }}</h1>
+
+  <!-- Info Animal -->
+  <section class="card">
+    <h2>🐄 {{ animal_ref }}</h2>
+    <p><strong>ID:</strong> {{ animal.ID }}</p>
+  </section>
+
+  <!-- Histórico -->
+  {% if historico %}
+  <section class="card">
+    <h2>📋 Medicações Registradas</h2>
+    <div style="overflow-x: auto;">
+      <table class="tabela-historico">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th>Princípio Ativo</th>
+            <th>Dosagem</th>
+            <th>Via</th>
+            <th>Quarentena</th>
+            <th>Libera Em</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for med in historico %}
+          <tr>
+            <td>{{ med.data }}</td>
+            <td>{{ med.tipo_medicacao }}</td>
+            <td>{{ med.principio_ativo }}</td>
+            <td>{{ med.dosagem }}</td>
+            <td>{{ med.via }}</td>
+            <td>{{ med.quarentena_leite }} dias</td>
+            <td>
+              <strong>{{ med.data_liberacao }}</strong>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% else %}
+  <div class="card" style="background: var(--bg-secondary);">
+    <p>ℹ️ Nenhuma medicação registrada para este animal.</p>
+  </div>
+  {% endif %}
+
+  <!-- Voltar -->
+  <div style="margin-top: 20px;">
+    <a href="{{ url_for('medicacoes') }}" class="btn btn-secondary">← Voltar</a>
+  </div>
+</div>
+
+<style>
+.tabela-historico {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.tabela-historico th, .tabela-historico td {
+  border: 1px solid var(--border-color);
+  padding: 10px;
+  text-align: left;
+  font-size: 13px;
+}
+
+.tabela-historico th {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+}
+
+.tabela-historico tbody tr:nth-child(even) {
+  background: var(--bg-secondary);
+}
+
+@media (max-width: 610px) {
+  .tabela-historico {
+    font-size: 11px;
+  }
+
+  .tabela-historico th, .tabela-historico td {
+    padding: 6px;
+  }
+}
+</style>
+{% endblock %}

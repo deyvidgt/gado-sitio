@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Ficha Reprodutiva — {{ animal_ref }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>📋 Ficha Reprodutiva: {{ animal_ref }}</h1>
+
+  <!-- Dados do Animal -->
+  <section class="card">
+    <h2>🐄 Identificação</h2>
+    <div class="grid-2col">
+      <div>
+        <p><strong>Brinco:</strong> {{ animal_ref }}</p>
+        <p><strong>ID:</strong> {{ animal.ID }}</p>
+        <p><strong>Sexo:</strong> {{ animal.get('Sexo', 'N/A') }}</p>
+      </div>
+      <div>
+        <p><strong>Data de Nascimento:</strong> {{ animal.get('Nascimento', 'N/A') }}</p>
+        <p><strong>Pai:</strong> {{ animal.get('Pai', 'N/A') or '—' }}</p>
+        <p><strong>Mãe:</strong> {{ animal.get('Mãe', 'N/A') or '—' }}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- IEP -->
+  {% if iep_data %}
+  <section class="card">
+    <h2>📊 Intervalo Entre Partos (IEP)</h2>
+    <div class="iep-resumo">
+      <div class="metric">
+        <div class="valor">{{ iep_data.iep_media }}</div>
+        <div class="label">IEP Médio (dias)</div>
+      </div>
+      <div class="metric">
+        <div class="valor">{{ iep_data.partos|length }}</div>
+        <div class="label">Partos Registrados</div>
+      </div>
+      <div class="metric">
+        <div class="badge badge-{% if iep_data.iep_status == 'excelente' %}ok{% elif iep_data.iep_status == 'bom' %}aviso{% else %}ruim{% endif %}">
+          {{ iep_data.iep_status|upper }}
+        </div>
+        <div class="label">Status</div>
+      </div>
+    </div>
+
+    {% if iep_data.iep_dias %}
+    <div style="margin-top: 12px;">
+      <p><strong>Histórico de IEP entre partos consecutivos:</strong></p>
+      <ul>
+        {% for i, dias in enumerate(iep_data.iep_dias) %}
+        <li>
+          Parto {{ i+1 }} → Parto {{ i+2 }}: <strong>{{ dias }} dias</strong>
+          {% if dias <= 365 %}
+          <span class="badge badge-ok">Excelente</span>
+          {% elif dias <= 400 %}
+          <span class="badge badge-aviso">Bom</span>
+          {% elif dias < 420 %}
+          <span class="badge badge-aviso">Ruim</span>
+          {% else %}
+          <span class="badge badge-ruim">Crítico</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <p style="margin-top: 12px; color: var(--text-secondary); font-size: 13px;">
+      <strong>Recomendação:</strong> {{ iep_data.recomendacao|upper }}
+    </p>
+    {% endif %}
+  </section>
+  {% else %}
+  <div class="card" style="background: var(--bg-secondary);">
+    <p>ℹ️ Sem dados de IEP (necessário 2+ partos registrados)</p>
+  </div>
+  {% endif %}
+
+  <!-- Taxa de Prenhez -->
+  {% if taxa_prenhez %}
+  <section class="card">
+    <h2>🎯 Taxa de Prenhez</h2>
+    <div class="grid-2col">
+      <div>
+        <p><strong>Coberturas Analisadas:</strong> {{ taxa_prenhez.coberturas_analisadas }}</p>
+        <p><strong>Prenhas:</strong> {{ taxa_prenhez.prenhas }}</p>
+        <p><strong>Vazias:</strong> {{ taxa_prenhez.coberturas_analisadas - taxa_prenhez.prenhas }}</p>
+      </div>
+      <div>
+        <div class="metric" style="text-align: center;">
+          <div class="valor">{{ (taxa_prenhez.taxa * 100)|int }}%</div>
+          <div class="label">Taxa de Prenhez</div>
+          <span class="badge badge-{% if taxa_prenhez.status == 'boa' %}ok{% elif taxa_prenhez.status == 'média' %}aviso{% else %}ruim{% endif %}">
+            {{ taxa_prenhez.status|upper }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top: 12px; color: var(--text-secondary); font-size: 13px;">
+      Taxa esperada: ≥ 75% = BOA | 50-75% = MÉDIA | < 50% = RUIM
+    </p>
+  </section>
+  {% endif %}
+
+  <!-- Recomendação -->
+  <section class="card">
+    <h2>💡 Recomendação</h2>
+    {% if iep_data.recomendacao == 'culling' %}
+    <div style="background: rgba(255, 0, 0, 0.1); padding: 12px; border-radius: 4px; border-left: 4px solid var(--danger);">
+      <p style="color: var(--danger); font-weight: bold;">🔴 DESCARTE RECOMENDADO</p>
+      <p>Esta vaca apresenta problemas reprodutivos crônicos (IEP crítico e/ou taxa prenhez baixa).</p>
+      <p>Considere descartá-la para melhorar a eficiência do rebanho.</p>
+    </div>
+    {% elif iep_data.recomendacao == 'investigar' %}
+    <div style="background: rgba(255, 165, 0, 0.1); padding: 12px; border-radius: 4px; border-left: 4px solid var(--warning);">
+      <p style="color: var(--warning); font-weight: bold;">⚠️ INVESTIGAÇÃO NECESSÁRIA</p>
+      <p>Investigar possíveis causas: mastite, nutrição inadequada, estresse, problemas de detecção de cio.</p>
+      <p>Consultar veterinário para diagnóstico preciso.</p>
+    </div>
+    {% else %}
+    <div style="background: rgba(0, 128, 0, 0.1); padding: 12px; border-radius: 4px; border-left: 4px solid var(--ok);">
+      <p style="color: var(--ok); font-weight: bold;">✅ MANTER NO REBANHO</p>
+      <p>Reprodução dentro do esperado. Continuar monitorando.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- Voltar -->
+  <div style="margin-top: 20px; text-align: center;">
+    <a href="{{ url_for('reproducao_culling') }}" class="btn btn-secondary">← Voltar para Culling</a>
+  </div>
+</div>
+
+<style>
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 12px;
+}
+
+.iep-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.iep-resumo .metric {
+  text-align: center;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.iep-resumo .valor {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.iep-resumo .label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+ul li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+ul li:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 610px) {
+  .grid-2col {
+    grid-template-columns: 1fr;
+  }
+
+  .iep-resumo {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+{% endblock %}
