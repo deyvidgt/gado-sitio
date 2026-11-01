@@ -29,11 +29,12 @@ def extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje=None):
     """
     hoje = pd.Timestamp(hoje or datetime.now()).normalize()
 
-    # Find animal
-    if df_animais.empty or animal_id not in df_animais['ID'].values:
+    # Find animal (support both 'ID' and 'animal_id' column names)
+    id_col = 'ID' if 'ID' in df_animais.columns else 'animal_id'
+    if df_animais.empty or animal_id not in df_animais[id_col].values:
         return None
 
-    animal = df_animais[df_animais['ID'] == animal_id].iloc[0]
+    animal = df_animais[df_animais[id_col] == animal_id].iloc[0]
 
     features = {}
 
