@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Relatórios Avançados{% endblock %}
+{% block page_title %}Relatórios Avançados 📊{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <h3>Relatórios em PDF</h3>
+  <p style="font-size:13.5px">
+    Cada relatório é gerado na hora, com os dados atuais da planilha. O download
+    abre em PDF. Nada é gravado — se quiser o dado atualizado, gere de novo.
+  </p>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:16px">
+
+  {% set itens = [
+    ('anual',       '📅 Relatório Anual',      'Receita, gastos e resultado do ano escolhido.'),
+    ('vendas',      '💰 Relatório de Vendas',  'Margem de cada venda, ordenada por resultado.'),
+    ('sanitario',   '🩺 Relatório Sanitário',  'Vacinas, vermifugações, medicações e carências.'),
+    ('reprodutivo', '🐮 Relatório Reprodutivo','Coberturas, taxa de prenhez e IEP médio.'),
+    ('leite',       '🥛 Relatório de Leite',   'Produção, CCS, CPP e qualidade do leite.'),
+    ('financeiro',  '📈 Relatório Financeiro', 'Receita, gastos, compras, resultado e margem.'),
+  ] %}
+
+  {% for tipo, titulo, desc in itens %}
+  <div class="card">
+    <div class="card-title">{{ titulo }}</div>
+    <p style="font-size:13px;color:var(--text-3);min-height:40px">{{ desc }}</p>
+    <a class="btn" href="{{ url_for('relatorio_avancado', tipo=tipo) }}">Baixar PDF</a>
+  </div>
+  {% endfor %}
+
+</div>
+
+<div class="card" style="margin-top:16px">
+  <p style="font-size:12.5px;color:var(--text-3)">
+    O <strong>Relatório Financeiro</strong> não desconta as compras do resultado:
+    comprar gado é troca de dinheiro por estoque, não despesa. O custo das cabeças
+    aparece quando elas são vendidas (média móvel), igual ao painel.
+  </p>
+</div>
+
+{% endblock %}

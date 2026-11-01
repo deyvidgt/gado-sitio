@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Ponto de Corte{% endblock %}
+{% block page_title %}Ponto de Corte 🎯{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <h3>Vender hoje ou esperar?</h3>
+  <p style="font-size:13.5px">
+    Compara a receita de vender <strong>hoje</strong> com esperar 7, 14 ou 30 dias,
+    descontando o custo de manter o animal no pasto. Usa o peso da última pesagem,
+    o GMD do próprio animal, o preço da arroba das Configurações
+    (<strong>R$ {{ preco_arroba|brl }}</strong> por arroba) e rendimento de carcaça
+    de <strong>{{ (rendimento * 100)|round(0)|int }}%</strong>.
+  </p>
+  <p style="font-size:12.5px;color:var(--text-3)">
+    ⚠️ O preço da arroba é mantido constante — o sistema não prevê mercado. O que muda
+    é o peso ganho e o custo continuado. Nada é gravado.
+  </p>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="card-title">Escolher animal</div>
+  {% if ids_pesados %}
+  <form method="get" action="{{ url_for('ponto_corte') }}"
+        style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+    <label style="flex:1;min-width:200px">
+      <span style="font-size:12px;color:var(--text-3)">Animal com pesagem</span>
+      <select name="animal" style="width:100%" onchange="this.form.submit()">
+        <option value="">— escolha —</option>
+        {% for i in ids_pesados %}
+          <option value="{{ i }}" {% if i == animal_id %}selected{% endif %}>{{ i }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="btn">Simular</button>
+  </form>
+  {% else %}
+  <p style="font-size:13.5px;color:var(--text-3)">
+    Nenhum animal tem pesagem de balança registrada ainda.
+    <a href="{{ url_for('pesagem') }}">Registrar pesagem</a> para poder simular.
+  </p>
+  {% endif %}
+</div>
+
+{% if sim %}
+  {% if sim.erro %}
+  <div class="card" style="margin-top:16px">
+    <p style="color:var(--danger)">❌ {{ sim.erro }}</p>
+  </div>
+  {% else %}
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">{{ recomendacao }}</div>
+
+    <form method="get" action="{{ url_for('ponto_corte') }}"
+          style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+      <input type="hidden" name="animal" value="{{ sim.animal_id }}">
+      <label>
+        <span style="font-size:12px;color:var(--text-3)">GMD (kg/dia)</span>
+        <input name="gmd" type="number" step="0.05" min="0" value="{{ sim.gmd }}" style="width:110px">
+      </label>
+      <label>
+        <span style="font-size:12px;color:var(--text-3)">Custo (R$/dia)</span>
+        <input name="custo" type="number" step="0.01" min="0" value="{{ sim.custo_diario }}" style="width:110px">
+      </label>
+      <button type="submit" class="btn">Recalcular</button>
+    </form>
+    <p style="font-size:12px;color:var(--text-3);margin-top:8px">
+      Peso atual: <strong>{{ sim.peso_atual }} kg</strong> ·
+      GMD usado: <strong>{{ sim.gmd }} kg/dia</strong> ·
+      Custo usado: <strong>R$ {{ sim.custo_diario|brl }}/dia</strong>
+    </p>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">Cenários</div>
+    <div class="linha" style="display:none"></div>
+    <table style="width:100%;border-collapse:collapse;font-size:13.5px">
+      <thead>
+        <tr style="text-align:left;border-bottom:2px solid var(--border)">
+          <th style="padding:8px 4px">Dias</th>
+          <th style="padding:8px 4px;text-align:right">Peso</th>
+          <th style="padding:8px 4px;text-align:right">Arrobas</th>
+          <th style="padding:8px 4px;text-align:right">Receita</th>
+          <th style="padding:8px 4px;text-align:right">Custo</th>
+          <th style="padding:8px 4px;text-align:right">Resultado</th>
+          <th style="padding:8px 4px">Situação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sim.simulacao %}
+        <tr style="border-bottom:1px solid var(--border){% if s.dias == sim.melhor_dia %};background:var(--green-100){% endif %}">
+          <td style="padding:8px 4px">{{ s.dias }}</td>
+          <td style="padding:8px 4px;text-align:right">{{ s.peso_esperado }} kg</td>
+          <td style="padding:8px 4px;text-align:right">{{ s.arrobas }}</td>
+          <td style="padding:8px 4px;text-align:right">{{ s.receita|brl }}</td>
+          <td style="padding:8px 4px;text-align:right">{{ s.custo_continuado|brl }}</td>
+          <td style="padding:8px 4px;text-align:right"><strong>{{ s.resultado|brl }}</strong></td>
+          <td style="padding:8px 4px;font-size:12.5px">{{ s.status }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% endif %}
+{% endif %}
+
+{% endblock %}

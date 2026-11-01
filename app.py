@@ -85,6 +85,10 @@ from routes_iot import *        # noqa: F401, F403
 # v5.3 — Painel econômico por lote
 from routes_lotes import *      # noqa: F401, F403
 
+# v5.14 — Simulador de ponto de corte e relatórios avançados (Onda 14)
+from routes_ponto_corte import *           # noqa: F401, F403
+from routes_relatorios_avancados import *  # noqa: F401, F403
+
 # v5.4 — Produção leiteira
 from routes_leite import *      # noqa: F401, F403
 from routes_volumosos import *  # noqa: F401, F403
