@@ -13,7 +13,7 @@ from flask import render_template
 from extensions import app, login_required, _get_dados_cache
 from indicadores_v58 import (
     engorda_pastagem_resumo, gmd_lotacao_analise,
-    racao_consumo_analise, mortalidade_bezerros_analise
+    racao_consumo_analise, mortalidade_bezerros_analise, mortalidade_por_faixa_etaria
 )
 
 
@@ -89,5 +89,6 @@ def indicadores_mortalidade_bezerros():
     analise = mortalidade_bezerros_analise(dados)
     return render_template(
         "indicadores/mortalidade_bezerros.html",
-        analise=analise
+        analise=analise,
+        mortalidade_faixa=mortalidade_por_faixa_etaria(dados),
     )

@@ -114,6 +114,16 @@
     background: var(--green-50);
   }
   #mm-wrap { display:none; }
+  /* Checklist rápido (v5.15): botões grandes, alvo de toque alto p/ uso no campo. */
+  .check-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; margin-top:8px; }
+  .check-btn { position:relative; display:flex; align-items:center; justify-content:center;
+               min-height:56px; padding:12px; border:2px solid var(--cream-dk); border-radius:10px;
+               background:var(--cream); font-size:15px; font-weight:600; text-align:center;
+               cursor:pointer; transition:all .15s; }
+  .check-btn input { position:absolute; opacity:0; pointer-events:none; }
+  .check-btn:has(input:checked) { border-color:var(--green-600); background:var(--green-50);
+                                  color:var(--green-700); box-shadow:0 0 0 2px var(--green-200); }
+  [data-theme="dark"] .check-btn:has(input:checked) { background:rgba(144,201,127,.18); color:var(--green-300); }
   @media(max-width: 768px) {
     .gado-box { grid-template-columns: 1fr 1fr; }
     .status-grid { grid-template-columns: 1fr 1fr; }
@@ -418,7 +428,31 @@
       </div>
     </div>
 
-    <!-- ── Seção 9: Observações ─────────────────────────────────────── -->
+    <!-- ── Seção 9: Checklist do Cocho (v5.15) ──────────────────────── -->
+    <div class="vis-section">
+      <h3>🍽️ Checklist do Cocho</h3>
+      <p style="font-size:12px;color:var(--text-3);margin:-6px 0 12px">
+        Toque rápido: como estava o cocho e o gado quando você chegou.
+      </p>
+      <div class="status-item" style="margin-bottom:16px">
+        <label>Estado do Cocho</label>
+        <div class="check-grid" data-campo="estado_cocho">
+          {% for op in OPCOES_VISITA.estado_cocho %}
+          <label class="check-btn"><input type="radio" name="estado_cocho" value="{{ op }}"><span>{{ op }}</span></label>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="status-item">
+        <label>Comportamento Animal</label>
+        <div class="check-grid" data-campo="comportamento_animal">
+          {% for op in OPCOES_VISITA.comportamento_animal %}
+          <label class="check-btn"><input type="radio" name="comportamento_animal" value="{{ op }}"><span>{{ op }}</span></label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Seção 10: Observações ─────────────────────────────────────── -->
     <div class="vis-section">
       <h3>📝 Observações Livres</h3>
       <textarea name="observacoes" rows="4"

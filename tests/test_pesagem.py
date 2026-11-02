@@ -139,3 +139,31 @@ def test_curva_evolucao_peso():
     assert p1["gmd"] is None
     assert p2["kg"] == 340.0
     assert p2["gmd"] == pytest.approx(1.0, rel=0.01)  # 30 kg em 30 dias
+
+
+def test_estoque_faixas_peso_cruza_sexo():
+    """v5.15: faixa de @ × Macho/Fêmea; vendidos e sem peso ficam de fora."""
+    df_animais = pd.DataFrame([
+        {"ID": "A0001", "Status": "Vivo", "Sexo": "M"},   # 145 kg → < 7 @
+        {"ID": "A0002", "Status": "Vivo", "Sexo": "M"},   # 410 kg → > 13 @
+        {"ID": "A0003", "Status": "Vivo", "Sexo": "F"},   # 230 kg → 7 a 10 @
+        {"ID": "A0004", "Status": "Vivo", "Sexo": "F"},   # sem pesagem
+        {"ID": "A0005", "Status": "Vendido", "Sexo": "M"},
+    ])
+    df_man = pd.DataFrame([{
+        **{c: "" for c in COLUNAS_MANEJO}, "Data": "01/10/2026", "Tipo": "Pesagem",
+        "Pesos": ("A 1 #A0001: 145 kg; A 2 #A0002: 410 kg; A 3 #A0003: 230 kg; "
+                  "A 5 #A0005: 500 kg"),
+    }])
+    r = P.estoque_faixas_peso(df_animais, df_man, rendimento=0.52)
+    assert r["total_vivos"] == 4
+    assert r["total_pesados"] == 3
+    assert r["sem_peso"] == 1
+    assert sum(f["m"] for f in r["faixas"]) == 2
+    assert sum(f["f"] for f in r["faixas"]) == 1
+    # Vendido (A0005) não entra em nenhuma faixa.
+    assert sum(f["n"] for f in r["faixas"]) == 3
+    fx = {f["rotulo"]: f for f in r["faixas"]}
+    assert fx["< 7 @"]["m"] == 1
+    assert fx["7 a 10 @"]["f"] == 1
+    assert fx["> 13 @"]["m"] == 1

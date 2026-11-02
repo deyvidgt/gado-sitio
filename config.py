@@ -233,6 +233,9 @@ COLUNAS_VISITAS = [
     "Estado Colchão",
     # NOVO v5.10.2: Estado do colcho (armazenamento de sal, proteinado, silo, feno).
     "Colcho",
+    # NOVO v5.15: checklist rápido de cocho/comportamento registrado na visita
+    # (cochos.py usa; Vazio/Normal/Cheio + Deitados/Parte em pé/…).
+    "Estado do Cocho", "Comportamento Animal",
 ]
 
 # ── Animais com brinco (v4.3) ────────────────────────────────────────────────
@@ -345,6 +348,9 @@ OPCOES_VISITA = {
     "cisterna":   ["OK", "Baixo/Secando", "Vazia"],
     "caixa_agua": ["Cheia", "Meia", "Baixa", "Vazia"],
     "conteiner":  ["Cheio", "Meio", "Baixo", "Vazio"],
+    # v5.15 — checklist de cocho (cochos.py)
+    "estado_cocho": ["Vazio", "Normal", "Cheio"],
+    "comportamento_animal": ["Deitados", "Parte em pé", "Maioria em pé", "Com fome"],
 }
 
 # v5.9 — Opções do módulo leiteiro (conforto, colchão, etc)

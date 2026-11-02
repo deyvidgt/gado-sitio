@@ -266,9 +266,11 @@ def pesagem():
             for _, a in vivos.iterrows()]
     medio, n = P.peso_medio_vivos(df, dados["Manejo"])
     faixas = P.faixas_arrobas(df, dados["Manejo"], rend)
+    faixas_sexo = P.estoque_faixas_peso(df, dados["Manejo"], rend)
     curva = P.curva_evolucao_peso(dados["Manejo"], rend)
     return render_template("pesagem.html", rows=rows, so_id=so_id, peso_medio=medio,
-                           n_pesados=n, rendimento=rend, faixas=faixas, curva=curva,
+                           n_pesados=n, rendimento=rend, faixas=faixas,
+                           faixas_sexo=faixas_sexo, curva=curva,
                            now_date=pd.Timestamp(hoje).normalize(), **_ctx_templates())
 
 

@@ -161,6 +161,55 @@ def faixas_arrobas(df_animais: pd.DataFrame, df_man: pd.DataFrame, rendimento: f
     }
 
 
+def estoque_faixas_peso(df_animais: pd.DataFrame, df_man: pd.DataFrame,
+                        rendimento: float = 0.52) -> dict:
+    """Rebanho vivo distribuído por faixa de arrobas (@ de carcaça) × sexo.
+
+    Deriva do último peso de cada animal vivo (pesagem/estimado) + cadastro —
+    sem campo novo. Reusa as mesmas faixas de `faixas_arrobas`. Serve para a
+    matriz "estoque por faixa de peso" com cruzamento Macho/Fêmea."""
+    hist = todas(df_man)
+    vivos = A.vivos(df_animais) if not df_animais.empty else pd.DataFrame()
+    faixas_def = [
+        ("< 7 @", "Bezerros / Desmama", 0.0, 7.0),
+        ("7 a 10 @", "Recria", 7.0, 10.0),
+        ("10 a 13 @", "Engorda", 10.0, 13.0),
+        ("> 13 @", "Terminação / Venda", 13.0, 9999.0),
+    ]
+    # Inicializa M e F por faixa.
+    base = {r: {"M": 0, "F": 0, "kg_m": 0.0, "kg_f": 0.0} for r, *_ in faixas_def}
+    sem_peso = 0
+    for _, a in vivos.iterrows():
+        sexo = str(a.get("Sexo") or "").upper()
+        pesos = hist.get(a["ID"])
+        if not pesos:
+            sem_peso += 1
+            continue
+        arr = pesos[-1][1] * rendimento / 15.0
+        for rotulo, _, f_min, f_max in faixas_def:
+            if f_min <= arr < f_max or (f_max > 100 and arr >= f_min):
+                c = base[rotulo]
+                if sexo == "M":
+                    c["M"] += 1; c["kg_m"] += pesos[-1][1]
+                elif sexo == "F":
+                    c["F"] += 1; c["kg_f"] += pesos[-1][1]
+                break
+    total_vivos = len(vivos)
+    lista = []
+    for rotulo, sub, *_ in faixas_def:
+        c = base[rotulo]
+        n = c["M"] + c["F"]
+        lista.append({
+            "rotulo": rotulo, "sub": sub, "n": n,
+            "m": c["M"], "f": c["F"],
+            "pct": round(n * 100 / total_vivos, 1) if total_vivos else 0,
+            "kg_medio_m": round(c["kg_m"] / c["M"], 1) if c["M"] else 0,
+            "kg_medio_f": round(c["kg_f"] / c["F"], 1) if c["F"] else 0,
+        })
+    return {"faixas": lista, "total_pesados": total_vivos - sem_peso,
+            "sem_peso": sem_peso, "total_vivos": total_vivos}
+
+
 def curva_evolucao_peso(df_man: pd.DataFrame, rendimento: float = 0.52) -> list[dict]:
     """Pontos no tempo com o peso médio do lote em cada pesagem realizada."""
     if df_man is None or df_man.empty or "Data" not in df_man.columns:
