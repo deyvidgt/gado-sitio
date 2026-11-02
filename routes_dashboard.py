@@ -279,17 +279,17 @@ def dashboard():
         ts = row.get("Data")
         recentes.append({"tipo": "Compra", "cor": "compra", "data": fmt_data(ts),
                           "_ts": ts if pd.notna(ts) else pd.Timestamp.min,
-                          "desc": row.get("Descrição", ""), "val": fmt_brl(row.get("Valor Total (R$)", 0))})
+                          "desc": (row.get("Descrição") or ""), "val": fmt_brl(row.get("Valor Total (R$)", 0))})
     for _, row in dados["Gastos"].tail(2).iterrows():
         ts = row.get("Data")
         recentes.append({"tipo": "Gasto", "cor": "gasto", "data": fmt_data(ts),
                           "_ts": ts if pd.notna(ts) else pd.Timestamp.min,
-                          "desc": row.get("Descrição", ""), "val": fmt_brl(row.get("Valor Total (R$)", 0))})
+                          "desc": (row.get("Descrição") or ""), "val": fmt_brl(row.get("Valor Total (R$)", 0))})
     for _, row in dados["Vendas"].tail(3).iterrows():
         ts = row.get("Data")
         recentes.append({"tipo": "Venda", "cor": "venda", "data": fmt_data(ts),
                           "_ts": ts if pd.notna(ts) else pd.Timestamp.min,
-                          "desc": row.get("Descrição", ""), "val": fmt_brl(row.get("Valor Total (R$)", 0))})
+                          "desc": (row.get("Descrição") or ""), "val": fmt_brl(row.get("Valor Total (R$)", 0))})
     recentes.sort(key=lambda x: x["_ts"], reverse=True)
     for rec in recentes:
         rec.pop("_ts", None)

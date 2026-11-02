@@ -2,38 +2,9 @@
 {% block title %}Alertas — Sítio Santo Antonio{% endblock %}
 {% block content %}
 <div class="page-head"><div><span class="eyebrow">Acompanhe o que pede atenção</span><h2>Central de alertas</h2></div></div>
-<div class="card" id="card-tempo">
-  <h3>Previsão do tempo{% if tempo.municipio and tempo.estado %} · {{ tempo.municipio }}, {{ tempo.estado }}{% elif tempo.local %} · {{ tempo.local }}{% endif %}</h3>
-  <p>{{ tempo.mensagem or 'Previsão indisponível' }}</p>
-  {% if tempo.pede_geo %}
-  <button id="btn-geo" style="margin-top:12px; padding:10px 16px; background:var(--green-600); color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:500; transition:all .2s">📍 Usar minha localização</button>
-  <small style="display:block; margin-top:8px; color:var(--text-3)">O sítio não tem coordenadas cadastradas. Toque para usar a localização do seu celular.</small>
-  {% endif %}
-  {% if tempo.atual %}
-    <div class="tri" style="margin-top:12px">
-      <div><strong>{{ tempo.atual.temperatura|br_num(1) if tempo.atual.temperatura is not none else '—' }} °C</strong><small>Agora</small></div>
-      <div><strong>{{ tempo.atual.umidade if tempo.atual.umidade is not none else '—' }}%</strong><small>Umidade</small></div>
-      <div><strong>{{ tempo.atual.vento_kmh|br_num(1) if tempo.atual.vento_kmh is not none else '—' }} km/h</strong><small>Vento</small></div>
-    </div>
-    <p><strong>{{ tempo.atual.condicao }}</strong></p>
-  {% endif %}
-  {% if tempo.dias %}
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:12px">
-      {% for dia in tempo.dias[:7] %}
-      <div style="padding:12px;background:var(--bg-2);border-radius:8px;border-left:3px solid var(--blue-500)">
-        <div style="font-weight:600;font-size:13px;color:var(--text-1)">{{ dia.data[8:10] }}/{{ dia.data[5:7] }}</div>
-        <div style="font-size:12px;color:var(--text-2);margin:4px 0">{{ dia.condicao }}</div>
-        <div style="display:flex;gap:8px;margin:8px 0;font-size:14px;font-weight:500">
-          <span title="Mínima">{{ dia.minima|br_num(0) if dia.minima is defined else '—' }}°</span>
-          <span title="Máxima" style="color:var(--red-500)">{{ dia.maxima|br_num(0) if dia.maxima is defined else '—' }}°</span>
-        </div>
-        <div style="font-size:11px;color:var(--text-3)">💧 {{ dia.chuva_probabilidade if dia.chuva_probabilidade is defined else '—' }}%</div>
-      </div>
-      {% endfor %}
-    </div>
-  {% endif %}
-</div>
-<div class="grid-2">{% for item in alertas %}
+<p style="font-size:13px;color:var(--text-3);margin-bottom:16px">A previsão do tempo fica no Painel. Aqui, só os alertas operacionais do sítio.</p>
+
+<div class="grid-alertas">{% for item in alertas %}
   {% if item.rota %}
   <a href="{{ item.rota }}" style="text-decoration:none;color:inherit">
     <div class="card" style="cursor:pointer;transition:all .2s">
@@ -51,82 +22,5 @@
     <small>{{ item.acao or 'Abrir módulo' }}</small>
   </div>
   {% endif %}
-{% else %}<div class="card"><p>Nenhum alerta no momento.</p></div>{% endfor %}</div>
-
-<script>
-  // Geolocalização para previsão do tempo (v5.8)
-  const btnGeo = document.getElementById("btn-geo");
-  if (btnGeo) {
-    btnGeo.addEventListener("click", () => {
-      btnGeo.disabled = true;
-      btnGeo.textContent = "📍 Localizando...";
-
-      if (!navigator.geolocation) {
-        btnGeo.textContent = "📍 Geolocalização não disponível";
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          // Envia coordenadas para o servidor e atualiza a previsão
-          fetch("/api/tempo/geo", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ latitude, longitude })
-          })
-          .then(r => r.json())
-          .then(dados => {
-            // Atualiza card de tempo com os novos dados
-            const cardTempo = document.getElementById("card-tempo");
-            if (dados.dias && dados.dias.length > 0) {
-              const localizacao = dados.municipio && dados.estado
-                ? `${dados.municipio}, ${dados.estado}`
-                : (dados.local || "Sua localização");
-              cardTempo.innerHTML = `
-                <h3>Previsão do tempo · ${localizacao}</h3>
-                <p>${dados.mensagem}</p>
-                ${dados.atual ? `
-                <div class="tri" style="margin-top:12px">
-                  <div><strong>${(dados.atual.temperatura || 0).toFixed(1)} °C</strong><small>Agora</small></div>
-                  <div><strong>${dados.atual.umidade || '—'}%</strong><small>Umidade</small></div>
-                  <div><strong>${(dados.atual.vento_kmh || 0).toFixed(1)} km/h</strong><small>Vento</small></div>
-                </div>
-                <p><strong>${dados.atual.condicao}</strong></p>
-                ` : ''}
-                ${dados.dias ? `
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:12px">
-                  ${dados.dias.slice(0, 7).map(d => `
-                    <div style="padding:12px;background:var(--bg-2);border-radius:8px;border-left:3px solid var(--blue-500)">
-                      <div style="font-weight:600;font-size:13px;color:var(--text-1)">${d.data.slice(8, 10)}/${d.data.slice(5, 7)}</div>
-                      <div style="font-size:12px;color:var(--text-2);margin:4px 0">${d.condicao}</div>
-                      <div style="display:flex;gap:8px;margin:8px 0;font-size:14px;font-weight:500">
-                        <span title="Mínima">${(d.minima || 0).toFixed(0)}°</span>
-                        <span title="Máxima" style="color:var(--red-500)">${(d.maxima || 0).toFixed(0)}°</span>
-                      </div>
-                      <div style="font-size:11px;color:var(--text-3)">💧 ${d.chuva_probabilidade || '—'}%</div>
-                    </div>
-                  `).join('')}
-                </div>
-                ` : ''}
-              `;
-            } else {
-              btnGeo.textContent = "📍 Falha ao obter previsão";
-            }
-          })
-          .catch(() => {
-            btnGeo.textContent = "📍 Erro na conexão";
-            btnGeo.disabled = false;
-          });
-        },
-        (erro) => {
-          console.warn("Geolocalização recusada ou falhou:", erro);
-          btnGeo.textContent = "📍 Permissão recusada";
-          btnGeo.disabled = false;
-        },
-        { timeout: 10000, enableHighAccuracy: false }
-      );
-    });
-  }
-</script>
+{% else %}<div class="card"><p>Nenhum alerta no momento. ✅</p></div>{% endfor %}</div>
 {% endblock %}

@@ -161,6 +161,15 @@
     .drawer-link:last-child {
       border-bottom: none;
     }
+    /* Títulos de grupo no menu lateral (v5.17) */
+    .nav-group-title {
+      padding: 10px 20px 4px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
 
     /* ── Container Central (max-width, padding) ─────────────────────────────── */
     .main {
@@ -460,6 +469,19 @@
       .grid { gap:12px; }
     }
 
+    /* Central de alertas: grade fluida + semântica de cor por prioridade */
+    .grid-alertas { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px; }
+    .card-alerta { border-left:4px solid var(--text-3); }
+    .card-alerta.prioridade-urgente { border-left-color:var(--danger); }
+    .card-alerta.prioridade-aviso   { border-left-color:var(--warn, #f9a825); }
+    .card-alerta.prioridade-info,
+    .card-alerta.prioridade-informativo { border-left-color:var(--info, #2980b9); }
+
+    /* Painel do Leite: ações em grid de cards (mobile-friendly) */
+    .leite-acoes-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin:16px 0; }
+    .leite-acao { display:flex; align-items:center; justify-content:center; text-align:center; min-height:48px; }
+    @media (max-width:768px) { .leite-acao { width:100%; } }
+
     /* v5.10: Seções do dashboard (com espaçamento) */
     .secao { margin-bottom:24px; }
     .secao-titulo { font-size:20px; font-weight:700; color:var(--text); margin-bottom:16px; padding-bottom:12px; border-bottom:2px solid var(--green-500); }
@@ -500,6 +522,13 @@
       .btn-grande { width:100%; }
       .btn-group { flex-direction:column; }
       .btn-group .btn { width:100%; }
+    }
+    /* Mobile: botões de ação com texto longo quebram linha e ocupam a largura */
+    @media (max-width:768px) {
+      .btn { white-space:normal; }
+      .btn { display:inline-flex; align-items:center; justify-content:center; }
+      .acoes, .acoes-rapidas { display:flex; flex-wrap:wrap; gap:10px; }
+      .acoes > .btn, .acoes-rapidas > .btn { flex:1 1 auto; width:100%; }
     }
 
     /* v5.10: Formulários (campos, labels, validação) */
@@ -705,36 +734,41 @@
 
   <!-- Drawer Menu (Hidden, toggle com JS) -->
   <div id="drawer-menu" style="display:none;position:fixed;top:48px;right:0;width:280px;bottom:0;background:var(--surface);border-left:1px solid var(--bg-2);overflow-y:auto;z-index:1000;box-shadow:var(--shadow)">
-    <nav style="padding:16px 0">
-      <!-- ═══ INÍCIO & ALERTAS ═══ -->
+    <nav style="padding:8px 0">
+      <!-- ═══ GERAL ═══ -->
+      <div class="nav-group-title">Geral</div>
       <a href="{{ url_for('dashboard') }}" class="drawer-link">🏠 Dashboard</a>
       {% if varios_sitios %}<a href="{{ url_for('familia') }}" class="drawer-link">👨‍👩‍👧 Família</a>{% endif %}
       <a href="{{ url_for('central_alertas') }}" class="drawer-link">🔔 Avisos & Alertas</a>
-      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
 
-      <!-- ═══ ANIMAIS & GENEALOGIA ═══ -->
+      <!-- ═══ REBANHO & MANEJO ═══ -->
+      <div class="nav-group-title">Rebanho & Manejo</div>
       <a href="{{ url_for('animais') }}" class="drawer-link">🐄 Animais</a>
       <a href="{{ url_for('pesagem') }}" class="drawer-link">⚖️ Pesagem</a>
-      <a href="{{ url_for('animais_leite') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🐮 Animais Leite</a>
-      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
+      <a href="{{ url_for('animais_leite') }}" class="drawer-link">🐮 Animais Leite</a>
+      <a href="{{ url_for('pastos') }}" class="drawer-link">🗺️ Pastos</a>
+      <a href="{{ url_for('dashboard_ocupacao_pastos') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📍 Ocupação & Rotação</a>
+      <a href="{{ url_for('manejo') }}" class="drawer-link">🌿 Manejo</a>
+      <a href="{{ url_for('cochos') }}" class="drawer-link">🥣 Cochos</a>
 
-      <!-- ═══ SAÚDE & VETERINÁRIA ═══ -->
-      <a href="{{ url_for('saude_leite') }}" class="drawer-link">💊 Mastite & Qualidade</a>
-      <a href="{{ url_for('listar_doencas') }}" class="drawer-link">🩺 Doenças & Carência</a>
-      <a href="{{ url_for('medicacoes_dashboard') }}" class="drawer-link">💉 Medicações</a>
-      <a href="{{ url_for('listar_bulas') }}" class="drawer-link">📖 Bulas & Embalagens</a>
-      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
-
-      <!-- ═══ REPRODUÇÃO & PARTOS ═══ -->
-      <a href="{{ url_for('reproducao') }}" class="drawer-link">🐮 Reprodução</a>
+      <!-- ═══ REPRODUÇÃO ═══ -->
+      <div class="nav-group-title">Reprodução</div>
+      <a href="{{ url_for('reproducao') }}" class="drawer-link">🐮 Painel Reprodutivo</a>
       <a href="{{ url_for('calendario_partos') }}" class="drawer-link">🍼 Previsão de Partos</a>
       <a href="{{ url_for('reproducao_iatf') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  💉 IATF</a>
       <a href="{{ url_for('reproducao_observacao_cio') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🔥 Observação de Cio</a>
       <a href="{{ url_for('reproducao_culling') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  ✂️ Sugestões de Descarte</a>
       <a href="{{ url_for('ia_predicoes') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🤖 IA Preditiva</a>
-      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
 
-      <!-- ═══ NUTRIÇÃO & ALIMENTAÇÃO ═══ -->
+      <!-- ═══ SANIDADE & FARMÁCIA ═══ -->
+      <div class="nav-group-title">Sanidade & Farmácia</div>
+      <a href="{{ url_for('saude_leite') }}" class="drawer-link">💊 Mastite & Qualidade</a>
+      <a href="{{ url_for('listar_doencas') }}" class="drawer-link">🩺 Doenças & Carência</a>
+      <a href="{{ url_for('medicacoes_dashboard') }}" class="drawer-link">💉 Medicações</a>
+      <a href="{{ url_for('listar_bulas') }}" class="drawer-link">📖 Bulas & Embalagens</a>
+
+      <!-- ═══ NUTRIÇÃO & LEITE ═══ -->
+      <div class="nav-group-title">Nutrição & Leite</div>
       <a href="{{ url_for('painel_leite') }}" class="drawer-link">🥛 Painel Leite</a>
       <a href="{{ url_for('nutricao_leite') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🍽️ Nutrição</a>
       <a href="{{ url_for('consumo_leite') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📊 Consumo</a>
@@ -742,59 +776,42 @@
       <a href="{{ url_for('comparar_insumos') }}" class="drawer-link">🧂 Insumos & Estoque</a>
       <a href="{{ url_for('calculador_racao_avancado') }}" class="drawer-link">🧮 Calculador Ração</a>
       <a href="{{ url_for('dashboard_conversao') }}" class="drawer-link">📉 Conversão Alimentar</a>
-      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
-
-      <!-- ═══ PASTOS & MANEJO ═══ -->
-      <a href="{{ url_for('pastos') }}" class="drawer-link">🗺️ Pastos</a>
-      <a href="{{ url_for('dashboard_ocupacao_pastos') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📍 Ocupação & Rotação</a>
-      <a href="{{ url_for('manejo') }}" class="drawer-link">🌿 Manejo</a>
-      <a href="{{ url_for('cochos') }}" class="drawer-link">🥣 Cochos</a>
       <a href="{{ url_for('operacao_leite', tipo='conforto') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🏠 Conforto Térmico</a>
       <a href="{{ url_for('operacao_leite', tipo='colchao') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🛏️ Colchão</a>
-      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
 
-      <!-- ═══ CONFINAMENTO & ENGORDA ═══ -->
-      <a href="{{ url_for('confinamento') }}" class="drawer-link">🏚️ Confinamento</a>
-      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
-
-      <!-- ═══ GENÉTICA ═══ -->
+      <!-- ═══ GENÉTICA & ENGORDA ═══ -->
+      <div class="nav-group-title">Genética & Engorda</div>
       <a href="{{ url_for('genetica') }}" class="drawer-link">🧬 Genética & Consanguinidade</a>
-      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
+      <a href="{{ url_for('confinamento') }}" class="drawer-link">🏚️ Confinamento</a>
 
       <!-- ═══ REGISTROS & EVENTOS ═══ -->
+      <div class="nav-group-title">Registros & Eventos</div>
       <a href="{{ url_for('compras') }}" class="drawer-link">📦 Compras</a>
       <a href="{{ url_for('gastos') }}" class="drawer-link">💸 Gastos</a>
       <a href="{{ url_for('vendas') }}" class="drawer-link">🤝 Vendas</a>
       <a href="{{ url_for('visitas') }}" class="drawer-link">🗓️ Visitas</a>
       <a href="{{ url_for('tarefas') }}" class="drawer-link">📋 Tarefas</a>
       <a href="{{ url_for('calendario_pagina') }}" class="drawer-link">📅 Calendário</a>
-      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
 
-      <!-- ═══ LOTES & INDICADORES ═══ -->
-      <a href="{{ url_for('lotes') }}" class="drawer-link">📦 Lotes</a>
-      <a href="{{ url_for('indicadores_gmd') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📊 GMD & Desempenho</a>
-      <a href="{{ url_for('indicadores_racao_consumo') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🥣 Ração Consumo</a>
-      <a href="{{ url_for('indicadores_mortalidade_bezerros') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🐂 Mortalidade</a>
-      <a href="{{ url_for('relatorios') }}" class="drawer-link">📈 Relatórios</a>
-      <a href="{{ url_for('relatorios_avancados') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📊 Relatórios PDF</a>
-      <a href="{{ url_for('ponto_corte') }}" class="drawer-link">🎯 Ponto de Corte</a>
-      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
-
-      <!-- ═══ FINANCEIRO ═══ -->
+      <!-- ═══ FINANCEIRO & RELATÓRIOS ═══ -->
+      <div class="nav-group-title">Financeiro & Relatórios</div>
       <a href="{{ url_for('financeiro') }}" class="drawer-link">💰 Financeiro</a>
       <a href="{{ url_for('resultado') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📊 Resultado Membro</a>
       <a href="{{ url_for('comparativo_anual') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📈 Comparativo Anual</a>
       <a href="{{ url_for('fluxo_caixa') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📊 Fluxo Caixa</a>
       <a href="{{ url_for('fluxo_animais') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🐄 Fluxo Animais</a>
+      <a href="{{ url_for('relatorios') }}" class="drawer-link">📈 Relatórios</a>
+      <a href="{{ url_for('ponto_corte') }}" class="drawer-link">🎯 Ponto de Corte</a>
       <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
 
       <!-- ═══ UTILIDADES ═══ -->
+      <div class="nav-group-title">Utilidades</div>
       <a href="{{ url_for('voz') }}" class="drawer-link">🎤 Comando de Voz</a>
       <a href="{{ url_for('ajuda') }}" class="drawer-link">❓ Ajuda</a>
       <a href="{{ url_for('tempo') }}" class="drawer-link">🌤️ Tempo</a>
-      <hr style="margin:8px 0;border:none;border-top:1px solid var(--bg-2)">
 
       <!-- ═══ ADMINISTRAÇÃO ═══ -->
+      <div class="nav-group-title">Administração</div>
       <a href="{{ url_for('configuracoes') }}" class="drawer-link">⚙️ Configurações</a>
       <a href="{{ url_for('logout') }}" class="drawer-link" style="color:var(--danger)">🚪 Sair</a>
     </nav>
