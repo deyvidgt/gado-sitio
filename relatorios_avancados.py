@@ -65,14 +65,18 @@ def gerar_relatorio_vendas(df_vendas, df_animais) -> dict:
 
         vendas = []
         for _, row in df_vendas.iterrows():
-            brincos = str(row.get("Brincos", ""))
+            brincos = str(row.get("Brincos", "") or "").strip()
+            if brincos in ("", "nan"):
+                brincos = "-"
             valor_total = row.get("Valor Total (R$)", 0)
             custo_total = row.get("Custo Total (R$)", 0) if "Custo Total (R$)" in row.index else 0
             resultado = valor_total - custo_total
             margem = (resultado / valor_total * 100) if valor_total > 0 else 0
+            data = pd.to_datetime(row.get("Data"), dayfirst=True, errors="coerce")
+            data_str = data.strftime("%d/%m/%Y") if pd.notna(data) else "—"
 
             vendas.append({
-                "data": str(row.get("Data", "")),
+                "data": data_str,
                 "brincos": brincos,
                 "qtd": row.get("Qtd Cabeças", 0),
                 "valor_total": valor_total,
@@ -109,17 +113,23 @@ def gerar_relatorio_sanitario(df_manejo) -> dict:
         eventos = []
         tipos_sanitarios = ["Medicação", "Vacina Raiva", "Vacina Clostridioses", "Vermifugação", "Tratamento Veterinário"]
 
+        # Data em DD/MM/AAAA (sem a hora do pandas) e brincos vazios viram '-'.
         for _, row in df_manejo.iterrows():
             tipo = str(row.get("Tipo", ""))
             if tipo not in tipos_sanitarios:
                 continue
+            data = pd.to_datetime(row.get("Data"), dayfirst=True, errors="coerce")
+            data_str = data.strftime("%d/%m/%Y") if pd.notna(data) else "—"
+            brincos = str(row.get("Brincos", "") or "").strip()
+            if brincos in ("", "nan"):
+                brincos = "-"
 
             eventos.append({
-                "data": str(row.get("Data", "")),
+                "data": data_str,
                 "tipo": tipo,
-                "brincos": str(row.get("Brincos", "")),
-                "descricao": str(row.get("Descrição", "")),
-                "responsavel": str(row.get("Responsável", "")),
+                "brincos": brincos,
+                "descricao": str(row.get("Descrição", "") or ""),
+                "responsavel": str(row.get("Responsável", "") or ""),
             })
 
         return {
