@@ -42,6 +42,10 @@ playwright>=1.40.0
 # ── Gráficos (interface de linha de comando) ─────────────────
 matplotlib>=3.8.0
 
+# ── IA preditiva (reproducao_avancada_ia / ia_features) ──────
+# Importado no caminho do app (app.py → routes_ia): sem ele o app não sobe.
+scikit-learn>=1.3.0,<2
+
 # ── Acesso remoto via ngrok (opcional) ───────────────────────
 # Permite acessar o sistema de fora da rede local.
 # Requer conta gratuita em https://ngrok.com e token configurado.

@@ -16,6 +16,17 @@
   .conf-card .nome { font-size:13px; color:var(--text-3); display:flex; align-items:center; gap:8px; }
   .conf-card .num { font-size:22px; font-weight:600; margin:4px 0; }
   .conf-card small { font-size:12px; color:var(--text-3); }
+  /* Cards de dono viram filtro de clique (v5.15): estado ativo usa a cor do brinco. */
+  .conf-card[data-dono] { cursor:pointer; transition:border-color .15s, box-shadow .15s, background .15s; }
+  .conf-card[data-dono]:hover { border-color:var(--cor, var(--green-500)); }
+  .conf-card[data-dono].ativo {
+    border:2px solid var(--cor);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--cor) 25%, transparent);
+    background:color-mix(in srgb, var(--cor) 10%, var(--surface));
+  }
+  .conf-card[data-dono].ativo::after {
+    content:"✓ filtrado"; float:right; font-size:11px; font-weight:600; color:var(--cor);
+  }
   .alerta-bruc { background:var(--gold-lt); border:1px solid var(--gold); border-radius:var(--radius);
                  padding:12px 16px; margin-bottom:18px; font-size:13.5px; }
   .alerta-bruc ul { margin:6px 0 0 18px; }
@@ -61,7 +72,7 @@
 
 <div class="conf-grid">
   {% for c in conferencia %}
-  <div class="conf-card">
+  <div class="conf-card" data-dono="{{ c.membro }}" data-cor="{{ COR_HEX.get(cores_dono[c.membro], '#999') }}" role="button" tabindex="0" title="Filtrar os animais de {{ NOMES[c.membro] }}">
     <div class="nome"><span class="chip-brinco"><span class="bol" style="background:{{ COR_HEX.get(cores_dono[c.membro], '#999') }}"></span></span>
       {{ NOMES[c.membro] }} · {{ cores_dono[c.membro] }}</div>
     <div class="num">{{ c.com_brinco }} <span class="muted">de {{ c.estoque }} no estoque</span></div>
@@ -74,6 +85,7 @@
 </div>
 
 <div class="tabs-status">
+  <button type="button" id="limpar-filtro-dono" class="on" style="display:none;cursor:pointer">✖️ Limpar filtro</button>
   {% for st, rot in [('Vivo','🐄 Vivos'),('Vendido','🤝 Vendidos'),('Morto','⚰️ Mortos'),('todos','Todos')] %}
     <a href="?status={{ st }}" class="{{ 'on' if status == st }}">{{ rot }}</a>
   {% endfor %}
@@ -97,7 +109,7 @@
     </tr></thead>
     <tbody>
     {% for r in rows %}
-      <tr class="linha" data-busca="{{ (r.brinco ~ ' ' ~ NOMES.get(r.dono, r.dono) ~ ' ' ~ r.categoria ~ ' ' ~ r.raca ~ ' ' ~ r.pelagem ~ ' ' ~ r.sinais)|lower }}">
+      <tr class="linha" data-dono="{{ r.dono }}" data-busca="{{ (r.brinco ~ ' ' ~ NOMES.get(r.dono, r.dono) ~ ' ' ~ r.categoria ~ ' ' ~ r.raca ~ ' ' ~ r.pelagem ~ ' ' ~ r.sinais)|lower }}">
         <td><a href="{{ url_for('ficha_animal', id_=r.id) }}"><span class="chip-brinco">{% if fotos_principais.get(r.id) %}<img class="mini-redonda" loading="lazy" alt="" src="{{ url_for('foto_mini', id_foto=fotos_principais[r.id]) }}" style="border-color:{{ r.hex }}">{% else %}<span class="bol" style="background:{{ r.hex }}"></span>{% endif %}{{ r.brinco }}</span></a></td>
         <td>{{ NOMES.get(r.dono, r.dono) }}</td>
         <td><a href="{{ url_for('ficha_animal', id_=r.id) }}">{{ r.categoria or '—' }}</a></td>
@@ -141,10 +153,47 @@
 
 {% block scripts %}
 <script>
-function filtrar() {
-  const q = document.getElementById("busca").value.trim().toLowerCase();
-  document.querySelectorAll("tr.linha").forEach(tr =>
-    tr.style.display = !q || tr.dataset.busca.includes(q) ? "" : "none");
+// Filtro combinado: texto (busca) + dono (card clicado, v5.15).
+let donoAtivo = null;
+
+function aplicarFiltro() {
+  const q = (document.getElementById("busca").value || "").trim().toLowerCase();
+  document.querySelectorAll("tr.linha").forEach(tr => {
+    const okTexto = !q || tr.dataset.busca.includes(q);
+    const okDono = !donoAtivo || tr.dataset.dono === donoAtivo;
+    tr.style.display = (okTexto && okDono) ? "" : "none";
+  });
+  const btn = document.getElementById("limpar-filtro-dono");
+  if (btn) btn.style.display = donoAtivo ? "" : "none";
 }
+
+// Chamada pelo oninput da busca.
+function filtrar() { aplicarFiltro(); }
+
+document.querySelectorAll('.conf-card[data-dono]').forEach(card => {
+  const escolher = () => {
+    // Clicar de novo no card ativo limpa o filtro (toggle).
+    donoAtivo = (donoAtivo === card.dataset.dono) ? null : card.dataset.dono;
+    document.querySelectorAll('.conf-card[data-dono]').forEach(c => {
+      const on = c.dataset.dono === donoAtivo;
+      c.classList.toggle('ativo', on);
+      c.style.setProperty('--cor', on ? c.dataset.cor : '');
+    });
+    aplicarFiltro();
+  };
+  card.addEventListener('click', escolher);
+  card.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); escolher(); }
+  });
+});
+
+const btnLimpar = document.getElementById('limpar-filtro-dono');
+if (btnLimpar) btnLimpar.addEventListener('click', () => {
+  donoAtivo = null;
+  document.querySelectorAll('.conf-card[data-dono]').forEach(c => {
+    c.classList.remove('ativo'); c.style.setProperty('--cor', '');
+  });
+  aplicarFiltro();
+});
 </script>
 {% endblock %}

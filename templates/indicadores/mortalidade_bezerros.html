@@ -25,6 +25,27 @@
       </div>
     </div>
 
+    {% if mortalidade_faixa and mortalidade_faixa.total %}
+    <h2>Mortalidade por Faixa Etária</h2>
+    <table class="tabela">
+      <thead>
+        <tr><th>Faixa Etária</th><th>Mortes</th><th>%Part</th></tr>
+      </thead>
+      <tbody>
+        {% for f in mortalidade_faixa.faixas %}
+        <tr>
+          <td>{{ f.faixa }}</td>
+          <td>{{ f.n }}</td>
+          <td class="{% if f.pct >= 40 %}status-ruim{% elif f.pct >= 20 %}status-aviso{% else %}status-ok{% endif %}">{{ f.pct }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if mortalidade_faixa.sem_data %}
+    <p class="muted" style="margin-top:8px">{{ mortalidade_faixa.sem_data }} animal(is) morto(s) sem data de nascimento/saída — fora do cálculo.</p>
+    {% endif %}
+    {% endif %}
+
     {% if analise.causas %}
     <h2>Principais Causas</h2>
     <div class="causas">

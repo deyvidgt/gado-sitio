@@ -189,3 +189,49 @@ def mortalidade_bezerros_analise(dados: dict = None) -> dict:
             "taxa_media": 0, "total_nascidos": 0, "total_mortos": 0,
             "causas": {}, "tabela": [], "erro": str(e)
         }
+
+
+def mortalidade_por_faixa_etaria(dados: dict = None) -> dict:
+    """Mortalidade segmentada por faixa etária (v5.15).
+
+    Usa o cadastro de animais: cada animal com Status "Morto" tem `Nascimento`
+    e `Data Saída`; a idade na morte define a faixa. `%Part` = quanto aquela
+    faixa representa do total de mortos. Só leitura — não mexe nas finanças.
+    """
+    abas = dados or {}
+    df = abas.get("Animais")
+    if df is None:
+        try:
+            df = carregar_aba("Animais")
+        except Exception:
+            df = None
+    faixas_def = [
+        ("0 a 4 meses", 0, 4),
+        ("5 a 12 meses", 5, 12),
+        ("13 a 24 meses", 13, 24),
+        ("25 a 36 meses", 25, 36),
+        ("> 36 meses", 37, 9999),
+    ]
+    contagem = {rot: 0 for rot, *_ in faixas_def}
+    sem_data = 0
+    total = 0
+    if df is not None and not df.empty and "Status" in df.columns:
+        mortos = df[df["Status"].astype(str).str.strip() == "Morto"]
+        nasc = pd.to_datetime(mortos.get("Nascimento"), dayfirst=True, errors="coerce") \
+            if "Nascimento" in mortos.columns else pd.Series([pd.NaT] * len(mortos), index=mortos.index)
+        saida = pd.to_datetime(mortos.get("Data Saída"), dayfirst=True, errors="coerce") \
+            if "Data Saída" in mortos.columns else pd.Series([pd.NaT] * len(mortos), index=mortos.index)
+        for n, s in zip(nasc, saida):
+            if pd.isna(n) or pd.isna(s):
+                sem_data += 1
+                continue
+            meses = int((s - n).days / 30.44)
+            for rot, lo, hi in faixas_def:
+                if lo <= meses <= hi:
+                    contagem[rot] += 1
+                    total += 1
+                    break
+    lista = [{"faixa": rot, "n": contagem[rot],
+              "pct": round(contagem[rot] * 100 / total, 1) if total else 0}
+             for rot, *_ in faixas_def]
+    return {"faixas": lista, "total": total, "sem_data": sem_data}

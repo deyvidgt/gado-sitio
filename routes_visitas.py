@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from flask import render_template, request, redirect, url_for, flash, session, jsonify
 from db import carregar_aba, fazer_backup
 from calculos import calcular_estoque, calcular_estoque_ate_data
-from config import MEMBROS, NOMES_MEMBROS
+from config import MEMBROS, NOMES_MEMBROS, OPCOES_VISITA
 from extensions import (
     app, _agora, _validar_csrf, _gerar_csrf, login_required,
     _get_dados_cache, salvar_linha, reescrever_aba,
@@ -274,6 +274,8 @@ def _registrar_visita_sem_trava(f) -> dict:
     choveu   = "Sim" if f.get("choveu") == "sim" else "Não"
     estado_colchao = f.get("estado_colchao", "")
     colcho   = f.get("colcho", "")
+    estado_cocho = f.get("estado_cocho", "")
+    comportamento = f.get("comportamento_animal", "")
 
     def _litros_safe(v):
         try:
@@ -317,6 +319,8 @@ def _registrar_visita_sem_trava(f) -> dict:
         chave_envio,
         estado_colchao or None,
         colcho or None,
+        estado_cocho or None,
+        comportamento or None,
     ])
 
     row = {
@@ -367,6 +371,7 @@ def nova_visita():
     estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
     return render_template("form_visita.html", estoque=estoque,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
+                           OPCOES_VISITA=OPCOES_VISITA,
                            hoje=_agora().strftime("%Y-%m-%d"))
 
 
