@@ -3,6 +3,7 @@ import pandas as pd
 
 
 def test_ficha_leiteira_mostra_historico_e_dias_em_lactacao(cliente, monkeypatch):
+    import doencas_carencia
     import routes_leite
 
     monkeypatch.setattr(routes_leite.A, "carregar", lambda: pd.DataFrame([{
@@ -10,7 +11,7 @@ def test_ficha_leiteira_mostra_historico_e_dias_em_lactacao(cliente, monkeypatch
         "Brinco Cor": "Amarelo", "Brinco Nº": "21", "Situação Leite": "lactação",
         "Último Parto": "20/10/2026",
     }]))
-    monkeypatch.setattr(routes_leite, "carregar_aba", lambda aba: {
+    abas = {
         "Leite Produção": pd.DataFrame([
             {"Data": "25/10/2026", "Vaca ID": "A0001", "Modo Registro": "individual", "Litros": 18},
             {"Data": "26/10/2026", "Vaca ID": "A0001", "Modo Registro": "individual", "Litros": 20},
@@ -19,7 +20,10 @@ def test_ficha_leiteira_mostra_historico_e_dias_em_lactacao(cliente, monkeypatch
             "Data": "26/10/2026", "Vaca ID": "A0001", "Descrição": "Mastite",
             "Período de Carência": "2",
         }]),
-    }.get(aba, pd.DataFrame()))
+    }
+    monkeypatch.setattr(routes_leite, "carregar_aba", lambda aba: abas.get(aba, pd.DataFrame()))
+    # A carência agora vem da fonte única (3 abas) — não só de Leite Tratamentos.
+    monkeypatch.setattr(doencas_carencia, "carregar_aba", lambda aba: abas.get(aba, pd.DataFrame()))
     monkeypatch.setattr(routes_leite, "_agora", lambda: pd.Timestamp("2026-10-26"))
 
     resposta = cliente.get("/leite/animal/A0001")

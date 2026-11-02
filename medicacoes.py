@@ -49,8 +49,13 @@ def registrar_medicacao(data: str, brincos: str, tipo: str, principio: str,
             print("❌ Brincos obrigatórios")
             return False
 
-        # Calcular data de liberação
-        data_liberacao = (data_obj + timedelta(days=int(quarentena_dias))).strftime('%d/%m/%Y')
+        # Calcular data de liberação. O que a pessoa digitou nunca encurta a
+        # tabela do remédio — senão a coluna "Data Liberação" mostraria uma
+        # data mais cedo do que a carência real.
+        from doencas_carencia import _obter_carencia
+
+        dias = max(int(quarentena_dias), _obter_carencia(principio, "leite") or 0)
+        data_liberacao = (data_obj + timedelta(days=dias)).strftime('%d/%m/%Y')
 
         # Montar linha
         linha = [
@@ -61,7 +66,7 @@ def registrar_medicacao(data: str, brincos: str, tipo: str, principio: str,
             dosagem,
             via,
             motivo,
-            str(quarentena_dias),
+            str(dias),
             data_liberacao,
             str(custo),
             "Sistema",  # Responsável (admin)
@@ -105,69 +110,41 @@ def historico_animal(brinco_id: str) -> list:
 
 def alertas_quarentena(hoje: str = None) -> dict:
     """
-    Retorna animais em quarentena de leite HOJE.
+    Animais em quarentena de leite HOJE — mesma conta do resto do sistema
+    (`doencas_carencia`, que lê as 3 abas de medicação).
 
     Args:
         hoje: dd/mm/aaaa (default: hoje)
 
     Returns:
-        {
-            "total": int,
-            "por_liberar": [{"brinco": "", "liberacao": "", "dias_falta": int}, ...],
-            "por_vencer_hoje": [...]
-        }
+        {"total": int, "por_liberar": [...], "por_vencer_hoje": [...]}
     """
-    if not hoje:
-        hoje = datetime.now().strftime('%d/%m/%Y')
+    from doencas_carencia import status_por_animal
 
-    try:
-        data_obj = pd.to_datetime(hoje, format='%d/%m/%Y')
-    except:
-        return {"total": 0, "por_liberar": [], "por_vencer_hoje": []}
-
-    try:
-        df = db.carregar_aba("Medicações")
-        if df.empty:
+    referencia = datetime.now().date()
+    if hoje:
+        try:
+            referencia = pd.to_datetime(hoje, format="%d/%m/%Y").date()
+        except (ValueError, TypeError):
             return {"total": 0, "por_liberar": [], "por_vencer_hoje": []}
 
-        # Converter Data Liberação para datetime
-        df['Data_Liberacao_obj'] = pd.to_datetime(df['Data Liberação'], format='%d/%m/%Y', errors='coerce')
-
-        # Filtrar medicações que ainda estão em quarentena (Data_Liberacao >= hoje)
-        df_quaren = df[df['Data_Liberacao_obj'] >= data_obj].copy()
-
-        if df_quaren.empty:
-            return {"total": 0, "por_liberar": [], "por_vencer_hoje": []}
-
-        # Calcular dias faltantes
-        df_quaren['dias_falta'] = (df_quaren['Data_Liberacao_obj'] - data_obj).dt.days
-
-        # Separar por vencer hoje (dias_falta == 0) e ainda faltando
-        por_vencer = df_quaren[df_quaren['dias_falta'] == 0].copy()
-        por_liberar = df_quaren[df_quaren['dias_falta'] > 0].copy()
-
-        return {
-            "total": len(df_quaren),
-            "por_liberar": [
-                {
-                    "brinco": row['Brincos'],
-                    "liberacao": row['Data Liberação'],
-                    "dias_falta": int(row['dias_falta']),
-                    "motivo": row['Motivo'],
-                } for _, row in por_liberar.iterrows()
-            ],
-            "por_vencer_hoje": [
-                {
-                    "brinco": row['Brincos'],
-                    "liberacao": row['Data Liberação'],
-                    "motivo": row['Motivo'],
-                } for _, row in por_vencer.iterrows()
-            ],
-        }
-
-    except Exception as e:
-        print(f"❌ Erro ao calcular quarentena: {e}")
-        return {"total": 0, "por_liberar": [], "por_vencer_hoje": []}
+    status = status_por_animal("leite", referencia)
+    em_carencia = {aid: s for aid, s in status.items() if s["em_carencia"]}
+    vencem_hoje = [s for s in status.values()
+                   if not s["em_carencia"] and s["data_liberacao"] == referencia]
+    return {
+        "total": len(em_carencia) + len(vencem_hoje),
+        "por_liberar": [
+            {"brinco": s["brinco"], "liberacao": s["data_liberacao"].strftime("%d/%m/%Y"),
+             "dias_falta": s["dias_restantes"], "motivo": s["medicamento"]}
+            for s in sorted(em_carencia.values(), key=lambda s: s["data_liberacao"])
+        ],
+        "por_vencer_hoje": [
+            {"brinco": s["brinco"], "liberacao": s["data_liberacao"].strftime("%d/%m/%Y"),
+             "motivo": s["medicamento"]}
+            for s in vencem_hoje
+        ],
+    }
 
 
 def medicacoes_recentes(dias: int = 30) -> list:

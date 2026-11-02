@@ -447,19 +447,21 @@ def nova_venda():
             flash(erro, "error")
             return redirect(url_for("nova_venda"))
 
-        # v5.10 Onda 2 — Validar carência antes de vender
+        # v5.10 Onda 2 — Validar carência antes de vender (fonte única: 3 abas)
         try:
-            from doencas_carencia import validar_venda
-            import animais
+            from doencas_carencia import status_por_animal, validar_venda
             import re
             texto_brincos = (form.get("brincos_refs") or "").strip()
             if texto_brincos:
+                status = status_por_animal("carne")
                 # Extrai IDs dos brincos (format: "Amarelo 21 #A0003; Azul 12 #A0007")
-                ids = re.findall(r'#([A-Z0-9]+)', texto_brincos)
-                for animal_id in ids:
-                    pode_vender, motivo = validar_venda(animal_id, "carne")
+                for animal_id in re.findall(r'#([A-Z0-9]+)', texto_brincos):
+                    s = status.get(animal_id)
+                    if not s:
+                        continue
+                    pode_vender, motivo = validar_venda(animal_id, "carne", s)
                     if not pode_vender:
-                        flash(f"⚠️ {animal_id}: {motivo} — não pode ser vendido.", "warning")
+                        flash(f"{animal_id}: {motivo} — não pode ser vendido.", "warning")
         except Exception as e:
             app.logger.warning(f"Validação de carência: {e}")
         _salvar_venda(form, dados)

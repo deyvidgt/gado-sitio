@@ -169,28 +169,16 @@ def alertas_consolidados(dados: dict) -> list:
     """
     alertas = []
 
-    # Quarentena de medicações (v5.7)
+    # Quarentena de leite — mesma fonte do painel e da venda (v5.16)
     try:
-        medicacoes = dados.get("Medicações") or carregar_aba("Medicações")
-        agora = _agora().date()
-
-        for _, row in medicacoes.iterrows():
-            data_lib = row.get("Data Liberação")
-            if pd.isna(data_lib):
-                continue
-
-            data_lib = pd.to_datetime(data_lib, dayfirst=True, errors="coerce")
-            if pd.isna(data_lib):
-                continue
-
-            if data_lib.date() > agora:
-                brinco = row.get("Brincos", "")
-                dias = (data_lib.date() - agora).days
-                alertas.append({
-                    "icon": "🚫",
-                    "msg": f"Quarentena: {brinco} ({dias}d)",
-                    "status": "urgente" if dias <= 3 else "aviso",
-                })
+        from doencas_carencia import carencias_ativas
+        for c in carencias_ativas("leite", _agora().date()):
+            dias = c["dias_restantes"]
+            alertas.append({
+                "icon": "🚫",
+                "msg": f"Quarentena: {c['brinco']} ({dias}d)",
+                "status": "urgente" if dias <= 3 else "aviso",
+            })
     except Exception as e:
         pass
 

@@ -75,6 +75,8 @@ def test_confinamento_custo_por_lote():
     assert resultado["custo_total"] == 5000
     assert resultado["custo_por_cab"] == 500  # 5000 / 10
     assert resultado["custo_por_dia"] == 33.33  # ~5000 / 150
+    # 1 @ = 15 kg de carcaça: 450 kg × 0,58 = 261 kg → 17,4 @ → R$5.220/cab.
+    assert resultado["receita_por_cab"] == 5220.0
     assert "resultado" in resultado
     assert "margem" in resultado
 

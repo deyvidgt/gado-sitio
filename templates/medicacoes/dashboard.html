@@ -7,6 +7,10 @@
 
 <h1>💊 Histórico de Medicações</h1>
 
+<p style="font-size:13px;margin-top:-8px;">
+  <a href="{{ url_for('listar_bulas') }}">📖 Bulas e embalagens dos remédios</a>
+</p>
+
 <!-- ALERTAS DE QUARENTENA HOJE -->
 {% if alertas.total > 0 %}
 <div class="card" style="background: #ffe6e6; border-left: 4px solid #c0392b;">

@@ -2,6 +2,22 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
+## [Não lançado]
+
+### Adicionado
+- **📖 Bulas e embalagens (v5.16):** cada remédio e vacina pode ter a **bula em PDF** e a **foto da embalagem** guardadas no Google Drive (pasta "Bulas e embalagens", mesma credencial das fotos), consultáveis no celular em `/bulas` — também linkada em 💉 Medicações, no formulário de 🩺 Doença e na aba ❓ Ajuda. Quem não tem arquivo aparece na lista "Ainda sem bula". `python subir_bulas.py <pasta>` envia os arquivos (nome do produto + extensão basta); o site baixa pelo próprio endereço, então o Drive continua privado.
+
+### Corrigido
+- **Carência de medicamento agora é uma conta só (B4):** a venda lia a aba `Tratamentos`, o painel de alertas lia `Leite Tratamentos`, a quarentena lia `Medicações` e a ficha da vaca lia de novo `Leite Tratamentos` — o mesmo animal podia estar "em carência" numa tela e "liberado" em outra. `doencas_carencia.status_por_animal()` lê as **três abas**, fica com o prazo mais longo e alimenta `/doencas`, `/alertas`, `/medicacoes`, a ficha da vaca, o dashboard novo e a validação da venda.
+- **Tabela de carência em dias reais (B5):** os valores de leite estavam em **horas** gravados como dias (Penicilina "48" virava 48 dias de descarte; o real é ~2). Convertidos, e entraram `Ceftiofur` (3 d leite / 4 d carne) e outros. Remédio fora da tabela não finge mais saber o prazo: usa o conservador (7 d leite / 28 d carne) **e avisa na tela** que o período não está cadastrado.
+- **Filtro por dono em Animais:** o card do dono não mudava de cor ao ser clicado (a borda usava uma variável CSS que só era definida no estado ativo) e o card "pulava" 2 px ao ativar; a cor agora vem no `style` do card e a borda transparente fica reservada desde o início.
+- **Contagem dos cards de dono (B3):** contava o rebanho vivo inteiro mesmo com `?status=Vendido` ou filtro de categoria/sexo — card dizia "12 de 15" com 3 linhas na tabela. Agora conta o recorte que a tela está mostrando.
+- **Receita do confinamento pela metade:** `confinamento.custo_por_lote()` dividia a arroba por 30 kg em vez de 15. Um lote de 450 kg dava 8,7 @ em vez de 17,4 @. A função ainda não aparece em tela, então o erro estava latente — o teste agora fixa o valor.
+- **`/dashboard-exemplo-graficos` sem login:** a página (com números fixos de exemplo) abria para qualquer visitante. Agora exige login, e um teste garante que as páginas internas redirecionam.
+
+### Documentado
+- `docs/AUDITORIA_INSPIRACOES.md` revisada contra a `main` (v5.15): 5 defeitos em código no ar (incluindo a carência do leite lida de três abas diferentes) e a resposta medida sobre migrar para PostgreSQL.
+
 ## [5.14.0] — 2026-11-01
 
 ### Adicionado

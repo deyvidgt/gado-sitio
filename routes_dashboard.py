@@ -669,6 +669,7 @@ def dashboard_novo_view():
 
 
 @app.route('/dashboard-exemplo-graficos')
+@login_required
 def dashboard_exemplo_graficos():
     """Página de exemplos dos componentes gráficos v5.8 (Gauge, Cards, Barras, Linhas)."""
     return render_template("dashboard-exemplo-graficos.html")

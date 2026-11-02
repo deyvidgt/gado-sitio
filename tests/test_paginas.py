@@ -49,6 +49,13 @@ def test_sem_login_redireciona(flask_app):
     assert "/login" in resp.headers["Location"]
 
 
+def test_paginas_internas_exigem_login(flask_app):
+    """A página de exemplo mostra números fixos: sem login não pode abrir."""
+    cli = flask_app.test_client()
+    for rota in ("/dashboard-exemplo-graficos", "/animais", "/confinamento"):
+        assert "/login" in cli.get(rota).headers.get("Location", ""), rota
+
+
 def test_post_sem_csrf_e_recusado(cliente):
     resp = cliente.post("/compras/nova", data={"cabecas": "1", "valor": "100"})
     assert resp.status_code in (400, 403)

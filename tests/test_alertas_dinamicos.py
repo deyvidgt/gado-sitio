@@ -18,16 +18,25 @@ def test_alertas_detecta_ausencia_de_registro_para_vacas_em_lactacao():
 
 
 def test_alertas_detecta_tratamento_em_carencia():
-    tratamentos = pd.DataFrame([{
-        "Data": "25/10/2026", "Vaca ID": "A0001", "Descrição": "Mastite",
-        "Período de Carência": "3", "Custo (R$)": "50",
-    }])
+    """A carência vem de doencas_carencia (fonte única das 3 abas)."""
+    from datetime import date as _date
 
-    itens = alertas.todos(tratamentos=tratamentos, referencia=date(2026, 10, 26))
+    from doencas_carencia import _status_de
+
+    linha = {
+        "animal_id": "A0001", "brinco": "Amarelo 21 #A0001",
+        "data": _date(2026, 10, 25), "medicamento": "Ceftiofur",
+        "descricao": "Mastite", "dias_leite": 3, "dias_carne": 4,
+        "conhecida_leite": True, "conhecida_carne": True,
+    }
+    carencias = [dict(_status_de([linha], "leite", _date(2026, 10, 26)), animal_id="A0001")]
+
+    itens = alertas.todos(carencias=carencias, referencia=date(2026, 10, 26))
 
     carencia = next(item for item in itens if item["origem"] == "tratamento")
     assert carencia["prioridade"] == "urgente"
     assert "A0001" in carencia["detalhe"]
+    assert carencia["rota"] == "/doencas"
 
 
 def test_alertas_detecta_qualidade_do_leite_por_ccs_e_cpp():

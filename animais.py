@@ -596,12 +596,12 @@ def janela_brucelose(df: pd.DataFrame, df_man: pd.DataFrame, hoje=None) -> list[
 
 
 def conferencia(df: pd.DataFrame, estoque_por_membro: dict) -> list[dict]:
-    """Vivos com brinco × estoque do sistema, por dono — mostra quantos faltam
-    brincar (ou se há mais animais cadastrados do que o estoque diz)."""
-    v = vivos(df)
+    """Animais do recorte que a tela está mostrando × estoque do sistema, por dono.
+    `df` já vem filtrado por status/categoria/sexo/busca — senão o card dizia
+    "12 de 15" com 3 linhas na tabela."""
     out = []
     for m in MEMBROS:
-        com_brinco = int((v["Dono"] == m).sum()) if not v.empty else 0
+        com_brinco = int((df["Dono"] == m).sum()) if not df.empty and "Dono" in df.columns else 0
         estoque = int(estoque_por_membro.get(m, 0) or 0)
         out.append({"membro": m, "com_brinco": com_brinco, "estoque": estoque,
                     "sem_brinco": max(estoque - com_brinco, 0),

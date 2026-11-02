@@ -49,8 +49,10 @@
         <td style="padding:10px;font-size:11px;">{{ registro.tratamento or '—' }}</td>
         <td style="padding:10px;"><em>{{ registro.medicamento }}</em></td>
         <td style="padding:10px;">
-          {% if registro.carencia > 0 %}
-            {{ registro.carencia }}h leite
+          {% if registro.carencia is none %}
+            <span title="Remédio fora da tabela — confira a bula">não cadastrada</span>
+          {% elif registro.carencia > 0 %}
+            {{ registro.carencia }} dia(s) leite
           {% else %}
             Nenhuma (leite)
           {% endif %}

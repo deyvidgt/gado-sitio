@@ -47,34 +47,13 @@
     <label for="medicamento" style="font-weight:600;display:block;margin-bottom:4px;">Medicamento (obrigatório)</label>
     <select id="medicamento" name="medicamento" required style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;">
       <option value="">— Selecione —</option>
-      <!-- Antibióticos -->
-      <optgroup label="Antibióticos">
-        <option value="Penicilina">Penicilina (48h leite / 8d carne)</option>
-        <option value="Amoxicilina">Amoxicilina (48h leite / 15d carne)</option>
-        <option value="Tetraciclina">Tetraciclina (72h leite / 28d carne)</option>
-        <option value="Gentamicina">Gentamicina (72h leite / 28d carne)</option>
-        <option value="Cefalosporina">Cefalosporina (48h leite / 14d carne)</option>
-      </optgroup>
-      <!-- Anti-inflamatórios -->
-      <optgroup label="Anti-inflamatórios">
-        <option value="Meloxicam">Meloxicam (0h leite / 15d carne)</option>
-        <option value="Fenilbutazona">Fenilbutazona (0h leite / 28d carne)</option>
-        <option value="Dexametasona">Dexametasona (0h leite / 7d carne)</option>
-      </optgroup>
-      <!-- Antiparasitários -->
-      <optgroup label="Antiparasitários">
-        <option value="Ivermectina">Ivermectina (0h leite / 35d carne)</option>
-        <option value="Albendazol">Albendazol (0h leite / 28d carne)</option>
-        <option value="Doramectina">Doramectina (0h leite / 49d carne)</option>
-      </optgroup>
-      <!-- Outros -->
-      <optgroup label="Outros">
-        <option value="Sulfadiazina">Sulfadiazina (60h leite / 14d carne)</option>
-        <option value="Enrofloxacina">Enrofloxacina (0h leite / 28d carne)</option>
-        <option value="Outro">Outro (informar na descrição)</option>
-      </optgroup>
+      {% for nome, p in periodos.items() %}
+      <option value="{{ nome }}">{{ nome }} ({{ p.leite }}d leite / {{ p.carne }}d carne)</option>
+      {% endfor %}
+      <option value="Outro">Outro (informar na descrição)</option>
     </select>
-    <div style="font-size:11px;color:var(--text-3);margin-top:4px;">Formato: "Medicamento (dias leite / dias carne)"</div>
+    <div style="font-size:11px;color:var(--text-3);margin-top:4px;">Períodos em dias, da tabela do sistema. "Outro" usa o prazo conservador e avisa na tela.
+      <a href="{{ url_for('listar_bulas') }}">📖 Ver bula e embalagem</a></div>
   </div>
 
   <div style="margin-bottom:16px;">

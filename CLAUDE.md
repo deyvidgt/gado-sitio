@@ -95,6 +95,7 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 | `static/voz_campos.js` | Prefill de formulário por `?prefill=1&campo=valor` e 🎤 de ditado nos campos de texto |
 | `drive.py` | Cliente mínimo do Google Drive (só `requests`, OAuth com refresh token em `<dados>/drive_token.json`); só opera dentro da pasta raiz |
 | `fotos.py` / `routes_fotos.py` | Fotos dos animais (v4.4): aba `Fotos` + arquivos no Drive; site faz proxy das imagens com cache em `<dados>/cache_fotos/`. `configurar_drive.py` autoriza uma vez (ver `docs/FOTOS_DRIVE.md`) |
+| `bulas.py` / `routes_bulas.py` | Bulas e embalagens (v5.16): PDF da bula e foto da embalagem de cada remédio/vacina no Drive (pasta "Bulas e embalagens", arquivo `<slug>__bula.pdf` / `<slug>__embalagem.jpg`, marcado com `appProperties bulas=<nome>`). Catálogo vem da tabela de carência + `saude.SUGESTOES_PRODUTO`; `/bulas` lista e `/bulas/<nome>` serve (cache em `cache_fotos/`). `subir_bulas.py <pasta>` envia |
 | `routes_ajuda.py` / `templates/ajuda.html` | Aba ❓ Ajuda (v4.5): manual com passo a passo; prints no Drive (marca `ajuda=<nome>`, `c-` celular / `p-` computador), enviados por `subir_prints_ajuda.py`. Mudou uma tela? Atualize o texto e o print |
 | `static/fila_fotos.js` | Foto offline: reduz no celular (1600 px), guarda no IndexedDB (mesmo banco das visitas, v2) e envia por `/api/fotos` |
 | `static/fila_visitas.js` | Visita offline: guarda no celular (IndexedDB) e envia por `/api/visitas` quando há sinal; `ID Envio` evita duplicata |
