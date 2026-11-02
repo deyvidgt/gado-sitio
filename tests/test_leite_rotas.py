@@ -12,7 +12,7 @@ def test_painel_leiteiro_abre(cliente):
     assert resposta.status_code == 200
     html = resposta.get_data(as_text=True)
     assert "Painel do leite" in html
-    assert "Lançar ordenha" in html
+    assert "Lançar Ordenha" in html
 
 
 def test_registra_ordenha_individual_e_impede_id_envio_duplicado(cliente, dados_restaurados):

@@ -5,7 +5,15 @@
 {% include '_leite_nav.html' %}
 <div class="page-head">
   <div><span class="eyebrow">Atividade leiteira</span><h2>Painel do leite</h2></div>
-  <div class="acoes"><a class="btn btn-primary" href="{{ url_for('ordenha_leite') }}">Lançar ordenha</a><a class="btn" href="{{ url_for('animais_leite') }}">Vacas leiteiras</a><a class="btn" href="{{ url_for('listar_colchao') }}">Colchões</a><a class="btn" href="{{ url_for('relatorios_leite') }}">Relatório</a></div>
+</div>
+<!-- Ações principais em grid de cards (toque fácil no celular) -->
+<div class="leite-acoes-grid">
+  <a class="btn btn-primary leite-acao" href="{{ url_for('ordenha_leite') }}">🥛 Lançar Ordenha</a>
+  <a class="btn leite-acao" href="{{ url_for('relatorios_leite') }}">📊 Relatório de Vacas</a>
+  <a class="btn leite-acao" href="{{ url_for('consumo_leite') }}">🍽️ Consumo</a>
+  <a class="btn leite-acao" href="{{ url_for('saude_leite') }}">🩺 Sanidade / Tratamentos</a>
+  <a class="btn leite-acao" href="{{ url_for('animais_leite') }}">🐮 Animais Leite</a>
+  <a class="btn leite-acao" href="{{ url_for('listar_colchao') }}">🛏️ Colchões</a>
 </div>
 <div class="metrics">
   <div class="metric"><strong>{{ '%.1f'|format(acumulado.dia)|replace('.', ',') }}</strong><span>Acumulado do dia (L)</span></div>
