@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """Alertas operacionais do módulo leiteiro."""
 
-from datetime import date, timedelta
-
 import pandas as pd
 
 from leite import _data, _numero, contagens_rebanho, _sem_duplicidade, historico_colchao, _hoje_br
@@ -13,21 +11,15 @@ def _item(origem, titulo, detalhe, prioridade="aviso", acao="Abrir módulo", rot
             "prioridade": prioridade, "acao": acao, "rota": rota}
 
 
-def _carencia(tratamentos, referencia):
+def _carencia(carencias):
+    """Carências vêm de doencas_carencia (fonte única das 3 abas de medicação)."""
     itens = []
-    if tratamentos is None or tratamentos.empty:
-        return itens
-    for _, linha in tratamentos.iterrows():
-        inicio = _data(linha.get("Data"))
-        dias = _numero(linha.get("Período de Carência"))
-        if inicio is None or dias is None or dias <= 0:
-            continue
-        fim = inicio + timedelta(days=int(dias))
-        if inicio <= referencia < fim:
-            animal = str(linha.get("Vaca ID") or linha.get("Brinco") or "animal não informado").strip()
-            itens.append(_item("tratamento", "Tratamento em carência",
-                                f"{animal} está em carência até {fim.strftime('%d/%m/%Y')}.",
-                                "urgente", "Ir para tratamentos", "/leite/tratamentos"))
+    for c in carencias or []:
+        aviso = "" if c["carencia_conhecida"] else " (remédio fora da tabela — confira a bula)"
+        itens.append(_item("tratamento", "Tratamento em carência",
+                           f"{c['brinco']} está em carência até "
+                           f"{c['data_liberacao'].strftime('%d/%m/%Y')}{aviso}.",
+                           "urgente", "Ir para tratamentos", "/doencas"))
     return itens
 
 
@@ -156,7 +148,7 @@ def _nutricao_alertas(alimentacao):
     return []
 
 
-def todos(*, producao=None, animais=None, tratamentos=None, colchao=None,
+def todos(*, producao=None, animais=None, carencias=None, colchao=None,
            alimentacao=None, referencia=None, df_manejo=None, df_compras=None, df_vendas=None):
     """Agregador de alertas: módulo leiteiro + IA preditiva (Onda 19)."""
     referencia = _data(referencia) or _hoje_br()
@@ -169,7 +161,7 @@ def todos(*, producao=None, animais=None, tratamentos=None, colchao=None,
             itens.append(_item("produção", "Produção sem registro",
                                f"Há {contagens['vacas_lactacao']} vaca(s) em lactação sem registro desde o último dia.",
                                "urgente", "Registrar ordenha", "/leite/producao"))
-    itens.extend(_carencia(tratamentos, referencia))
+    itens.extend(_carencia(carencias))
     itens.extend(_qualidade_leite_alertas(producao, referencia))
     itens.extend(_colchao_alertas(colchao, referencia))
     itens.extend(_nutricao_alertas(alimentacao))

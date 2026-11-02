@@ -77,10 +77,10 @@ def custo_por_lote(lote_id: str, custo_total: float = 0, preco_venda_arroba: flo
     dias = resumo["dias"] or 1
     peso_final = resumo["peso_final"]
 
-    # Receita (estimada): peso_final × rendimento × preco_arroba / 30kg
-    # Assumir rendimento 58% padrão se não informado
+    # Receita (estimada): peso_final × rendimento ÷ 15 kg/@ × preço da arroba.
+    # (Era /30 — dobrava o peso de carcaça por arroba e cortava a receita pela metade.)
     rendimento = 0.58
-    arrobas_por_cab = (peso_final * rendimento) / 30 if peso_final > 0 else 0
+    arrobas_por_cab = (peso_final * rendimento) / 15 if peso_final > 0 else 0
     receita_por_cab = arrobas_por_cab * preco_venda_arroba if preco_venda_arroba > 0 else 0
     receita_total = receita_por_cab * qtd
 

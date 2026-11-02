@@ -127,6 +127,21 @@ def _df(linhas):
     return df
 
 
+def test_conferencia_conta_o_recorte_que_a_tela_mostra():
+    """B3: o card do dono contava o rebanho vivo inteiro mesmo com ?status=Vendido."""
+    df = _df([{"ID": "A0001", "Dono": "Deyvid", "Status": "Vivo"},
+              {"ID": "A0002", "Dono": "Deyvid", "Status": "Vendido"},
+              {"ID": "A0003", "Dono": "Nilson", "Status": "Vendido"}])
+    estoque = {"Deyvid": 1, "Nilson": 1}
+
+    vivos = {c["membro"]: c["com_brinco"] for c in A.conferencia(A.vivos(df), estoque)}
+    vendidos = {c["membro"]: c["com_brinco"]
+                for c in A.conferencia(df[df["Status"] == "Vendido"], estoque)}
+
+    assert vivos == {"Mae": 0, "Deyvid": 1, "Nilson": 0}
+    assert vendidos == {"Mae": 0, "Deyvid": 1, "Nilson": 1}
+
+
 def test_proximo_numero_continua_e_recomeca_depois_do_99():
     df = _df([{"ID": "A0001", "Brinco Cor": "Amarelo", "Brinco Nº": 98, "Status": "Vivo"},
               {"ID": "A0002", "Brinco Cor": "Amarelo", "Brinco Nº": 99, "Status": "Vivo"}])

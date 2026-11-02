@@ -63,6 +63,11 @@ class DriveFalso:
                 return fid
         return None
 
+    def listar(self, pasta_id):
+        self._checar()
+        return [{"id": fid, "name": a["nome"]} for fid, a in self.arquivos.items()
+                if a["pasta"] == pasta_id and not a["lixeira"]]
+
     def pasta(self, nome, props):
         self._checar()
         chave = "pasta:" + repr(sorted(props.items()))

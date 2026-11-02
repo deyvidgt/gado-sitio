@@ -118,7 +118,7 @@ def animais():
     return render_template("animais.html", rows=rows,
                            status=status, q=busca, categoria=categoria, sexo=sexo,
                            categorias=categorias, total_vivos=len(A.vivos(df)),
-                           conferencia=A.conferencia(df, est_m),
+                           conferencia=A.conferencia(lista, est_m),
                            brucelose=[{**_linha_animal(b["animal"], hoje), "msg": b["msg"],
                                        "situacao": b["situacao"]}
                                       for b in A.janela_brucelose(df, dados["Manejo"], hoje)],

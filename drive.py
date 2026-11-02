@@ -143,6 +143,14 @@ class Drive:
             "appProperties": {k: str(v) for k, v in props.items()}})
         return r.json()["id"]
 
+    def listar(self, pasta_id: str) -> list[dict]:
+        """Arquivos de uma pasta (id e nome) numa chamada só — a tela de bulas
+        mostra o catálogo inteiro sem uma consulta por remédio."""
+        r = self._http(requests.get, URL_API, params={
+            "q": f"'{_q(pasta_id)}' in parents and trashed=false",
+            "fields": "files(id,name)", "pageSize": 200, "spaces": "drive"})
+        return r.json().get("files", [])
+
     def achar_por_prop(self, chave: str, valor: str) -> str | None:
         """Arquivo marcado com appProperties chave=valor (ex.: print da Ajuda)."""
         achados = self._buscar(

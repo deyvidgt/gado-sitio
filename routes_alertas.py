@@ -10,13 +10,15 @@ import animais
 
 
 def _dados_alertas():
+    from doencas_carencia import carencias_ativas
+    referencia = _agora().date()
     return alertas.todos(
         producao=carregar_aba("Leite Produção"),
         animais=animais.carregar(),
-        tratamentos=carregar_aba("Leite Tratamentos"),
+        carencias=carencias_ativas("leite", referencia),
         colchao=carregar_aba("Leite Colchão"),
         alimentacao=carregar_aba("Leite Alimentação"),
-        referencia=_agora().date(),
+        referencia=referencia,
     )
 
 

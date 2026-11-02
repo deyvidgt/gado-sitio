@@ -382,16 +382,10 @@ def ficha_animal_leite(animal_id):
                     "valores_grafico": valores_grafico,
                 }
 
-    carencias = []
-    df_tratamentos = carregar_aba("Leite Tratamentos")
-    if not df_tratamentos.empty:
-        for _, tratamento in df_tratamentos.iterrows():
-            if str(tratamento.get("Vaca ID", "")).strip() != str(animal_id).strip():
-                continue
-            inicio = _data(tratamento.get("Data"))
-            dias = _numero(tratamento.get("Período de Carência"))
-            if inicio and dias and dias > 0 and inicio <= hoje < inicio + timedelta(days=int(dias)):
-                carencias.append({"descricao": tratamento.get("Descrição") or "Tratamento", "fim": inicio + timedelta(days=int(dias))})
+    from doencas_carencia import carencias_ativas
+    carencias = [{"descricao": c["descricao"] or c["medicamento"] or "Tratamento",
+                  "fim": c["data_liberacao"]}
+                 for c in carencias_ativas("leite", hoje, vaca_id=animal_id)]
 
     parto = linha.get("Último Parto", "")
     return render_template("leite_animal.html", animal={

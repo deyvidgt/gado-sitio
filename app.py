@@ -109,6 +109,9 @@ from routes_agenda_unificada import * # noqa: F401, F403
 # v5.10 Onda 2 — Histórico de doenças e carência
 from routes_doencas import *    # noqa: F401, F403
 
+# v5.16 — Bulas e embalagens dos remédios (Drive)
+from routes_bulas import *      # noqa: F401, F403
+
 # v5.10 Onda 3 — Previsão de partos
 from routes_partos import *     # noqa: F401, F403
 
