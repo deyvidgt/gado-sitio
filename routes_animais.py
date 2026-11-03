@@ -184,7 +184,7 @@ def brincar_compra(idx):
     df_c = dados["Compras"]
     if df_c.empty or idx >= len(df_c):
         flash("Compra não encontrada.", "error")
-        return redirect(url_for("compras"))
+        return redirect(url_for("transacoes"))
     compra = df_c.iloc[idx]
     ref_compra = f"{fmt_data(compra.get('Data'))} · {int(compra.get('Qtd Cabeças') or 0)} cab."
     if request.method == "POST":
@@ -583,7 +583,7 @@ def _executar(p: dict):
         idx = gravar_compra(p["form"])
         if p["form"].get("brincar"):
             return "🛒 Compra registrada. Agora os brincos…", url_for("brincar_compra", idx=idx)
-        return "🛒 Compra registrada.", url_for("compras")
+        return "🛒 Compra registrada.", url_for("transacoes")
     if acao == "venda":
         form = dict(p["form"])
         refs = form.pop("brincos", "")
@@ -591,7 +591,7 @@ def _executar(p: dict):
         if int(form.get("cabecas") or 0) <= 0:
             raise ValueError("Informe ao menos 1 cabeça.")
         _salvar_venda(form, _get_dados_cache())
-        return "🤝 Venda registrada.", url_for("vendas")
+        return "🤝 Venda registrada.", url_for("transacoes")
     if acao == "gasto":
         dados = _get_dados_cache()
         gravar_gasto(p["form"], calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"]))

@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Comercialização — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Comercialização de Gado 📦🤝{% endblock %}
+
+{% block content %}
+<style>
+  .trans-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .trans-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); }
+  .trans-card-val { font-size: 26px; font-weight: 700; margin-top: 6px; }
+  .trans-card-sub { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+
+  .filtros-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; background: var(--bg-2); padding: 12px; border-radius: 10px; }
+
+  .badge-tipo { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+  .badge-compra { background: #d1ecf1; color: #0c5460; }
+  .badge-venda { background: #d4edda; color: #155724; }
+
+  .trans-table-wrap { overflow-x: auto; background: var(--surface); border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+  .trans-table { width: 100%; border-collapse: collapse; font-size: 13.5px; white-space: nowrap; }
+  .trans-table th, .trans-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+  .trans-table th { background: var(--bg-2); font-weight: 600; color: var(--text-2); }
+  .trans-table tr:hover { background: var(--bg-2); }
+
+  .acoes-topo { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+</style>
+
+<!-- Ações Principais -->
+<div class="acoes-topo">
+  <a href="{{ url_for('nova_compra') }}" class="btn btn-primary">➕ Registrar Compra</a>
+  <a href="{{ url_for('nova_venda') }}" class="btn btn-success" style="background: var(--green-600); color: #fff">🤝 Registrar Venda</a>
+</div>
+
+<!-- Cards Resumo -->
+<div class="trans-cards">
+  <div class="trans-card" style="border-left: 4px solid #3498db">
+    <div style="font-size: 13px; font-weight: 600; color: var(--text-3)">TOTAL COMPRADO</div>
+    <div class="trans-card-val" style="color: #2980b9">{{ fmt_brl(total_comprado_val) }}</div>
+    <div class="trans-card-sub">{{ total_comprado_cab }} cabeças adquiridas</div>
+  </div>
+  <div class="trans-card" style="border-left: 4px solid #27ae60">
+    <div style="font-size: 13px; font-weight: 600; color: var(--text-3)">TOTAL VENDIDO</div>
+    <div class="trans-card-val" style="color: #27ae60">{{ fmt_brl(total_vendido_val) }}</div>
+    <div class="trans-card-sub">{{ total_vendido_cab }} cabeças comercializadas</div>
+  </div>
+  <div class="trans-card" style="border-left: 4px solid {% if saldo >= 0 %}#27ae60{% else %}#c0392b{% endif %}">
+    <div style="font-size: 13px; font-weight: 600; color: var(--text-3)">SALDO / BALANÇO LÍQUIDO</div>
+    <div class="trans-card-val" style="color: {% if saldo >= 0 %}#27ae60{% else %}#c0392b{% endif %}">{{ fmt_brl(saldo) }}</div>
+    <div class="trans-card-sub">Receita de Vendas menos Investimento em Compras</div>
+  </div>
+</div>
+
+<!-- Filtros Rápidos -->
+<div class="card" style="padding: 16px; margin-bottom: 20px">
+  <form method="get" action="{{ url_for('transacoes') }}" class="filtros-bar">
+    <div style="display: flex; gap: 6px">
+      <button type="submit" name="filtro" value="todos" class="btn btn-sm {% if filtro == 'todos' %}btn-primary{% else %}btn-outline{% endif %}">Todos</button>
+      <button type="submit" name="filtro" value="compras" class="btn btn-sm {% if filtro == 'compras' %}btn-primary{% else %}btn-outline{% endif %}">Apenas Compras</button>
+      <button type="submit" name="filtro" value="vendas" class="btn btn-sm {% if filtro == 'vendas' %}btn-primary{% else %}btn-outline{% endif %}">Apenas Vendas</button>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-left: auto; flex-wrap: wrap; align-items: center">
+      <select name="ano" onchange="this.form.submit()" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border)">
+        <option value="">Todos os anos</option>
+        {% for a in anos_disponiveis %}
+        <option value="{{ a }}" {% if ano_selecionado|string == a|string %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+
+      <input type="text" name="busca" value="{{ busca }}" placeholder="Buscar por descrição..." style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); width: 200px">
+      <button class="btn btn-outline btn-sm">🔎 Filtrar</button>
+      {% if busca or ano_selecionado or filtro != 'todos' %}
+      <a href="{{ url_for('transacoes') }}" class="btn btn-outline btn-sm" style="color: var(--danger)">Limpar</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- Tabela Unificada -->
+<div class="trans-table-wrap">
+  <table class="trans-table">
+    <thead>
+      <tr>
+        <th>Tipo</th>
+        <th>Data</th>
+        <th>Qtd Cab.</th>
+        <th>Valor Total (R$)</th>
+        <th>Valor / Cab.</th>
+        {% for m in MEMBROS %}
+        <th>Qtd {{ NOMES.get(m, m) }}</th>
+        {% endfor %}
+        <th>Descrição / Brincos</th>
+        <th style="text-align: right">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in transacoes %}
+      <tr>
+        <td>
+          <span class="badge-tipo badge-{{ t.tipo_cor }}">{{ t.tipo }}</span>
+        </td>
+        <td>{{ t.data }}</td>
+        <td><b>{{ t.qtd_cabecas }}</b></td>
+        <td><b>{{ fmt_brl(t.valor_total) }}</b></td>
+        <td>{{ fmt_brl(t.valor_cabeca) }}</td>
+        {% for m in MEMBROS %}
+        <td>{{ t.cotas.get(m, 0) }}</td>
+        {% endfor %}
+        <td>
+          {% if t.tipo == 'COMPRA' %}
+            {{ t.descricao or '—' }} {% if t.registrado_por %}<small class="muted">({{ t.registrado_por }})</small>{% endif %}
+          {% else %}
+            {{ t.descricao or '—' }} {% if t.brincos %}<br><small class="muted">🏷️ Brincos: {{ t.brincos }}</small>{% endif %}
+          {% endif %}
+        </td>
+        <td style="text-align: right">
+          <a href="{{ t.editar_url }}" class="btn btn-outline btn-sm" title="Editar">✏️</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="{{ 6 + MEMBROS|length }}" style="text-align: center; padding: 32px; color: var(--text-3)">
+          Nenhuma transação encontrada com os filtros selecionados.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

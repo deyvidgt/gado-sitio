@@ -50,7 +50,7 @@ def _cards_painel(dados, r, extras):
         "icone": "🐄",
         "numero": r.get("estoque", 0),
         "subtexto": "cabeças",
-        "link": "compras",
+        "link": "transacoes",
         "alertas": 0,
         "status": "ok",
     })

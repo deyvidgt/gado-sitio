@@ -5,6 +5,11 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
+- *(vazio — ver abaixo as versões fechadas)*
+
+## [5.19.0] — 2026-11-03
+
+### Adicionado
 - **📖 Bulas e embalagens (v5.16):** cada remédio e vacina pode ter a **bula em PDF** e a **foto da embalagem** guardadas no Google Drive (pasta "Bulas e embalagens", mesma credencial das fotos), consultáveis no celular em `/bulas` — também linkada em 💉 Medicações, no formulário de 🩺 Doença e na aba ❓ Ajuda. Quem não tem arquivo aparece na lista "Ainda sem bula". `python subir_bulas.py <pasta>` envia os arquivos (nome do produto + extensão basta); o site baixa pelo próprio endereço, então o Drive continua privado.
 
 ### Corrigido
@@ -14,6 +19,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - **Contagem dos cards de dono (B3):** contava o rebanho vivo inteiro mesmo com `?status=Vendido` ou filtro de categoria/sexo — card dizia "12 de 15" com 3 linhas na tabela. Agora conta o recorte que a tela está mostrando.
 - **Receita do confinamento pela metade:** `confinamento.custo_por_lote()` dividia a arroba por 30 kg em vez de 15. Um lote de 450 kg dava 8,7 @ em vez de 17,4 @. A função ainda não aparece em tela, então o erro estava latente — o teste agora fixa o valor.
 - **`/dashboard-exemplo-graficos` sem login:** a página (com números fixos de exemplo) abria para qualquer visitante. Agora exige login, e um teste garante que as páginas internas redirecionam.
+- **Dtype warnings ao editar/salgar cocho:** gravar string do formulário em coluna que o pandas inferiu como float/int disparava `FutureWarning` (vira erro no pandas futuro). O DataFrame agora é forçado para `object` antes de gravar em `/cochos/editar`, `/cochos/salgar` e `/cochos/excluir`.
+- **Comercialização unificada (v5.19):** as abas de **Compras** e **Vendas** viraram uma só página **Comercialização** (`/transacoes`) — um único item no menu lateral, cards de Total Comprado / Total Vendido / Saldo, e tabela única por data com badge `COMPRA`/`VENDA` e divisão por sócio. Os antigos `compras()`/`vendas()` ainda existem (usados por cadastro/edição e pelos testes), mas o menu e os "Cancelar"/"Voltar" agora apontam para `/transacoes`.
 
 ### Documentado
 - `docs/AUDITORIA_INSPIRACOES.md` revisada contra a `main` (v5.15): 5 defeitos em código no ar (incluindo a carência do leite lida de três abas diferentes) e a resposta medida sobre migrar para PostgreSQL.

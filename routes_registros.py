@@ -148,7 +148,7 @@ def nova_compra():
               f"{fmt_brl(parse_valor(f.get('valor', 0)))}", "success")
         if f.get("brincar"):
             return redirect(url_for("brincar_compra", idx=idx))
-        return redirect(url_for("compras"))
+        return redirect(url_for("transacoes"))
     return render_template("form_compra.html", modo="nova", cmp_atual=cmp_atual,
                            row=None, idx=None, MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            hoje=_agora().strftime("%Y-%m-%d"))
@@ -159,7 +159,7 @@ def editar_compra(idx):
     df = carregar_aba("Compras")
     if df.empty or idx >= len(df):
         flash("Registro não encontrado.", "error")
-        return redirect(url_for("compras"))
+        return redirect(url_for("transacoes"))
     if request.method == "POST":
         _validar_csrf()
         f = request.form
@@ -183,7 +183,7 @@ def editar_compra(idx):
         _aplicar_updates(df, idx, updates)
         reescrever_aba("Compras", df)
         flash("Compra atualizada!", "success")
-        return redirect(url_for("compras"))
+        return redirect(url_for("transacoes"))
     row = df.iloc[idx].to_dict()
     row["Data"] = fmt_data(row.get("Data"))
     row["data_input"] = df.iloc[idx]["Data"].strftime("%Y-%m-%d") if pd.notna(df.iloc[idx]["Data"]) else ""
@@ -471,7 +471,7 @@ def nova_venda():
             # cabeça vendida sem ter entrado no rebanho sai com custo zero.
             flash(f"Atenção: a venda tem {cabecas} cabeças, mas o rebanho registrado tinha "
                   f"{r_fin['estoque']}. Falta lançar alguma compra ou nascimento?", "warning")
-        return redirect(url_for("vendas"))
+        return redirect(url_for("transacoes"))
     return render_template("form_venda.html", modo="nova", row=None, idx=None, r_fin=r_fin,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            hoje=_agora().strftime("%Y-%m-%d"))
@@ -483,7 +483,7 @@ def editar_venda(idx):
     df    = carregar_aba("Vendas")
     if df.empty or idx >= len(df):
         flash("Registro não encontrado.", "error")
-        return redirect(url_for("vendas"))
+        return redirect(url_for("transacoes"))
     r_fin = _get_resumo_cache()
     if request.method == "POST":
         _validar_csrf()
@@ -687,8 +687,8 @@ def excluir(aba, idx):
             # Venda apagada: os animais dela não foram vendidos — voltam a Vivo.
             import animais
             _avisar_animais_revertidos(*animais.reverter_baixa(animais.ids_de(brincos), "Vendido"))
-    return redirect(url_for({"Compras": "compras", "Gastos": "gastos",
-                              "Vendas": "vendas", "Manejo": "manejo"}.get(aba, "dashboard")))
+    return redirect(url_for({"Compras": "transacoes", "Gastos": "gastos",
+                              "Vendas": "transacoes", "Manejo": "manejo"}.get(aba, "dashboard")))
 
 
 # ══════════════════════════════════════════════════════════════════════════════

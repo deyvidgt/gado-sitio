@@ -12,6 +12,12 @@ from extensions import (app, _agora, _validar_csrf, login_required, _get_dados_c
 from routes_animais import _membro_logado, fazer_backup_seguro
 
 
+def _preparar_para_editar(df):
+    # carregar_aba infere float64 em colunas de texto vazias; gravar string
+    # nela dispara FutureWarning (vira erro em pandas futuro). Força object.
+    return df.astype(object)
+
+
 @app.route("/cochos")
 @login_required
 def cochos():
@@ -87,7 +93,7 @@ def salgar_cocho(cocho_id):
     _validar_csrf()
     try:
         from db import reescrever_aba
-        df = CO.carregar()
+        df = _preparar_para_editar(CO.carregar())
 
         cocho = df[df["ID"].astype(str) == str(cocho_id)]
         if cocho.empty:
@@ -128,7 +134,7 @@ def editar_cocho(cocho_id):
     _validar_csrf()
     try:
         from db import reescrever_aba
-        df = CO.carregar()
+        df = _preparar_para_editar(CO.carregar())
 
         cocho = df[df["ID"].astype(str) == str(cocho_id)]
         if cocho.empty:
@@ -162,7 +168,7 @@ def deletar_cocho(cocho_id):
     _validar_csrf()
     try:
         from db import reescrever_aba
-        df = CO.carregar()
+        df = _preparar_para_editar(CO.carregar())
 
         cocho = df[df["ID"].astype(str) == str(cocho_id)]
         if cocho.empty:

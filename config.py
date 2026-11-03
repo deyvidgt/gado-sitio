@@ -20,7 +20,7 @@ for _stream in ("stdout", "stderr"):
         pass
 
 ARQUIVO_DADOS = "gado_familia.xlsx"
-VERSAO = "5.14.0"
+VERSAO = "5.19.0"
 NOME_SITIO = "Sítio Santo Antonio"
 
 # ── Donos (sócios) do sítio ─────────────────────────────────────────────────

@@ -39,6 +39,7 @@ from routes_api_extras import * # noqa: F401, F403
 
 # ── 5) CRUD ──────────────────────────────────────────────────────────────────
 from routes_registros import *  # noqa: F401, F403
+from routes_transacoes import *  # noqa: F401, F403  — Comercialização (Compras+Vendas)
 
 # ── 6) Importar / Exportar / Backup ──────────────────────────────────────────
 from routes_importar_exportar import *  # noqa: F401, F403
