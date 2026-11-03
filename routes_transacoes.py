@@ -149,5 +149,6 @@ def transacoes():
         total_vendido_cab=global_vendido_cab,
         saldo=saldo,
         MEMBROS=MEMBROS,
-        NOMES=NOMES_MEMBROS
+        NOMES=NOMES_MEMBROS,
+        fmt_brl=fmt_brl
     )
