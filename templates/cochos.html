@@ -201,6 +201,15 @@
     text-transform: uppercase;
   }
 
+  /* Modal de Salga */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000;
+  }
+  .modal-content {
+    background: var(--surface); border-radius: 12px; padding: 24px; width: 90%; max-width: 450px; box-shadow: var(--shadow);
+  }
+
   @media (max-width: 768px) {
     .cocho-visual { grid-template-columns: 1fr; }
     .cocho-stats { grid-template-columns: repeat(3, 1fr); }
@@ -284,6 +293,8 @@
           {% elif cocho.tipo == 'racao' %}🌽
           {% elif cocho.tipo == 'silo' %}📦
           {% elif cocho.tipo == 'feno' %}🌾
+          {% elif cocho.tipo == 'misto' %}🥣
+          {% elif cocho.tipo == 'agua / mistura umida' %}💧
           {% else %}🍽️
           {% endif %}
         </div>
@@ -341,18 +352,15 @@
 
       <!-- Ações -->
       <div class="cocho-acoes">
-        <form class="cocho-acoes-principal" method="post" action="{{ url_for('salgar_cocho', cocho_id=cocho.id) }}" data-acao="salgar">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <input type="hidden" name="volume" value="{{ cocho.capacidade_kg }}">
-          <button class="btn btn-primary btn-salgar" style="width: 100%">
-            ✨ Salgar Cocho
-          </button>
-        </form>
+        <button type="button" class="btn btn-primary btn-salgar" style="width: 100%"
+                onclick="abrirModalSalgar('{{ cocho.id }}', '{{ cocho.nome }}', '{{ cocho.capacidade_kg }}', '{{ cocho.volume_kg }}')">
+          ✨ Salgar Cocho
+        </button>
 
         <details class="cocho-menu">
           <summary class="btn btn-outline" style="width: 100%; cursor: pointer">⋮ Menu</summary>
           <div style="margin-top: 8px; display: grid; gap: 8px">
-            <button type="button" class="btn btn-outline btn-sm" onclick="editarCocho('{{ cocho.id }}')">
+            <button type="button" class="btn btn-outline btn-sm" onclick="editarCocho('{{ cocho.id }}', '{{ cocho.nome }}', '{{ cocho.tipo }}', '{{ cocho.local }}', '{{ cocho.capacidade_kg }}', '{{ cocho.volume_kg }}', '{{ cocho.observacoes }}')">
               ✏️ Editar
             </button>
             <form method="post" action="{{ url_for('deletar_cocho', cocho_id=cocho.id) }}" onsubmit="return confirm('Remover este cocho?')">
@@ -371,6 +379,37 @@
     <a href="#" onclick="mostrarNovoCocho()">Clique aqui para criar o primeiro.</a>
   </p>
   {% endif %}
+</div>
+
+<!-- Modal Salgar Cocho -->
+<div id="modal-salgar" class="modal-overlay">
+  <div class="modal-content">
+    <h3 style="margin-bottom: 16px">✨ Salgar / Recarregar Cocho</h3>
+    <form id="form-salgar" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="form-group">
+        <label>Cocho</label>
+        <input type="text" id="modal-cocho-nome" readonly style="background: var(--bg-2)">
+      </div>
+      <div class="form-group">
+        <label>Data da Recarga</label>
+        <input type="date" name="data" id="modal-data" value="{{ hoje }}" required>
+      </div>
+      <div class="form-group">
+        <label>Quantidade fornecida (kg)</label>
+        <div style="display: flex; gap: 8px">
+          <input type="number" step="0.1" name="volume" id="modal-volume" required placeholder="Ex: 50">
+          <button type="button" class="btn btn-outline btn-sm" onclick="encherCapacidadeTotal()" title="Preencher com capacidade máxima">
+            ⚡ Capacidade Total
+          </button>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 20px">
+        <button type="submit" class="btn btn-primary" style="flex: 1">Confirmar Recarga</button>
+        <button type="button" class="btn btn-outline" onclick="fecharModalSalgar()">Cancelar</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- Formulário Novo Cocho (oculto por padrão) -->
@@ -396,6 +435,8 @@
           <option value="racao">Ração</option>
           <option value="silo">Silo</option>
           <option value="feno">Feno</option>
+          <option value="misto">Misto</option>
+          <option value="agua / mistura umida">Água / Mistura Húmida</option>
         </select>
       </div>
       <div class="form-group">
@@ -420,6 +461,50 @@
   </form>
 </div>
 
+<!-- Formulário Editar Cocho (oculto por padrão) -->
+<div class="card" id="editar-cocho-form" style="display: none; margin-top: 16px">
+  <h3>✏️ Editar Cocho</h3>
+  <form id="form-editar" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Nome</label>
+        <input type="text" name="nome" id="edit-nome" required>
+      </div>
+      <div class="form-group">
+        <label>Tipo</label>
+        <select name="tipo" id="edit-tipo" required>
+          <option value="proteinado">Proteinado</option>
+          <option value="sal">Sal</option>
+          <option value="racao">Ração</option>
+          <option value="silo">Silo</option>
+          <option value="feno">Feno</option>
+          <option value="misto">Misto</option>
+          <option value="agua / mistura umida">Água / Mistura Húmida</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Local</label>
+        <input type="text" name="local" id="edit-local">
+      </div>
+      <div class="form-group">
+        <label>Capacidade (kg)</label>
+        <input type="number" name="capacidade" id="edit-capacidade" step="0.1" required>
+      </div>
+      <div class="form-group">
+        <label>Volume Atual (kg)</label>
+        <input type="number" name="volume_atual" id="edit-volume" step="0.1">
+      </div>
+      <div class="form-group" style="grid-column: 1/-1">
+        <label>Observações</label>
+        <input type="text" name="observacoes" id="edit-observacoes">
+      </div>
+    </div>
+    <button class="btn btn-primary">💾 Atualizar Cocho</button>
+    <button type="button" class="btn btn-outline" onclick="esconderEditarCocho()">Cancelar</button>
+  </form>
+</div>
+
 <!-- Botão Flutuante para Novo Cocho -->
 <button class="btn btn-primary" onclick="mostrarNovoCocho()" id="btn-novo-cocho"
         style="position: fixed; bottom: 24px; right: 24px; border-radius: 50%; width: 56px; height: 56px;
@@ -431,19 +516,54 @@
 
 {% block scripts %}
 <script>
-function mostrarNovoCocho() {
-  document.getElementById("novo-cocho-form").style.display = "block";
-  document.getElementById("btn-novo-cocho").style.display = "none";
-}
+  let capacidadeAtualCocho = 0;
 
-function esconderNovoCocho() {
-  document.getElementById("novo-cocho-form").style.display = "none";
-  document.getElementById("btn-novo-cocho").style.display = "flex";
-}
+  function mostrarNovoCocho() {
+    document.getElementById("novo-cocho-form").style.display = "block";
+    document.getElementById("editar-cocho-form").style.display = "none";
+    document.getElementById("btn-novo-cocho").style.display = "none";
+    window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+  }
 
-function editarCocho(id) {
-  alert("Edição em desenvolvimento");
-  // TODO: implementar modal de edição
-}
+  function esconderNovoCocho() {
+    document.getElementById("novo-cocho-form").style.display = "none";
+    document.getElementById("btn-novo-cocho").style.display = "flex";
+  }
+
+  function abrirModalSalgar(id, nome, capacidade, volumeAtual) {
+    capacidadeAtualCocho = parseFloat(capacidade) || 0;
+    document.getElementById("modal-cocho-nome").value = nome + " (Cap.: " + capacidade + " kg)";
+    document.getElementById("modal-volume").value = volumeAtual || capacidade;
+    document.getElementById("form-salgar").action = "/cochos/salgar/" + id;
+    document.getElementById("modal-salgar").style.display = "flex";
+  }
+
+  function fecharModalSalgar() {
+    document.getElementById("modal-salgar").style.display = "none";
+  }
+
+  function encherCapacidadeTotal() {
+    document.getElementById("modal-volume").value = capacidadeAtualCocho;
+  }
+
+  function editarCocho(id, nome, tipo, local, capacidade, volume, observacoes) {
+    document.getElementById("form-editar").action = "/cochos/editar/" + id;
+    document.getElementById("edit-nome").value = nome;
+    document.getElementById("edit-tipo").value = tipo.toLowerCase();
+    document.getElementById("edit-local").value = local;
+    document.getElementById("edit-capacidade").value = capacidade;
+    document.getElementById("edit-volume").value = volume;
+    document.getElementById("edit-observacoes").value = observacoes;
+
+    document.getElementById("editar-cocho-form").style.display = "block";
+    document.getElementById("novo-cocho-form").style.display = "none";
+    document.getElementById("btn-novo-cocho").style.display = "none";
+    window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+  }
+
+  function esconderEditarCocho() {
+    document.getElementById("editar-cocho-form").style.display = "none";
+    document.getElementById("btn-novo-cocho").style.display = "flex";
+  }
 </script>
 {% endblock %}

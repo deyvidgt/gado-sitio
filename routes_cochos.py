@@ -35,6 +35,13 @@ def cochos():
         info = sit.get(cocho_id, {})
         lista.append({
             "id": cocho_id,
+            "nome": str(cocho.get("Nome", "")),
+            "tipo": str(cocho.get("Tipo", "")),
+            "local": str(cocho.get("Local", "")),
+            "capacidade": cocho.get("Capacidade (kg)", 0),
+            "volume_atual": cocho.get("Volume Atual (kg)", 0),
+            "observacoes": str(cocho.get("Observações", "")),
+            "ativo": str(cocho.get("Ativo", "Sim")),
             **info
         })
 
@@ -74,7 +81,7 @@ def novo_cocho():
 @app.route("/cochos/salgar/<cocho_id>", methods=["POST"])
 @login_required
 def salgar_cocho(cocho_id):
-    """Registra salga (reposição) do cocho."""
+    """Registra salga (reposição) do cocho com dados do modal."""
     _validar_csrf()
     try:
         from db import reescrever_aba
@@ -84,13 +91,26 @@ def salgar_cocho(cocho_id):
         if cocho.empty:
             abort(404)
 
-        # Atualiza última salga e volume
         cocho_idx = df[df["ID"].astype(str) == str(cocho_id)].index[0]
-        df.at[cocho_idx, "Última Salga"] = _agora().strftime("%d/%m/%Y")
-        df.at[cocho_idx, "Volume Atual (kg)"] = request.form.get("volume", "")
+
+        # Data da recarga
+        data_str = request.form.get("data", "").strip()
+        if data_str and "-" in data_str:
+            try:
+                dt_obj = datetime.strptime(data_str, "%Y-%m-%d")
+                data_str = dt_obj.strftime("%d/%m/%Y")
+            except ValueError:
+                data_str = _agora().strftime("%d/%m/%Y")
+        else:
+            data_str = _agora().strftime("%d/%m/%Y")
+
+        volume_recarregado = request.form.get("volume", "")
+
+        df.at[cocho_idx, "Última Salga"] = data_str
+        df.at[cocho_idx, "Volume Atual (kg)"] = volume_recarregado
 
         reescrever_aba("Cochos", df)
-        flash(f"✨ Cocho salgado em {_agora().strftime('%d/%m/%Y')}!", "success")
+        flash(f"✨ Cocho salgado com sucesso em {data_str}!", "success")
         fazer_backup_seguro()
     except Exception as e:
         flash(f"Erro ao registrar salga: {e}", "error")
