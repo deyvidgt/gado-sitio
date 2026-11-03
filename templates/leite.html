@@ -1,216 +1,113 @@
 {% extends "base.html" %}
-{% block title %}Leite — Sítio Santo Antonio{% endblock %}
+{% block title %}Painel do Leite — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Painel do Leite 🥛{% endblock %}
+
 {% block content %}
-{% set leite_breadcrumb = 'Painel' %}
-{% include '_leite_nav.html' %}
-<div class="page-head">
-  <div><span class="eyebrow">Atividade leiteira</span><h2>Painel do leite</h2></div>
-</div>
-<!-- Ações principais em grid de cards (toque fácil no celular) -->
+<style>
+  .leite-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .leite-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); }
+  .leite-kpi-val { font-size: 28px; font-weight: 700; margin-top: 6px; color: var(--green-600); }
+  .leite-kpi-lbl { font-size: 12px; color: var(--text-3); text-transform: uppercase; font-weight: 600; }
+
+  .leite-acoes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .leite-acao-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 12px; text-align: center; text-decoration: none; color: inherit; box-shadow: var(--shadow); transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+  .leite-acao-card:hover { transform: translateY(-2px); border-color: var(--green-500); background: var(--bg-2); }
+  .leite-acao-icon { font-size: 28px; }
+  .leite-acao-title { font-weight: 600; font-size: 13.5px; color: var(--text-1); }
+
+  .leite-grid-secoes { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+  @media(max-width: 900px) { .leite-grid-secoes { grid-template-columns: 1fr; } }
+</style>
+
+<!-- Ações Rápidas (Cards de Ação Visual) -->
 <div class="leite-acoes-grid">
-  <a class="btn btn-primary leite-acao" href="{{ url_for('ordenha_leite') }}">🥛 Lançar Ordenha</a>
-  <a class="btn leite-acao" href="{{ url_for('relatorios_leite') }}">📊 Relatório de Vacas</a>
-  <a class="btn leite-acao" href="{{ url_for('consumo_leite') }}">🍽️ Consumo</a>
-  <a class="btn leite-acao" href="{{ url_for('saude_leite') }}">🩺 Sanidade / Tratamentos</a>
-  <a class="btn leite-acao" href="{{ url_for('animais_leite') }}">🐮 Animais Leite</a>
-  <a class="btn leite-acao" href="{{ url_for('listar_colchao') }}">🛏️ Colchões</a>
+  <a class="leite-acao-card" href="{{ url_for('ordenha_leite') }}">
+    <div class="leite-acao-icon">🥛</div>
+    <div class="leite-acao-title">Lançar Ordenha</div>
+  </a>
+  <a class="leite-acao-card" href="{{ url_for('animais_leite') }}">
+    <div class="leite-acao-icon">🐮</div>
+    <div class="leite-acao-title">Vacas Leiteiras</div>
+  </a>
+  <a class="leite-acao-card" href="{{ url_for('consumo_leite') }}">
+    <div class="leite-acao-icon">🍽️</div>
+    <div class="leite-acao-title">Consumo / Ração</div>
+  </a>
+  <a class="leite-acao-card" href="{{ url_for('saude_leite') }}">
+    <div class="leite-acao-icon">🩺</div>
+    <div class="leite-acao-title">Mastite & Sanidade</div>
+  </a>
+  <a class="leite-acao-card" href="{{ url_for('listar_colchao') }}">
+    <div class="leite-acao-icon">🛏️</div>
+    <div class="leite-acao-title">Colchões</div>
+  </a>
+  <a class="leite-acao-card" href="{{ url_for('relatorios_leite') }}">
+    <div class="leite-acao-icon">📊</div>
+    <div class="leite-acao-title">Relatório Geral</div>
+  </a>
 </div>
-<div class="metrics">
-  <div class="metric"><strong>{{ '%.1f'|format(acumulado.dia)|replace('.', ',') }}</strong><span>Acumulado do dia (L)</span></div>
-  <div class="metric"><strong>{{ '%.1f'|format(acumulado.semana)|replace('.', ',') }}</strong><span>Acumulado da semana (L)</span></div>
-  <div class="metric"><strong>{{ '%.1f'|format(acumulado.mes)|replace('.', ',') }}</strong><span>Acumulado do mês (L)</span></div>
-  <div class="metric"><strong>{{ '%.1f'|format(acumulado.total)|replace('.', ',') }}</strong><span>Acumulado total (L)</span></div>
+
+<!-- KPIs Principais em Destaque -->
+<div class="leite-kpis">
+  <div class="leite-kpi">
+    <div class="leite-kpi-lbl">Acumulado do Dia</div>
+    <div class="leite-kpi-val">{{ '%.1f'|format(acumulado.dia)|replace('.', ',') }} <small style="font-size:14px">L</small></div>
+  </div>
+  <div class="leite-kpi">
+    <div class="leite-kpi-lbl">Acumulado da Semana</div>
+    <div class="leite-kpi-val" style="color: #2980b9">{{ '%.1f'|format(acumulado.semana)|replace('.', ',') }} <small style="font-size:14px">L</small></div>
+  </div>
+  <div class="leite-kpi">
+    <div class="leite-kpi-lbl">Acumulado do Mês</div>
+    <div class="leite-kpi-val" style="color: #8e44ad">{{ '%.1f'|format(acumulado.mes)|replace('.', ',') }} <small style="font-size:14px">L</small></div>
+  </div>
+  <div class="leite-kpi">
+    <div class="leite-kpi-lbl">Vacas em Lactação</div>
+    <div class="leite-kpi-val" style="color: #f39c12">{{ contagens.vacas_lactacao }}</div>
+  </div>
 </div>
-<div class="grid-3">
-  <div class="card"><strong>{{ contagens.animais_ativos }}</strong><span>Animais ativos</span></div>
-  <div class="card"><strong>{{ contagens.vacas_leiteiras_ativas }}</strong><span>Vacas leiteiras ativas</span></div>
-  <div class="card"><strong>{{ contagens.vacas_lactacao }}</strong><span>Vacas em lactação</span></div>
-</div>
-<div class="grid-3" style="margin-top:16px">
-  <div class="card"><strong>{{ '%.1f'|format(medias.media_por_animal_lactacao or 0)|replace('.', ',') }}</strong><span>Média por vaca em lactação (L)</span></div>
-  <div class="card"><strong>{{ operacional.sem_registro }}</strong><span>Vacas sem registro hoje</span></div>
+
+<div class="leite-grid-secoes">
+  <!-- Gráficos e Produção -->
   <div class="card">
-    <strong class="badge badge-{{ 'ruim' if operacional.qualidade.status == 'urgente' else 'aviso' if operacional.qualidade.status in ('aviso', 'sem dados') else 'ok' }}">{{ operacional.qualidade.status|capitalize }}</strong>
-    <span>Qualidade mais recente</span>
+    <h3 style="margin-bottom: 16px">📈 Produção Recente e Gráficos</h3>
+    <div class="tri" style="margin-bottom:16px">
+      <div><strong>{{ '%.1f'|format(medias.litros_dia)|replace('.', ',') }} L</strong><small>Média / dia no mês</small></div>
+      <div><strong>{{ '%.1f'|format(medias.litros_vaca_dia)|replace('.', ',') }} L</strong><small>Média / vaca / dia</small></div>
+      <div><strong>{{ contagens.total }}</strong><small>Total rebanho leite</small></div>
+    </div>
+    <div style="margin-top: 16px; text-align: right">
+      <a href="{{ url_for('relatorios_leite') }}" class="btn btn-outline btn-sm">Ver relatórios e histórico →</a>
+    </div>
   </div>
-</div>
 
-<div class="card" style="margin-top:16px">
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-    <h3>Produção diária · últimos 14 dias</h3>
-    <a class="btn btn-small" href="{{ url_for('ordenha_leite') }}">Registrar hoje</a>
-  </div>
-  {% if operacional.serie %}
-  <div style="height:220px;margin-top:12px"><canvas id="grafico-producao" aria-label="Litros produzidos por dia"></canvas></div>
-  <table class="sr-only" aria-label="Tabela da produção diária">
-    <thead><tr><th>Data</th><th>Litros</th></tr></thead>
-    <tbody>{% for item in operacional.serie %}<tr><td>{{ item.data }}</td><td>{{ item.litros }}</td></tr>{% endfor %}</tbody>
-  </table>
-  {% else %}<p class="muted">Ainda não há produção registrada nos últimos 14 dias.</p>{% endif %}
-</div>
+  <!-- Qualidade do Leite & Colchões -->
+  <div class="card">
+    <h3 style="margin-bottom: 16px">🚨 Qualidade & Manejo</h3>
+    <div style="display: grid; gap: 12px">
+      <div style="padding: 12px; background: var(--bg-2); border-radius: 8px">
+        <div style="font-size: 11px; text-transform: uppercase; color: var(--text-3); font-weight: 600">Última Análise de Qualidade</div>
+        <div style="font-size: 15px; font-weight: 700; margin-top: 4px">
+          CCS: {{ operacional.qualidade.ccs or '—' }} | CPP: {{ operacional.qualidade.cpp or '—' }}
+        </div>
+        <div style="font-size: 12px; margin-top: 4px">
+          Status: <b>{{ operacional.qualidade.status|upper }}</b>
+        </div>
+      </div>
 
-<div class="card" style="margin-top:16px">
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-    <div><h3>Qualidade do leite</h3><p class="muted">Último registro: {{ operacional.qualidade.data or 'sem dados' }}</p></div>
-    <a class="btn btn-small" href="{{ url_for('saude_leite') }}">Ver saúde</a>
-  </div>
-  <div class="tri" style="margin-top:12px">
-    <div><strong>{{ operacional.qualidade.ccs or '—' }}</strong><small>CCS (células/mL)</small></div>
-    <div><strong>{{ operacional.qualidade.cpp or '—' }}</strong><small>CPP (UFC/mL)</small></div>
-    <div><strong>{{ operacional.sem_registro }}</strong><small>sem registro hoje</small></div>
-  </div>
-</div>
-
-<div class="card" style="margin-top:16px">
-  <h3>Ações agora</h3>
-  <div class="linha" style="margin-top:8px"><span>{{ '⚠️ Há vacas sem registro hoje.' if operacional.sem_registro else '✅ Registro individual atualizado hoje.' }}</span><a href="{{ url_for('ordenha_leite') }}">Ordenha →</a></div>
-  <div class="linha"><span>{{ '⚠️ Qualidade exige atenção.' if operacional.qualidade.status in ('aviso', 'urgente') else '✅ Qualidade sem alerta no último registro.' }}</span><a href="{{ url_for('saude_leite') }}">Saúde →</a></div>
-  {% if colchoes_alertas.urgente or colchoes_alertas.aviso %}<div class="linha aviso"><span>🛏️ Colchão precisa de atenção.</span><a href="{{ url_for('listar_colchao') }}">Colchões →</a></div>{% endif %}
-</div>
-
-<div class="card" style="margin-top:16px">
-  <h3>Médias de produção</h3>
-  <div class="tri">
-    <div><strong>{{ '%.1f'|format(medias.media_diaria or 0)|replace('.', ',') }}</strong><small>Média por dia (L)</small></div>
-    <div><strong>{{ '%.1f'|format(medias.media_mensal or 0)|replace('.', ',') }}</strong><small>Média por mês (L)</small></div>
-    <div><strong>{{ '%.1f'|format(medias.media_por_animal or 0)|replace('.', ',') }}</strong><small>Média por animal (L)</small></div>
-  </div>
-</div>
-{% if colchoes_alertas %}
-<div class="card">
-  <div style="display: flex; justify-content: space-between; align-items: center;">
-    <div>
-      <h3>🛏️ Colchões</h3>
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 0.5rem;">
-        {% if colchoes_alertas.urgente > 0 %}
-        <div><strong class="badge badge-ruim">{{ colchoes_alertas.urgente }}</strong><small>Urgente</small></div>
-        {% endif %}
-        {% if colchoes_alertas.aviso > 0 %}
-        <div><strong class="badge badge-aviso">{{ colchoes_alertas.aviso }}</strong><small>Em aviso</small></div>
-        {% endif %}
-        {% if colchoes_alertas.ok > 0 %}
-        <div><strong class="badge badge-ok">{{ colchoes_alertas.ok }}</strong><small>OK</small></div>
-        {% endif %}
+      <div style="padding: 12px; background: var(--bg-2); border-radius: 8px">
+        <div style="font-size: 11px; text-transform: uppercase; color: var(--text-3); font-weight: 600">Status dos Colchões</div>
+        <div style="font-size: 14px; margin-top: 4px">
+          {% if colchoes_alertas.urgente > 0 %}
+            <span style="color:var(--danger); font-weight:700">🚨 {{ colchoes_alertas.urgente }} troca(s) urgente(s)</span>
+          {% elif colchoes_alertas.aviso > 0 %}
+            <span style="color:var(--warn); font-weight:700">⚠️ {{ colchoes_alertas.aviso }} troca(s) próxima(s)</span>
+          {% else %}
+            <span style="color:var(--green-600); font-weight:700">✅ Colchões em dia</span>
+          {% endif %}
+        </div>
       </div>
     </div>
-    <a href="{{ url_for('listar_colchao') }}" class="btn btn-small">Ver lista</a>
   </div>
 </div>
-{% endif %}
-
-<!-- ═══ GRÁFICOS (Onda 8.3 — v5.11) ════════════════════════════════ -->
-{% if grafico_producao %}
-<div class="card" style="margin-top:16px">
-  <h3>📊 Produção (últimos 30 dias)</h3>
-  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
-    <canvas id="grafico_producao_onda83"></canvas>
-  </div>
-  <script defer>
-  document.addEventListener('DOMContentLoaded', function() {
-    if (typeof grafico_linhas === 'function') {
-      const ctx = document.getElementById('grafico_producao_onda83').getContext('2d');
-      grafico_linhas(ctx, {{ grafico_producao.labels|tojson }}, [
-        { label: 'Litros', data: {{ grafico_producao.data|tojson }}, color: '#72b148' }
-      ], {
-        tema: localStorage.getItem('gado-theme') || 'light',
-        legend: false
-      });
-    }
-  });
-  </script>
-</div>
-{% endif %}
-
-{% if grafico_qualidade %}
-<div class="card" style="margin-top:16px">
-  <h3>🧪 CCS/CPP Trending</h3>
-  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
-    <canvas id="grafico_qualidade"></canvas>
-  </div>
-  <script defer>
-  document.addEventListener('DOMContentLoaded', function() {
-    if (typeof grafico_linhas === 'function') {
-      const ctx = document.getElementById('grafico_qualidade').getContext('2d');
-      const datasets = [];
-      if ({{ grafico_qualidade.ccs|tojson }}.some(v => v !== null)) {
-        datasets.push({ label: 'CCS (células/mL)', data: {{ grafico_qualidade.ccs|tojson }}, color: '#19316f' });
-      }
-      if ({{ grafico_qualidade.cpp|tojson }}.some(v => v !== null)) {
-        datasets.push({ label: 'CPP (UFC/mL)', data: {{ grafico_qualidade.cpp|tojson }}, color: '#e74c3c' });
-      }
-      if (datasets.length > 0) {
-        grafico_linhas(ctx, {{ grafico_qualidade.labels|tojson }}, datasets, {
-          tema: localStorage.getItem('gado-theme') || 'light'
-        });
-      }
-    }
-  });
-  </script>
-</div>
-{% endif %}
-
-{% if grafico_top_vacas %}
-<div class="card" style="margin-top:16px">
-  <h3>🐄 Top 10 Vacas (últimos 30 dias)</h3>
-  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
-    <canvas id="grafico_top_vacas"></canvas>
-  </div>
-  <script defer>
-  document.addEventListener('DOMContentLoaded', function() {
-    if (typeof grafico_barras_horizontal === 'function') {
-      const ctx = document.getElementById('grafico_top_vacas').getContext('2d');
-      grafico_barras_horizontal(ctx, {{ grafico_top_vacas.labels|tojson }},
-        {{ grafico_top_vacas.data|tojson }}, {
-        tema: localStorage.getItem('gado-theme') || 'light',
-        label: 'Litros',
-        colors: ['#8ba753']
-      });
-    }
-  });
-  </script>
-</div>
-{% endif %}
-
-{% if grafico_saude %}
-<div class="card" style="margin-top:16px">
-  <h3>❤️ Saúde Geral</h3>
-  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
-    <canvas id="grafico_saude"></canvas>
-  </div>
-  <p class="muted" style="margin-top:8px">{{ grafico_saude.saudaveis }}/{{ grafico_saude.total }} vacas saudáveis (CCS < 200k E CPP < 100k)</p>
-  <script defer>
-  document.addEventListener('DOMContentLoaded', function() {
-    if (typeof grafico_gauge === 'function') {
-      const ctx = document.getElementById('grafico_saude').getContext('2d');
-      grafico_gauge(ctx, {{ grafico_saude.valor }}, 100, {
-        tema: localStorage.getItem('gado-theme') || 'light'
-      });
-    }
-  });
-  </script>
-</div>
-{% endif %}
-<div class="card"><span>{{ registros }} lançamentos registrados. Registros totais não entram no ranking individual.</span></div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-(() => {
-  const dados = {{ operacional.serie|tojson }};
-  const canvas = document.getElementById('grafico-producao');
-  if (!canvas || !dados.length || typeof Chart === 'undefined') return;
-  new Chart(canvas, {
-    type: 'line',
-    data: {
-      labels: dados.map(item => item.data.split('-').reverse().join('/')),
-      datasets: [{label: 'Litros por dia', data: dados.map(item => item.litros),
-        borderColor: '#3d7a34', backgroundColor: 'rgba(61,122,52,.12)',
-        borderWidth: 2, pointRadius: 4, pointHoverRadius: 6, fill: true, tension: .25}]
-    },
-    options: {responsive: true, maintainAspectRatio: false,
-      plugins: {legend: {display: false}, tooltip: {callbacks: {label: ctx => `${ctx.parsed.y.toLocaleString('pt-BR')} L`}}},
-      scales: {y: {beginAtZero: true, title: {display: true, text: 'Litros'}}, x: {grid: {display: false}}}}
-  });
-})();
-</script>
 {% endblock %}
