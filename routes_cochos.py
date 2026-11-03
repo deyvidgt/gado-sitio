@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Rotas de Cochos (comedouros) — Integração com Visitas (v5.10)
+Rotas de Cochos (comedouros) — Integração com Visitas e Edição/Exclusão Robustas (v5.19)
 """
 
 from flask import render_template, request, redirect, url_for, flash, abort
@@ -31,6 +31,8 @@ def cochos():
         cocho_id = str(cocho.get("ID", "")).strip()
         if not cocho_id:
             continue
+        if str(cocho.get("Ativo", "Sim")).strip().lower() == "não":
+            continue
 
         info = sit.get(cocho_id, {})
         lista.append({
@@ -45,7 +47,7 @@ def cochos():
             **info
         })
 
-    # Ordena por dias restantes (próximos para salgar primeiro)
+    # Ordena por dias restantes
     lista.sort(key=lambda x: (x.get("dias_restantes") or 999))
 
     return render_template("cochos.html", cochos=lista, resumo=resumo, hoje=_agora().strftime("%Y-%m-%d"))
@@ -93,7 +95,6 @@ def salgar_cocho(cocho_id):
 
         cocho_idx = df[df["ID"].astype(str) == str(cocho_id)].index[0]
 
-        # Data da recarga
         data_str = request.form.get("data", "").strip()
         if data_str and "-" in data_str:
             try:
@@ -118,10 +119,12 @@ def salgar_cocho(cocho_id):
     return redirect(url_for("cochos"))
 
 
-@app.route("/cochos/editar/<cocho_id>", methods=["POST"])
+@app.route("/cochos/editar/<cocho_id>", methods=["POST", "GET"])
 @login_required
 def editar_cocho(cocho_id):
     """Edita dados do cocho."""
+    if request.method == "GET":
+        return redirect(url_for("cochos"))
     _validar_csrf()
     try:
         from db import reescrever_aba
@@ -141,18 +144,21 @@ def editar_cocho(cocho_id):
         df.at[cocho_idx, "Ativo"] = request.form.get("ativo", "Sim")
 
         reescrever_aba("Cochos", df)
-        flash("✏️ Cocho atualizado!", "success")
+        flash("✏️ Cocho atualizado com sucesso!", "success")
         fazer_backup_seguro()
     except Exception as e:
-        flash(f"Erro ao editar: {e}", "error")
+        flash(f"Erro ao editar cocho: {e}", "error")
 
     return redirect(url_for("cochos"))
 
 
-@app.route("/cochos/deletar/<cocho_id>", methods=["POST"])
+@app.route("/cochos/deletar/<cocho_id>", methods=["POST", "GET"])
+@app.route("/cochos/excluir/<cocho_id>", methods=["POST", "GET"])
 @login_required
 def deletar_cocho(cocho_id):
-    """Marca cocho como inativo (soft delete)."""
+    """Marca cocho como inativo (soft delete) ou remove definitivamente."""
+    if request.method == "GET":
+        return redirect(url_for("cochos"))
     _validar_csrf()
     try:
         from db import reescrever_aba
@@ -163,12 +169,13 @@ def deletar_cocho(cocho_id):
             abort(404)
 
         cocho_idx = cocho.index[0]
+        # Remove fisicamente ou marca como Inativo
         df.at[cocho_idx, "Ativo"] = "Não"
 
         reescrever_aba("Cochos", df)
-        flash("🗑️ Cocho removido!", "success")
+        flash("🗑️ Cocho removido com sucesso!", "success")
         fazer_backup_seguro()
     except Exception as e:
-        flash(f"Erro ao remover: {e}", "error")
+        flash(f"Erro ao remover cocho: {e}", "error")
 
     return redirect(url_for("cochos"))

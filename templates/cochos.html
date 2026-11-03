@@ -352,7 +352,7 @@
 
       <!-- Ações -->
       <div class="cocho-acoes">
-        <button type="button" class="btn btn-primary btn-salgar" style="width: 100%"
+        <button type="button" class="btn btn-primary btn-salgar" style="width: 100%" data-acao="salgar"
                 onclick="abrirModalSalgar('{{ cocho.id }}', '{{ cocho.nome }}', '{{ cocho.capacidade_kg }}', '{{ cocho.volume_kg }}')">
           ✨ Salgar Cocho
         </button>
@@ -360,7 +360,7 @@
         <details class="cocho-menu">
           <summary class="btn btn-outline" style="width: 100%; cursor: pointer">⋮ Menu</summary>
           <div style="margin-top: 8px; display: grid; gap: 8px">
-            <button type="button" class="btn btn-outline btn-sm" onclick="editarCocho('{{ cocho.id }}', '{{ cocho.nome }}', '{{ cocho.tipo }}', '{{ cocho.local }}', '{{ cocho.capacidade_kg }}', '{{ cocho.volume_kg }}', '{{ cocho.observacoes }}')">
+            <button type="button" class="btn btn-outline btn-sm" onclick='editarCocho({{ cocho.id|tojson }}, {{ cocho.nome|tojson }}, {{ cocho.tipo|tojson }}, {{ cocho.local|tojson }}, {{ cocho.capacidade_kg|tojson }}, {{ cocho.volume_kg|tojson }}, {{ cocho.observacoes|tojson }})'>
               ✏️ Editar
             </button>
             <form method="post" action="{{ url_for('deletar_cocho', cocho_id=cocho.id) }}" onsubmit="return confirm('Remover este cocho?')">
