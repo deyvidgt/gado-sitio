@@ -190,6 +190,8 @@ COLUNAS_GASTOS = [
     # NOVO v4.2: compra de insumo (Sal/Proteinado/Ração) e quantos sacos — alimenta
     # a previsão de estoque (insumos.py).
     "Produto", "Qtd Sacos",
+    # Aplicação de insumo em pastagem vinculada à aba "Pastos Aplicações".
+    "Pasto ID", "Aplicação ID",
 ]
 COLUNAS_MANEJO = [
     "Data", "Tipo", "Qtd Cabeças", "Descrição", "Responsável",
@@ -269,6 +271,18 @@ COLUNAS_TAREFAS = ["ID", "Data", "Título", "Responsável", "Repetir", "Feito Em
 # v5.10 — Gerenciamento de cochos (comedouros). Rastreia volume, consumo e próxima salga.
 COLUNAS_COCHOS = ["ID", "Nome", "Tipo", "Local", "Capacidade (kg)", "Volume Atual (kg)",
                   "Última Salga", "Observações", "Ativo", "Criado Por"]
+
+# v5.20 — Aplicações de insumos em pastagens e planejamento financeiro.
+COLUNAS_PASTOS_APLICACOES = [
+    "ID", "Data", "Pasto ID", "Tipo Insumo", "Produto", "Quantidade",
+    "Unidade", "Custo Total (R$)", "Responsável",
+]
+COLUNAS_ORCAMENTO_PREVISTO = [
+    "ID", "Mês", "Tipo", "Categoria", "Descrição", "Valor Previsto (R$)", "Membro",
+]
+COLUNAS_CONTAS_FUTURAS = [
+    "ID", "Data Vencimento", "Tipo", "Categoria", "Descrição", "Valor (R$)", "Status", "Membro",
+]
 
 # v5.7 — Histórico de medicações por animal (medicacoes.py) — Leite e Corte
 COLUNAS_MEDICACOES = [

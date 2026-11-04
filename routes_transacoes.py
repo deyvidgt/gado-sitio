@@ -16,13 +16,14 @@ from extensions import (
     _get_dados_cache, _get_resumo_cache,
     salvar_linha, reescrever_aba,
     _limpar_backups_antigos,
-    fmt_brl, fmt_data, parse_valor,
+    fmt_brl, fmt_data, parse_valor, _agora,
 )
 from routes_registros import (
     _anos_de, _int_form, _data_form, _aplicar_updates,
     _cotas_do_form, gravar_compra, _salvar_venda, _brincos_do_form,
     _brincos_legiveis, _avisar_animais_revertidos
 )
+import planejamento as PL
 
 @app.route("/transacoes")
 @login_required
@@ -135,6 +136,9 @@ def transacoes():
     saldo = global_vendido_val - global_comprado_val
 
     anos_disponiveis = sorted(list(set(_anos_de(df_compras) + _anos_de(df_vendas))), reverse=True)
+    contas_proximas = PL.contas_proximas(carregar_aba("Contas Futuras"), _agora().date())
+    for conta in contas_proximas:
+        conta["valor_formatado"] = fmt_brl(parse_valor(conta.get("Valor (R$)")))
 
     return render_template(
         "transacoes.html",
@@ -148,6 +152,7 @@ def transacoes():
         total_vendido_val=global_vendido_val,
         total_vendido_cab=global_vendido_cab,
         saldo=saldo,
+        contas_proximas=contas_proximas,
         MEMBROS=MEMBROS,
         NOMES=NOMES_MEMBROS,
         fmt_brl=fmt_brl

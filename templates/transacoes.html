@@ -30,6 +30,24 @@
   <a href="{{ url_for('nova_venda') }}" class="btn btn-success" style="background: var(--green-600); color: #fff">🤝 Registrar Venda</a>
 </div>
 
+{% if contas_proximas %}
+<div class="card" style="border-left:4px solid #f39c12;margin-bottom:20px">
+  <h3>⏰ Contas vencidas ou com vencimento nos próximos 7 dias</h3>
+  <div style="display:grid;gap:8px">
+    {% for conta in contas_proximas %}
+    <div class="linha" style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+      <span>
+        {% if conta.atrasada %}<strong style="color:#c0392b">Atrasada</strong>{% else %}<strong>{{ conta.vencimento_exibido }}</strong>{% endif %}
+        · {{ conta.Tipo }} · {{ conta.Descrição }} · {{ conta.Categoria }}
+      </span>
+      <strong>{{ conta.valor_formatado }}</strong>
+    </div>
+    {% endfor %}
+  </div>
+  <a href="{{ url_for('planejamento_financeiro') }}">Gerenciar contas futuras →</a>
+</div>
+{% endif %}
+
 <!-- Cards Resumo -->
 <div class="trans-cards">
   <div class="trans-card" style="border-left: 4px solid #3498db">
