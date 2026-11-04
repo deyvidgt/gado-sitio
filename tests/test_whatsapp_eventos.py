@@ -55,8 +55,10 @@ def test_avisar_outro_tipo_nao_faz_nada(dados_restaurados, fila_avisos_vazia):
 
 def test_form_manejo_avisa(cliente, dados_restaurados, monkeypatch, fila_avisos_vazia):
     chamadas = []
-    monkeypatch.setattr(alertas_whatsapp, "enviar_para_familia",
-                        lambda msg, **kw: chamadas.append(kw) or 1)
+    monkeypatch.setattr(alertas_whatsapp, "enviar_para_familia_resultado",
+                        lambda msg, **kw: chamadas.append(kw) or {
+                            "enviados": 1, "falhas": [], "elegiveis": 1,
+                        })
     r = _form_manejo(cliente, tipo="Nascimento", nascimento_de="Mae")
     assert chamadas == []
     r.close()
@@ -65,8 +67,10 @@ def test_form_manejo_avisa(cliente, dados_restaurados, monkeypatch, fila_avisos_
 
 def test_form_manejo_vacina_nao_avisa(cliente, dados_restaurados, monkeypatch, fila_avisos_vazia):
     chamadas = []
-    monkeypatch.setattr(alertas_whatsapp, "enviar_para_familia",
-                        lambda msg, **kw: chamadas.append(kw) or 1)
+    monkeypatch.setattr(alertas_whatsapp, "enviar_para_familia_resultado",
+                        lambda msg, **kw: chamadas.append(kw) or {
+                            "enviados": 1, "falhas": [], "elegiveis": 1,
+                        })
     r = _form_manejo(cliente, tipo="Vacina Aftosa", produto="X")
     r.close()
     assert chamadas == [] and not fila_avisos_vazia.exists()
@@ -109,7 +113,8 @@ def test_editar_manejo_nao_avisa(cliente, dados_restaurados, fila_avisos_vazia):
 def test_voz_nascimento_sem_brinco_gera_um_aviso(cliente, dados_restaurados, monkeypatch,
                                                  fila_avisos_vazia):
     # nunca enviar de verdade: o r.close() abaixo dispararia o envio da fila
-    monkeypatch.setattr(alertas_whatsapp, "enviar_para_familia", lambda msg, **kw: 1)
+    monkeypatch.setattr(alertas_whatsapp, "enviar_para_familia_resultado",
+                        lambda msg, **kw: {"enviados": 1, "falhas": [], "elegiveis": 1})
     h = _csrf(cliente)
     r = cliente.post("/api/voz/executar", json={"texto": "nasceu um bezerro do nilson"}, headers=h)
     assert r.status_code == 200 and r.get_json()["ok"], r.get_json()

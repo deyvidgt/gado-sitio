@@ -22,6 +22,19 @@ from test_calculos import checar_invariantes
 HOJE = datetime(2026, 10, 15)
 
 
+@pytest.mark.parametrize(
+    "cor,esperada",
+    [("Amarelo", "#17211b"), ("Azul", "#ffffff"), ("Vermelho", "#ffffff")],
+)
+def test_cor_do_texto_dos_brincos_tem_contraste(cor, esperada):
+    assert A.cor_texto_brinco(cor) == esperada
+
+
+def test_cor_do_brinco_nao_depende_de_maiusculas():
+    assert A.hex_cor_brinco("amarelo") == A.COR_HEX["Amarelo"]
+    assert A.cor_texto_brinco("azul") == "#ffffff"
+
+
 @pytest.fixture(autouse=True)
 def _sem_sobra_de_backup():
     """Baixa/edição fazem backup de verdade; apaga os criados aqui para não
@@ -334,6 +347,14 @@ def test_paginas_de_animais_abrem(cliente, sem_animais):
     for rota in ("/animais", "/animais?status=todos", f"/animais/{id_}", f"/animais/{id_}/editar",
                  "/voz", "/animais/novo?prefill=1&cor=Azul&numero=3"):
         assert cliente.get(rota).status_code == 200, rota
+    html_lista = cliente.get("/animais").get_data(as_text=True)
+    assert 'class="chip-brinco animal-identificacao"' in html_lista
+    assert "--cor-brinco:#f4c430;--texto-brinco:#17211b" in html_lista
+    html_ficha = cliente.get(f"/animais/{id_}").get_data(as_text=True)
+    assert "brinco-identidade" in html_ficha and "Amarelo 92" in html_ficha
+    assert "background:#f4c430;color:#17211b" in html_ficha
+    html_mobile = cliente.get(f"/animais/{id_}?modo=mobile").get_data(as_text=True)
+    assert "cond-brinco-identidade" in html_mobile and "Amarelo 92" in html_mobile
 
 
 def test_frases_do_usuario_gravam_de_verdade(cliente, sem_animais):

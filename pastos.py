@@ -419,12 +419,17 @@ def animais_por_pasto(df_man: pd.DataFrame, df_anim: pd.DataFrame | None = None)
         animal = animais_por_id.get(animal_id)
         if animal is not None:
             brinco = A.fmt_brinco(animal.get("Brinco Cor"), animal.get("Brinco Nº"))
+            cor_nome = A._txt(animal.get("Brinco Cor"))
             dono = A._txt(animal.get("Dono"))
-            cor = A.COR_HEX.get(cores_dono.get(dono), "#999")
+            cor_nome = cor_nome or cores_dono.get(dono, "")
+            cor = A.hex_cor_brinco(cor_nome)
+            cor_texto = A.cor_texto_brinco(cor_nome)
             nome = A._txt(animal.get("Nome"))
         else:
             brinco = brinco_por_id.get(animal_id, animal_id)
-            cor = "#999"
+            cor_nome = ""
+            cor = "#999999"
+            cor_texto = "#ffffff"
             nome = ""
 
         pasto_id = locais_individuais.get(animal_id, local_rebanho)
@@ -433,6 +438,8 @@ def animais_por_pasto(df_man: pd.DataFrame, df_anim: pd.DataFrame | None = None)
             "brinco": brinco,
             "nome": nome,
             "cor": cor,
+            "cor_nome": cor_nome,
+            "cor_texto": cor_texto,
         })
 
     return resultado

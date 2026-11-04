@@ -44,6 +44,24 @@ COR_HEX = {
 }
 
 
+def hex_cor_brinco(cor: str | None) -> str:
+    """Cor de tela do brinco, sem depender de maiúsculas na planilha."""
+    nome = str(cor or "").strip().casefold()
+    return next((hexa for chave, hexa in COR_HEX.items() if chave.casefold() == nome), "#999999")
+
+
+def cor_texto_brinco(cor: str | None) -> str:
+    """Contraste de texto para o fundo visual da cor do brinco."""
+    hexa = hex_cor_brinco(cor).lstrip("#")
+    try:
+        canais = [int(hexa[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+    except (ValueError, IndexError):
+        return "#ffffff"
+    linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in canais]
+    luminancia = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+    return "#17211b" if luminancia > 0.179 else "#ffffff"
+
+
 # ── Cores por dono ────────────────────────────────────────────────────────────
 
 def _sitio_config_path() -> str:

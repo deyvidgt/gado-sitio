@@ -230,6 +230,37 @@ def test_task_erro_num_sitio_nao_para_os_outros(dois_sitios, monkeypatch):
     assert [kw["sitio"] for _, kw in chamadas] == ["joao"]
 
 
+def test_envio_manual_whatsapp_captura_e_restaurar_sitio(cliente, dois_sitios, monkeypatch):
+    import alertas_whatsapp as aw
+    import threading
+    tarefas = []
+    chamadas = []
+
+    class ThreadAdiada:
+        def __init__(self, target, daemon):
+            self.target = target
+
+        def start(self):
+            tarefas.append(self.target)
+
+    monkeypatch.setattr(threading, "Thread", ThreadAdiada)
+    monkeypatch.setattr(aw, "montar_alertas", lambda: ["Alerta"])
+    monkeypatch.setattr(aw, "montar_mensagem_alertas", lambda alertas: "Mensagem")
+    monkeypatch.setattr(
+        aw, "enviar_para_familia",
+        lambda msg, **kw: chamadas.append((sitios.atual(), msg, kw)) or 1,
+    )
+    _logar(cliente, "joao", sitio="joao")
+
+    resposta = cliente.post("/api/enviar-alertas-familia").get_json()
+    sitios.ativar("santo-antonio")
+    tarefas[0]()
+
+    assert resposta["ok"] and resposta["enviados"] is None
+    assert chamadas == [("joao", "Mensagem", {"sitio": "joao"})]
+    assert sitios.atual() == "santo-antonio"
+
+
 def test_resumo_mensal_por_sitio(dois_sitios, monkeypatch):
     from datetime import datetime
     import alertas_whatsapp

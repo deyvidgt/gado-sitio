@@ -59,7 +59,7 @@ def test_dashboard_nao_renderiza_fab_sobre_navegacao_inferior(cliente):
     assert "Registrar nova visita" not in html
 
 
-def test_pastos_renderizam_pin_por_animal_com_posicao_deterministica(cliente, dados_restaurados):
+def test_pastos_renderizam_pin_por_lote_com_centro_deterministico(cliente, dados_restaurados):
     PA.criar("Pasto dos animais", json.dumps(_postura_pasto()))
     db.salvar_linha("Manejo", [
         "29/10/2026", "Movimentação de Pasto", 2, "", "Deyvid", "", "",
@@ -68,6 +68,8 @@ def test_pastos_renderizam_pin_por_animal_com_posicao_deterministica(cliente, da
 
     html = cliente.get("/pastos").get_data(as_text=True)
 
-    assert "p.animais_dados.forEach" in html
-    assert "animalIndex" in html
+    assert "pasto-pin-circulo" in html
+    assert "p.animais_dados" in html
+    assert "const centro = Array.isArray(p.centroid)" in html
+    assert "L.marker(centro" in html
     assert "p.geo.coordinates" in html

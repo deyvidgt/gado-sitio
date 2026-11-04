@@ -9,57 +9,34 @@
   <div class="secao">
     <h2 class="secao-titulo">⚙️ Preferências de Notificação</h2>
     <div class="card">
-      <form method="POST" action="#">
-        <div class="form-group">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" name="urgentes" {% if user_prefs.get('urgentes') %}checked{% endif %}>
-            <span style="font-weight:600">⚠️ Avisos Urgentes</span>
-          </label>
-          <p class="form-help">Mortes, acidentes, alertas críticos</p>
+      <p class="form-help">
+        {% if user_prefs.get('configurado') %}
+          {% if user_prefs.get('alertas_ativos') %}✅ WhatsApp configurado e ativo.{% else %}⏸️ WhatsApp configurado, mas pausado.{% endif %}
+        {% else %}
+          ⚙️ WhatsApp ainda não está configurado.
+        {% endif %}
+      </p>
+      <div class="lista-items">
+        {% for chave, rotulo in [
+          ('urgentes', '⚠️ Alertas urgentes'),
+          ('semanal', '📊 Resumo semanal'),
+          ('visita', '🏡 Avisos de visita'),
+          ('eventos', '🐄 Nascimentos e mortes/perdas'),
+          ('mensal', '📅 Resumo mensal'),
+          ('valores', '💰 Mostrar valores em R$')
+        ] %}
+        <div class="lista-item">
+          <span class="lista-item-icon">{{ '✅' if user_prefs.get(chave) else '⏸️' }}</span>
+          <div class="lista-item-content">
+            <div class="lista-item-label">{{ rotulo }}</div>
+            <div class="lista-item-desc">{{ 'Recebendo' if user_prefs.get(chave) else 'Desativado' }}</div>
+          </div>
         </div>
-
-        <div class="form-group">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" name="semanal" {% if user_prefs.get('semanal') %}checked{% endif %}>
-            <span style="font-weight:600">📊 Resumo Semanal</span>
-          </label>
-          <p class="form-help">Segunda-feira com compras, vendas e resultado</p>
-        </div>
-
-        <div class="form-group">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" name="visita" {% if user_prefs.get('visita') %}checked{% endif %}>
-            <span style="font-weight:600">🗓️ Lembrete de Visita</span>
-          </label>
-          <p class="form-help">Notificação quando alguém registra uma visita</p>
-        </div>
-
-        <div class="form-group">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" name="eventos" {% if user_prefs.get('eventos') %}checked{% endif %}>
-            <span style="font-weight:600">🎉 Eventos</span>
-          </label>
-          <p class="form-help">Nascimentos, partos confirmados</p>
-        </div>
-
-        <div class="form-group">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" name="mensal" {% if user_prefs.get('mensal') %}checked{% endif %}>
-            <span style="font-weight:600">📅 Resumo Mensal</span>
-          </label>
-          <p class="form-help">1º do mês com resultado e indicadores</p>
-        </div>
-
-        <div class="form-group">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" name="valores" {% if user_prefs.get('valores') %}checked{% endif %}>
-            <span style="font-weight:600">💰 Valores em Aviso</span>
-          </label>
-          <p class="form-help">Incluir valores (compra/venda/resultado)</p>
-        </div>
-
-        <button type="submit" class="btn btn-principal">💾 Salvar Preferências</button>
-      </form>
+        {% endfor %}
+      </div>
+      <a href="{{ url_for('configuracoes') }}#wpp" class="btn btn-principal" style="display:inline-block;margin-top:12px">
+        ✏️ Editar configuração e preferências
+      </a>
     </div>
   </div>
 
@@ -71,15 +48,13 @@
       <ul class="lista-items">
         {% for aviso in avisos_pendentes %}
         <li class="lista-item">
-          <span class="lista-item-icon">
-            {% if aviso.get('status') == 'pendente' %}⏳{% elif aviso.get('status') == 'enviado' %}✅{% else %}—{% endif %}
-          </span>
+          <span class="lista-item-icon">⏳</span>
           <div class="lista-item-content">
-            <div class="lista-item-label">{{ aviso.get('tipo', 'Aviso') }}</div>
-            <div class="lista-item-desc">{{ aviso.get('texto') or aviso.get('msg') }}</div>
+            <div class="lista-item-label">{{ rotulos_tipos.get(aviso.get('tipo'), 'Aviso') }}</div>
+            <div class="lista-item-desc">{{ aviso.get('msg', 'Aviso sem texto') }}</div>
             <div style="font-size:11px;color:var(--text-3);margin-top:4px">
-              📅 {{ aviso.get('data', '—') }}
-              {% if aviso.get('timestamp') %}· {{ aviso.get('timestamp') }}{% endif %}
+              📅 {{ aviso.get('criado', 'Data não informada') }}
+              {% if aviso.get('tentativas') %}· {{ aviso.get('tentativas') }} tentativa(s) de envio{% endif %}
             </div>
           </div>
         </li>

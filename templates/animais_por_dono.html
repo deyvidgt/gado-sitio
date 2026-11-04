@@ -14,6 +14,9 @@
   .animal-brinco { width: 60px; height: 60px; border-radius: 50% 50% 50% 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; flex: none; }
   .animal-info { flex: 1; }
   .animal-nome { font-weight: 600; color: var(--text-1); }
+  .animal-brinco-texto { display:inline-block; padding:3px 8px; border-radius:7px;
+                          background:var(--cor-brinco); color:var(--texto-brinco);
+                          font-variant-numeric:tabular-nums; font-weight:800; }
   .animal-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; }
   .animal-stats { display: flex; gap: 16px; margin-top: 6px; font-size: 12px; }
   .animal-stat { display: flex; flex-direction: column; }
@@ -52,11 +55,11 @@
   {% for item in animais %}
   <a href="{{ url_for('ficha_animal', id_=item.linha.id) }}" style="text-decoration: none; color: inherit;">
     <div class="animal-card" style="cursor: pointer; transition: all 0.2s; border-left: 3px solid {% if item.linha.status == 'Vivo' %}var(--green-600){% elif item.linha.status == 'Vendido' %}var(--info){% else %}var(--danger){% endif %}">
-      <div class="animal-brinco" style="background: {{ item.linha.hex }}; color: {{ '#222' if item.linha.cor in ['Amarelo','Branco','Rosa','Laranja'] else '#fff' }}">
+      <div class="animal-brinco" style="background: {{ item.linha.hex }}; color: {{ item.linha.texto_hex }}" aria-label="Brinco {{ item.linha.brinco }}">
         {{ '%02d' % item.linha.num if item.linha.num is not none else '??' }}
       </div>
       <div class="animal-info">
-        <div class="animal-nome">{{ item.linha.brinco }}</div>
+        <div class="animal-nome"><span class="animal-brinco-texto" style="--cor-brinco:{{ item.linha.hex }};--texto-brinco:{{ item.linha.texto_hex }}">{{ item.linha.brinco }}</span></div>
         <div class="animal-meta">
           {{ item.linha.categoria or 'Animal' }} · {{ {'F': 'Fêmea', 'M': 'Macho'}.get(item.linha.sexo, '?') }} · {{ item.linha.idade or '—' }}
         </div>

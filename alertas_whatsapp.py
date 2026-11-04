@@ -22,6 +22,7 @@ import os
 import sys
 import json
 import logging
+import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -58,7 +59,12 @@ except Exception as e:
 def _cabecalho() -> str:
     """1ª linha das mensagens: o nome do sítio de onde vem (vários sítios, v5.0)."""
     import sitios
-    return f"🐄 *{sitios.nome(sitios.atual())}*"
+    return f"🐄 *{sitio_nome()}*"
+
+
+def sitio_nome() -> str:
+    import sitios
+    return sitios.nome(sitios.atual())
 
 
 def fmt_r(v):
@@ -66,6 +72,10 @@ def fmt_r(v):
         return f"R$ {float(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     except Exception:
         return "—"
+
+
+def _texto_whatsapp(valor) -> str:
+    return valor.strip() if isinstance(valor, str) else ""
 
 
 def carregar_usuarios() -> dict:
@@ -81,31 +91,56 @@ def carregar_usuarios() -> dict:
     for caminho in candidatos:
         if caminho.exists():
             try:
-                return json.loads(caminho.read_text(encoding="utf-8"))
-            except Exception:
-                pass
+                usuarios = json.loads(caminho.read_text(encoding="utf-8"))
+                if isinstance(usuarios, dict):
+                    return usuarios
+                logging.error("Arquivo de usuários inválido em %s: conteúdo não é um objeto.", caminho)
+            except (OSError, ValueError) as e:
+                logging.error(f"Não foi possível ler usuários em {caminho}: {e}")
     return {}
+
+
+def enviar_whatsapp_resultado(telefone: str, apikey: str, msg: str) -> dict:
+    """Envia pelo CallMeBot e devolve erro legível sem expor credenciais."""
+    try:
+        import requests
+        resp = requests.get(
+            "https://api.callmebot.com/whatsapp.php",
+            params={"phone": telefone, "text": msg, "apikey": apikey},
+            timeout=20,
+        )
+        corpo = resp.text.lower()
+        if resp.status_code == 200 and "message queued" in corpo:
+            logging.info("WhatsApp enviado para %s*** OK", telefone[:6])
+            return {"ok": True, "erro": None}
+        if "phone number not correct" in corpo or "incorrect phone" in corpo:
+            erro = ("Número inválido ou não autorizado no CallMeBot. Confira o telefone "
+                    "e se a autorização foi enviada ao número do bot.")
+        elif "apikey" in corpo or "api key" in corpo or "not found" in corpo:
+            erro = ("API Key inválida ou expirada. Confira a API Key e o número do bot "
+                    "nas configurações do WhatsApp.")
+        elif resp.status_code == 403:
+            erro = "Acesso negado pelo CallMeBot (erro 403). Confira o número do bot."
+        else:
+            erro = f"CallMeBot retornou erro HTTP {resp.status_code}."
+        logging.warning("WhatsApp para %s*** falhou: %s", telefone[:6], erro)
+        return {"ok": False, "erro": erro}
+    except Exception as e:
+        tipo_erro = type(e).__name__
+        logging.error("Erro ao enviar WhatsApp para %s*** (%s)", telefone[:6], tipo_erro)
+        msg_e = tipo_erro.lower()
+        if any(k in msg_e for k in ("proxyerror", "max retries", "connectionerror",
+                                     "tunnel connection", "timeout", "requestexception")):
+            erro = ("Servidor sem acesso ao CallMeBot (restrição de rede do PythonAnywhere). "
+                    "O envio funciona pelo celular ou pelo script local.")
+        else:
+            erro = "Erro inesperado ao comunicar com o CallMeBot."
+        return {"ok": False, "erro": erro}
 
 
 def enviar_whatsapp(telefone: str, apikey: str, msg: str) -> bool:
     """Envia mensagem via CallMeBot. Retorna True se enviou com sucesso."""
-    try:
-        import requests
-        url = "https://api.callmebot.com/whatsapp.php"
-        resp = requests.get(
-            url,
-            params={"phone": telefone, "text": msg, "apikey": apikey},
-            timeout=20,
-        )
-        ok = resp.status_code == 200 and "message queued" in resp.text.lower()
-        if ok:
-            logging.info(f"WhatsApp enviado para {telefone[:6]}*** OK")
-        else:
-            logging.warning(f"WhatsApp para {telefone[:6]}*** falhou: {resp.text[:200]}")
-        return ok
-    except Exception as e:
-        logging.error(f"Erro ao enviar WhatsApp para {telefone[:6]}***: {e}")
-        return False
+    return enviar_whatsapp_resultado(telefone, apikey, msg)["ok"]
 
 
 def _str_campo(v, default="—"):
@@ -147,7 +182,7 @@ def montar_msg_nova_visita(row: dict, estoque_esperado: int) -> str:
     elif isinstance(data_vis, str) and data_vis:
         data_str = data_vis
     else:
-        data_str = datetime.now().strftime("%d/%m/%Y")
+        data_str = _agora_br().strftime("%d/%m/%Y")
 
     gado_cnt  = int(_num_campo(row.get("Gado Contado")))
     gado_esp  = int(_num_campo(row.get("Gado Esperado")) or estoque_esperado)
@@ -242,7 +277,7 @@ def montar_msg_nova_visita(row: dict, estoque_esperado: int) -> str:
 
     linhas += [
         f"",
-        f"_Sistema de Gestão de Gado — Sítio SA_",
+        f"_Sistema de Gestão de Gado — {sitio_nome()}_",
     ]
     return "\n".join(linhas)
 
@@ -618,6 +653,8 @@ from config import LOGIN_MEMBRO as _LOGIN_MEMBRO  # noqa: E402
 
 
 def _chave_pessoa(nome: str) -> str:
+    if not isinstance(nome, str):
+        return ""
     n = (nome or "").strip().lower()
     return _LOGIN_MEMBRO.get(n, n).lower()
 
@@ -625,13 +662,16 @@ def _chave_pessoa(nome: str) -> str:
 def receber_de(cfg_whatsapp: dict) -> dict:
     """As 6 preferências de recebimento; o que não foi definido vale True, para quem
     nunca mexeu continuar recebendo tudo."""
-    guardado = (cfg_whatsapp or {}).get("receber") or {}
-    return {t: bool(guardado.get(t, True)) for t in TIPOS_RECEBER}
+    guardado = cfg_whatsapp.get("receber") if isinstance(cfg_whatsapp, dict) else None
+    if not isinstance(guardado, dict):
+        guardado = {}
+    return {t: guardado.get(t) if isinstance(guardado.get(t), bool) else True
+            for t in TIPOS_RECEBER}
 
 
 def quer_receber(cfg_whatsapp: dict, tipo: str | None) -> bool:
     """alertas_ativos=False desliga tudo; com tipo=None só ele é considerado."""
-    if not (cfg_whatsapp or {}).get("alertas_ativos", True):
+    if isinstance(cfg_whatsapp, dict) and cfg_whatsapp.get("alertas_ativos") is False:
         return False
     if tipo is None:
         return True
@@ -639,35 +679,63 @@ def quer_receber(cfg_whatsapp: dict, tipo: str | None) -> bool:
 
 
 def enviar_para_familia(msg: str, excluir_usuario: str = "", tipo: str | None = None,
-                        msg_sem_valores: str | None = None, sitio: str | None = None) -> int:
+                        msg_sem_valores: str | None = None, sitio: str | None = None,
+                        destinatarios: list[str] | None = None) -> int:
+    return enviar_para_familia_resultado(
+        msg, excluir_usuario, tipo, msg_sem_valores, sitio, destinatarios
+    )["enviados"]
+
+
+def enviar_para_familia_resultado(
+        msg: str, excluir_usuario: str = "", tipo: str | None = None,
+        msg_sem_valores: str | None = None, sitio: str | None = None,
+        destinatarios: list[str] | None = None) -> dict:
     """
-    Envia msg para todos os usuários com WhatsApp configurado.
+    Envia e devolve o número de envios e logins que falharam.
     excluir_usuario: pular essa pessoa (membro ou login; ex: quem acabou de registrar).
     tipo: categoria do aviso, filtrada pelas preferências de cada um (None = sem filtro).
     msg_sem_valores: texto alternativo para quem desligou "valores".
     sitio: aviso de um sítio só vai para quem tem acesso a ele (None = sem filtro).
-    Retorna número de envios bem-sucedidos.
+    destinatarios restringe uma tentativa de reenvio aos logins que falharam antes.
     """
     import sitios
     usuarios = carregar_usuarios()
     excluir = _chave_pessoa(excluir_usuario) if excluir_usuario else ""
+    somente = {_chave_pessoa(nome) for nome in destinatarios} if destinatarios is not None else None
     enviados = 0
+    falhas = []
+    elegiveis = 0
     for nome, info in usuarios.items():
+        if not isinstance(info, dict):
+            continue
+        if somente is not None and _chave_pessoa(nome) not in somente:
+            continue
         if excluir and _chave_pessoa(nome) == excluir:
             continue
         if sitio and not sitios.tem_acesso(nome, sitio):
             continue
-        cfg      = info.get("whatsapp", {})
-        telefone = cfg.get("telefone", "").strip()
-        apikey   = cfg.get("apikey",   "").strip()
+        cfg = info.get("whatsapp", {})
+        if not isinstance(cfg, dict):
+            continue
+        telefone = _texto_whatsapp(cfg.get("telefone"))
+        apikey = _texto_whatsapp(cfg.get("apikey"))
         if not telefone or not apikey or not quer_receber(cfg, tipo):
             continue
+        elegiveis += 1
         texto = msg
         if tipo is not None and msg_sem_valores is not None and not receber_de(cfg)["valores"]:
             texto = msg_sem_valores
-        if enviar_whatsapp(telefone, apikey, texto):
+        try:
+            enviado = enviar_whatsapp(telefone, apikey, texto)
+        except Exception as e:
+            logging.error("Erro inesperado ao enviar WhatsApp para %s*** (%s)",
+                          telefone[:6], type(e).__name__)
+            enviado = False
+        if enviado:
             enviados += 1
-    return enviados
+        else:
+            falhas.append(nome)
+    return {"enviados": enviados, "falhas": falhas, "elegiveis": elegiveis}
 
 
 # ── Avisos de visita pendentes ───────────────────────────────────────────────
@@ -681,20 +749,56 @@ def _pendentes_path() -> Path:
     return Path(DATA_DIR) / "avisos_pendentes.json"
 
 
+def _trava_fila():
+    """Reusa o lock interprocesso do diretório do sítio para operações da fila."""
+    from db import _trava_escrita
+    return _trava_escrita()
+
+
+def _ler_fila(caminho: Path) -> list:
+    if not caminho.exists():
+        return []
+    fila = json.loads(caminho.read_text(encoding="utf-8"))
+    if not isinstance(fila, list):
+        raise ValueError("A fila de avisos precisa ser uma lista JSON.")
+    return fila
+
+
+def _quarentenar_fila(caminho: Path, motivo: str) -> Path:
+    stem = "avisos_pendentes" if caminho.name.startswith("avisos_enviando_") else caminho.stem
+    destino = caminho.with_name(
+        f"{stem}_corrompida_{datetime.now():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:8]}{caminho.suffix}"
+    )
+    os.replace(caminho, destino)
+    logging.error("Fila WhatsApp inválida preservada em %s: %s", destino, motivo)
+    return destino
+
+
+def _gravar_fila(caminho: Path, fila: list) -> None:
+    tmp = caminho.with_name(f"{caminho.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        tmp.write_text(json.dumps(fila, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(tmp, caminho)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
+
 def guardar_aviso_pendente(msg: str, tipo: str = "visita", excluir: str = "",
                            msg_sem_valores: str | None = None) -> None:
     caminho = _pendentes_path()
-    try:
-        fila = json.loads(caminho.read_text(encoding="utf-8")) if caminho.exists() else []
-    except Exception:
-        fila = []
     import sitios
-    fila.append({"msg": msg, "tipo": tipo, "excluir": excluir,
-                 "msg_sem_valores": msg_sem_valores, "sitio": sitios.atual(),
-                 "criado": datetime.now().isoformat(timespec="seconds")})
-    tmp = caminho.with_suffix(".tmp")
-    tmp.write_text(json.dumps(fila, ensure_ascii=False, indent=2), encoding="utf-8")
-    os.replace(tmp, caminho)
+    with _trava_fila():
+        try:
+            fila = _ler_fila(caminho)
+        except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as e:
+            if caminho.exists():
+                _quarentenar_fila(caminho, str(e))
+            fila = []
+        fila.append({"msg": msg, "tipo": tipo, "excluir": excluir,
+                     "msg_sem_valores": msg_sem_valores, "sitio": sitios.atual(),
+                     "criado": datetime.now().isoformat(timespec="seconds")})
+        _gravar_fila(caminho, fila)
 
 
 def avisar_manejo(tipo: str, qtd: int, brincos: str = "", de: str = "", descricao: str = "",
@@ -736,36 +840,84 @@ def avisar_manejo(tipo: str, qtd: int, brincos: str = "", de: str = "", descrica
         return False
 
 
-def enviar_avisos_pendentes() -> int:
-    """Envia e esvazia a fila. Quem consegue renomear o arquivo primeiro é o único
-    que envia (os.replace é atômico) — dois processos nunca mandam o mesmo aviso."""
+def enviar_avisos_pendentes(agora: datetime | None = None) -> int:
+    """Processa a fila atomicamente; destinatários com falha ficam para nova tentativa."""
+    agora = agora or datetime.now()
     caminho = _pendentes_path()
-    if not caminho.exists():
-        return 0
-    meu = caminho.with_name(f"avisos_enviando_{os.getpid()}_{id(caminho)}.json")
+    meu = caminho.with_name(f"avisos_enviando_{os.getpid()}_{uuid.uuid4().hex}.json")
+    with _trava_fila():
+        if not caminho.exists():
+            return 0
+        try:
+            os.replace(caminho, meu)
+        except OSError as e:
+            logging.warning("Não foi possível reservar a fila WhatsApp: %s", e)
+            return 0
     try:
-        os.replace(caminho, meu)
-    except OSError:
+        fila = _ler_fila(meu)
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as e:
+        if meu.exists():
+            _quarentenar_fila(meu, str(e))
         return 0
-    try:
-        fila = json.loads(meu.read_text(encoding="utf-8")) or []
-    except Exception:
-        fila = []
+
     total = 0
+    retentar = []
     for item in fila:
+        if not isinstance(item, dict) or not isinstance(item.get("msg"), str) or not item["msg"].strip():
+            retentar.append(item)
+            logging.error("Aviso WhatsApp inválido preservado na fila: %r", item)
+            continue
+        destinatarios = item.get("destinatarios")
+        if destinatarios is not None and (
+                not isinstance(destinatarios, list)
+                or any(not isinstance(nome, str) for nome in destinatarios)):
+            retentar.append(item)
+            logging.error("Destinatários inválidos em aviso WhatsApp; item preservado.")
+            continue
+        ultima = item.get("ultima_tentativa")
+        if ultima:
+            try:
+                if agora - datetime.fromisoformat(ultima) < timedelta(minutes=15):
+                    retentar.append(item)
+                    continue
+            except (TypeError, ValueError):
+                logging.warning("Data de tentativa inválida em aviso pendente; tentando envio.")
         try:
             # Item gravado antes desta versão não tem "tipo": era sempre aviso de visita.
-            total += enviar_para_familia(
+            resultado = enviar_para_familia_resultado(
                 item["msg"], tipo=item.get("tipo") or "visita",
                 excluir_usuario=item.get("excluir") or "",
                 msg_sem_valores=item.get("msg_sem_valores"),
-                sitio=item.get("sitio"))   # fila antiga, sem sítio: vai para todos, como antes
+                sitio=item.get("sitio"),
+                destinatarios=item.get("destinatarios"))
+            total += resultado["enviados"]
+            if resultado["falhas"]:
+                pendente = dict(item)
+                pendente["destinatarios"] = resultado["falhas"]
+                pendente["tentativas"] = int(pendente.get("tentativas", 0)) + 1
+                pendente["ultima_tentativa"] = agora.isoformat(timespec="seconds")
+                retentar.append(pendente)
+            elif resultado["elegiveis"] == 0:
+                logging.warning("Aviso WhatsApp sem destinatários configurados ou habilitados; descartado.")
         except Exception as e:
             logging.error(f"Erro ao enviar aviso pendente: {e}")
+            retentar.append(item)
+
+    try:
+        with _trava_fila():
+            novas = _ler_fila(caminho)
+            pendentes = novas + retentar
+            if pendentes:
+                _gravar_fila(caminho, pendentes)
+            elif caminho.exists():
+                caminho.unlink()
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as e:
+        logging.exception("Não foi possível atualizar a fila de avisos: %s", e)
+        return total
     try:
         meu.unlink()
-    except OSError:
-        pass
+    except OSError as e:
+        logging.warning("Não foi possível remover a fila reservada %s: %s", meu, e)
     return total
 
 

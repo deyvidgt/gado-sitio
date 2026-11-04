@@ -469,17 +469,30 @@ def fluxo_animais():
 @login_required
 def lembretes_whatsapp():
     """Página de preferências WhatsApp e fila de avisos pendentes."""
+    from alertas_whatsapp import receber_de
     usuarios = _carregar_usuarios_disco()
-    user_id = session.get("user_id")
-    user_prefs = usuarios.get(user_id, {}).get("whatsapp_prefs", {})
+    usuario = session.get("usuario", "")
+    whatsapp = usuarios.get(usuario, {}).get("whatsapp", {})
+    if not isinstance(whatsapp, dict):
+        whatsapp = {}
+    user_prefs = receber_de(whatsapp)
+    user_prefs["alertas_ativos"] = whatsapp.get("alertas_ativos", True) is True
+    user_prefs["configurado"] = bool(
+        isinstance(whatsapp.get("telefone"), str) and whatsapp["telefone"].strip()
+        and isinstance(whatsapp.get("apikey"), str) and whatsapp["apikey"].strip()
+    )
 
-    # Ler fila de avisos pendentes
     avisos_pendentes = _ler_avisos_pendentes()
+    rotulos_tipos = {
+        "visita": "Visita",
+        "eventos": "Nascimento ou morte/perda",
+    }
 
     return render_template(
         "lembretes_whatsapp.html",
         user_prefs=user_prefs,
         avisos_pendentes=avisos_pendentes,
+        rotulos_tipos=rotulos_tipos,
     )
 
 
@@ -616,13 +629,12 @@ def _carregar_usuarios_disco():
 
 
 def _ler_avisos_pendentes():
-    """Lê fila de avisos pendentes de WhatsApp."""
+    """Lê uma cópia consistente da fila WhatsApp do sítio atual."""
     try:
-        from db import DATA_DIR
-        path = os.path.join(DATA_DIR, "avisos_pendentes.json")
-        if os.path.exists(path):
-            with open(path, encoding="utf-8") as f:
-                return json.load(f) or []
-    except Exception:
-        pass
+        from alertas_whatsapp import _pendentes_path, _trava_fila, _ler_fila
+        with _trava_fila():
+            fila = _ler_fila(_pendentes_path())
+            return [item for item in fila if isinstance(item, dict)]
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as e:
+        app.logger.error("Não foi possível ler a fila de avisos WhatsApp: %s", e)
     return []

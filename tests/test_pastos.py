@@ -162,6 +162,11 @@ def test_animais_por_pasto_aplica_movimentacoes_individuais_e_do_rebanho():
     assert [a["id"] for a in por_pasto["P01"]] == ["A0001"]
     assert [a["id"] for a in por_pasto["P02"]] == ["A0002"]
     assert por_pasto["P01"][0]["brinco"] == "Amarelo 01"
+    assert por_pasto["P01"][0]["cor_nome"] == "Amarelo"
+    assert por_pasto["P01"][0]["cor"] == "#f4c430"
+    assert por_pasto["P01"][0]["cor_texto"] == "#17211b"
+    assert por_pasto["P02"][0]["cor_nome"] == "Azul"
+    assert por_pasto["P02"][0]["cor"] == "#2f6fd6"
 
 
 def test_animais_por_pasto_retorna_animais_sem_movimentacao_como_sem_pasto():
@@ -370,6 +375,16 @@ def test_pagina_pastos_tem_controles_mapa(cliente, dados_restaurados):
     assert "Ver no mapa" in html
     assert "mapa-shell" in html
     assert "legenda-lotacao" in html
+    assert 'id="btn-add-pasto"' in html
+    assert 'aria-label="Desenhar novo pasto"' in html
+    assert "pasto-pin-circulo" in html
+    assert "pasto-pin-cabe" in html
+    assert "pasto-pin-cores" in html
+    assert "pasto-brinco-badge" in html
+    assert "Brincos cadastrados" in html
+    assert "L.Draw.Event.CREATED" in html
+    assert "#17834a" in html and "#c0392b" in html
+    assert "marcador-brinco" not in html
 
 
 def test_pagina_pastos_nao_exibe_valores_invalidos(cliente, dados_restaurados):

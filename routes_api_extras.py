@@ -9,7 +9,7 @@ from datetime import timedelta
 from flask import request, jsonify, session
 from db import carregar_aba, get_alertas_saude
 from saude import ultima_data, brucelose_proxima
-from alertas_whatsapp import TIPOS_RECEBER, receber_de
+from alertas_whatsapp import TIPOS_RECEBER, receber_de, enviar_whatsapp_resultado
 from extensions import app, _agora, login_required, _safe, _carregar_usuarios, _salvar_usuarios
 
 
@@ -207,13 +207,19 @@ def api_config_whatsapp_todos():
     todos = _usuarios_visiveis(_carregar_usuarios())
     resultado = []
     for u, info in todos.items():
-        wpp = info.get("whatsapp", {})
+        wpp = info.get("whatsapp", {}) if isinstance(info, dict) else {}
+        if not isinstance(wpp, dict):
+            wpp = {}
+        telefone = wpp.get("telefone")
+        bot_number = wpp.get("bot_number")
+        apikey = wpp.get("apikey")
         resultado.append({
             "usuario":    u,
-            "telefone":   wpp.get("telefone", ""),
-            "bot_number": wpp.get("bot_number", ""),
-            "configurado": bool(wpp.get("apikey", "").strip() and wpp.get("telefone", "").strip()),
-            "alertas_ativos": wpp.get("alertas_ativos", True),
+            "telefone":   telefone if isinstance(telefone, str) else "",
+            "bot_number": bot_number if isinstance(bot_number, str) else "",
+            "configurado": bool(isinstance(apikey, str) and apikey.strip()
+                                and isinstance(telefone, str) and telefone.strip()),
+            "alertas_ativos": wpp.get("alertas_ativos") if isinstance(wpp.get("alertas_ativos"), bool) else True,
             "receber":    receber_de(wpp),
         })
     return jsonify({"ok": True, "usuarios": resultado})
@@ -225,51 +231,81 @@ def api_config_whatsapp_todos():
 def api_config_whatsapp():
     usuario = session.get("usuario", "")
     if request.method == "GET":
-        cfg = _carregar_usuarios().get(usuario, {}).get("whatsapp", {})
+        registro = _carregar_usuarios().get(usuario, {})
+        cfg = registro.get("whatsapp", {}) if isinstance(registro, dict) else {}
+        if not isinstance(cfg, dict):
+            cfg = {}
+        api_key = cfg.get("apikey")
+        bot_number = cfg.get("bot_number")
         return jsonify({
             "ok":                True,
-            "telefone":          cfg.get("telefone", ""),
-            "bot_number":        cfg.get("bot_number", "+34644663262"),
-            "apikey_configurada": bool(cfg.get("apikey", "").strip()),
-            "alertas_ativos":    cfg.get("alertas_ativos", True),
+            "telefone":          cfg.get("telefone", "") if isinstance(cfg.get("telefone"), str) else "",
+            "bot_number":        bot_number if isinstance(bot_number, str) else "+34644663262",
+            "apikey_configurada": bool(api_key.strip()) if isinstance(api_key, str) else False,
+            "alertas_ativos":    cfg.get("alertas_ativos") if isinstance(cfg.get("alertas_ativos"), bool) else True,
             "receber":           receber_de(cfg),
         })
 
     data = request.get_json(silent=True) or {}
-    tel      = str(data.get("telefone",   "")).strip().replace(" ", "").replace("-", "")
-    key      = str(data.get("apikey",     "")).strip()
-    bot_num  = str(data.get("bot_number", "")).strip().replace(" ", "")
-    if not tel:
-        return jsonify({"ok": False, "erro": "Telefone obrigatório."})
+    if not isinstance(data, dict):
+        return jsonify({"ok": False, "erro": "Envie uma configuração JSON válida."}), 400
+    tel = str(data.get("telefone", "")).strip().replace(" ", "").replace("-", "")
+    key = data.get("apikey", "")
+    bot_num = str(data.get("bot_number", "")).strip().replace(" ", "")
+    if not tel.isdigit() or not 8 <= len(tel) <= 15:
+        return jsonify({"ok": False, "erro": "Telefone inválido. Use DDI + DDD + número, apenas dígitos."}), 400
+    if bot_num and (not bot_num.startswith("+") or not bot_num[1:].isdigit()
+                    or not 8 <= len(bot_num[1:]) <= 15):
+        return jsonify({"ok": False, "erro": "Número do bot inválido. Informe o número internacional com +."}), 400
+    if not isinstance(key, str):
+        return jsonify({"ok": False, "erro": "API Key inválida."}), 400
+    key = key.strip()
+    if "alertas_ativos" in data and not isinstance(data["alertas_ativos"], bool):
+        return jsonify({"ok": False, "erro": "A opção de alertas ativos precisa ser verdadeira ou falsa."}), 400
 
     usuarios = _carregar_usuarios()
     if usuario not in usuarios:
-        return jsonify({"ok": False, "erro": "Usuário não encontrado."})
+        return jsonify({"ok": False, "erro": "Usuário não encontrado."}), 404
 
+    if not isinstance(usuarios[usuario], dict):
+        usuarios[usuario] = {}
     cfg_atual = usuarios[usuario].get("whatsapp", {})
+    if not isinstance(cfg_atual, dict):
+        cfg_atual = {}
 
     # Se a key não foi enviada, manter a que já está salva
     key_salva = key if key else cfg_atual.get("apikey", "")
-    if not key_salva:
-        return jsonify({"ok": False, "erro": "API Key obrigatória na primeira configuração."})
+    if not isinstance(key_salva, str) or not key_salva.strip():
+        return jsonify({"ok": False, "erro": "API Key obrigatória na primeira configuração."}), 400
 
     # Só as 6 chaves conhecidas, como bool; sem "receber" no corpo, mantém o salvo
     # (este dicionário é recriado do zero, então senão a escolha se perderia).
     if isinstance(data.get("receber"), dict):
-        receber = {t: bool(data["receber"].get(t, True)) for t in TIPOS_RECEBER}
+        receber = receber_de(cfg_atual)
+        for tipo in TIPOS_RECEBER:
+            if tipo in data["receber"]:
+                if not isinstance(data["receber"][tipo], bool):
+                    return jsonify({"ok": False, "erro": f"A preferência '{tipo}' precisa ser verdadeira ou falsa."}), 400
+                receber[tipo] = data["receber"][tipo]
+    elif "receber" in data:
+        return jsonify({"ok": False, "erro": "As preferências de recebimento precisam estar em um objeto."}), 400
     else:
         receber = receber_de(cfg_atual)
-        if "receber" not in cfg_atual:
-            receber = None
 
+    alertas_ativos = cfg_atual.get("alertas_ativos")
+    if not isinstance(alertas_ativos, bool):
+        alertas_ativos = True
+    alertas_ativos = data.get("alertas_ativos", alertas_ativos)
+    bot_salvo = cfg_atual.get("bot_number")
+    if not isinstance(bot_salvo, str) or not bot_salvo.strip():
+        bot_salvo = "+34644663262"
     usuarios[usuario]["whatsapp"] = {
         "telefone":      tel,
-        "apikey":        key_salva,
-        "bot_number":    bot_num or cfg_atual.get("bot_number", "+34644663262"),
-        "alertas_ativos": bool(data.get("alertas_ativos", True)),
+        "apikey":        key_salva.strip(),
+        "bot_number":    bot_num or bot_salvo,
+        "alertas_ativos": alertas_ativos,
+        "receber": receber,
     }
-    if receber is not None:
-        usuarios[usuario]["whatsapp"]["receber"] = receber
     _salvar_usuarios(usuarios)
     return jsonify({"ok": True, "msg": "Configuração salva!"})
 
@@ -279,68 +315,39 @@ def _enviar_callmebot(tel: str, key: str, msg: str) -> dict:
     Utilitário central de envio via CallMeBot.
     Retorna {"ok": bool, "erro": str|None} com mensagens de erro claras.
     """
-    try:
-        import requests as req
-        r = req.get(
-            "https://api.callmebot.com/whatsapp.php",
-            params={"phone": tel, "text": msg, "apikey": key},
-            timeout=20,
-        )
-        texto = r.text.lower()
-        ok = r.status_code == 200 and "message queued" in texto
-
-        if not ok:
-            # Detectar erros específicos do CallMeBot
-            if "phone number not correct" in texto or "incorrect phone" in texto:
-                erro = (
-                    "Número de telefone inválido ou não autorizado. "
-                    "Verifique se você enviou 'I allow callmebot to send me messages' "
-                    "para o número do bot e se o telefone está correto."
-                )
-            elif "apikey" in texto or "api key" in texto or "not found" in texto:
-                erro = (
-                    "API Key inválida ou expirada. "
-                    "O número do bot CallMeBot pode ter mudado — "
-                    "verifique em callmebot.com e atualize o número do bot em ⚙️ Configurações → WhatsApp."
-                )
-            elif r.status_code == 403:
-                erro = (
-                    "Acesso negado pelo CallMeBot (erro 403). "
-                    "Possível mudança no número do bot — "
-                    "confira o número atual em callmebot.com e atualize em ⚙️ Configurações → WhatsApp."
-                )
-            else:
-                erro = f"CallMeBot retornou erro: {r.text[:200]}"
-            return {"ok": False, "erro": erro}
-
-        return {"ok": True, "erro": None}
-
-    except Exception as e:
-        msg_e = str(e)
-        if any(k in msg_e for k in ("ProxyError", "Max retries", "ConnectionError",
-                                     "Tunnel connection", "timeout")):
-            return {
-                "ok": False,
-                "erro": (
-                    "Servidor sem acesso ao CallMeBot (restrição de rede do PythonAnywhere). "
-                    "O envio funciona normalmente pelo celular ou pelo script alertas_whatsapp.py local."
-                ),
-            }
-        return {"ok": False, "erro": f"Erro inesperado: {msg_e}"}
+    return enviar_whatsapp_resultado(tel, key, msg)
 
 
 @app.route("/api/enviar-lembrete-whatsapp", methods=["POST"])
 @login_required
 def api_enviar_lembrete_whatsapp():
-    data = request.get_json(silent=True) or {}
-    tel  = str(data.get("telefone", "")).strip()
-    key  = str(data.get("apikey",   "")).strip()
-    msg  = str(data.get("msg",      "")).strip()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"ok": False, "erro": "Envie os dados do lembrete em JSON."}), 400
+    msg = data.get("msg")
+    if not isinstance(msg, str) or not msg.strip() or len(msg) > 4000:
+        return jsonify({"ok": False, "erro": "A mensagem é obrigatória e deve ter até 4.000 caracteres."}), 400
 
-    if not tel or not key or not msg:
-        return jsonify({"ok": False, "erro": "telefone, apikey e msg são obrigatórios."})
+    usuario = _carregar_usuarios().get(session.get("usuario", ""), {})
+    cfg = usuario.get("whatsapp", {}) if isinstance(usuario, dict) else {}
+    if not isinstance(cfg, dict):
+        cfg = {}
+    tel = cfg.get("telefone")
+    key = cfg.get("apikey")
+    tel = tel.strip() if isinstance(tel, str) else ""
+    key = key.strip() if isinstance(key, str) else ""
+    if not tel or not key:
+        return jsonify({"ok": False, "erro": "Configure seu WhatsApp antes de enviar lembretes."}), 400
 
-    return jsonify(_enviar_callmebot(tel, key, msg))
+    # Compatibilidade com clientes antigos sem permitir que usem a API Key salva
+    # para enviar mensagens a telefones diferentes do próprio usuário.
+    tel_solicitado = data.get("telefone")
+    if tel_solicitado and str(tel_solicitado).strip().replace(" ", "").replace("-", "") != tel:
+        return jsonify({"ok": False, "erro": "O lembrete só pode ser enviado ao telefone configurado."}), 403
+    key_solicitada = data.get("apikey")
+    if key_solicitada and str(key_solicitada).strip() != key:
+        return jsonify({"ok": False, "erro": "A API Key deve ser a chave já configurada no servidor."}), 403
+    return jsonify(_enviar_callmebot(tel, key, msg.strip()))
 
 
 @app.route("/api/enviar-teste-whatsapp", methods=["POST"])
@@ -351,9 +358,14 @@ def api_enviar_teste_whatsapp():
     já salva no servidor — sem precisar que o frontend a conheça.
     """
     usuario = session.get("usuario", "")
-    cfg     = _carregar_usuarios().get(usuario, {}).get("whatsapp", {})
-    tel     = cfg.get("telefone",   "").strip()
-    key     = cfg.get("apikey",     "").strip()
+    dados_usuario = _carregar_usuarios().get(usuario, {})
+    cfg = dados_usuario.get("whatsapp", {}) if isinstance(dados_usuario, dict) else {}
+    if not isinstance(cfg, dict):
+        cfg = {}
+    tel = cfg.get("telefone")
+    key = cfg.get("apikey")
+    tel = tel.strip() if isinstance(tel, str) else ""
+    key = key.strip() if isinstance(key, str) else ""
     ativo   = cfg.get("alertas_ativos", True)
 
     if not tel or not key:
@@ -363,8 +375,9 @@ def api_enviar_teste_whatsapp():
         })
 
     from extensions import _agora
+    from alertas_whatsapp import sitio_nome
     msg = (
-        f"🐄 *Sítio Santo Antonio*\n"
+        f"🐄 *{sitio_nome()}*\n"
         f"📤 Teste de notificação — {_agora().strftime('%d/%m/%Y %H:%M')}\n"
         f"✅ Sistema funcionando! Alertas {'ativos' if ativo else 'pausados'}."
     )
@@ -381,39 +394,32 @@ def api_enviar_alertas_familia():
     """
     import threading
 
+    import sitios
+    slug = sitios.atual()
+
     def _disparar():
+        from extensions import _trava_sitio
+        if not _trava_sitio.acquire(timeout=30):
+            app.logger.error("Não foi possível adquirir a trava do sítio para enviar WhatsApp.")
+            return
+        anterior = None
         try:
+            anterior = sitios.atual()
+            sitios.ativar(slug)
             from alertas_whatsapp import montar_alertas, montar_mensagem_alertas, enviar_para_familia
             alertas  = montar_alertas()
             msg      = montar_mensagem_alertas(alertas)
-            enviados = enviar_para_familia(msg)
-            app.logger.info(f"Alertas manuais enviados para {enviados} destinatário(s)")
-            return enviados
+            enviados = enviar_para_familia(msg, sitio=slug)
+            app.logger.info("[%s] Alertas manuais enviados para %s destinatário(s)", slug, enviados)
         except Exception as e:
             app.logger.error(f"Erro ao enviar alertas família: {e}")
-            return 0
-
-    # Executa em thread para responder imediatamente ao browser
-    resultado = {"enviados": 0, "erro": None}
-    ev = threading.Event()
-
-    def _run():
-        try:
-            resultado["enviados"] = _disparar()
-        except Exception as e:
-            resultado["erro"] = str(e)
         finally:
-            ev.set()
+            try:
+                if anterior is not None:
+                    sitios.ativar(anterior)
+            finally:
+                _trava_sitio.release()
 
-    t = threading.Thread(target=_run, daemon=True)
-    t.start()
-    if not ev.wait(timeout=30):   # aguarda até 30s para dar feedback real
-        # Ainda enviando (CallMeBot lento): antes caía no "nenhum WhatsApp configurado".
-        return jsonify({"ok": True, "enviados": None,
-                        "msg": "Enviando os alertas… pode levar alguns minutos para chegar."})
-    if resultado["erro"]:
-        return jsonify({"ok": False, "erro": resultado["erro"]})
-    if resultado["enviados"] == 0:
-        return jsonify({"ok": False, "erro": "Nenhum WhatsApp configurado ou nenhum usuário com alertas ativos."})
-    return jsonify({"ok": True, "enviados": resultado["enviados"],
-                    "msg": f"Alertas enviados para {resultado['enviados']} destinatário(s)!"})
+    threading.Thread(target=_disparar, daemon=True).start()
+    return jsonify({"ok": True, "enviados": None,
+                    "msg": "Envio iniciado. As mensagens podem levar alguns instantes para chegar."})

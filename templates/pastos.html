@@ -9,52 +9,81 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
 <style>
-  .mapa-shell { position:relative; }
+  .mapa-shell { position:relative; isolation:isolate; }
   #mapa { height:62vh; min-height:340px; border-radius:12px; transition:all .3s ease; }
   #mapa.mapa-oculto { display:none; height:0; }
-  .rotulo-pasto { background:rgba(0,0,0,.65); color:#fff; border:0; border-radius:8px; font-size:12px; line-height:1.3; text-align:center; box-shadow:none; }
-  .rotulo-pasto::before { display:none; }
+  .mapa-fab {
+    position:absolute; right:18px; bottom:18px; z-index:1000;
+    display:grid; place-items:center; width:62px; height:62px;
+    border:3px solid #fff; border-radius:50%;
+    background:#17834a; color:#fff; cursor:pointer;
+    box-shadow:0 4px 16px rgba(0,0,0,.36);
+    transition:transform .16s ease, background .16s ease;
+  }
+  .mapa-fab:hover { background:#11683b; transform:translateY(-2px); }
+  .mapa-fab.is-drawing { background:#b45309; }
+  .mapa-fab:focus-visible { outline:3px solid #f5b942; outline-offset:3px; }
+  .mapa-fab span { font-size:38px; line-height:1; font-weight:400; margin-top:-4px; }
+  .mapa-fab-label {
+    position:absolute; right:0; bottom:calc(100% + 8px); white-space:nowrap;
+    padding:5px 9px; border-radius:6px; background:#142a21; color:#fff;
+    font-size:12px; font-weight:700; opacity:0; pointer-events:none;
+    transform:translateY(3px); transition:opacity .16s ease, transform .16s ease;
+  }
+  .mapa-fab:hover .mapa-fab-label, .mapa-fab:focus-visible .mapa-fab-label {
+    opacity:1; transform:translateY(0);
+  }
+  .pasto-pin {
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    width:112px; cursor:pointer; filter:drop-shadow(0 3px 4px rgba(0,0,0,.45));
+  }
+  .pasto-pin-circulo {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    width:66px; height:66px; border:3px solid #fff; border-radius:50%;
+    background:var(--pasto-status,#64748b); color:#fff;
+    box-shadow:0 0 0 2px var(--pasto-status,#64748b), inset 0 1px 5px rgba(0,0,0,.14);
+  }
+  .pasto-pin-ganado { font-size:19px; line-height:1; filter:grayscale(1) brightness(0) invert(1); }
+  .pasto-pin-cabezas { font-size:21px; line-height:1.05; font-weight:900; font-variant-numeric:tabular-nums; }
+  .pasto-pin-cores { display:flex; align-items:center; justify-content:center; gap:3px; min-height:9px; }
+  .pasto-pin-cor { width:9px; height:9px; border:1px solid #fff; border-radius:50%;
+                   box-shadow:0 1px 3px rgba(0,0,0,.4); }
+  .pasto-pin-mais-cores { color:#fff; font-size:9px; line-height:1; font-weight:800;
+                          text-shadow:0 1px 3px #000; }
+  .pasto-pin-etiqueta {
+    max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    padding:3px 9px; border:1px solid rgba(255,255,255,.9); border-radius:999px;
+    background:#142a21; color:#fff; font-size:11px; line-height:1.2; font-weight:800;
+  }
+  .pasto-popup { min-width:150px; color:#26352c; }
+  .pasto-popup b { font-size:14px; }
+  .pasto-popup-status { display:inline-block; margin-top:5px; font-weight:800; }
+  .pasto-popup-titulo { margin:8px 0 4px; font-size:11px; color:#526258; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+  .pasto-popup-animais { list-style:none; margin:4px 0 0; padding:0; max-height:150px; overflow:auto; display:flex; flex-wrap:wrap; gap:5px; }
+  .pasto-brinco-badge { display:inline-block; padding:3px 7px; border:1px solid rgba(0,0,0,.16);
+                        border-radius:999px; font-size:11px; font-weight:800; font-variant-numeric:tabular-nums; }
   .pastos-tab { width:100%; border-collapse:collapse; font-size:13.5px; }
   .pastos-tab td, .pastos-tab th { padding:8px 6px; border-bottom:1px solid var(--border, #ddd); text-align:left; }
   .bol { display:inline-block; width:12px; height:12px; border-radius:50%; vertical-align:-1px; margin-right:4px; }
   .muted { color:var(--text-3); font-size:12px; }
   #novo-pasto { display:none; }
   .nv { font-weight:700; }
-  .nv-baixa { color:#e67e22; } .nv-ideal { color:#27ae60; } .nv-atencao { color:#f39c12; } .nv-lotado { color:#c0392b; }
+  .nv-baixa { color:#e67e22; } .nv-ideal { color:#17834a; } .nv-atencao { color:#e99b16; } .nv-lotado { color:#c0392b; }
 
   /* Legenda de lotação e brincos */
   .legenda-lotacao { display:flex; gap:16px; flex-wrap:wrap; padding:12px; background:var(--bg-2); border-radius:8px; margin-bottom:12px; }
   .legenda-item { display:flex; align-items:center; gap:8px; font-size:13px; }
   .legenda-item .bol { width:16px; height:16px; }
 
-  /* Marcador de animal em formato de brinco no mapa */
-  .marcador-brinco {
-    display: flex; flex-direction: column; align-items: center; cursor: pointer;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-  }
-  .brinco-etiqueta {
-    position: relative; width: 34px; height: 42px;
-    background: var(--cor-brinco, #ffe119);
-    border: 2px solid #fff; border-radius: 12px 12px 20px 20px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.25);
-  }
-  .brinco-numero {
-    font-size: 10px; font-weight: 800; color: #111; text-align: center;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30px;
-  }
-  .brinco-status-bolha {
-    position: absolute; top: -4px; right: -4px;
-    background: var(--cor-status, #e74c3c); color: #fff;
-    font-size: 9px; font-weight: 700; width: 16px; height: 16px;
-    border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    border: 1.5px solid #fff;
-  }
-
   /* ── Mobile responsivo (< 768px) ── */
   @media (max-width: 768px) {
     #mapa { height: 56vh; min-height: 300px; }
     .mapa-shell { margin-inline: -4px; }
+    .mapa-fab { right:calc(14px + env(safe-area-inset-right, 0px)); bottom:calc(18px + env(safe-area-inset-bottom, 0px)); width:58px; height:58px; }
+    .pasto-pin { width:96px; }
+    .pasto-pin-circulo { width:58px; height:58px; }
+    .pasto-pin-cabezas { font-size:19px; }
+    .pasto-pin-etiqueta { max-width:96px; font-size:10px; }
     .mapa-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
     .mapa-controls .btn { min-height: 44px; }
     .legenda-lotacao { gap: 8px; padding: 8px; }
@@ -77,7 +106,7 @@
     <button type="button" class="btn btn-outline btn-sm" id="btn-focar-pasto">🎯 Mostrar selecionado</button>
     {% endif %}
     <button type="button" class="btn btn-outline btn-sm" id="btn-abrir-kmz">📂 Importar KMZ</button>
-    <span class="muted mapa-text" style="align-self:center">Novo: toque ⬟ ou importe .kmz</span>
+    <span class="muted mapa-text" style="align-self:center">Use + no mapa para desenhar um pasto ou importe .kmz</span>
   </div>
 
   <form method="post" action="{{ url_for('importar_kmz') }}" enctype="multipart/form-data" id="form-kmz" style="display:none;margin-bottom:12px;padding:12px;background:var(--bg-2,#f8f9fa);border:1px dashed var(--accent,#4363d8);border-radius:8px">
@@ -95,20 +124,24 @@
 
   <div class="mapa-shell">
     <div id="mapa" aria-label="Mapa de satélite dos pastos"></div>
+    <button type="button" class="mapa-fab" id="btn-add-pasto" aria-label="Desenhar novo pasto" title="Desenhar novo pasto">
+      <span aria-hidden="true">+</span><span class="mapa-fab-label" aria-hidden="true">Novo pasto</span>
+    </button>
   </div>
 
-  <!-- Legenda de Lotação e Brincos -->
+  <!-- Legenda de lotação e cores dos pins -->
   <div class="legenda-lotacao">
     {% if capacidade %}
     <div class="legenda-item"><span class="bol" style="background:#e67e22"></span><span><b>Baixa</b> (&lt;50%)</span></div>
-    <div class="legenda-item"><span class="bol" style="background:#27ae60"></span><span><b>Ideal</b> (50-70%)</span></div>
-    <div class="legenda-item"><span class="bol" style="background:#f39c12"></span><span><b>Atenção</b> (70-100%)</span></div>
+    <div class="legenda-item"><span class="bol" style="background:#17834a"></span><span><b>Ideal</b> (50-70%)</span></div>
+    <div class="legenda-item"><span class="bol" style="background:#e99b16"></span><span><b>Atenção</b> (70-100%)</span></div>
     <div class="legenda-item"><span class="bol" style="background:#c0392b"></span><span><b>Lotado</b> (&gt;100%)</span></div>
     {% endif %}
-    <div class="legenda-item"><span class="bol" style="background:#ffe119; border:1px solid #333"></span><span><b>Brinco Animais</b> (Clique p/ ver detalhes)</span></div>
+    <div class="legenda-item"><span class="bol" style="background:#64748b"></span><span><b>Sem referência</b> de capacidade</span></div>
+    <div class="legenda-item"><span class="bol" style="background:#17834a"></span><span><b>Pin</b>: cabeças e código do pasto</span></div>
   </div>
 
-  <p class="muted" style="margin-top:6px">Mapa de satélite com marcadores de animais em tempo real.
+  <p class="muted" style="margin-top:6px">Lotação por pasto, com total de cabeças e identificação do lote.
     {% if sem_pasto.cab %}<b>{{ sem_pasto.cab }}</b> cabeça(s) ainda sem pasto.{% endif %}</p>
 
   <form method="post" action="{{ url_for('novo_pasto') }}" id="novo-pasto" style="margin-top:10px">
@@ -245,10 +278,27 @@
   L.control.layers({"Satélite (Esri)": esriSat, "Ruas (OSM)": osm}).addTo(map);
 
   const pastosCamadas = {};
-  const marcadoresAnimaisCamada = L.layerGroup().addTo(map);
+  const desenhosPendentes = L.featureGroup().addTo(map);
 
   // Carrega polígonos dos pastos
   const pastosData = {{ pastos | tojson | safe }};
+  if (L.drawLocal) {
+    L.drawLocal.draw.handlers.polygon.tooltip.start = "Toque no mapa para marcar o primeiro canto.";
+    L.drawLocal.draw.handlers.polygon.tooltip.cont = "Toque para marcar o próximo canto.";
+    L.drawLocal.draw.handlers.polygon.tooltip.end = "Toque no primeiro ponto para fechar o contorno.";
+  }
+  const coresLotacao = {
+    baixa: "#e67e22",
+    ideal: "#17834a",
+    atencao: "#e99b16",
+    lotado: "#c0392b"
+  };
+  const nomesLotacao = {
+    baixa: "Subutilizado",
+    ideal: "Ideal",
+    atencao: "No limite",
+    lotado: "Sobrecarga"
+  };
 
   function escaparHtml(valor) {
     return String(valor || '').replace(/[&<>"']/g, caractere => ({
@@ -256,41 +306,31 @@
     })[caractere]);
   }
 
-  function desenharAnimaisDeterministicos() {
-    pastosData.forEach(p => {
-      if (!p.geo || !p.geo.coordinates || !Array.isArray(p.geo.coordinates[0])
-          || !p.geo.coordinates[0].length || !Array.isArray(p.animais_dados)
-          || !p.animais_dados.length) return;
-      const coords = p.geo.coordinates[0];
-      const centro = Array.isArray(p.centroid) && p.centroid.length === 2
-        ? p.centroid
-        : [
-            coords.reduce((total, ponto) => total + Number(ponto[1] || 0), 0) / coords.length,
-            coords.reduce((total, ponto) => total + Number(ponto[0] || 0), 0) / coords.length
-          ];
-      const [latC, lngC] = centro;
-      p.animais_dados.forEach((animal, animalIndex) => {
-        const angulo = (animalIndex / p.animais_dados.length) * 2 * Math.PI;
-        const raio = 0.00012 * Math.sqrt(animalIndex + 1);
-        const latFinal = latC + raio * Math.cos(angulo);
-        const lngFinal = lngC + raio * Math.sin(angulo);
-        const corFundo = /^#[0-9a-f]{6}$/i.test(animal.cor || '') ? animal.cor : '#ffe119';
-        const brincoNum = escaparHtml(animal.brinco || animal.id || '—');
-        const nomePasto = escaparHtml(p.nome);
-        const htmlIcon = `
-          <div class="marcador-brinco">
-            <div class="brinco-etiqueta" style="--cor-brinco: ${corFundo}">
-              <div class="brinco-status-bolha">🐄</div>
-              <div class="brinco-numero">${brincoNum}</div>
-            </div>
-          </div>
-        `;
-        const customIcon = L.divIcon({ className: '', html: htmlIcon, iconSize: [34, 42], iconAnchor: [17, 42] });
-        const m = L.marker([latFinal, lngFinal], { icon: customIcon });
-        m.bindPopup(`<b>🏷️ Brinco: ${brincoNum}</b><br>Pasto: ${nomePasto}`);
-        marcadoresAnimaisCamada.addLayer(m);
-      });
-    });
+  function corDoPasto(p) {
+    return coresLotacao[p.nivel] || "#64748b";
+  }
+
+  function popupDoPasto(p) {
+    const nome = escaparHtml(p.nome);
+    const codigo = escaparHtml(p.id);
+    const nivel = nomesLotacao[p.nivel] || "Sem referência de capacidade";
+    const uaHa = p.ua_ha !== null && p.ua_ha !== undefined && Number.isFinite(Number(p.ua_ha))
+      ? `${Number(p.ua_ha).toFixed(2).replace(".", ",")} UA/ha`
+      : "UA/ha não disponível";
+    const animais = Array.isArray(p.animais_dados) ? p.animais_dados : [];
+    const lista = animais.map(animal => {
+      const cor = /^#[0-9a-f]{6}$/i.test(animal.cor || "") ? animal.cor : "#64748b";
+      const texto = /^#[0-9a-f]{6}$/i.test(animal.cor_texto || "") ? animal.cor_texto : "#ffffff";
+      return `<li><span class="pasto-brinco-badge" title="${escaparHtml(animal.cor_nome || "Cor não informada")}" ` +
+        `style="background:${cor};color:${texto}">${escaparHtml(animal.brinco || animal.id || "Animal")}</span></li>`;
+    }).join("");
+    const semBrinco = Math.max(0, (Number(p.cab) || 0) - animais.length);
+    return `<div class="pasto-popup"><b>${nome}</b> <span>(${codigo})</span>` +
+      `<br>${Number(p.cab) || 0} cabeças · ${Number(p.area || 0).toFixed(1).replace(".", ",")} ha` +
+      `<br>${uaHa}<br><span class="pasto-popup-status" style="color:${corDoPasto(p)}">${escaparHtml(nivel)}</span>` +
+      `<div class="pasto-popup-titulo">Brincos cadastrados (${animais.length})</div>` +
+      (lista ? `<ul class="pasto-popup-animais">${lista}</ul>` : "<span>Nenhum brinco localizado neste pasto.</span>") +
+      (semBrinco ? `<div class="muted">${semBrinco} cabeça(s) sem brinco cadastrado</div>` : "") + "</div>";
   }
 
   if (pastosData && pastosData.length > 0) {
@@ -298,27 +338,45 @@
     pastosData.forEach(p => {
       if (p.geo) {
         const coords = p.geo.coordinates[0].map(c => [c[1], c[0]]); // [lat, lng]
+        const corStatus = corDoPasto(p);
         const poly = L.polygon(coords, {
-          color: p.cor || '#3388ff',
-          weight: 3,
-          fillOpacity: 0.25
+          color: corStatus,
+          weight: 4,
+          opacity: 0.95,
+          fillColor: corStatus,
+          fillOpacity: 0.24
         }).addTo(map);
 
-        poly.bindPopup(`<b>${p.nome}</b><br>Área: ${p.area} ha<br>Cabeças: ${p.cab}`);
+        poly.bindPopup(popupDoPasto(p));
 
-        if (p.centroid) {
-          const marker = L.marker([p.centroid[0], p.centroid[1]], {
-            icon: L.divIcon({
-              className: 'rotulo-pasto',
-              html: `<b>${p.nome}</b><br>${p.cab} cab`,
-              iconSize: [80, 36],
-              iconAnchor: [40, 18]
-            })
-          }).addTo(map);
-          pastosCamadas[p.id] = { poly, marker, centroid: p.centroid };
-        } else {
-          pastosCamadas[p.id] = { poly };
-        }
+        const centro = Array.isArray(p.centroid) && p.centroid.length === 2
+          ? p.centroid
+          : poly.getBounds().getCenter();
+        const animais = Array.isArray(p.animais_dados) ? p.animais_dados : [];
+        const coresPresentes = [...new Map(animais
+          .filter(animal => /^#[0-9a-f]{6}$/i.test(animal.cor || ""))
+          .map(animal => [animal.cor, animal.cor_nome || "Cor do brinco"])).entries()];
+        const indicadoresCor = coresPresentes.slice(0, 5).map(([cor, nome]) =>
+          `<span class="pasto-pin-cor" style="background:${cor}" title="${escaparHtml(nome)}"></span>`
+        ).join("");
+        const maisCores = coresPresentes.length > 5
+          ? `<span class="pasto-pin-mais-cores">+${coresPresentes.length - 5}</span>` : "";
+        const htmlPin = `<div class="pasto-pin" style="--pasto-status:${corStatus}">` +
+          `<span class="pasto-pin-circulo"><span class="pasto-pin-ganado" aria-hidden="true">🐄</span>` +
+          `<span class="pasto-pin-cabezas">${Number(p.cab) || 0}</span></span>` +
+          `<span class="pasto-pin-cores" aria-label="${coresPresentes.length} cores de brinco">${indicadoresCor}${maisCores}</span>` +
+          `<span class="pasto-pin-etiqueta">${escaparHtml(p.id)} · ${escaparHtml(p.nome)}</span></div>`;
+        const marker = L.marker(centro, {
+          title: `${p.nome}: ${Number(p.cab) || 0} cabeças`,
+          icon: L.divIcon({
+            className: "",
+            html: htmlPin,
+            iconSize: [112, 100],
+            iconAnchor: [56, 50]
+          })
+        }).addTo(map);
+        marker.bindPopup(popupDoPasto(p));
+        pastosCamadas[p.id] = { poly, marker, centroid: centro };
         bounds.extend(poly.getBounds());
       }
     });
@@ -326,8 +384,6 @@
       map.fitBounds(bounds, { padding: [30, 30] });
     }
   }
-
-  desenharAnimaisDeterministicos();
 
   // Botões de ação do mapa
   document.querySelectorAll(".btn-ver-mapa").forEach(btn => {
@@ -340,7 +396,7 @@
         } else if (item.poly) {
           map.fitBounds(item.poly.getBounds());
         }
-        item.poly.openPopup();
+        item.marker ? item.marker.openPopup() : item.poly.openPopup();
       }
     });
   });
@@ -356,7 +412,7 @@
         } else {
           map.fitBounds(item.poly.getBounds());
         }
-        item.poly.openPopup();
+        item.marker ? item.marker.openPopup() : item.poly.openPopup();
       }
     });
   }
@@ -374,8 +430,51 @@
   document.getElementById("btn-toggle-mapa")?.addEventListener("click", () => {
     const mapaEl = document.getElementById("mapa");
     mapaEl.classList.toggle("mapa-oculto");
+    if (botaoAdicionarPasto) botaoAdicionarPasto.hidden = mapaEl.classList.contains("mapa-oculto");
     document.getElementById("btn-toggle-mapa").textContent = mapaEl.classList.contains("mapa-oculto") ? "👁️ Mostrar" : "👁️ Ocultar";
     setTimeout(() => map.invalidateSize(), 300);
+  });
+
+  const formularioPasto = document.getElementById("novo-pasto");
+  const campoContorno = document.getElementById("contorno");
+  const campoNomePasto = formularioPasto.querySelector('[name="nome"]');
+  const desenhadorPasto = new L.Draw.Polygon(map, {
+    allowIntersection: false,
+    showArea: true,
+    shapeOptions: { color: "#17834a", weight: 3, fillOpacity: 0.22 }
+  });
+
+  const botaoAdicionarPasto = document.getElementById("btn-add-pasto");
+  botaoAdicionarPasto?.addEventListener("click", () => {
+    if (desenhadorPasto.enabled()) {
+      desenhadorPasto.disable();
+    } else {
+      desenhadorPasto.enable();
+    }
+  });
+  map.on("draw:drawstart", () => {
+    botaoAdicionarPasto?.classList.add("is-drawing");
+    botaoAdicionarPasto?.setAttribute("aria-pressed", "true");
+  });
+  map.on("draw:drawstop", () => {
+    botaoAdicionarPasto?.classList.remove("is-drawing");
+    botaoAdicionarPasto?.setAttribute("aria-pressed", "false");
+  });
+
+  map.on(L.Draw.Event.CREATED, evento => {
+    desenhosPendentes.clearLayers();
+    desenhosPendentes.addLayer(evento.layer);
+    campoContorno.value = JSON.stringify(evento.layer.toGeoJSON().geometry);
+    formularioPasto.style.display = "block";
+    formularioPasto.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    campoNomePasto.focus({ preventScroll: true });
+  });
+
+  document.getElementById("cancelar-novo")?.addEventListener("click", () => {
+    formularioPasto.reset();
+    campoContorno.value = "";
+    formularioPasto.style.display = "none";
+    desenhosPendentes.clearLayers();
   });
 
   // Toggle visibilidade de pastos individuais

@@ -74,7 +74,7 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 | `calculos.py` | **Motor financeiro** (CMP, GPCab, CTCab, resultado por membro, resumo) |
 | `routes_*.py` | Rotas por área (registros, visitas, relatórios, api, usuários, auth…) |
 | `relatorios.py` / `exportar.py` | Geração de relatórios e exportação |
-| `alertas_whatsapp.py` | Notificações via CallMeBot: Task diária só com urgentes (sem repetir), resumo semanal na segunda com "Na semana"; preferências por pessoa (`receber` em `usuarios.json`: urgentes/semanal/visita/eventos/mensal/valores); fila de avisos (`avisos_pendentes.json`) de visita e de Morte/Nascimento (`avisar_manejo`). Testes nunca enviam (fixture autouse no `conftest`) |
+| `alertas_whatsapp.py` | Notificações via CallMeBot: Task diária só com urgentes (sem repetir), resumo semanal na segunda com "Na semana"; preferências por pessoa (`receber` em `usuarios.json`: urgentes/semanal/visita/eventos/mensal/valores); fila atômica de avisos (`avisos_pendentes.json`) com nova tentativa só para destinatários que falharam e preservação de arquivo inválido em quarentena. Testes nunca enviam (fixture autouse no `conftest`) |
 | `saude.py` | Calendário sanitário (Triângulo Mineiro): vacina por tipo, campanha de brucelose, vermifugação 5-7-9 — fonte única p/ painel, calendário e WhatsApp |
 | `backup_automatico.py` | Backup diário (Task do PythonAnywhere) |
 | `resumo_mensal.py` | Resumo do mês no WhatsApp no dia 1º (Task diária; `--teste` só mostra) |

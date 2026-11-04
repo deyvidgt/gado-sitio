@@ -8,6 +8,9 @@
   .brinco-grande { width:84px; height:84px; border-radius:50% 50% 50% 8px; display:flex; align-items:center;
                    justify-content:center; font-size:30px; font-weight:700; border:3px solid rgba(0,0,0,.2);
                    box-shadow:var(--shadow); flex:none; }
+  .brinco-identidade { display:inline-block; padding:3px 9px; border-radius:8px; font-size:.84em;
+                       line-height:1.25; vertical-align:middle; font-family:inherit; font-weight:800;
+                       font-variant-numeric:tabular-nums; }
   .ficha-top h2 { font-family:'Playfair Display',serif; font-size:24px; color:var(--green-700); }
   .tag-status { display:inline-block; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:600; }
   .st-Vivo { background:var(--green-100); color:var(--green-700); }
@@ -45,11 +48,11 @@
   <img class="foto-principal" src="{{ url_for('foto_mini', id_foto=principal.id_foto) }}" alt="Foto de {{ a.brinco }}"
        data-foto="{{ principal.id_foto }}">
   {% endif %}
-  <div class="brinco-grande" style="background:{{ a.hex }};color:{{ '#222' if a.cor in ['Amarelo','Branco','Rosa','Laranja'] else '#fff' }}">
+  <div class="brinco-grande" style="background:{{ a.hex }};color:{{ a.texto_hex }}" aria-label="Brinco {{ a.brinco }}">
     {{ '%02d' % a.num if a.num is not none else '??' }}
   </div>
   <div>
-    <h2>{{ a.brinco }} · {{ a.categoria or 'Animal' }}</h2>
+    <h2><span class="brinco-identidade" style="background:{{ a.hex }};color:{{ a.texto_hex }}">{{ a.brinco }}</span> · {{ a.categoria or 'Animal' }}</h2>
     <div style="margin-top:4px">
       <span class="tag-status st-{{ a.status }}">{{ a.status }}{% if a.saida %} em {{ a.saida }}{% endif %}</span>
       <span class="muted">&nbsp;#{{ a.id }}</span>

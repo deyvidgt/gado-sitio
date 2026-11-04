@@ -79,7 +79,8 @@ def _rendimento() -> float:
 def _linha_animal(a, hoje):
     return {"id": a["ID"], "cor": a["Brinco Cor"], "num": a["Brinco Nº"],
             "brinco": A.fmt_brinco(a["Brinco Cor"], a["Brinco Nº"]),
-            "hex": A.COR_HEX.get(a["Brinco Cor"], "#999"),
+            "hex": A.hex_cor_brinco(a["Brinco Cor"]),
+            "texto_hex": A.cor_texto_brinco(a["Brinco Cor"]),
             "dono": a["Dono"], "categoria": a["Categoria"], "sexo": a["Sexo"],
             "raca": a["Raça"], "pelagem": a["Pelagem"], "sinais": a["Sinais"],
             "idade": A.idade_txt(a["Nascimento"], hoje), "origem": a["Origem"],

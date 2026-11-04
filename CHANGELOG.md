@@ -10,9 +10,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - **Aplicações de insumos em pastagens:** histórico por pasto com custo/ha; cada aplicação lança atomicamente um gasto vinculado na aba Gastos.
 - **Orçamento e contas futuras:** comparação anual previsto vs. realizado por mês/categoria, contas a pagar/receber e lembrete de vencimentos na Comercialização. Marcar uma conta como paga/recebida não cria um lançamento real.
 - **Busca e voz globais:** a busca rápida encontra registros em todas as abas da planilha, telas e subpáginas disponíveis; o cabeçalho também permite ditar a busca. O comando de voz entende pedidos para buscar ou abrir telas e mostra links para os resultados. Os microfones dos formulários agora preenchem texto, número, data, lista e opções, sem enviar o formulário nem gravar automaticamente.
+- **Pins e brincos no mapa de pastos:** pins circulares mostram o total de cabeças, o status de lotação e as cores dos brincos presentes; ao tocar, exibem a lista completa de brincos cadastrados. A criação do pasto também pode ser iniciada pelo botão flutuante do mapa.
+- **Brincos consistentes nas telas de animais:** cabeçalhos, cartões e tabela exibem o nome e número do brinco sobre o fundo da sua cor identificadora, com contraste de texto calculado para leitura.
 
 ### Corrigido
 
+- **WhatsApp mais confiável:** a fila é protegida por trava e gravação atômica; avisos com falha ficam pendentes para nova tentativa após 15 minutos, sem reenviar para quem já recebeu. Filas inválidas são preservadas em quarentena. A tela de lembretes agora mostra as preferências reais e o conteúdo/data reais da fila; validações de telefone e opções evitam configurações ambíguas.
+- **WhatsApp por sítio:** o teste usa o nome do sítio atual, e o envio manual da família captura e restaura o sítio correto ao rodar em segundo plano.
 - **Exclusão de cochos:** a rota agora remove fisicamente a linha pelo ID normalizado, salva a aba com segurança e atualiza o painel lendo novamente do Excel.
 - **IDs duplicados em Cochos:** a listagem mantém apenas o registro mais recente por ID, e o cadastro rejeita IDs já existentes e limpa duplicatas antigas ao salvar.
 - **Botão flutuante de Cochos:** elevado acima da navegação e reposicionado a 30 px das bordas.
