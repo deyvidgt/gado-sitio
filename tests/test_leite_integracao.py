@@ -70,6 +70,19 @@ def test_navegacao_contextual_de_subpaginas(cliente):
         assert f'data-leite-back-url="{destino}"' in resposta.get_data(as_text=True)
 
 
+def test_botoes_de_ordenha_e_medicao_com_css_visivel_e_elevado(cliente):
+    leite = cliente.get("/leite/saude").get_data(as_text=True)
+    assert 'class="btn btn-registrar-ordenha"' in leite
+    assert "background: #28a745" in leite
+    assert "color: #fff" in leite
+    assert "font-weight: 700" in leite
+
+    medicacoes = cliente.get("/medicacoes").get_data(as_text=True)
+    assert "bottom: calc(72px + env(safe-area-inset-bottom, 0px))" in medicacoes
+    assert "z-index: 1050" in medicacoes
+    assert ".fab-container { position: fixed; bottom: calc(72px + env(safe-area-inset-bottom, 0px))" in leite
+
+
 def test_script_de_gesto_tem_regras_de_segurança():
     from pathlib import Path
     script = Path("static/leite_nav.js").read_text(encoding="utf-8")

@@ -503,9 +503,9 @@ def api_ultima_visita():
 @login_required
 def api_busca():
     """Busca rápida global: GET /api/busca?q=termo&tipo=animal"""
-    q = request.args.get("q", "").strip()
+    q = request.args.get("q", "").strip()[:80]
     tipo = request.args.get("tipo", "").strip() or None
-    resultados = buscar_global(q, tipo)
+    resultados = buscar_global(q, tipo, dados=_get_dados_cache())
     return jsonify({"resultados": resultados})
 
 

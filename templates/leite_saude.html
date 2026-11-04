@@ -7,6 +7,18 @@
 {% set leite_voltar_url = url_for('painel_leite') %}
 {% set leite_voltar_label = 'Painel do leite' %}
 {% include '_leite_nav.html' %}
+<style>
+  .btn-registrar-ordenha {
+    background: #28a745;
+    color: #fff;
+    font-weight: 700;
+  }
+  .btn-registrar-ordenha:hover,
+  .btn-registrar-ordenha:focus-visible {
+    background: #218838;
+    color: #fff;
+  }
+</style>
 <h1>🏥 Saúde do Leite — Controle de Mastite</h1>
 
 <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:20px;">
@@ -96,7 +108,7 @@
 <!-- Links Úteis -->
 <div style="margin-top:20px;text-align:center;">
   <a href="{{ url_for('painel_leite') }}" class="btn" style="display:inline-block;">← Voltar ao Painel</a>
-  <a href="{{ url_for('ordenha_leite') }}" class="btn" style="display:inline-block;background:var(--green-600);">📝 Registrar Ordenha</a>
+  <a href="{{ url_for('ordenha_leite') }}" class="btn btn-registrar-ordenha" style="display:inline-block;">📝 Registrar Ordenha</a>
 </div>
 
 {% endblock %}

@@ -85,7 +85,7 @@
 </div>
 
 <!-- BOTÃO FLUTUANTE -->
-<div style="position: fixed; bottom: 28px; right: 28px; z-index: 50;">
+<div style="position: fixed; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); right: 28px; z-index: 1050;">
   <a href="{{ url_for('registrar_medicacao') }}"
      style="display: flex; align-items: center; justify-content: center;
              width: 56px; height: 56px; border-radius: 50%;

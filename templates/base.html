@@ -203,28 +203,34 @@
       align-items: center;
       gap: 8px;
       position: relative;
-      width: 100%;
-      z-index: 999;
+      flex: 1;
+      min-width: 100px;
+      max-width: 520px;
+      z-index: 1002;
     }
 
     .search-input {
       display: block !important;
+      width: 100%;
+      min-height: 40px;
       padding: 8px 12px;
       border: 1.5px solid var(--border);
-      border-radius: 6px;
+      border-radius: 10px;
       font-size: 13px;
       background: var(--bg-secondary);
       color: var(--text-primary);
       outline: none;
       transition: all 0.2s;
       flex: 1;
-      min-width: 100px;
+      min-width: 0;
       box-sizing: border-box;
     }
 
     #search-btn {
       display: none;
-      padding: 8px 14px;
+      min-width: 40px;
+      min-height: 40px;
+      padding: 8px 12px;
       background: var(--green-600);
       color: white;
       border: none;
@@ -249,6 +255,7 @@
     .search-input:focus {
       border-color: var(--green-600);
       background: var(--bg-primary);
+      box-shadow: 0 0 0 3px rgba(82,160,68,.16);
     }
 
     .search-input::placeholder {
@@ -256,25 +263,29 @@
     }
 
     .search-dropdown {
-      display: none !important;
+      display: block;
       position: absolute;
-      top: 100%;
+      top: calc(100% + 4px);
       left: 0;
       right: 0;
-      max-height: 50vh;
+      max-height: min(60vh, 480px);
       background: var(--bg-primary);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 10px;
       overflow-y: auto;
-      z-index: 1000;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      margin-top: 4px;
+      z-index: 1100;
+      box-shadow: 0 10px 28px rgba(0,0,0,.2);
+    }
+
+    .search-dropdown[hidden] {
+      display: none;
     }
 
     .search-result {
       display: flex !important;
       align-items: center;
-      padding: 12px 14px;
+      min-height: 54px;
+      padding: 9px 14px;
       border-bottom: 1px solid var(--border);
       color: inherit;
       text-decoration: none;
@@ -288,6 +299,13 @@
 
     .search-result:hover {
       background: var(--bg-secondary);
+    }
+
+    .search-result[aria-selected="true"] {
+      background: var(--green-50);
+    }
+    [data-theme="dark"] .search-result[aria-selected="true"] {
+      background: rgba(144,201,127,.14);
     }
 
     .search-result-icon {
@@ -317,6 +335,19 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+    .search-result-type {
+      flex-shrink: 0;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-size: 10px;
+    }
+    .search-message {
+      padding: 12px 14px;
+      color: var(--text-secondary);
+      font-size: 12px;
     }
 
     /* Flash */
@@ -626,11 +657,11 @@
     }
 
     /* ── Botão Flutuante (FAB) ─────────────────────────────────────────────── */
-    .fab-container { position: fixed; bottom: 28px; right: 28px; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; z-index: 50; }
+    .fab-container { position: fixed; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); right: 28px; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; z-index: 1050; }
     .fab-primary { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--green-600), var(--green-700)); color: #fff; border: none; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.2); display: flex; align-items: center; justify-content: center; transition: all .2s; text-decoration: none; }
     .fab-primary:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(0,0,0,.25); }
     .fab-primary:active { transform: scale(0.95); }
-    @media (max-width: 768px) { .fab-container { bottom: 20px; right: 20px; } .fab-primary { width: 48px; height: 48px; font-size: 20px; } }
+    @media (max-width: 768px) { .fab-container { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); right: 20px; } .fab-primary { width: 48px; height: 48px; font-size: 20px; } }
 
     /* ── Seções Colapsáveis (Details) ──────────────────────────────────────── */
     details { margin-bottom: 20px; }
@@ -702,10 +733,13 @@
 
     <!-- Busca Rápida Global -->
     <div id="search-container" style="margin:0 12px;">
-      <input type="text" id="search-input" class="search-input" placeholder="🔍 Procurar…"
-             aria-label="Busca rápida global" autocomplete="off">
+      <input type="search" id="search-input" class="search-input"
+             placeholder="Buscar animal, registro ou tela…"
+             aria-label="Busca rápida global" aria-autocomplete="list"
+             aria-controls="search-dropdown" aria-expanded="false" aria-haspopup="listbox"
+             role="combobox" autocomplete="off">
       <button type="button" id="search-btn" aria-label="Executar busca" title="Buscar (Enter)">🔎</button>
-      <div id="search-dropdown" class="search-dropdown"></div>
+      <div id="search-dropdown" class="search-dropdown" role="listbox" aria-live="polite" hidden></div>
     </div>
 
     <div class="header-right">
@@ -1003,111 +1037,232 @@ function dispensarInstall() {
   if (b) b.remove();
 }
 
-// Busca rápida global com debounce e Enter imediato
+// Busca rápida global
 (function() {
   const input = document.getElementById('search-input');
   const btn = document.getElementById('search-btn');
   const dropdown = document.getElementById('search-dropdown');
-  let debounceTimer;
-  const cacheKey = 'gado-search-cache';
+  if (!input || !btn || !dropdown) return;
+
+  let debounceTimer = null;
+  let abortController = null;
+  let requestId = 0;
+  let selectedIndex = -1;
+  let displayedQuery = '';
+  let resultLinks = [];
+  const cacheKey = 'gado-search-cache-v2';
+  const cacheTtl = 60 * 1000;
 
   function updateButtonVisibility() {
-    if (input.value.trim().length > 0) {
-      btn.style.display = 'block';
-    } else {
-      btn.style.display = 'none';
-      dropdown.style.display = 'none';
-    }
+    btn.style.display = input.value.trim() ? 'block' : 'none';
+    if (!input.value.trim()) fecharSugestoes();
+  }
+
+  function fecharSugestoes() {
+    dropdown.hidden = true;
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    selectedIndex = -1;
+    resultLinks = [];
+  }
+
+  function mostrarMensagem(mensagem, erro) {
+    dropdown.replaceChildren();
+    const item = document.createElement('div');
+    item.className = 'search-message';
+    item.setAttribute('role', 'option');
+    item.setAttribute('aria-disabled', 'true');
+    item.textContent = mensagem;
+    if (erro) item.style.color = 'var(--danger)';
+    dropdown.appendChild(item);
+    dropdown.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+    input.removeAttribute('aria-activedescendant');
+    selectedIndex = -1;
+    resultLinks = [];
   }
 
   function showResults(resultados) {
     if (!resultados.length) {
-      dropdown.innerHTML = '<div style="padding:10px 12px;color:var(--text-secondary);font-size:12px;">Nenhum resultado encontrado</div>';
-      dropdown.style.display = 'block';
+      mostrarMensagem('Nenhum resultado encontrado. Tente outro termo.');
       return;
     }
-    dropdown.innerHTML = resultados.map(r => `
-      <a href="${r.link}" class="search-result" style="text-decoration:none;color:inherit;">
-        <div class="search-result-icon">${r.icone}</div>
-        <div class="search-result-text">
-          <div class="search-result-title">${esc(r.titulo)}</div>
-          <div class="search-result-sub">${esc(r.subtitulo)}</div>
-        </div>
-      </a>
-    `).join('');
-    dropdown.style.display = 'block';
+    dropdown.replaceChildren();
+    resultLinks = [];
+    resultados.forEach((resultado, indice) => {
+      const link = document.createElement('a');
+      const destino = new URL(resultado.link, window.location.origin);
+      if (destino.origin !== window.location.origin) return;
+      link.href = destino.href;
+      link.className = 'search-result';
+      link.id = `search-result-${indice}`;
+      link.setAttribute('role', 'option');
+      link.setAttribute('aria-selected', 'false');
+
+      const icone = document.createElement('span');
+      icone.className = 'search-result-icon';
+      icone.textContent = resultado.icone || '🔎';
+      const texto = document.createElement('span');
+      texto.className = 'search-result-text';
+      const titulo = document.createElement('span');
+      titulo.className = 'search-result-title';
+      titulo.textContent = resultado.titulo || '';
+      const subtitulo = document.createElement('span');
+      subtitulo.className = 'search-result-sub';
+      subtitulo.textContent = resultado.subtitulo || '';
+      texto.append(titulo, subtitulo);
+      const tipo = document.createElement('span');
+      tipo.className = 'search-result-type';
+      tipo.textContent = ({
+        animal: 'Animal', tarefa: 'Tarefa', evento: 'Manejo',
+        registro: 'Registro', aba: 'Tela'
+      })[resultado.tipo] || 'Resultado';
+      link.append(icone, texto, tipo);
+      dropdown.appendChild(link);
+      resultLinks.push(link);
+    });
+    dropdown.hidden = resultLinks.length === 0;
+    input.setAttribute('aria-expanded', String(resultLinks.length > 0));
+    displayedQuery = input.value.trim();
+    selectedIndex = -1;
   }
 
-  function buscar(termo) {
-    const cache = JSON.parse(sessionStorage.getItem(cacheKey) || '{}');
-    if (cache[termo]) {
-      showResults(cache[termo]);
-      return;
-    }
-
-    if (!termo || termo.length < 2) {
-      dropdown.style.display = 'none';
-      return;
-    }
-
-    fetch(`/api/busca?q=${encodeURIComponent(termo)}`)
-      .then(r => r.json())
-      .then(data => {
-        cache[termo] = data.resultados;
-        sessionStorage.setItem(cacheKey, JSON.stringify(cache));
-        showResults(data.resultados);
-      })
-      .catch(() => {
-        dropdown.innerHTML = '<div style="padding:10px 12px;color:var(--red-600);font-size:12px;">Erro na busca</div>';
-        dropdown.style.display = 'block';
+  function lerCache() {
+    try {
+      const cache = JSON.parse(sessionStorage.getItem(cacheKey) || '{}');
+      const agora = Date.now();
+      Object.keys(cache).forEach(chave => {
+        const entrada = cache[chave];
+        if (!entrada || typeof entrada.hora !== 'number'
+            || !Array.isArray(entrada.resultados) || agora - entrada.hora > cacheTtl) {
+          delete cache[chave];
+        }
       });
+      return cache;
+    } catch (erro) {
+      return {};
+    }
   }
 
-  function buscarENavegar() {
+  function guardarCache(cache, termo, resultados) {
+    cache[termo] = { hora: Date.now(), resultados };
+    const chaves = Object.keys(cache);
+    chaves.slice(0, Math.max(0, chaves.length - 30)).forEach(chave => delete cache[chave]);
+    try {
+      sessionStorage.setItem(cacheKey, JSON.stringify(cache));
+    } catch (erro) {
+      // Sugestões funcionam mesmo quando o navegador bloqueia o armazenamento.
+    }
+  }
+
+  async function buscar(termo) {
+    const consulta = termo.trim();
+    if (consulta.length < 2) {
+      mostrarMensagem('Digite pelo menos 2 caracteres para buscar.');
+      return [];
+    }
+    const cache = lerCache();
+    const chave = consulta.toLocaleLowerCase('pt-BR');
+    if (cache[chave]) {
+      showResults(cache[chave].resultados);
+      return cache[chave].resultados;
+    }
+
+    if (abortController) abortController.abort();
+    abortController = new AbortController();
+    const idRequisicao = ++requestId;
+    mostrarMensagem('Buscando…');
+    try {
+      const resposta = await fetch(`/api/busca?q=${encodeURIComponent(consulta)}`, {
+        signal: abortController.signal,
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!resposta.ok) throw new Error(`Busca indisponível (${resposta.status}).`);
+      const dados = await resposta.json();
+      const resultados = Array.isArray(dados.resultados) ? dados.resultados : [];
+      if (idRequisicao !== requestId || input.value.trim() !== consulta) return [];
+      guardarCache(cache, chave, resultados);
+      showResults(resultados);
+      return resultados;
+    } catch (erro) {
+      if (erro.name === 'AbortError') return [];
+      if (idRequisicao === requestId) mostrarMensagem('Não foi possível buscar. Tente novamente.', true);
+      return [];
+    }
+  }
+
+  async function buscarENavegar() {
     clearTimeout(debounceTimer);
     const termo = input.value.trim();
-    if (!termo || termo.length < 2) {
-      dropdown.style.display = 'none';
+    if (selectedIndex >= 0 && resultLinks[selectedIndex]) {
+      window.location.href = resultLinks[selectedIndex].href;
       return;
     }
-    buscar(termo);
-    // Navega para primeiro resultado em 100ms
-    setTimeout(() => {
-      const link = dropdown.querySelector('.search-result');
-      if (link) window.location.href = link.href;
-    }, 100);
+    const resultados = termo === displayedQuery ? resultLinks : await buscar(termo);
+    if (resultados && resultados.length) {
+      const destino = resultados[0].href || resultados[0].link;
+      window.location.href = new URL(destino, window.location.origin).href;
+    }
   }
 
-  // Digitar: debounce 200ms para listar resultados
+  function selecionar(indice) {
+    if (!resultLinks.length) return;
+    selectedIndex = (indice + resultLinks.length) % resultLinks.length;
+    resultLinks.forEach((link, i) => link.setAttribute('aria-selected', String(i === selectedIndex)));
+    input.setAttribute('aria-activedescendant', resultLinks[selectedIndex].id);
+  }
+
   input.addEventListener('input', (e) => {
     updateButtonVisibility();
     clearTimeout(debounceTimer);
+    if (abortController) abortController.abort();
+    fecharSugestoes();
     const termo = e.target.value.trim();
-    debounceTimer = setTimeout(() => buscar(termo), 200);
+    if (!termo) return;
+    debounceTimer = setTimeout(() => buscar(termo), 250);
   });
 
-  // Enter: busca imediata (sem debounce) e navega
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'ArrowDown' && resultLinks.length) {
+      e.preventDefault();
+      selecionar(selectedIndex + 1);
+    } else if (e.key === 'ArrowUp' && resultLinks.length) {
+      e.preventDefault();
+      selecionar(selectedIndex < 0 ? resultLinks.length - 1 : selectedIndex - 1);
+    } else if (e.key === 'Escape') {
+      fecharSugestoes();
+    } else if (e.key === 'Enter') {
       e.preventDefault();
       buscarENavegar();
     }
   });
 
-  // Botão: busca imediata (sem debounce) e navega
   btn.addEventListener('click', (e) => {
     e.preventDefault();
     buscarENavegar();
   });
 
-  // Fechar ao clicar fora
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('#search-container')) {
-      dropdown.style.display = 'none';
+  input.addEventListener('focus', () => {
+    if (input.value.trim().length >= 2 && dropdown.childElementCount) {
+      dropdown.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
     }
   });
 
-  // Inicializar botão
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      input.focus();
+      input.select();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#search-container')) {
+      fecharSugestoes();
+    }
+  });
+
   updateButtonVisibility();
 })();
 

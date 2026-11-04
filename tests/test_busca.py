@@ -3,6 +3,7 @@
 """
 Testes da busca rápida global (v5.6)
 """
+import pandas as pd
 import pytest
 from busca import buscar_global
 
@@ -79,3 +80,56 @@ def test_api_busca_com_tipo(cliente):
     data = rv.get_json()
     for r in data["resultados"]:
         assert r["tipo"] == "animal"
+
+
+def test_busca_sem_acento_e_com_varias_palavras(monkeypatch):
+    animais_df = pd.DataFrame([{
+        "ID": "A0001", "Brinco Cor": "Amarelo", "Brinco Nº": 21,
+        "Nome": "Estrela", "Categoria": "Vaca", "Sexo": "Fêmea",
+        "Raça": "Nelore", "Pelagem": "", "Dono": "Geane", "Status": "Ativo",
+        "Observações": "",
+    }])
+    vazio = pd.DataFrame()
+    monkeypatch.setattr("busca.animais.carregar", lambda: animais_df)
+    monkeypatch.setattr("busca.tarefas.carregar", lambda: vazio)
+    monkeypatch.setattr("busca.db.carregar_aba", lambda aba: vazio)
+
+    resultados = buscar_global("amarelo 21")
+    assert resultados[0]["tipo"] == "animal"
+    assert resultados[0]["link"] == "/animais/A0001"
+    assert any(r["titulo"] == "Reprodução" for r in buscar_global("reproducao"))
+    assert any(r["titulo"] == "Resultado por Membro" for r in buscar_global("resultado por membro"))
+    assert any(r["titulo"] == "Comercialização" for r in buscar_global("compras e vendas"))
+
+
+def test_busca_encontra_transacao_pelo_brinco(monkeypatch):
+    animais_df = pd.DataFrame(columns=[
+        "ID", "Brinco Cor", "Brinco Nº", "Nome", "Categoria", "Sexo",
+        "Raça", "Pelagem", "Dono", "Status", "Observações",
+    ])
+    vazio = pd.DataFrame()
+    monkeypatch.setattr("busca.animais.carregar", lambda: animais_df)
+    monkeypatch.setattr("busca.tarefas.carregar", lambda: vazio)
+    monkeypatch.setattr("busca.db.carregar_aba", lambda aba: vazio)
+    dados = {
+        "Manejo": vazio,
+        "Compras": vazio,
+        "Gastos": vazio,
+        "Visitas": vazio,
+        "Vendas": pd.DataFrame([{
+            "Data": "03/11/2026", "Qtd Cabeças": 1,
+            "Descrição": "Venda lote", "Brincos": "Amarelo 21 #A0001",
+        }]),
+    }
+
+    resultados = buscar_global("amarelo 21", dados=dados)
+    assert any(r["tipo"] == "registro" and "Venda: 1 cabeças" == r["titulo"] for r in resultados)
+    assert any(r["link"].startswith("/transacoes") for r in resultados)
+
+
+def test_busca_rapida_tem_sugestoes_acessiveis(cliente):
+    html = cliente.get("/").get_data(as_text=True)
+    assert 'aria-autocomplete="list"' in html
+    assert 'aria-haspopup="listbox"' in html
+    assert 'id="search-dropdown" class="search-dropdown" role="listbox" aria-live="polite" hidden' in html
+    assert "Ctrl+K" in html or "ctrlKey" in html

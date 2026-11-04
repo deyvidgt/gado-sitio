@@ -1,133 +1,212 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-busca.py — Busca rápida global por animais, tarefas, eventos, registros, abas (v5.10)
-"""
+"""Busca rápida global por animais, tarefas, registros e páginas."""
 import re
-from functools import lru_cache
-import db
+import unicodedata
+from datetime import date, datetime
+from urllib.parse import quote
+
 import animais
+import db
 import tarefas
 
-# Atalhos de abas/páginas que podem ser pesquisados
+
+PALAVRAS_IGNORADAS = {"a", "as", "o", "os", "de", "da", "do", "das", "dos", "e", "em", "por", "para", "com"}
+
 ABAS_DISPONIVEIS = [
-    {"termo": "dashboard", "titulo": "Dashboard", "link": "/", "icone": "🏠"},
+    {"termo": "dashboard", "titulo": "Painel", "link": "/", "icone": "🏠"},
     {"termo": "animais", "titulo": "Animais", "link": "/animais", "icone": "🐄"},
-    {"termo": "pesagem", "titulo": "Pesagem", "link": "/animais/pesagem", "icone": "⚖️"},
-    {"termo": "reproducao", "titulo": "Reprodução", "link": "/reproducao", "icone": "🐮"},
-    {"termo": "pastos", "titulo": "Pastos", "link": "/pastos", "icone": "🗺️"},
+    {"termo": "pesagem peso", "titulo": "Pesagem", "link": "/animais/pesagem", "icone": "⚖️"},
+    {"termo": "reproducao reprodução", "titulo": "Reprodução", "link": "/reproducao", "icone": "🐮"},
+    {"termo": "pastos pastagem", "titulo": "Pastos", "link": "/pastos", "icone": "🗺️"},
     {"termo": "manejo", "titulo": "Manejo", "link": "/manejo", "icone": "🌿"},
-    {"termo": "insumos", "titulo": "Insumos", "link": "/insumos/comparar", "icone": "🧂"},
-    {"termo": "estoque", "titulo": "Estoque de Insumos", "link": "/insumos/estoque", "icone": "📦"},
-    {"termo": "visita", "titulo": "Visitas", "link": "/visitas", "icone": "🗓️"},
-    {"termo": "tarefa", "titulo": "Tarefas", "link": "/tarefas", "icone": "📋"},
-    {"termo": "calendario", "titulo": "Calendário", "link": "/calendario", "icone": "📅"},
-    {"termo": "agenda", "titulo": "Agenda Unificada", "link": "/agenda", "icone": "📅"},
-    {"termo": "compra", "titulo": "Compras", "link": "/compras", "icone": "📦"},
-    {"termo": "gasto", "titulo": "Gastos", "link": "/gastos", "icone": "💸"},
-    {"termo": "venda", "titulo": "Vendas", "link": "/vendas", "icone": "🤝"},
-    {"termo": "lote", "titulo": "Lotes", "link": "/lotes", "icone": "📦"},
-    {"termo": "relatorio", "titulo": "Relatórios", "link": "/relatorios", "icone": "📈"},
+    {"termo": "cocho cochos", "titulo": "Cochos", "link": "/cochos", "icone": "🥣"},
+    {"termo": "insumos sal racao ração", "titulo": "Insumos e estoque", "link": "/insumos/comparar", "icone": "🧂"},
+    {"termo": "visita visitas", "titulo": "Visitas", "link": "/visitas", "icone": "🗓️"},
+    {"termo": "tarefa tarefas", "titulo": "Tarefas", "link": "/tarefas", "icone": "📋"},
+    {"termo": "calendario calendário agenda", "titulo": "Calendário", "link": "/calendario", "icone": "📅"},
+    {"termo": "agenda unificada", "titulo": "Agenda Unificada", "link": "/agenda", "icone": "📅"},
+    {"termo": "compra compras venda vendas comercializacao comercialização transacao transação", "titulo": "Comercialização", "link": "/transacoes", "icone": "📦🤝"},
+    {"termo": "gasto gastos despesa despesas", "titulo": "Gastos", "link": "/gastos", "icone": "💸"},
+    {"termo": "lote lotes", "titulo": "Lotes", "link": "/lotes", "icone": "📦"},
+    {"termo": "relatorio relatórios relatorios", "titulo": "Relatórios", "link": "/relatorios", "icone": "📈"},
     {"termo": "financeiro", "titulo": "Financeiro", "link": "/financeiro", "icone": "💰"},
-    {"termo": "resultado", "titulo": "Resultado por Membro", "link": "/resultado", "icone": "📊"},
-    {"termo": "fluxo", "titulo": "Fluxo de Caixa", "link": "/fluxo-caixa", "icone": "📈"},
-    {"termo": "genetica", "titulo": "Genética", "link": "/genetica", "icone": "🧬"},
+    {"termo": "resultado membro", "titulo": "Resultado por Membro", "link": "/resultado", "icone": "📊"},
+    {"termo": "fluxo caixa", "titulo": "Fluxo de Caixa", "link": "/fluxo-caixa", "icone": "📈"},
+    {"termo": "fluxo animais rebanho", "titulo": "Fluxo de Animais", "link": "/fluxo-animais", "icone": "🐄"},
+    {"termo": "leite ordenha", "titulo": "Painel do Leite", "link": "/leite", "icone": "🥛"},
+    {"termo": "conversao conversão alimentar nutricao nutrição", "titulo": "Conversão Alimentar", "link": "/nutrição/conversão", "icone": "🥣"},
+    {"termo": "doenca doença doencas doenças carencia carência tratamento vacina vacinação saude saúde", "titulo": "Doenças e Carência", "link": "/doencas", "icone": "🩺"},
+    {"termo": "medicacao medicação medicamentos", "titulo": "Medicações", "link": "/medicacoes", "icone": "💉"},
+    {"termo": "bulas embalagem remedio remédio", "titulo": "Bulas e Embalagens", "link": "/bulas", "icone": "📖"},
+    {"termo": "genetica genética", "titulo": "Genética", "link": "/genetica", "icone": "🧬"},
     {"termo": "confinamento", "titulo": "Confinamento", "link": "/confinamento", "icone": "🏚️"},
-    {"termo": "conversao alimentar", "titulo": "Conversão Alimentar", "link": "/nutrição/conversão", "icone": "🥣"},
-    {"termo": "ocupacao pastos", "titulo": "Ocupação de Pastos", "link": "/pastos/ocupação", "icone": "🌾"},
-    {"termo": "medicacao", "titulo": "Medicações", "link": "/medicacoes", "icone": "💉"},
-    {"termo": "cocho", "titulo": "Cochos", "link": "/cochos", "icone": "🥣"},
+    {"termo": "voz microfone", "titulo": "Comando de Voz", "link": "/voz", "icone": "🎤"},
+    {"termo": "ajuda manual", "titulo": "Ajuda", "link": "/ajuda", "icone": "❓"},
+    {"termo": "ocupacao ocupação rotacao rotação pastos", "titulo": "Ocupação de Pastos", "link": "/pastos/ocupação", "icone": "🌾"},
     {"termo": "iatf", "titulo": "IATF", "link": "/reproducao/iatf", "icone": "💉"},
-    {"termo": "observacao de cio", "titulo": "Observação de Cio", "link": "/reproducao/observacao-cio", "icone": "🔥"},
+    {"termo": "observacao observação cio", "titulo": "Observação de Cio", "link": "/reproducao/observacao-cio", "icone": "🔥"},
     {"termo": "descarte culling", "titulo": "Sugestões de Descarte", "link": "/reproducao/culling", "icone": "✂️"},
     {"termo": "ia preditiva", "titulo": "IA Preditiva", "link": "/reproducao/ia-predicoes", "icone": "🤖"},
 ]
 
 
-def buscar_global(termo: str, tipo_filtro: str | None = None) -> list[dict]:
-    """Busca por termo em animais, tarefas e manejo. Retorna até 10 resultados."""
-    if not termo or len(termo.strip()) < 2:
-        return []
+def _normalizar(valor) -> str:
+    texto = unicodedata.normalize("NFKD", _texto(valor))
+    sem_acentos = "".join(c for c in texto if not unicodedata.combining(c))
+    return " ".join(re.findall(r"[a-z0-9]+", sem_acentos.casefold()))
 
-    termo = termo.strip().lower()
+
+def _texto(valor) -> str:
+    if valor is None:
+        return ""
+    if isinstance(valor, (date, datetime)):
+        return valor.strftime("%d/%m/%Y %Y-%m-%d")
+    texto = str(valor).strip()
+    return "" if texto.lower() in {"nan", "none", "nat", "<na>"} else texto
+
+
+def _contem_termos(termos: list[str], campos) -> tuple[bool, str]:
+    alvo = _normalizar(" ".join(_texto(campo) for campo in campos))
+    return all(termo in alvo for termo in termos), alvo
+
+
+def _adicionar(resultados, tipo, titulo, subtitulo, link, icone, alvo, consulta):
+    resultados.append({
+        "tipo": tipo,
+        "id": link,
+        "titulo": titulo,
+        "subtitulo": subtitulo,
+        "link": link,
+        "icone": icone,
+        "_relevancia": (100 if consulta in alvo else 0)
+        + sum(5 for termo in consulta.split() if alvo.startswith(termo))
+        + sum(1 for termo in consulta.split() if termo in alvo),
+    })
+
+
+def buscar_global(
+    termo: str,
+    tipo_filtro: str | None = None,
+    dados: dict | None = None,
+) -> list[dict]:
+    """Busca até 10 resultados por texto, sem diferenciar acentos ou caixa."""
+    consulta = _normalizar(termo)
+    if len(consulta) < 2:
+        return []
+    termos = [parte for parte in consulta.split() if parte not in PALAVRAS_IGNORADAS]
+    if not termos:
+        return []
     resultados = []
 
-    # Animais: brinco, ID, nome
-    try:
-        df_animais = animais.carregar()
-        for _, row in df_animais.iterrows():
-            if (termo in f"{row.get('Brinco Cor', '')} {row.get('Brinco Nº', '')}".lower() or
-                termo in str(row.get('ID', '')).lower() or
-                termo in str(row.get('Nome', '')).lower()):
-                cat = str(row.get('Categoria', 'Animal')).strip() or 'Animal'
-                peso = row.get('Peso Estimado', '') or row.get('Peso', '')
-                subtitulo = f"{cat.title()}"
-                if peso:
-                    subtitulo += f", {peso} kg"
-                resultados.append({
-                    "tipo": "animal",
-                    "id": str(row.get('ID', '')),
-                    "titulo": f"{row.get('Brinco Cor', '')} {int(row.get('Brinco Nº', 0)) or '??'} ({cat})",
-                    "subtitulo": subtitulo,
-                    "link": f"/animais/{row.get('ID', '')}",
-                    "icone": "🐄"
-                })
-    except Exception:
-        pass
+    df_animais = animais.carregar()
+    for _, row in df_animais.iterrows():
+        campos = [
+            row.get("Brinco Cor"), row.get("Brinco Nº"), row.get("ID"),
+            row.get("Nome"), row.get("Categoria"), row.get("Sexo"),
+            row.get("Raça"), row.get("Pelagem"), row.get("Dono"),
+            row.get("Status"), row.get("Observações"), row.get("Nascimento"),
+            row.get("Entrada"), row.get("Data Saída"), row.get("Uso Produtivo"),
+            row.get("Situação Leite"),
+        ]
+        corresponde, alvo = _contem_termos(termos, campos)
+        if not corresponde:
+            continue
+        numero = _texto(row.get("Brinco Nº"))
+        try:
+            numero = str(int(float(numero)))
+        except (ValueError, TypeError):
+            numero = numero or "??"
+        categoria = _texto(row.get("Categoria")) or "Animal"
+        peso = _texto(row.get("Peso Estimado")) or _texto(row.get("Peso"))
+        subtitulo = categoria.title() + (f", {peso} kg" if peso else "")
+        animal_id = _texto(row.get("ID"))
+        link = f"/animais/{quote(animal_id, safe='')}" if animal_id else "/animais"
+        _adicionar(
+            resultados, "animal",
+            f"{_texto(row.get('Brinco Cor'))} {numero} ({categoria})".strip(),
+            subtitulo, link, "🐄", alvo, consulta,
+        )
 
-    # Tarefas: descrição, ID
-    try:
-        df_tarefas = tarefas.carregar()
-        for _, row in df_tarefas.iterrows():
-            if (termo in str(row.get('Título', '')).lower() or
-                termo in str(row.get('ID', '')).lower() or
-                termo in str(row.get('Responsável', '')).lower()):
-                feito = "✓" if row.get('Feito Em') else ""
-                resultados.append({
-                    "tipo": "tarefa",
-                    "id": str(row.get('ID', '')),
-                    "titulo": f"{feito} {row.get('Título', '')}",
-                    "subtitulo": f"Data: {row.get('Data', '')}",
-                    "link": f"/tarefas?id={row.get('ID', '')}",
-                    "icone": "📋"
-                })
-    except Exception:
-        pass
+    df_tarefas = tarefas.carregar()
+    for _, row in df_tarefas.iterrows():
+        campos = [
+            row.get("Título"), row.get("ID"), row.get("Responsável"),
+            row.get("Observações"), row.get("Data"), row.get("Repetir"),
+        ]
+        corresponde, alvo = _contem_termos(termos, campos)
+        if not corresponde:
+            continue
+        tarefa_id = _texto(row.get("ID"))
+        feito = "✓ " if _texto(row.get("Feito Em")) else ""
+        link = f"/tarefas?id={quote(tarefa_id, safe='')}"
+        _adicionar(
+            resultados, "tarefa", f"{feito}{_texto(row.get('Título'))}",
+            f"Data: {_texto(row.get('Data'))}", link, "📋", alvo, consulta,
+        )
 
-    # Manejo: tipo de evento (Cobertura, Parto, Vacinação, etc)
-    try:
+    dados = dados or {}
+    df_manejo = dados.get("Manejo")
+    if df_manejo is None:
         df_manejo = db.carregar_aba("Manejo")
-        for _, row in df_manejo.iterrows():
-            tipo = str(row.get('Tipo', '')).strip().lower()
-            if termo in tipo or termo in str(row.get('Descrição', '')).lower():
-                resultados.append({
-                    "tipo": "evento",
-                    "id": str(row.get('Data', '')),
-                    "titulo": f"{row.get('Tipo', 'Evento')} — {row.get('Brincos', 'Rebanho')}",
-                    "subtitulo": f"{row.get('Data', '')} — {row.get('Descrição', '')}",
-                    "link": "/manejo",
-                    "icone": "📅"
-                })
-    except Exception:
-        pass
+    for _, row in df_manejo.iterrows():
+        campos = [
+            row.get("Tipo"), row.get("Descrição"), row.get("Brincos"),
+            row.get("Produto"), row.get("Responsável"), row.get("Data"),
+        ]
+        corresponde, alvo = _contem_termos(termos, campos)
+        if corresponde:
+            titulo = f"{_texto(row.get('Tipo')) or 'Evento'} — {_texto(row.get('Brincos')) or 'Rebanho'}"
+            subtitulo = " — ".join(v for v in (_texto(row.get("Data")), _texto(row.get("Descrição"))) if v)
+            _adicionar(resultados, "evento", titulo, subtitulo, "/manejo", "📅", alvo, consulta)
 
-    # Abas/Páginas: pesquisa rápida por nome de aba
+    tabelas = (
+        ("Compras", "Compra", "📦", "compra"),
+        ("Vendas", "Venda", "🤝", "venda"),
+        ("Gastos", "Gasto", "💸", "gasto"),
+        ("Visitas", "Visita", "🗓️", "visita"),
+    )
+    for aba, nome, icone, rota in tabelas:
+        df = dados.get(aba)
+        if df is None:
+            df = db.carregar_aba(aba)
+        for _, row in df.iterrows():
+            campos = [_texto(valor) for valor in row.to_dict().values()]
+            corresponde, alvo = _contem_termos(termos, campos)
+            if not corresponde:
+                continue
+            data = _texto(row.get("Data"))
+            descricao = _texto(row.get("Descrição")) or _texto(row.get("Tipo"))
+            cabecas = _texto(row.get("Qtd Cabeças"))
+            if rota in {"compra", "venda"}:
+                titulo = f"{nome}: {cabecas} cabeças" if cabecas else nome
+                link = f"/transacoes?busca={quote(descricao)}" if descricao else "/transacoes"
+            elif rota == "gasto":
+                titulo = " — ".join(v for v in (nome, descricao) if v)
+                link = "/gastos"
+            else:
+                titulo = f"{nome}: {data}" if data else nome
+                link = "/visitas"
+            _adicionar(
+                resultados, "registro", titulo or nome,
+                " — ".join(v for v in (data, descricao) if v),
+                link, icone, alvo, consulta,
+            )
+
     for aba in ABAS_DISPONIVEIS:
-        if termo in aba["termo"]:
-            resultados.append({
-                "tipo": "aba",
-                "id": aba["link"],
-                "titulo": aba["titulo"],
-                "subtitulo": "Ir para esta página",
-                "link": aba["link"],
-                "icone": aba["icone"]
-            })
+        campos = [aba["termo"], aba["titulo"]]
+        corresponde, alvo = _contem_termos(termos, campos)
+        if corresponde:
+            _adicionar(
+                resultados, "aba", aba["titulo"], "Abrir página",
+                aba["link"], aba["icone"], alvo, consulta,
+            )
 
-    # Filtro por tipo se pedido
     if tipo_filtro:
         resultados = [r for r in resultados if r["tipo"] == tipo_filtro]
 
-    # Ordena por tipo (animal > tarefa > evento > aba) e limita a 10
-    ordem = {"animal": 0, "tarefa": 1, "evento": 2, "aba": 3}
-    resultados.sort(key=lambda r: (ordem.get(r["tipo"], 99), r["titulo"]))
+    ordem = {"animal": 0, "tarefa": 1, "evento": 2, "registro": 3, "aba": 4}
+    resultados.sort(key=lambda r: (-r["_relevancia"], ordem.get(r["tipo"], 99), r["titulo"]))
+    for resultado in resultados:
+        resultado.pop("_relevancia")
     return resultados[:10]
