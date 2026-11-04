@@ -29,7 +29,6 @@ MODULOS = {
 }
 
 _ROTAS_FIXAS = (
-    ("/leite/saude", None),
     ("/leite/alimentacao", None),
     ("/leite/necessidades", None),
     ("/leite/calculador", None),

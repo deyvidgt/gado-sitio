@@ -24,7 +24,9 @@
     <a href="{{ url_for('consumo_leite') }}">Consumo</a>
     <a href="{{ url_for('nutricao_leite') }}">Nutrição</a>
     <a href="{{ url_for('calculador_leite') }}">Calculador</a>
+    {% if modulos.leite %}
     <a href="{{ url_for('saude_leite') }}">Saúde</a>
+    {% endif %}
     {% if modulos.conforto %}
     <a href="{{ url_for('operacao_leite', tipo='conforto') }}">Conforto</a>
     <a href="{{ url_for('listar_colchao') }}">Colchões</a>

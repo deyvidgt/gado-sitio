@@ -20,7 +20,7 @@
   - **Conforto e Colchão** — módulo independente, mas subordinado a Leite: só fica disponível quando ambos estão ativos.
   - **Reprodução**.
   - **Genética e Confinamento** — controlados juntos como um grupo.
-- **Sempre disponíveis e fora do controle deste MVP:** Animais e Manejo, Sanidade/Farmácia, Nutrição, Pastos, Cochos, Registros, Financeiro/Relatórios, Painel, Configurações, Ajuda e utilidades. O catálogo pode ser ampliado numa fase futura.
+- **Sempre disponíveis e fora do controle deste MVP:** Animais e Manejo, Sanidade geral/Farmácia, Nutrição, Pastos, Cochos, Registros, Financeiro/Relatórios, Painel, Configurações, Ajuda e utilidades. Saúde do Leite (incluindo controle de mastite) pertence ao módulo Leite e é desativada junto com ele. O catálogo pode ser ampliado numa fase futura.
 - **Fora do escopo:** presets por sistema produtivo, preferências pessoais por usuário, exclusão de dados, habilitação/desabilitação por rota individual e mudanças no banco Excel.
 - **Cenários:** o usuário abre Configurações → Módulos, altera os controles e salva; ao navegar, os links ocultados deixam de aparecer; uma URL guardada de uma área desativada apresenta uma mensagem e encaminha para a página de módulos.
 

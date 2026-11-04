@@ -117,13 +117,15 @@ def test_menu_e_busca_ocultam_modulos_desativados(cliente, config_modulos):
     assert 'href="/reproducao"' not in pagina
     assert 'href="/genetica"' not in pagina
     assert 'href="/confinamento"' not in pagina
+    assert "Saúde do Leite — Mastite" not in pagina
     assert 'href="/leite/nutricao"' in pagina
-    assert 'href="/leite/saude"' in pagina
+    assert 'href="/leite/saude"' not in pagina
 
-    for caminho in ("/leite/nutricao", "/leite/saude"):
+    for caminho in ("/leite/nutricao",):
         html = cliente.get(caminho).get_data(as_text=True)
         assert 'href="/leite"' not in html
         assert 'href="/leite/ordenha"' not in html
+        assert 'href="/leite/saude"' not in html
 
     for termo in ("ordenha", "reproducao", "genetica", "conforto"):
         dados = cliente.get(f"/api/busca?q={termo}&tipo=aba").get_json()
@@ -144,6 +146,7 @@ def test_rotas_desativadas_sao_bloqueadas_por_metodo(cliente, config_modulos):
 
     for resposta in (
         cliente.get("/leite/ordenha"),
+        cliente.get("/leite/saude"),
         cliente.post("/leite/ordenha", data={"data": "2026-01-01"}),
     ):
         assert resposta.status_code == 302
