@@ -5,12 +5,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
-- **Módulos personalizáveis por sítio:** em Configurações → Módulos do sítio, usuários podem ocultar e bloquear Leite, Conforto/Colchão, Reprodução ou Genética/Confinamento; preferências são compartilhadas no sítio e a busca rápida acompanha o menu.
+
+- **Módulos personalizáveis por sítio:** em Configurações → Módulos do sítio, usuários podem ocultar e bloquear Leite, Conforto térmico e descanso, Reprodução ou Genética/Confinamento; Conforto é independente de Leite e pode ser usado no gado de corte.
 - **Aplicações de insumos em pastagens:** histórico por pasto com custo/ha; cada aplicação lança atomicamente um gasto vinculado na aba Gastos.
 - **Orçamento e contas futuras:** comparação anual previsto vs. realizado por mês/categoria, contas a pagar/receber e lembrete de vencimentos na Comercialização. Marcar uma conta como paga/recebida não cria um lançamento real.
 - **Busca rápida global:** encontra animais, tarefas, registros e telas do menu, incluindo subpáginas de Leite e Pastos; prioriza a tela quando o nome buscado corresponde a ela e abre o destino ao clicar ou pressionar Enter.
 
 ### Corrigido
+
 - **Exclusão de cochos:** a rota agora remove fisicamente a linha pelo ID normalizado, salva a aba com segurança e atualiza o painel lendo novamente do Excel.
 - **IDs duplicados em Cochos:** a listagem mantém apenas o registro mais recente por ID, e o cadastro rejeita IDs já existentes e limpa duplicatas antigas ao salvar.
 - **Botão flutuante de Cochos:** elevado acima da navegação e reposicionado a 30 px das bordas.
@@ -24,9 +26,11 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [5.19.0] — 2026-11-03
 
 ### Adicionado
+
 - **📖 Bulas e embalagens (v5.16):** cada remédio e vacina pode ter a **bula em PDF** e a **foto da embalagem** guardadas no Google Drive (pasta "Bulas e embalagens", mesma credencial das fotos), consultáveis no celular em `/bulas` — também linkada em 💉 Medicações, no formulário de 🩺 Doença e na aba ❓ Ajuda. Quem não tem arquivo aparece na lista "Ainda sem bula". `python subir_bulas.py <pasta>` envia os arquivos (nome do produto + extensão basta); o site baixa pelo próprio endereço, então o Drive continua privado.
 
 ### Corrigido
+
 - **Modelos de IA ausentes após deploy:** `atualizar.sh` agora instala scikit-learn e treina os modelos no servidor quando não encontra os arquivos (ignorados pelo Git). O caminho padrão de saída do treino também não depende mais da pasta atual do terminal.
 - **Carência de medicamento agora é uma conta só (B4):** a venda lia a aba `Tratamentos`, o painel de alertas lia `Leite Tratamentos`, a quarentena lia `Medicações` e a ficha da vaca lia de novo `Leite Tratamentos` — o mesmo animal podia estar "em carência" numa tela e "liberado" em outra. `doencas_carencia.status_por_animal()` lê as **três abas**, fica com o prazo mais longo e alimenta `/doencas`, `/alertas`, `/medicacoes`, a ficha da vaca, o dashboard novo e a validação da venda.
 - **Tabela de carência em dias reais (B5):** os valores de leite estavam em **horas** gravados como dias (Penicilina "48" virava 48 dias de descarte; o real é ~2). Convertidos, e entraram `Ceftiofur` (3 d leite / 4 d carne) e outros. Remédio fora da tabela não finge mais saber o prazo: usa o conservador (7 d leite / 28 d carne) **e avisa na tela** que o período não está cadastrado.
@@ -38,11 +42,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - **Comercialização unificada (v5.19):** as abas de **Compras** e **Vendas** viraram uma só página **Comercialização** (`/transacoes`) — um único item no menu lateral, cards de Total Comprado / Total Vendido / Saldo, e tabela única por data com badge `COMPRA`/`VENDA` e divisão por sócio. Os antigos `compras()`/`vendas()` ainda existem (usados por cadastro/edição e pelos testes), mas o menu e os "Cancelar"/"Voltar" agora apontam para `/transacoes`.
 
 ### Documentado
+
 - `docs/AUDITORIA_INSPIRACOES.md` revisada contra a `main` (v5.15): 5 defeitos em código no ar (incluindo a carência do leite lida de três abas diferentes) e a resposta medida sobre migrar para PostgreSQL.
 
 ## [5.14.0] — 2026-11-01
 
 ### Adicionado
+
 - **Ponto de corte e relatórios avançados (v5.14 Onda 14):** dois módulos que existiam no código mas não tinham tela agora estão no menu:
   - `/ponto-corte`: simula vender o animal hoje ou em 7/14/30 dias (peso × rendimento ÷ 15 = arrobas × preço da arroba), descontando o custo diário, e diz o melhor dia. GMD vem da pesagem; preço da arroba e rendimento vêm do `sitio_config.json`. Só cálculo, não grava.
   - `/relatorios/avancados`: 6 PDFs de verdade (anual, vendas, sanitário, reprodutivo, leite, financeiro), no mesmo visual do relatório antigo. Antes o `exportar_pdf_relatorio` despejava o dicionário cru num arquivo `.pdf`.
@@ -72,6 +78,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   - Documentação completa em `docs/INDICADORES_COLETA.md` com exemplos de API.
 
 ### Corrigido
+
 - **Relatório de leite** lia `"Produção (litros)"` e `"CPP (ufc/mL)"`, colunas que não existem (as reais são `Litros` e `CPP (UFC/mL)`) — saía tudo zero.
 - **Relatório financeiro** subtraía as compras do resultado, contando o custo do gado duas vezes. Agora é receita − gastos; o custo da cabeça aparece na venda, pela média móvel.
 - **`ponto_corte.py`** chamava funções com assinatura errada (`pesagem.todas()` sem argumento, `pesagem.peso_animal()`, `calculos._build_gastos_timeline()`) e não rodava.
@@ -81,6 +88,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [5.10.1] — 2026-10-29
 
 ### Modificado
+
 - **Calendário Unificado (v5.10):** refactored `/calendario` para integrar com API manejo:
   - Calendário agora mostra **todos** os eventos: Manejo, Visitas, Compras, Vendas, Gastos, Tarefas.
   - Antes: calendário tinha sua própria função `_eventos_mes()` que combinava dados de forma diferente da API `/api/calendario-manejo`.
@@ -93,6 +101,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   antes só existiam como rota, sem nenhum link para chegar nelas.
 
 ### Corrigido
+
 - **IA preditiva não previa nada (Onda 19):** o pipeline de treino normalizava as features
   com `preprocessar_batch()` e passava o resultado para `treinar()`, que normaliza de novo.
   O modelo aprendia z-scores enquanto `prever()` mandava valores crus — todas as
@@ -120,6 +129,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
     (endpoint inexistente) corrigidos em `reproducao_observacao_cio.html` e `reproducao_iatf.html`.
 
 ### Adicionado
+
 - **Animais Agrupados por Dono (v5.10):** nova página `/animais/dono/<dono>` mostra todos os animais de um dono:
   - Lista com brincos numerados (Amarelo 01, Azul 99, etc.) com cor e status visual.
   - Informações resumidas: peso atual, GMD, status (Vivo/Vendido/Morto), pasto atual.
@@ -191,6 +201,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [5.10.0] — 2026-10-28
 
 ### Adicionado
+
 - **Calculador de Ração Avançado (v5.10):** nova página GET `/racao/calculador` com interface completa para cálculo de necessidades nutricionais e balanço de ração:
   - Fórmulas Embrapa por categoria (Lactação, Seca, Novilha, Bezerro) com incremento de lactação (+0.6kg MS, +100g PB, +0.5 Mcal por L/dia).
   - Entrada: categoria, peso vivo (kg), produção de leite (L/dia, opcional).
@@ -230,9 +241,11 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - **WhatsApp Lembretes reposicionado:** botão "📲 Gerenciar Lembretes e Alertas" movido de dashboard para página `/configuracoes` (ao lado de "Como ativar"). Deixa o painel mais limpo e melhora discoverabilidade.
 
 ### Corrigido
+
 - **Routes não registradas em app.py:** adicionados imports de `routes_racao_avancada` e `routes_reconhecimento` (faltava `from routes_racao_avancada import *` e `from routes_reconhecimento import *`). Agora `/racao/calculador` e `/animais/reconhecer` respondem corretamente.
 
 ### Mudanças Técnicas
+
 - **Migração de templates:** 5 páginas financeiras (`financeiro.html`, `resultado.html`, `fluxo_caixa.html`, `fluxo_animais.html`, `lembretes_whatsapp.html`) reescritas com novos componentes CSS.
 - **Componentes CSS com dark mode:** todos os 8 componentes usam variáveis CSS (`--surface`, `--text`, `--green-*`, etc) e herdam tema da página via `@media (prefers-color-scheme: dark)`.
 - **Testes:** 964/971 testes passam (99.3% taxa de sucesso); 7 falhas são legadas (dashboard refactor, encoding UTF-8 Windows, multi-site setup).
@@ -240,6 +253,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [5.9.0] — 2026-10-27
 
 ### Adicionado (v5.8.1: Novos Indicadores)
+
 - **Estado do Colchão nas Visitas:** nova coluna "Estado Colchão" em `COLUNAS_VISITAS` permite registrar a cada visita o status do colchão (integração com módulo leiteiro v5.4).
 - **4 novas abas de rastreamento:**
   - **Engorda Pastagem:** rastrear crescimento (GMD) vs condição do pasto; campos: Pasto ID, Peso Inicial/Final, Dias, GMD, Lotação (UA/ha), Consumo estimado (kg MS/dia).
@@ -261,17 +275,20 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [5.9.0] — 2026-10-27
 
 ### Adicionado
+
 - **Cotação de mercado em tempo real melhorada:** GET `/api/cotacao-hoje` retorna preço/@ atual + histórico 30 dias. Tenta scraping Scot Consultoria → fallback IMEA → fallback média 7 dias. Função `_historico_preco_arroba()` extrai preços das Vendas. Útil para monitorar tendência de preços de mercado.
 - **Notificações push avançadas:** função `_preparar_notificacoes()` agrupa alertas por categoria com ações (Abrir, Descartar). GET `/api/alertas/push` retorna notificações em formato Web Push. POST `/api/notificacoes/acao` registra cliques de botões para análise de engajamento. Service Worker v5.7: handlers `push` + `notificationclick` com navegação automática para URL.
 - **Fluxo de caixa visual:** função `calcular_fluxo_caixa_mensal()` em `calculos.py` calcula entrada (vendas), saída (compras + gastos), saldo mensal e saldo acumulado. GET `/fluxo-caixa` renderiza `templates/fluxo_caixa.html` com 2 gráficos Chart.js (entrada vs saída em barras, saldo acumulado em linha) + tabela detalhada com cores semáforo.
 - **Comparativo de períodos (ano anterior vs ano atual):** função `comparativo_anual()` compara período anual anterior (365 dias) vs ano atual (1º jan até hoje). Retorna total compras, gastos, vendas, resultado + variação %. GET `/comparativo-anual` renderiza `templates/comparativo_anual.html` com 4 cards resumo (Compras, Gastos, Vendas, Resultado) + tabela detalhada. Cores semáforo indicam aumento/redução.
 
 ### Corrigido
+
 - **DataFrame ambiguous truth value em routes_api.py:** substituir `dados.get("Vendas") or pd.DataFrame()` por verificação `is None` em `_historico_preco_arroba()`. Mesmo padrão corrigido em v5.8.0.
 
 ## [5.8.0] — 2026-10-27
 
 ### Adicionado
+
 - **Gráfico de entrada/saída temporal:** função `_entrada_saida_timeline()` em `routes_dashboard.py` agrega compras (entrada, verde) e vendas (saída, vermelha) nos últimos 90 dias. Visualização com Chart.js no painel principal mostra fluxo de gado ao longo do tempo.
 - **Geolocalização automática da previsão do tempo:** novo endpoint `/api/tempo/geo` aceita latitude/longitude do navegador. Fallback automático: se o sítio não tem coordenadas cadastradas, o sistema extrai o centro geográfico do mapa de pastos via `_coordenadas_do_mapa()` (média dos contornos GeoJSON). Botão 📍 no card de previsão solicita permissão de localização.
 - **Toggle ocultar/mostrar mapa de pastos:** botão 👁️ na página **/pastos** comuta visibilidade do mapa (salva em localStorage). Útil para economizar banda/bateria em celular. Chama `mapa.invalidateSize()` ao reexibir.
@@ -283,12 +300,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - **Exemplos removido do git:** pasta `F:\programa sitio\exemplos\` excluída do versionamento (`.gitignore` atualizado).
 
 ### Corrigido
+
 - **DataFrame ambiguous truth value:** substituir `dados.get(...) or pd.DataFrame()` por verificação `is None` em `_entrada_saida_timeline()`. Pandas DataFrames não são avaliáveis em contexto booleano.
 - Sidebar mobile travada em celular: z-index corrigido (sidebar 1001 > overlay 1000) e event listeners simplificados em `base.html`.
 
 ## [5.7.0] — 2026-10-27 (anterior)
 
 ### Adicionado (v5.7 Sprint 4: Component Library — Phase 4)
+
 - **Componentes de interface reutilizáveis:** biblioteca completa de 4 componentes Web (Modal, Toast, Accordion, Form Validator) com 100% ARIA accessibility, temas escuro/claro, e suporte a redução de movimento.
   - **Modal (Phase 1):** diálogos com foco aprisionado, suporte a ESC/clique fora, e métodos estáticos para confirm/alert.
   - **Toast (Phase 2):** notificações com fila automática, 4 tipos (success/error/warning/info), 300ms slide-in animation.
@@ -300,6 +319,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [5.6.0] — 2026-10-27
 
 ### Adicionado (Dashboard, Calendário e Ferramentas — v5.6)
+
 - **Dashboard com cards clicáveis:** cada cartão (Leite, Corte, Insumos, etc) no painel principal agora é clicável e leva ao detalhe. Alertas aparecem no card (ex: "3 urgentes") e navegam para a página específica.
 - **Calendário visual de eventos:** nova página **🗓️ Calendário** mostra mês inteiro com eventos (partos próximos, vacinação, colchão urgente, tarefas). Cores: 🔴 urgente (≤3 dias), 🟡 aviso (≤7 dias), 🟢 normal. Clique no dia para detalhes.
 - **Gráficos de crescimento (GMD):** página **📈 Crescimento** mostra peso do animal vs tempo com tendência de ganho (g/dia). Status visual: ✅ acelerando, 🟡 normal, 🔴 desacelerando. Útil para diagnosticar problemas de nutrição/saúde.
@@ -311,12 +331,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - **Volumosos (v5.5):** módulo para feno, silo e alimentos volumosos. Entrada com qualidade (Ótima/Boa/Regular/Ruim), consumo diário, alertas quando falta ≤7 dias. Tipos configuráveis por sítio (não fixo). Usa em corte e leite.
 
 ### Corrigido
+
 - **Lançamento de litros:** o formulário aceitava "12,5" mas o site gravava 12 (interpretava "12,5" como número inteiro). Agora `parse_valor("12,5")` retorna 12.5 e fica redondo na planilha.
 - **Edição e exclusão de ordenhas:** a leitura e a reescrita não compartilhavam a trava de arquivo, então um novo lançamento entre o GET e o POST sumia. Agora `db.alterar_aba()` segura a trava do começo até o `os.replace()`, garantindo que a gravação é atômica.
 - **Aviso pandas ao ler datas:** `_data()` em `leite.py` agora especifica o formato ("dd/mm/aaaa" ou "aaaa-mm-dd") em vez de deixar o pandas adivinhar, evitando avisos em ISO + dayfirst.
 - **Timeout da previsão:** `requests.get()` para o Open-Meteo agora é `timeout=(2, 3)` em vez de 5 s — a chamada roda com a trava do sítio segurada (um pedido por vez), então a espera muito longa bloqueia outras requisições.
 
 ### Adicionado (módulo leiteiro — v5.4)
+
 - **Campos de leite no cadastro de animal:** Uso Produtivo (leite/ambos/corte), Situação Leite (lactação/seca) e Último Parto (data). Opcionais; preenchidos ao editar a ficha do animal — quem não mexe no leite deixa em branco.
 - **Números de cabeças no mapa de pastos:** cada pasto agora mostra o número total de cabeças no centro (em contraste automático: branco em fundo escuro, preto em claro). Atualiza ao mover gado.
 - **Alertas de qualidade do leite (CCS/CPP):** painel mostra gráfico dos últimos 7 dias de CCS (Contagem Célula Somática) e CPP (Contagem Padrão em Placa) com cores (verde OK, amarelo aviso, vermelho crítico). Ficha do animal lista últimas 5 ordenhas com status de mastite/higiene. WhatsApp avisa quando CCS > 200k ou CPP > 100k.
@@ -325,6 +347,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - **Alertas de troca de colchão:** nova página **🛏️ Leite → Colchões** (GET /leite/colchao) com lista e histórico. Cada colchão mostra: Material, Última Troca, Próxima Troca (automaticamente +180 dias se não informada), Dias Restantes e Status (✅ OK / 🟡 Aviso ≤14 dias / 🔴 Urgente ≤7 dias). WhatsApp avisa quando faltam 7 dias. Card no painel resume urgentes e avisos.
 
 ### Melhorado
+
 - **Telas mais fáceis de ler (v5.3):** inspirado nos aplicativos que a família já conhece,
   o que antes era só número virou **barra colorida com semáforo**:
   - **Pastos** deixou de ser tabela e virou um cartão por pasto, com cabeças, hectares,
@@ -345,6 +368,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
     quem não distingue bem as cores ou está no sol.
 
 ### Adicionado
+
 - **Módulo leiteiro:** painel do leite, lançamento de ordenha (individual ou total, sem somar
   duas vezes), vacas e ficha com dias em lactação e carência, alimentação e necessidades,
   tratamentos, conforto e colchão, central de alertas com previsão do tempo, **relatório do
@@ -409,6 +433,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   e resumo mensal rodam para cada sítio (a mensagem começa com o nome do sítio).
 
 ### Segurança
+
 - Com vários sítios, só o **administrador** (quem tem acesso ao 1º sítio, ou a lista
   `"admins"` do `sitios.json`) cria/exclui usuários e redefine senhas — antes qualquer
   login podia, e um parente de outro sítio poderia trocar a senha de quem é do Santo
@@ -432,6 +457,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   não tem pesagem de balança). Botão 📍 Onde estou (GPS). Precisa de internet para o mapa.
 
 ### Planejado
+
 - Leite: produção por vaca/ordenha, lactação e secagem, entregas e preço do litro
   (liga só no sítio que tiver leite); reprodução (cobertura, prenhez, alerta de parto).
 - Peso pela fita no peito (perímetro torácico direto).
@@ -439,10 +465,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - Simulador Boi Gordo, calendário de eventos, reprodução, painel de lote e de sanidade.
 
 ### Corrigido
+
 - Datas dos formulários de edição (compra, gasto, venda, manejo): a data ISO do campo
   `date` do navegador é lida sem `dayfirst` — o log não enche mais de avisos do pandas.
 
 ### Novo
+
 - **WhatsApp — cada um escolhe o que recebe** (Configurações → WhatsApp): urgentes,
   resumo semanal, visita, morte/nascimento e resumo mensal, um a um.
 - **Sem valores**: quem desmarca "Mostrar valores em R$" recebe as mensagens só com
@@ -456,6 +484,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [4.5.1] — 2026-10-19
 
 ### Corrigido
+
 - **Editar/excluir podia acertar o registro errado**: a lista vinha de um cache que não
   via gravações de outro processo (Task do WhatsApp, outro worker). O cache agora confere
   a versão do `.xlsx` no disco e recarrega quando ele muda.
@@ -476,6 +505,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - "Enviar alertas à família" lento dizia "nenhum WhatsApp configurado".
 
 ### Desempenho
+
 - `carregar_todas` lê o `.xlsx` uma vez só (eram 5 leituras).
 - Resultado por membro e evolução do rebanho entram no cache; a evolução roda **uma**
   simulação (antes era uma por mês).
@@ -489,6 +519,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   abre por vez.
 
 ### Novo
+
 - Aviso ao registrar venda com mais cabeças do que o rebanho registrado.
 - **Preço da arroba** em ⚙️ Configurações → Rebanho (antes fixo em R$ 340 no código), com
   a arroba da última venda como dica. Vale para a estimativa do rebanho e as arrobas
@@ -497,6 +528,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [4.5.0] — 2026-10-16
 
 ### Novo
+
 - **Aba ❓ Ajuda** (menu, acima de Configurações): manual de todo o sistema com passo a passo
   e prints — celular para o dia a dia (visita, manejo, compra, gasto, venda, animal, fotos,
   voz) e computador para consultas, relatórios, backups e configurações. Inclui como as
@@ -510,6 +542,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [4.4.0] — 2026-10-16
 
 ### Novo
+
 - **Fotos dos animais** (ficha do animal → 📷 Fotos): linha do tempo com data, tipo
   (Perfil / Evolução / Ocorrência), legenda e quem enviou; uma foto **principal** aparece
   na ficha e como miniatura na lista de animais. Qualquer usuário logado pode enviar.
@@ -525,6 +558,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [4.3.0] — 2026-10-15
 
 ### Novo
+
 - **Animais com brinco** (`animais.py`, página **Animais**): cadastro individual com
   brinco (cor + nº), dono, categoria, raça, pelagem, sinais, nascimento, mãe e origem.
   Cada dono tem a sua cor (padrão: Deyvid amarelo, Nilson azul, Geane vermelho —
@@ -552,16 +586,19 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   `static/voz_campos.js`).
 
 ### Regras financeiras
+
 - O cadastro não mexe nas contas. Só o **Nascimento** com brinco grava a linha de
   Nascimento no Manejo, e a baixa por **morte** grava a Morte/Perda (Perda De = dono).
   Invariantes cobertas em `tests/test_animais.py`.
 
 ### Colunas novas (no fim, migradas automaticamente)
+
 - Aba nova `Animais` · Manejo: `Brincos` · Vendas: `Brincos`
 
 ## [4.2.0] — 2026-10-04
 
 ### Novo
+
 - **Visita sem internet**: o formulário de visita abre e salva sem sinal. A visita fica
   guardada no celular (`static/fila_visitas.js`, IndexedDB) e é enviada sozinha quando a
   internet volta (ao abrir o app, ao reconectar ou a cada 30 s). Faixa no topo mostra
@@ -576,6 +613,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   resumo semanal completo. `alertas_whatsapp.py --teste [--semanal]` mostra sem enviar.
 
 ### Corrigido
+
 - Aviso de visita no WhatsApp rodava numa thread (o PythonAnywhere não garante) — agora
   fica numa fila (`avisos_pendentes.json`) e sai logo após a resposta; se a conexão cair,
   sai na próxima requisição de visita ou na Task diária.
@@ -583,11 +621,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   era desenhado **duas vezes** (com o envio novo, cada "Salvar" mandaria duas visitas).
 
 ### Colunas novas (no fim, migradas automaticamente)
+
 - Gastos: `Produto`, `Qtd Sacos` · Visitas: `ID Envio`
 
 ## [4.1.1] — 2026-10-03
 
 ### Corrigido — modo escuro
+
 - **Nova Visita**: caixas de status (sal, ração, pasto, água…) tinham fundo pastel fixo
   com o texto claro do tema — ilegível. Agora usam tons translúcidos da mesma cor.
 - Revisão de todas as telas com verificador automático de contraste (17 telas, 0 problemas):
@@ -599,11 +639,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   comparado antes/depois e ficou idêntico).
 
 ### Corrigido
+
 - Lista de visitas mostrava "📝 nan" quando a visita não tinha observação.
 
 ## [4.1] — 2026-10-03
 
 ### Novo
+
 - **Gráfico "Evolução do Rebanho"** no painel: cabeças no fim de cada mês, entradas
   (compras + nascimentos), saídas (vendas + mortes) e custo médio/cab pela média móvel
   (`calculos.calcular_evolucao_rebanho`, `/api/rebanho`).
@@ -625,6 +667,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   incluindo as 3 invariantes contábeis. `atualizar.sh` roda os testes no servidor.
 
 ### Corrigido
+
 - **Backup diário** (`backup_automatico.py`) procurava a planilha na pasta do código, não
   em `~/gado-dados/` — no servidor abortava ou copiava um arquivo velho.
 - **Limpeza dos backups do site** olhava a pasta errada; backups acumulavam sem limite.
@@ -635,12 +678,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - Cotação IMEA: faltava `import sys` ao tentar instalar o navegador automaticamente.
 
 ### Outros
+
 - `requirements.txt` trava a próxima versão MAIOR de cada biblioteca.
 - Cache do app no celular (PWA) renovado (`gado-v3`) para carregar as telas novas.
 
 ## [4.0] — 2026-10-02
 
 ### Cálculos — Média Móvel Perpétua (mudança principal)
+
 - O custo das cabeças vendidas e o resultado por membro passaram a usar **média móvel
   perpétua** (`calculos.py: _simular_media_movel`): cada venda sai pela média de custo
   (compra + gastos) vigente no momento; gastos são diluídos **só** no rebanho vivo
@@ -655,6 +700,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
     ficando idêntico ao que o dashboard recomputa — antes usava o modelo acumulado e divergia.
 
 ### Mortes/Perdas como perda separada
+
 - O custo de uma cabeça morta/perdida passou a ser uma **perda registrada** (pela média
   do momento) em vez de ser absorvido pelos sobreviventes. Com o campo *Perda De*, a perda
   é atribuída ao dono; sem indicação, é rateada em terços.
@@ -663,6 +709,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   no **relatório PDF** e na **exportação Excel**. `resultado_total` já desconta as perdas.
 
 ### Corrigido
+
 - **Custo fantasma** (`calculos.py`): o capital imobilizado usava `estoque × CTCab_atual`
   enquanto o custo das vendas usava o valor na data de cada venda; as bases não
   reconciliavam e surgiam **+R$ 99.019,96** de custo inexistente nos dados reais.
@@ -671,6 +718,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   (📂 📊 ✅ 🐄) quebravam com `UnicodeEncodeError` em terminais cp1252. Saída forçada a UTF-8.
 
 ### Adicionado
+
 - **Visitas — reservatórios de água**: campos *Caixa d'Água* e *Conteiner*, cada um
   com status (Cheia/Meia/Baixa/Vazia) e litros restantes. (Por preferência da família,
   o sistema **não** sugere reabastecimento para cisterna, caixa d'água e conteiner.)
@@ -681,6 +729,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
   valores e datas), além dos filtros de ano e tipo.
 
 ### Alterado
+
 - **Versão unificada em `config.VERSAO` (4.0)**, injetada em todos os templates
   (login e demais telas) via context processor — fim das versões hardcoded.
 - **Migração de banco generalizada** (`db.py`): ao iniciar, cria colunas novas em
@@ -689,6 +738,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ---
 
 ## [3.5] e anteriores (histórico)
+
 Histórico não versionado neste arquivo. Principais marcos registrados nos commits
 (`atualizacao 3.xx`): motor de cálculos (CMP/GPCab/CTCab), resultado por membro,
 fluxo de caixa, relatórios/PDF, importação/exportação Excel, visitas ao sítio,

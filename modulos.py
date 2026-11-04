@@ -14,9 +14,8 @@ MODULOS = {
         "descricao": "Produção, animais leiteiros, ordenha e relatórios.",
     },
     "conforto": {
-        "nome": "Conforto e Colchão",
-        "descricao": "Conforto térmico e acompanhamento de colchões.",
-        "depende_de": "leite",
+        "nome": "Conforto térmico e descanso",
+        "descricao": "Conforto térmico e descanso do rebanho, aplicáveis a gado de corte e leite.",
     },
     "reproducao": {
         "nome": "Reprodução",
@@ -46,16 +45,12 @@ def preferencias(config: dict | None) -> dict[str, bool]:
 
 
 def estado_efetivo(config: dict | None) -> dict[str, bool]:
-    estado = preferencias(config)
-    estado["conforto"] = estado["leite"] and estado["conforto"]
-    return estado
+    return preferencias(config)
 
 
 def esta_ativo(chave: str, estado: dict[str, bool]) -> bool:
     if chave not in MODULOS:
         return True
-    if chave == "conforto":
-        return bool(estado.get("leite", True) and estado.get("conforto", True))
     return bool(estado.get(chave, True))
 
 

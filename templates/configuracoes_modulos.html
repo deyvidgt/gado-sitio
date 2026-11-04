@@ -32,11 +32,6 @@
         <span>
           <strong style="display:block;color:var(--text-primary)">{{ item.nome }}</strong>
           <span style="display:block;margin-top:4px;color:var(--text-2);font-size:13px">{{ item.descricao }}</span>
-          {% if item.depende_de %}
-          <span style="display:block;margin-top:7px;color:var(--warn);font-size:12px">
-            Disponível somente quando {{ catalogo_modulos[item.depende_de].nome }} também estiver ativo.
-          </span>
-          {% endif %}
         </span>
       </label>
       {% endfor %}

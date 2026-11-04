@@ -819,16 +819,18 @@
       <a href="{{ url_for('comparar_insumos') }}" class="drawer-link">🧂 Insumos & Estoque</a>
       <a href="{{ url_for('calculador_racao_avancado') }}" class="drawer-link">🧮 Calculador Ração</a>
       <a href="{{ url_for('dashboard_conversao') }}" class="drawer-link">📉 Conversão Alimentar</a>
-      {% if modulos.leite and modulos.conforto %}
-      <a href="{{ url_for('operacao_leite', tipo='conforto') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🏠 Conforto Térmico</a>
-      <a href="{{ url_for('operacao_leite', tipo='colchao') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🛏️ Colchão</a>
-      {% endif %}
-
       <!-- ═══ GENÉTICA & ENGORDA ═══ -->
       {% if modulos.genetica_confinamento %}
       <div class="nav-group-title">Genética & Engorda</div>
       <a href="{{ url_for('genetica') }}" class="drawer-link">🧬 Genética & Consanguinidade</a>
       <a href="{{ url_for('confinamento') }}" class="drawer-link">🏚️ Confinamento</a>
+      {% endif %}
+
+      <!-- ═══ CONFORTO & DESCANSO ═══ -->
+      {% if modulos.conforto %}
+      <div class="nav-group-title">Conforto & Descanso</div>
+      <a href="{{ url_for('operacao_leite', tipo='conforto') }}" class="drawer-link">🏠 Conforto Térmico</a>
+      <a href="{{ url_for('operacao_leite', tipo='colchao') }}" class="drawer-link">🛏️ Descanso e Colchões</a>
       {% endif %}
 
       <!-- ═══ REGISTROS & EVENTOS ═══ -->

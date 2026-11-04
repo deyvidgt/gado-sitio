@@ -17,7 +17,7 @@
   4. Bloqueio de acesso direto a páginas e APIs de módulos desativados.
 - **Catálogo configurável do MVP:**
   - **Leite** — módulo principal, incluindo páginas e operações leiteiras.
-  - **Conforto e Colchão** — módulo independente, mas subordinado a Leite: só fica disponível quando ambos estão ativos.
+  - **Conforto térmico e descanso** — módulo independente, aplicável a gado de corte e leite.
   - **Reprodução**.
   - **Genética e Confinamento** — controlados juntos como um grupo.
 - **Sempre disponíveis e fora do controle deste MVP:** Animais e Manejo, Sanidade geral/Farmácia, Nutrição, Pastos, Cochos, Registros, Financeiro/Relatórios, Painel, Configurações, Ajuda e utilidades. Saúde do Leite (incluindo controle de mastite) pertence ao módulo Leite e é desativada junto com ele. O catálogo pode ser ampliado numa fase futura.
@@ -38,7 +38,7 @@
   - Sítios sem preferências salvas mantêm todos os módulos ativos, preservando o comportamento anterior.
   - Não exigir migração da planilha. Salvar deve preservar nome, donos, logotipo e outras configurações existentes.
   - Invalidar o cache da configuração após salvar, para que menu e bloqueios mudem imediatamente.
-- **Hierarquia:** Conforto e Colchão dependem de Leite; desligar Leite bloqueia suas rotas mesmo se a opção de Conforto continuar marcada. Reativar Leite restaura o acesso de Conforto apenas se a opção própria também estiver ativa.
+- **Independência:** Conforto térmico e descanso não depende do módulo Leite; pode ser usado no gado de corte com Leite desligado.
 - **Casos de borda:** preferências ausentes ou parcialmente preenchidas usam `ativo` como padrão; valores desconhecidos são ignorados sem desativar módulos; opções recebidas no formulário são validadas por lista permitida; falha ao salvar deve ser apresentada como erro, sem mensagem de sucesso.
 
 ## Decisões de design
@@ -80,7 +80,7 @@
 ### Funcionais
 
 - [ ] Usuário autenticado abre `/configuracoes/modulos`; usuário não autenticado segue o fluxo de login existente.
-- [ ] A página mostra os quatro grupos configuráveis e indica a dependência de Conforto/Colchão em relação a Leite.
+- [ ] A página mostra os quatro grupos configuráveis e indica que Conforto térmico e descanso é independente de Leite.
 - [ ] Usuário com acesso ao sítio salva qualquer combinação válida; a alteração persiste no `sitio_config.json` daquele sítio.
 - [ ] Sítio sem chave de módulos apresenta todos os grupos ativos e não perde nenhuma configuração atual.
 - [ ] Após salvar, links das áreas desligadas desaparecem do menu e da busca rápida sem exigir novo login.
@@ -88,7 +88,7 @@
 - [ ] GET em página desativada redireciona à configuração com mensagem identificando a área bloqueada.
 - [ ] POST em rota desativada não grava nem altera dados e redireciona à configuração com mensagem.
 - [ ] Chamada direta a API desativada responde 403 JSON e não executa a operação.
-- [ ] Com Leite desligado, suas rotas são bloqueadas; Conforto só é acessível quando Leite e Conforto estão ativos.
+- [ ] Com Leite desligado, suas rotas são bloqueadas; Conforto continua acessível se estiver ativo.
 - [ ] Ativar todos os grupos restaura o acesso sem recarregar ou migrar dados.
 - [ ] Configurações de módulos de sítios diferentes não vazam entre si.
 
@@ -109,7 +109,9 @@
 ## Fases de execução
 
 ### Fase 1: Preparação e catálogo
+
 **Objetivo:** identificar com precisão as superfícies pertencentes a cada grupo.
+
 - [ ] Criar catálogo canônico de IDs, nomes, dependências e endpoints.
 - [ ] Inventariar páginas, operações POST, APIs e atalhos de navegação dos quatro grupos.
 - [ ] Definir padrão ativo para configuração ausente e validação de dados existentes.
@@ -117,7 +119,9 @@
 - **Estimativa:** 2–3 horas.
 
 ### Fase 2: Configuração e navegação
+
 **Objetivo:** permitir salvar preferências e refletir o estado no menu.
+
 - [ ] Criar a página e rota POST com autenticação, CSRF, validação e mensagens.
 - [ ] Persistir as opções no arquivo do sítio sem alterar outras chaves e invalidar o cache.
 - [ ] Condicionar os links do drawer e as sugestões da busca rápida.
@@ -125,7 +129,9 @@
 - **Estimativa:** 4–6 horas.
 
 ### Fase 3: Proteção e integração
+
 **Objetivo:** impedir que as rotas escondidas continuem acessíveis diretamente.
+
 - [ ] Aplicar proteção centralizada após ativar o sítio e antes da execução das rotas.
 - [ ] Implementar redirecionamento informativo para páginas e 403 JSON para APIs.
 - [ ] Testar métodos de escrita, hierarquia Leite/Conforto e isolamento multi-sítio.
@@ -133,7 +139,9 @@
 - **Estimativa:** 4–6 horas.
 
 ### Fase 4: Validação e publicação
+
 **Objetivo:** confirmar compatibilidade e documentar o uso.
+
 - [ ] Executar testes direcionados e a suíte completa.
 - [ ] Verificar visualmente menu e configurações em computador e telemóvel.
 - [ ] Atualizar Ajuda e changelog; revisar a lista final de endpoints protegidos.

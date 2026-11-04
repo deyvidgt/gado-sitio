@@ -30,19 +30,20 @@ def test_preferencias_ausentes_e_parciais_mantem_modulos_ativos():
 
     estado = modulos.estado_efetivo({"modulos": {"leite": False}})
     assert estado["leite"] is False
-    assert estado["conforto"] is False
+    assert estado["conforto"] is True
     assert estado["reproducao"] is True
     assert estado["genetica_confinamento"] is True
 
 
-def test_conforto_depende_de_leite():
+def test_conforto_e_independente_de_leite():
     estado = modulos.estado_efetivo({
         "modulos": {"leite": False, "conforto": True},
     })
-    assert not modulos.esta_ativo("conforto", estado)
+    assert modulos.esta_ativo("conforto", estado)
+    assert not modulos.esta_ativo("leite", estado)
 
     estado = modulos.estado_efetivo({
-        "modulos": {"leite": True, "conforto": False},
+        "modulos": {"leite": False, "conforto": False},
     })
     assert not modulos.esta_ativo("conforto", estado)
 
@@ -112,8 +113,8 @@ def test_menu_e_busca_ocultam_modulos_desativados(cliente, config_modulos):
 
     pagina = cliente.get("/").get_data(as_text=True)
     assert 'href="/leite/ordenha"' not in pagina
-    assert 'href="/leite/conforto"' not in pagina
-    assert 'href="/leite/colchao"' not in pagina
+    assert 'href="/leite/conforto"' in pagina
+    assert 'href="/leite/colchao"' in pagina
     assert 'href="/reproducao"' not in pagina
     assert 'href="/genetica"' not in pagina
     assert 'href="/confinamento"' not in pagina
@@ -126,8 +127,10 @@ def test_menu_e_busca_ocultam_modulos_desativados(cliente, config_modulos):
         assert 'href="/leite"' not in html
         assert 'href="/leite/ordenha"' not in html
         assert 'href="/leite/saude"' not in html
+        assert 'href="/leite/conforto"' in html
+        assert 'href="/leite/colchao"' in html
 
-    for termo in ("ordenha", "reproducao", "genetica", "conforto"):
+    for termo in ("ordenha", "reproducao", "genetica"):
         dados = cliente.get(f"/api/busca?q={termo}&tipo=aba").get_json()
         for resultado in dados["resultados"]:
             chave = modulos.modulo_da_rota(resultado["link"])
@@ -141,7 +144,10 @@ def test_menu_e_busca_ocultam_modulos_desativados(cliente, config_modulos):
 
 def test_rotas_desativadas_sao_bloqueadas_por_metodo(cliente, config_modulos):
     _gravar_config(config_modulos, {
-        "modulos": {chave: False for chave in modulos.MODULOS},
+        "modulos": {
+            **{chave: False for chave in modulos.MODULOS},
+            "conforto": True,
+        },
     })
 
     for resposta in (
@@ -151,6 +157,9 @@ def test_rotas_desativadas_sao_bloqueadas_por_metodo(cliente, config_modulos):
     ):
         assert resposta.status_code == 302
         assert resposta.headers["Location"].endswith("/configuracoes/modulos")
+
+    assert cliente.get("/leite/conforto").status_code == 200
+    assert cliente.get("/leite/colchao").status_code == 200
 
     resposta_api = cliente.get("/api/leite/comparativo")
     assert resposta_api.status_code == 403
