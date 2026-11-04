@@ -371,51 +371,69 @@ def animais_por_pasto(df_man: pd.DataFrame, df_anim: pd.DataFrame | None = None)
     """Retorna {pasto_id: [lista de animais]} baseado na última movimentação de pasto.
 
     Útil para mostrar no mapa quais animais estão em cada pasto. Cada animal
-    aparece no pasto da sua última "Movimentação de Pasto" (coluna Pasto).
-    Animais sem movimentação registrada aparecem em pasto_id=None.
+    aparece no destino efetivo após aplicar movimentações individuais e do
+    rebanho inteiro em ordem cronológica.
 
     Se df_anim fornecido, enriquece com cor/nome do animal.
     """
     resultado = {}
+    local_rebanho = None
+    locais_individuais = {}
+    ids_encontrados = set()
+    brinco_por_id = {}
 
-    # Pega última movimentação de pasto de cada animal
-    movs = df_man[df_man["Tipo"] == TIPO_MOV].copy()
-    if movs.empty:
-        return resultado
+    if (df_man is not None and not df_man.empty
+            and {"Tipo", "Pasto", "Data"}.issubset(df_man.columns)):
+        movs = df_man[
+            (df_man["Tipo"] == TIPO_MOV) & df_man["Pasto"].apply(A._txt).ne("")
+        ].copy()
+        movs["_data_mov"] = pd.to_datetime(movs["Data"], dayfirst=True, errors="coerce")
+        movs = movs.dropna(subset=["_data_mov"]).sort_values("_data_mov", kind="stable")
 
-    # Agrupar por Brincos (animal) e pegar a última linha (mais recente)
-    ultima_mov = movs.sort_values("Data").groupby("Brincos").tail(1)
+        for _, row in movs.iterrows():
+            pasto_id = A._txt(row.get("Pasto"))
+            brincos = row.get("Brincos", "")
+            ids = A.ids_de(brincos)
+            if ids:
+                ids_encontrados.update(ids)
+                for animal_id in ids:
+                    locais_individuais[animal_id] = pasto_id
+                    brinco_por_id[animal_id] = str(brincos)
+            else:
+                local_rebanho = pasto_id
+                locais_individuais.clear()
 
-    for _, row in ultima_mov.iterrows():
-        brincos_str = row.get("Brincos", "")
-        pasto_id = row.get("Pasto", None)
+    if df_anim is not None:
+        animais = A.vivos(df_anim) if not df_anim.empty else df_anim
+        animais_por_id = {
+            A._txt(animal.get("ID")): animal
+            for _, animal in animais.iterrows()
+            if A._txt(animal.get("ID"))
+        }
+        ids_encontrados = set(animais_por_id)
+    else:
+        animais_por_id = {}
 
-        # Parse brincos (pode vir como "Amarelo 21 #A0001, Vermelho 05 #A0002")
-        if pd.isna(brincos_str) or not brincos_str:
-            pasto_id = None  # Rebanho todo movido, não rastreamos individual
-            continue
+    cores_dono = A.cores_brinco() if animais_por_id else {}
+    for animal_id in sorted(ids_encontrados):
+        animal = animais_por_id.get(animal_id)
+        if animal is not None:
+            brinco = A.fmt_brinco(animal.get("Brinco Cor"), animal.get("Brinco Nº"))
+            dono = A._txt(animal.get("Dono"))
+            cor = A.COR_HEX.get(cores_dono.get(dono), "#999")
+            nome = A._txt(animal.get("Nome"))
+        else:
+            brinco = brinco_por_id.get(animal_id, animal_id)
+            cor = "#999"
+            nome = ""
 
-        # Separa múltiplos brincos se houver
-        brincos_lista = [b.strip() for b in str(brincos_str).split(",")]
-
-        if pasto_id not in resultado:
-            resultado[pasto_id] = []
-
-        for brinco in brincos_lista:
-            # Extrai ID (ex: "#A0001" de "Amarelo 21 #A0001")
-            match = re.search(r"#(A\d+)", brinco)
-            animal_id = match.group(1) if match else brinco
-
-            info = {"id": animal_id, "brinco": brinco}
-
-            # Se temos df_anim, adiciona cor e nome
-            if df_anim is not None:
-                anim = A.por_id(df_anim, animal_id)
-                if anim:
-                    info["nome"] = anim.get("Nome", "")
-                    info["cor"] = anim.get("Cor", "")
-
-            resultado[pasto_id].append(info)
+        pasto_id = locais_individuais.get(animal_id, local_rebanho)
+        resultado.setdefault(pasto_id, []).append({
+            "id": animal_id,
+            "brinco": brinco,
+            "nome": nome,
+            "cor": cor,
+        })
 
     return resultado
 

@@ -9,7 +9,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - **Módulos personalizáveis por sítio:** em Configurações → Módulos do sítio, usuários podem ocultar e bloquear Leite, Conforto térmico e descanso, Reprodução ou Genética/Confinamento; Conforto é independente de Leite e pode ser usado no gado de corte.
 - **Aplicações de insumos em pastagens:** histórico por pasto com custo/ha; cada aplicação lança atomicamente um gasto vinculado na aba Gastos.
 - **Orçamento e contas futuras:** comparação anual previsto vs. realizado por mês/categoria, contas a pagar/receber e lembrete de vencimentos na Comercialização. Marcar uma conta como paga/recebida não cria um lançamento real.
-- **Busca rápida global:** encontra animais, tarefas, registros e telas do menu, incluindo subpáginas de Leite e Pastos; prioriza a tela quando o nome buscado corresponde a ela e abre o destino ao clicar ou pressionar Enter.
+- **Busca e voz globais:** a busca rápida encontra registros em todas as abas da planilha, telas e subpáginas disponíveis; o cabeçalho também permite ditar a busca. O comando de voz entende pedidos para buscar ou abrir telas e mostra links para os resultados. Os microfones dos formulários agora preenchem texto, número, data, lista e opções, sem enviar o formulário nem gravar automaticamente.
 
 ### Corrigido
 

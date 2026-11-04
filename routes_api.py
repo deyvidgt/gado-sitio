@@ -18,7 +18,7 @@ from config import MEMBROS, NOMES_MEMBROS, ALERTAS_SAUDE
 from busca import buscar_global
 from extensions import (
     app, _agora, login_required,
-    _get_dados_cache, _get_resumo_cache, _get_membros_cache, _get_evolucao_cache,
+    _get_dados_cache, _get_dados_busca_cache, _get_resumo_cache, _get_membros_cache, _get_evolucao_cache,
     _safe, fmt_brl, fmt_data, _carregar_usuarios, _salvar_usuarios,
     BASE_DIR,
 )
@@ -506,7 +506,7 @@ def api_busca():
     q = request.args.get("q", "").strip()[:80]
     tipo = request.args.get("tipo", "").strip() or None
     import modulos
-    resultados = buscar_global(q, tipo, dados=_get_dados_cache(),
+    resultados = buscar_global(q, tipo, dados=_get_dados_busca_cache(),
                                modulos=modulos.estado_sitio())
     return jsonify({"resultados": resultados})
 

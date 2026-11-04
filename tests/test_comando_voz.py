@@ -752,3 +752,44 @@ def test_visita_falada_preenche_tudo():
         "Pastagem": "Amarelando/Secando",
     }
     assert "responsavel=Deyvid" in r["url_form"] and "gado_contado=30" in r["url_form"]
+
+
+@pytest.mark.parametrize(
+    "frase,acao,consulta",
+    [
+        ("buscar vacina raiva", "buscar_global", "vacina raiva"),
+        ("abrir a tela de pastos", "navegar", "pastos"),
+        ("ir para o painel do leite", "navegar", "painel do leite"),
+    ],
+)
+def test_busca_e_navegacao_por_voz(frase, acao, consulta):
+    intencao = V.analisar(frase, HOJE)
+    assert intencao["acao"] == acao
+    assert intencao["consulta"] == consulta
+
+
+def test_resultado_de_busca_por_voz_nao_pode_gravar():
+    resultados = [{
+        "tipo": "aba", "titulo": "Pastos", "subtitulo": "Abrir tela",
+        "link": "/pastos", "icone": "🗺️",
+    }]
+    resp = V.montar(V.analisar("abrir tela de pastos", HOJE),
+                    {**CTX, "resultados_busca": resultados})
+    assert resp["resultados"] == resultados
+    assert resp["so_info"]
+    assert not V.pode_salvar(resp)
+
+
+def test_api_de_voz_mostra_navegacao_sem_permitir_gravacao(cliente):
+    with cliente.session_transaction() as sessao:
+        sessao["csrf_token"] = "token-teste"
+    resposta = cliente.post(
+        "/api/voz/interpretar",
+        json={"texto": "abrir a tela de pastos"},
+        headers={"X-CSRF-Token": "token-teste"},
+    )
+    assert resposta.status_code == 200
+    dados = resposta.get_json()
+    assert dados["acao"] == "navegar"
+    assert any(item["link"] == "/pastos" for item in dados["resultados"])
+    assert not dados["pode_salvar"]

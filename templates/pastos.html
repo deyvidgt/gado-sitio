@@ -250,6 +250,49 @@
   // Carrega polígonos dos pastos
   const pastosData = {{ pastos | tojson | safe }};
 
+  function escaparHtml(valor) {
+    return String(valor || '').replace(/[&<>"']/g, caractere => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[caractere]);
+  }
+
+  function desenharAnimaisDeterministicos() {
+    pastosData.forEach(p => {
+      if (!p.geo || !p.geo.coordinates || !Array.isArray(p.geo.coordinates[0])
+          || !p.geo.coordinates[0].length || !Array.isArray(p.animais_dados)
+          || !p.animais_dados.length) return;
+      const coords = p.geo.coordinates[0];
+      const centro = Array.isArray(p.centroid) && p.centroid.length === 2
+        ? p.centroid
+        : [
+            coords.reduce((total, ponto) => total + Number(ponto[1] || 0), 0) / coords.length,
+            coords.reduce((total, ponto) => total + Number(ponto[0] || 0), 0) / coords.length
+          ];
+      const [latC, lngC] = centro;
+      p.animais_dados.forEach((animal, animalIndex) => {
+        const angulo = (animalIndex / p.animais_dados.length) * 2 * Math.PI;
+        const raio = 0.00012 * Math.sqrt(animalIndex + 1);
+        const latFinal = latC + raio * Math.cos(angulo);
+        const lngFinal = lngC + raio * Math.sin(angulo);
+        const corFundo = /^#[0-9a-f]{6}$/i.test(animal.cor || '') ? animal.cor : '#ffe119';
+        const brincoNum = escaparHtml(animal.brinco || animal.id || '—');
+        const nomePasto = escaparHtml(p.nome);
+        const htmlIcon = `
+          <div class="marcador-brinco">
+            <div class="brinco-etiqueta" style="--cor-brinco: ${corFundo}">
+              <div class="brinco-status-bolha">🐄</div>
+              <div class="brinco-numero">${brincoNum}</div>
+            </div>
+          </div>
+        `;
+        const customIcon = L.divIcon({ className: '', html: htmlIcon, iconSize: [34, 42], iconAnchor: [17, 42] });
+        const m = L.marker([latFinal, lngFinal], { icon: customIcon });
+        m.bindPopup(`<b>🏷️ Brinco: ${brincoNum}</b><br>Pasto: ${nomePasto}`);
+        marcadoresAnimaisCamada.addLayer(m);
+      });
+    });
+  }
+
   if (pastosData && pastosData.length > 0) {
     const bounds = L.latLngBounds([]);
     pastosData.forEach(p => {
@@ -284,66 +327,7 @@
     }
   }
 
-  // Carrega e desenha marcadores de animais em formato de brinco no mapa
-  async function carregarAnimaisMapa() {
-    try {
-      const resp = await fetch('/api/pastos/animais');
-      const animaisPorPasto = await resp.json();
-
-      marcadoresAnimaisCamada.clearLayers();
-
-      // Para cada pasto, distribui os animais em volta do centróide
-      pastosData.forEach(p => {
-        if (!p.centroid || !animaisPorPasto[p.id]) return;
-        const animais = animaisPorPasto[p.id];
-        const [latC, lngC] = p.centroid;
-
-        animais.forEach((a, idx) => {
-          // Pequeno desvio em espiral para evitar sobreposição exata
-          const angulo = (idx / animais.length) * 2 * Math.PI;
-          const raio = 0.00015 * Math.sqrt(idx + 1);
-          const lat = latC + raio * Math.cos(angulo);
-          const lng = lngC + raio * Math.sin(angulo);
-
-          const corFundo = a.cor || '#ffe119';
-          const brincoNum = a.brinco || a.id;
-
-          const htmlIcon = `
-            <div class="marcador-brinco">
-              <div class="brinco-etiqueta" style="--cor-brinco: ${corFundo}">
-                <div class="brinco-status-bolha">🐄</div>
-                <div class="brinco-numero">${brincoNum}</div>
-              </div>
-            </div>
-          `;
-
-          const customIcon = L.divIcon({
-            className: '',
-            html: htmlIcon,
-            iconSize: [34, 42],
-            iconAnchor: [17, 42]
-          });
-
-          const m = L.marker([lat, lng], { icon: customIcon });
-
-          m.bindPopup(`
-            <div style="min-width:180px; padding:4px">
-              <b>🏷️ Brinco: ${brincoNum}</b><br>
-              <span style="color:var(--text-3)">Pasto:</span> ${p.nome}<br>
-              <hr style="margin:6px 0; border:0; border-top:1px solid #ddd">
-              <a href="/animais" class="btn btn-primary btn-sm" style="display:block; text-align:center; color:#fff; text-decoration:none">Ver Ficha do Animal</a>
-            </div>
-          `);
-
-          marcadoresAnimaisCamada.addLayer(m);
-        });
-      });
-    } catch (e) {
-      console.error("Erro ao carregar marcadores de animais no mapa:", e);
-    }
-  }
-
-  carregarAnimaisMapa();
+  desenharAnimaisDeterministicos();
 
   // Botões de ação do mapa
   document.querySelectorAll(".btn-ver-mapa").forEach(btn => {

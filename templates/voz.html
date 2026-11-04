@@ -78,11 +78,15 @@
       <li>gastei 350 reais de sal, 10 sacos</li>
       <li>visita contei 38 cabeças, choveu 20 milímetros, sal baixo, proteinado ok</li>
       <li>ficha amarelo 21</li>
+      <li>abrir a tela de pastos</li>
+      <li>abrir o painel do leite</li>
+      <li>buscar vacina raiva</li>
+      <li>buscar lote de confinamento</li>
     </ul>
     <p style="font-size:12px;color:var(--text-3);margin-top:10px">
       Cores dos brincos: {% for m, c in cores_dono.items() %}{{ NOMES[m] }} = {{ c }}{{ ' · ' if not loop.last }}{% endfor %}.
       Sem a cor, vale se só houver um animal vivo com aquele número. Datas: "ontem", "anteontem", "dia 12".
-      Nada é gravado sem você confirmar.
+      A busca e a navegação mostram links para abrir. Nenhum registro é gravado sem você tocar em Salvar.
     </p>
   </div>
 </div>
@@ -204,6 +208,17 @@
     }
     (d.erros || []).forEach(e => h += '<div class="msg-erro">❌ ' + esc(e) + "</div>");
     (d.avisos || []).forEach(a => h += '<div class="msg-aviso">⚠️ ' + esc(a) + "</div>");
+    if (d.resultados && d.resultados.length) {
+      h += '<div class="acoes-res">';
+      d.resultados.forEach(item => {
+        const destino = new URL(item.link, location.origin);
+        if (destino.origin !== location.origin) return;
+        h += '<a class="btn btn-outline" href="' + esc(destino.pathname + destino.search + destino.hash) +
+          '">' + esc(item.icone || "🔎") + " " + esc(item.titulo) +
+          (item.subtitulo ? '<small style="display:block">' + esc(item.subtitulo) + "</small>" : "") + "</a>";
+      });
+      h += "</div>";
+    }
     (d.perguntas || []).forEach(p => {
       h += '<div class="pergunta"><b>❓ ' + esc(p.pergunta) + '</b><div class="ops">';
       p.opcoes.forEach(o => h += '<button type="button" class="btn btn-outline btn-sm op" data-i="' + esc(p.indice) +

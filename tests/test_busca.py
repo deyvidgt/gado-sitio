@@ -150,11 +150,31 @@ def test_busca_encontra_transacao_pelo_brinco(monkeypatch):
     assert any(r["link"].startswith("/transacoes") for r in resultados)
 
 
+def test_busca_encontra_registros_de_abas_adicionais(monkeypatch):
+    vazio = pd.DataFrame()
+    monkeypatch.setattr("busca.animais.carregar", lambda: vazio)
+    monkeypatch.setattr("busca.tarefas.carregar", lambda: vazio)
+    monkeypatch.setattr("busca.db.carregar_aba", lambda aba: vazio)
+    dados = {
+        "Leite Alimentação": pd.DataFrame([{
+            "Produto": "Farelo de algodão", "Categoria": "Concentrado",
+            "Data": "03/11/2026",
+        }]),
+    }
+
+    resultados = buscar_global("farelo algodao", dados=dados)
+    assert any(r["tipo"] == "registro"
+               and r["titulo"] == "Alimento leiteiro: Farelo de algodão"
+               and r["link"] == "/leite/alimentacao"
+               for r in resultados)
+
+
 def test_busca_rapida_tem_sugestoes_acessiveis(cliente):
     html = cliente.get("/").get_data(as_text=True)
     assert 'aria-autocomplete="list"' in html
     assert 'aria-haspopup="listbox"' in html
     assert 'id="search-dropdown" class="search-dropdown" role="listbox" aria-live="polite" hidden' in html
+    assert 'id="search-mic"' in html
     assert "Ctrl+K" in html or "ctrlKey" in html
 
 

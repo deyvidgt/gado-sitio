@@ -142,6 +142,37 @@ def test_mover_grava_no_manejo(dados_restaurados):
         PA.mover("P99", "2026-10-20", None, 7)
 
 
+def test_animais_por_pasto_aplica_movimentacoes_individuais_e_do_rebanho():
+    animais = pd.DataFrame([
+        {"ID": "A0001", "Status": "Vivo", "Brinco Cor": "Amarelo", "Brinco Nº": 1,
+         "Dono": "Deyvid"},
+        {"ID": "A0002", "Status": "Vivo", "Brinco Cor": "Azul", "Brinco Nº": 2,
+         "Dono": "Nilson"},
+        {"ID": "A0003", "Status": "Vendido", "Brinco Cor": "Verde", "Brinco Nº": 3,
+         "Dono": "Mae"},
+    ])
+    movimentos = _man(
+        _mov("2026-10-01", "P01", "Amarelo 01 #A0001; Azul 02 #A0002", 2),
+        _mov("2026-10-10", "P02", qtd=3),
+        _mov("2026-10-20", "P01", "Amarelo 01 #A0001", 1),
+    )
+
+    por_pasto = PA.animais_por_pasto(movimentos, animais)
+
+    assert [a["id"] for a in por_pasto["P01"]] == ["A0001"]
+    assert [a["id"] for a in por_pasto["P02"]] == ["A0002"]
+    assert por_pasto["P01"][0]["brinco"] == "Amarelo 01"
+
+
+def test_animais_por_pasto_retorna_animais_sem_movimentacao_como_sem_pasto():
+    animais = pd.DataFrame([
+        {"ID": "A0001", "Status": "Vivo", "Brinco Cor": "Amarelo", "Brinco Nº": 1,
+         "Dono": "Deyvid"},
+    ])
+
+    assert [a["id"] for a in PA.animais_por_pasto(_man(), animais)[None]] == ["A0001"]
+
+
 # ── Lotação e composição do rebanho ───────────────────────────────────────────
 
 @pytest.mark.parametrize("ua_ha, capacidade, esperado", [

@@ -34,7 +34,7 @@ ABAS_DISPONIVEIS = [
     {"termo": "consumo leite", "titulo": "Consumo do Rebanho Leiteiro", "link": "/leite/consumo", "icone": "📊"},
     {"termo": "volumoso volumosos silagem feno", "titulo": "Volumosos", "link": "/volumosos", "icone": "🌾"},
     {"termo": "consumo volumoso volumosos silagem", "titulo": "Consumo de Volumosos", "link": "/volumosos/consumo", "icone": "📉"},
-    {"termo": "calculador calculadora racao ração dieta ingredientes", "titulo": "Calculador de Ração", "link": "/racao/calculador", "icone": "🧮"},
+    {"termo": "calculador calculadora racao ração dieta ingredientes", "titulo": "Calculador de Ração", "link": "/leite/calculador", "icone": "🧮"},
     {"termo": "conforto termico térmico calor", "titulo": "Conforto Térmico", "link": "/leite/conforto", "icone": "🏠"},
     {"termo": "colchao colchão cama troca", "titulo": "Colchão", "link": "/leite/colchao", "icone": "🛏️"},
     {"termo": "ordenha registrar producao produção leite", "titulo": "Registrar Ordenha", "link": "/leite/ordenha", "icone": "🥛"},
@@ -70,6 +70,67 @@ ABAS_DISPONIVEIS = [
     {"termo": "tempo clima previsao previsão", "titulo": "Tempo", "link": "/tempo", "icone": "🌤️"},
     {"termo": "configuracao configurações usuarios usuários sitio sítio", "titulo": "Configurações", "link": "/configuracoes", "icone": "⚙️"},
     {"termo": "modulos módulos personalizar ativar desativar", "titulo": "Módulos do Sítio", "link": "/configuracoes/modulos", "icone": "🧩"},
+    {"termo": "alimentacao alimentação catalogo catálogo produtos leite", "titulo": "Alimentação do Leite", "link": "/leite/alimentacao", "icone": "🥛"},
+    {"termo": "lancar volumoso entrada feno silagem", "titulo": "Lançar Volumoso", "link": "/volumosos/lançar", "icone": "➕"},
+    {"termo": "indicadores crescimento gmd", "titulo": "Indicadores de Crescimento", "link": "/indicadores/gmd", "icone": "📈"},
+    {"termo": "engorda pastagem gmd", "titulo": "Engorda em Pastagem", "link": "/indicadores/engorda-pastagem", "icone": "🌱"},
+    {"termo": "gmd lotacao lotação capacidade", "titulo": "GMD e Lotação", "link": "/indicadores/gmd-lotacao", "icone": "📊"},
+    {"termo": "consumo racao ração desperdicio desperdício", "titulo": "Consumo de Ração", "link": "/indicadores/racao-consumo", "icone": "🥣"},
+    {"termo": "mortalidade bezerros", "titulo": "Mortalidade de Bezerros", "link": "/indicadores/mortalidade-bezerros", "icone": "🐮"},
+    {"termo": "historico doenças tratamentos", "titulo": "Histórico de Doenças", "link": "/doencas", "icone": "🩺"},
+    {"termo": "historico medicacoes medicações", "titulo": "Histórico de Medicações", "link": "/medicacoes", "icone": "💉"},
+    {"termo": "relatorios avancados avançados", "titulo": "Relatórios Avançados", "link": "/relatorios/avancados", "icone": "📈"},
+    {"termo": "backup backups restaurar baixar", "titulo": "Backups", "link": "/backups", "icone": "💾"},
+    {"termo": "importar dados planilha", "titulo": "Importar Dados", "link": "/importar", "icone": "📥"},
+    {"termo": "exportar dados planilha", "titulo": "Exportar Dados", "link": "/exportar", "icone": "📤"},
+]
+
+ABAS_REGISTROS_EXTRAS = [
+    ("Cochos", "Cocho", "🥣", "/cochos", ("Nome", "Tipo", "Local", "Observações")),
+    ("Pastos", "Pasto", "🗺️", "/pastos", ("Nome", "ID", "Observações")),
+    ("Pastos Aplicações", "Aplicação em pasto", "🌱", "/pastos/aplicacoes",
+     ("Produto", "Tipo Insumo", "Pasto ID", "Responsável")),
+    ("Leite Produção", "Produção de leite", "🥛", "/leite/relatorios",
+     ("Vaca ID", "Brinco", "Ordenha", "Qualidade", "Observação")),
+    ("Leite Configuração", "Configuração do leite", "🥛", "/leite", ("Observações",)),
+    ("Leite Alimentação", "Alimento leiteiro", "🍽️", "/leite/alimentacao",
+     ("Produto", "Fabricante", "Categoria", "Lote")),
+    ("Leite Necessidades", "Necessidade nutricional", "🍽️", "/leite/nutricao",
+     ("Categoria Produtiva", "Nutriente ou Item", "Fonte")),
+    ("Leite Tratamentos", "Tratamento leiteiro", "💊", "/leite/saude",
+     ("Vaca ID", "Brinco", "Tipo", "Descrição", "Produto/Serviço")),
+    ("Leite Conforto", "Conforto térmico", "🏠", "/leite/conforto",
+     ("Local", "Observação", "Responsável")),
+    ("Leite Colchão", "Colchão", "🛏️", "/leite/colchao",
+     ("Local", "Material", "Condição", "Observação")),
+    ("Tratamentos", "Tratamento", "🩺", "/doencas",
+     ("ID Animal", "Brinco", "Tipo Doença", "Tratamento", "Medicamento", "Observações")),
+    ("Medicações", "Medicação", "💉", "/medicacoes",
+     ("Brincos", "Tipo Medicação", "Princípio Ativo", "Motivo", "Observações")),
+    ("Volumosos", "Volumoso", "🌾", "/volumosos",
+     ("Tipo", "Qualidade", "Origem", "Observação")),
+    ("Consumo Volumosos", "Consumo de volumoso", "🌾", "/volumosos/consumo",
+     ("Tipo", "Local", "Observação")),
+    ("Engorda Pastagem", "Engorda em pastagem", "🌱", "/indicadores/engorda-pastagem",
+     ("Pasto ID", "Brincos", "Condição Pasto", "Observação")),
+    ("GMD Lotação", "GMD e lotação", "📊", "/indicadores/gmd-lotacao",
+     ("Animais", "Pasto ID", "Qualidade Pasto", "Clima", "Observação")),
+    ("Ração Consumo", "Consumo de ração", "🥣", "/indicadores/racao-consumo",
+     ("Tipo Ração", "Observação")),
+    ("Mortalidade Bezerros", "Mortalidade de bezerros", "🐮", "/indicadores/mortalidade-bezerros",
+     ("Causa 1", "Causa 2", "Causa 3", "Observação")),
+    ("Confinamento Lotes", "Lote de confinamento", "🏚️", "/confinamento",
+     ("Lote ID", "Brincos", "Status", "Observação")),
+    ("Genética", "Registro genético", "🧬", "/genetica",
+     ("Animal ID", "Pai ID", "Mãe ID", "Genótipo", "Observação")),
+    ("Insumos", "Insumo", "🧂", "/insumos/comparar",
+     ("Tipo", "Marca", "Observações")),
+    ("Orçamento Previsto", "Orçamento previsto", "📅", "/planejamento",
+     ("Tipo", "Categoria", "Descrição", "Membro")),
+    ("Contas Futuras", "Conta futura", "📅", "/planejamento",
+     ("Tipo", "Categoria", "Descrição", "Status", "Membro")),
+    ("Fotos", "Foto de animal", "📷", "/animais",
+     ("Animal ID", "Brinco", "Descrição", "Legenda")),
 ]
 
 
@@ -217,6 +278,34 @@ def buscar_global(
                 " — ".join(v for v in (data, descricao) if v),
                 link, icone, alvo, consulta,
             )
+
+    for nome_aba, rotulo, icone, link, campos_titulo in ABAS_REGISTROS_EXTRAS:
+        if modulos is not None:
+            chave_modulo = modulo_da_rota(link)
+            if chave_modulo and not esta_ativo(chave_modulo, modulos):
+                continue
+        df = dados.get(nome_aba)
+        if df is None:
+            df = db.carregar_aba(nome_aba)
+        for _, row in df.iterrows():
+            corresponde, alvo = _contem_termos(termos, row.to_dict().values())
+            if not corresponde:
+                continue
+            titulo_detalhe = next(
+                (_texto(row.get(campo)) for campo in campos_titulo if _texto(row.get(campo))),
+                "",
+            )
+            data = next(
+                (_texto(row.get(campo)) for campo in ("Data", "Data Registro", "Data Entrada")
+                 if _texto(row.get(campo))),
+                "",
+            )
+            registro_id = _texto(row.get("ID"))
+            titulo = f"{rotulo}: {titulo_detalhe}" if titulo_detalhe else rotulo
+            if registro_id:
+                titulo += f" ({registro_id})"
+            subtitulo = " — ".join(v for v in (data, titulo_detalhe) if v)
+            _adicionar(resultados, "registro", titulo, subtitulo, link, icone, alvo, consulta)
 
     for aba in ABAS_DISPONIVEIS:
         if modulos is not None:

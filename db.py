@@ -330,6 +330,15 @@ def carregar_todas() -> dict[str, pd.DataFrame]:
         return {aba: carregar_aba(aba) for aba in _ABAS_PRINCIPAIS}
 
 
+def carregar_todas_abas() -> dict[str, pd.DataFrame]:
+    """Carrega todas as abas existentes em uma abertura do arquivo."""
+    with pd.ExcelFile(ARQUIVO_PATH) as arquivo:
+        return {
+            aba: _preparar_df(pd.read_excel(arquivo, sheet_name=aba))
+            for aba in arquivo.sheet_names
+        }
+
+
 def versao_arquivo():
     """Assinatura (mtime, tamanho) do .xlsx — muda a cada gravação, inclusive de
     outro processo (Task do WhatsApp, outro worker do servidor). Usada pelo cache."""

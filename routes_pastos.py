@@ -126,49 +126,14 @@ def _extrair_animais_por_pasto(df_manejo, df_animais=None):
 
     Retorna dict: {pasto_id: {"brincos": [...], "dados": [{brinco, dono_cor}, ...]}}
     """
-    animais_por_pasto = {}
-    if df_manejo.empty or "Pasto" not in df_manejo.columns:
-        return animais_por_pasto
-
-    # Dicionário de cores por dono (de df_animais se disponível)
-    dono_cores = {}
-    if df_animais is not None and not df_animais.empty:
-        for _, animal in df_animais.iterrows():
-            partes = []
-            for campo in ("Brinco Cor", "Brinco Nº"):
-                valor = animal.get(campo, "")
-                if pd.notna(valor) and str(valor).strip().lower() != "nan":
-                    partes.append(str(valor).strip())
-            brinco = " ".join(partes)
-            cor = animal.get("Cor Dono", "#999")
-            if brinco:
-                dono_cores[brinco] = cor
-
-    # Últimas movimentações de pasto
-    df_mov = df_manejo[df_manejo["Pasto"].notna() & (df_manejo["Pasto"] != "")].copy()
-    if df_mov.empty:
-        return animais_por_pasto
-
-    for pasto_id, grup in df_mov.groupby("Pasto"):
-        if "Brincos" in grup.columns:
-            brincos_set = set()
-            for _, row in grup.sort_values("Data", ascending=False, na_position="last").iterrows():
-                brincos_str = str(row.get("Brincos", "")).strip()
-                if brincos_str and brincos_str != "":
-                    for brinco in brincos_str.split(","):
-                        brinco_limpo = brinco.strip().split("#")[0].strip()
-                        if brinco_limpo and brinco_limpo.lower() != "nan":
-                            brincos_set.add(brinco_limpo)
-            if brincos_set:
-                brincos_list = sorted(list(brincos_set))
-                dados = [{"brinco": b, "cor": dono_cores.get(b, "#999")} for b in brincos_list]
-                animais_por_pasto[pasto_id] = {
-                    "brincos": brincos_list,
-                    "dados": dados,
-                    "total": len(brincos_list)
-                }
-
-    return animais_por_pasto
+    return {
+        pasto_id: {
+            "brincos": [animal["brinco"] for animal in animais],
+            "dados": animais,
+            "total": len(animais),
+        }
+        for pasto_id, animais in PA.animais_por_pasto(df_manejo, df_animais).items()
+    }
 
 @app.route("/pastos")
 @login_required

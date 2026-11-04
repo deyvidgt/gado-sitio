@@ -194,6 +194,12 @@ def _get_dados_cache():
     from db import carregar_todas
     return _cache_dados("dados", carregar_todas)
 
+
+def _get_dados_busca_cache():
+    from db import carregar_todas_abas
+    return _cache_dados("dados_busca", carregar_todas_abas)
+
+
 def _get_resumo_cache():
     from calculos import calcular_resumo_financeiro
     def _calc():

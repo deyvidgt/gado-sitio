@@ -21,6 +21,7 @@ from config import (LOGIN_MEMBRO, MEMBROS, NOMES_MEMBROS, CORES_BRINCO, CATEGORI
 from db import fazer_backup
 from routes_visitas import _enviar_avisos_depois
 from extensions import (app, _agora, _validar_csrf, login_required, _get_dados_cache,
+                        _get_dados_busca_cache,
                         salvar_linha, fmt_data, _limpar_backups_antigos, _ler_sitio_config_disco)
 
 
@@ -507,7 +508,22 @@ def _ctx_voz():
 def _interpretar(corpo: dict) -> dict:
     texto = str(corpo.get("texto") or "")[:600]
     intencao = V.analisar(texto, _agora())
-    resp = V.montar(intencao, _ctx_voz(), corpo.get("escolhas") or {})
+    if intencao.get("acao") in {"buscar_global", "navegar"}:
+        ctx = {}
+        consulta = intencao.get("consulta", "")
+        if len(consulta.strip()) >= 2:
+            import busca
+            import modulos
+            filtro = "aba" if intencao["acao"] == "navegar" else None
+            ctx["resultados_busca"] = busca.buscar_global(
+                consulta, filtro, dados=_get_dados_busca_cache(),
+                modulos=modulos.estado_sitio(),
+            )
+    elif intencao.get("acao"):
+        ctx = _ctx_voz()
+    else:
+        ctx = {}
+    resp = V.montar(intencao, ctx, corpo.get("escolhas") or {})
     resp["pode_salvar"] = V.pode_salvar(resp)
     return resp
 

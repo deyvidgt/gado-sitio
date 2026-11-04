@@ -630,6 +630,35 @@ def _acao(n: str, toks) -> str | None:
     return None
 
 
+def _acao_busca_ou_navegacao(texto: str) -> dict | None:
+    toks = tokenizar(texto)
+    if not toks:
+        return None
+    palavras = [t.n for t in toks]
+    primeiro = palavras[0]
+    if primeiro in {"buscar", "busque", "procure", "pesquise", "pesquisar"}:
+        inicio = 1
+        if inicio < len(toks) and palavras[inicio] == "por":
+            inicio += 1
+        consulta = " ".join(t.o for t in toks[inicio:]).strip()
+        return {"acao": "buscar_global", "consulta": consulta}
+
+    if "ficha" in palavras or any(t.v is not None and t.v <= 99 for t in toks):
+        return None
+    if primeiro in {"abrir", "abre", "acessar", "acesse", "navegar", "navegue"}:
+        inicio = 1
+    elif palavras[:2] in (["ir", "para"], ["vá", "para"], ["vai", "para"]):
+        inicio = 2
+    else:
+        return None
+    while inicio < len(toks) and palavras[inicio] in {
+        "a", "o", "as", "os", "tela", "pagina", "aba", "menu", "do", "da", "de"
+    }:
+        inicio += 1
+    consulta = " ".join(t.o for t in toks[inicio:]).strip()
+    return {"acao": "navegar", "consulta": consulta}
+
+
 def _tipo_manejo(n: str) -> str | None:
     if "vacin" in n:
         for chave, tipo in _VACINAS:
@@ -817,6 +846,9 @@ def analisar(texto: str, hoje: datetime | None = None) -> dict:
     hoje = hoje or datetime.now()
     toks = tokenizar(texto)
     n = " ".join(t.n for t in toks)
+    atalho = _acao_busca_ou_navegacao(texto)
+    if atalho:
+        return {**atalho, "texto": str(texto or "").strip(), "data": None}
     acao = _acao(n, toks)
     r = {"acao": acao, "texto": str(texto or "").strip(), "data": None}
     if acao is None:
@@ -978,6 +1010,20 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
     if not acao:
         out["erros"].append("Não entendi o comando. Comece com: registrar, nasceu, vacina, "
                             "vermífugo, pesagem, morreu, comprei, vendi, gastei, visita ou ficha.")
+        return out
+    if acao in {"buscar_global", "navegar"}:
+        consulta = str(intencao.get("consulta") or "").strip()
+        out["titulo"] = "🔎 Buscar no sítio" if acao == "buscar_global" else "🧭 Abrir uma tela"
+        out["so_info"] = True
+        if len(consulta) < 2:
+            out["erros"].append("Diga o que quer procurar ou qual tela quer abrir.")
+            return out
+        resultados = ctx.get("resultados_busca") or []
+        if not resultados:
+            out["avisos"].append(f"Não encontrei resultados para “{consulta}”.")
+        else:
+            out["campos"].append(["Busca", consulta])
+            out["resultados"] = resultados
         return out
     if acao == "recusa":
         out["titulo"] = "Não faço isso por voz"
@@ -1413,5 +1459,6 @@ def montar(intencao: dict, ctx: dict, escolhas: dict | None = None) -> dict:
 
 
 def pode_salvar(resp: dict) -> bool:
-    return bool(resp.get("payload")) and not resp["erros"] and not resp["perguntas"] \
+    return resp.get("acao") not in {"buscar_global", "navegar"} \
+        and bool(resp.get("payload")) and not resp["erros"] and not resp["perguntas"] \
         and not resp.get("so_formulario")
