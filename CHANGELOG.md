@@ -5,7 +5,11 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
-- *(vazio — ver abaixo as versões fechadas)*
+- **Aplicações de insumos em pastagens:** histórico por pasto com custo/ha; cada aplicação lança atomicamente um gasto vinculado na aba Gastos.
+- **Orçamento e contas futuras:** comparação anual previsto vs. realizado por mês/categoria, contas a pagar/receber e lembrete de vencimentos na Comercialização. Marcar uma conta como paga/recebida não cria um lançamento real.
+
+### Corrigido
+- **Exclusão de cochos:** a rota agora remove fisicamente a linha pelo ID normalizado, salva a aba com segurança e atualiza o painel lendo novamente do Excel.
 
 ## [5.19.0] — 2026-11-03
 

@@ -160,26 +160,29 @@ def editar_cocho(cocho_id):
 @app.route("/cochos/excluir/<cocho_id>", methods=["POST", "GET"])
 @login_required
 def deletar_cocho(cocho_id):
-    """Marca cocho como inativo (soft delete) ou remove definitivamente."""
+    """Remove definitivamente o cocho da aba persistida."""
     if request.method == "GET":
         return redirect(url_for("cochos"))
     _validar_csrf()
     try:
         from db import reescrever_aba
         df = _preparar_para_editar(CO.carregar())
+        if df.empty or "ID" not in df.columns:
+            flash("Cocho não encontrado.", "error")
+            return redirect(url_for("cochos"))
 
-        cocho = df[df["ID"].astype(str) == str(cocho_id)]
-        if cocho.empty:
-            abort(404)
+        ids = df["ID"].fillna("").astype(str).str.strip()
+        alvo = str(cocho_id).strip()
+        if not ids.eq(alvo).any():
+            flash("Cocho não encontrado.", "error")
+            return redirect(url_for("cochos"))
 
-        cocho_idx = cocho.index[0]
-        # Remove fisicamente ou marca como Inativo
-        df.at[cocho_idx, "Ativo"] = "Não"
-
+        df = df.loc[~ids.eq(alvo)].reset_index(drop=True)
+        fazer_backup_seguro()
         reescrever_aba("Cochos", df)
         flash("🗑️ Cocho removido com sucesso!", "success")
-        fazer_backup_seguro()
     except Exception as e:
+        app.logger.exception("Falha ao excluir cocho %s", cocho_id)
         flash(f"Erro ao remover cocho: {e}", "error")
 
     return redirect(url_for("cochos"))

@@ -11,13 +11,18 @@ Novas páginas para dashboard mobile-first:
 - /lembretes-whatsapp — Preferências + fila de avisos
 """
 
-from flask import render_template, session, jsonify
+from flask import render_template, session, jsonify, request, redirect, url_for, flash
 import pandas as pd
 from datetime import datetime, timedelta
+import math
+import db
 from db import carregar_aba, RAIZ
 from calculos import calcular_todos_membros, calcular_estoque_por_membro
 from config import MEMBROS, NOMES_MEMBROS, EMOJIS_MEMBROS
-from extensions import app, _agora, login_required, _get_dados_cache, _get_membros_cache, _get_resumo_cache, fmt_brl, fmt_data
+from extensions import (app, _agora, _validar_csrf, login_required, _get_dados_cache,
+                        _get_membros_cache, _get_resumo_cache, fmt_brl, fmt_data, parse_valor,
+                        _limpar_backups_antigos)
+import planejamento as PL
 import os
 import json
 
@@ -151,6 +156,248 @@ def financeiro():
                           tabela_membros=tabela_membros,
                           r_membros=r_membros,
                           MEMBROS=MEMBROS, NOMES_MEMBROS=NOMES_MEMBROS, EMOJIS_MEMBROS=EMOJIS_MEMBROS)
+
+
+def _backup_planejamento():
+    db.fazer_backup()
+    _limpar_backups_antigos()
+
+
+def _alterar_registro_por_id(aba, registro_id, operacao):
+    """Aplica alteração sob a trava de escrita do Excel e exige ID existente."""
+    encontrado = False
+
+    def alterar(df):
+        nonlocal encontrado
+        if df.empty or "ID" not in df.columns:
+            return df
+        mascara = df["ID"].astype(str) == str(registro_id)
+        if not mascara.any():
+            return df
+        encontrado = True
+        return operacao(df, mascara)
+
+    db.alterar_aba(aba, alterar)
+    if not encontrado:
+        raise ValueError("Registro não encontrado.")
+
+
+@app.route("/planejamento")
+@login_required
+def planejamento_financeiro():
+    dados = _get_dados_cache()
+    agora = _agora()
+    try:
+        ano = int(request.args.get("ano", agora.year))
+        if ano < 2000 or ano > 2100:
+            raise ValueError
+    except (TypeError, ValueError):
+        ano = agora.year
+
+    df_orcamento = carregar_aba("Orçamento Previsto")
+    df_contas = carregar_aba("Contas Futuras")
+    comparativo = PL.comparar_orcamento(
+        df_orcamento, dados["Compras"], dados["Gastos"], dados["Vendas"], ano
+    )
+    orcamentos = []
+    if not df_orcamento.empty:
+        for _, row in df_orcamento.iterrows():
+            if str(row.get("Mês") or "")[:4] != str(ano):
+                continue
+            item = row.to_dict()
+            item["valor_formatado"] = fmt_brl(parse_valor(item.get("Valor Previsto (R$)")))
+            orcamentos.append(item)
+    orcamentos.sort(key=lambda i: (str(i.get("Mês") or ""), str(i.get("Categoria") or "")))
+
+    contas = []
+    if not df_contas.empty:
+        for _, row in df_contas.iterrows():
+            item = row.to_dict()
+            vencimento = PL.normalizar_data(item.get("Data Vencimento"))
+            item["vencimento_exibido"] = vencimento.strftime("%d/%m/%Y") if not pd.isna(vencimento) else ""
+            item["valor_formatado"] = fmt_brl(parse_valor(item.get("Valor (R$)")))
+            contas.append(item)
+    contas.sort(key=lambda i: PL.normalizar_data(i.get("Data Vencimento"))
+                if not pd.isna(PL.normalizar_data(i.get("Data Vencimento"))) else pd.Timestamp.max)
+    proximas = PL.contas_proximas(df_contas, agora.date())
+    for conta in proximas:
+        conta["valor_formatado"] = fmt_brl(parse_valor(conta.get("Valor (R$)")))
+
+    anos = {agora.year - 1, agora.year, agora.year + 1}
+    for _, row in df_orcamento.iterrows() if not df_orcamento.empty else []:
+        mes = str(row.get("Mês") or "")
+        if len(mes) >= 4 and mes[:4].isdigit():
+            anos.add(int(mes[:4]))
+
+    totais = {
+        tipo: {
+            "previsto": sum(r["previsto"] for r in comparativo if r["tipo"] == tipo),
+            "realizado": sum(r["realizado"] for r in comparativo if r["tipo"] == tipo),
+        }
+        for tipo in ("Despesa", "Receita")
+    }
+    return render_template(
+        "planejamento.html", ano=ano, anos=sorted(anos, reverse=True),
+        categorias=PL.CATEGORIAS_ORCAMENTO, membros=MEMBROS,
+        orcamentos=orcamentos, comparativo=comparativo, totais=totais,
+        contas=contas, proximas=proximas, hoje=agora.strftime("%Y-%m-%d"),
+        fmt_brl=fmt_brl,
+    )
+
+
+@app.route("/orcamento/novo", methods=["POST"])
+@login_required
+def novo_orcamento():
+    _validar_csrf()
+    f = request.form
+    try:
+        mes = (f.get("mes") or "").strip()
+        try:
+            datetime.strptime(mes, "%Y-%m")
+        except ValueError:
+            raise ValueError("Informe o mês do orçamento.")
+        tipo = (f.get("tipo") or "").strip()
+        categoria = (f.get("categoria") or "").strip()
+        if (tipo, categoria) not in PL.CATEGORIAS_ORCAMENTO:
+            raise ValueError("Selecione uma categoria compatível com o tipo.")
+        descricao = (f.get("descricao") or "").strip()
+        valor = parse_valor(f.get("valor"))
+        if not descricao:
+            raise ValueError("Informe a descrição do orçamento.")
+        if not math.isfinite(valor) or valor <= 0:
+            raise ValueError("O valor previsto deve ser maior que zero.")
+        membro = (f.get("membro") or "").strip()
+        if membro and membro not in MEMBROS:
+            raise ValueError("Selecione um membro válido.")
+        _backup_planejamento()
+        db.salvar_linha("Orçamento Previsto", [
+            PL.novo_id("ORC"), mes, tipo, categoria, descricao, valor, membro,
+        ])
+        flash("Previsão de orçamento registrada.", "success")
+    except ValueError as e:
+        flash(str(e), "error")
+    except Exception as e:
+        app.logger.exception("Falha ao registrar previsão de orçamento")
+        flash(f"Erro ao registrar orçamento: {e}", "error")
+    return redirect(url_for("planejamento_financeiro"))
+
+
+@app.route("/orcamento/<registro_id>/excluir", methods=["POST"])
+@login_required
+def excluir_orcamento(registro_id):
+    _validar_csrf()
+    try:
+        _backup_planejamento()
+        _alterar_registro_por_id(
+            "Orçamento Previsto", registro_id,
+            lambda df, mascara: df.loc[~mascara].reset_index(drop=True),
+        )
+        flash("Previsão removida.", "success")
+    except ValueError as e:
+        flash(str(e), "error")
+    except Exception as e:
+        app.logger.exception("Falha ao excluir previsão de orçamento")
+        flash(f"Erro ao remover previsão: {e}", "error")
+    return redirect(url_for("planejamento_financeiro"))
+
+
+@app.route("/contas-futuras/nova", methods=["POST"])
+@login_required
+def nova_conta_futura():
+    _validar_csrf()
+    f = request.form
+    try:
+        vencimento = PL.normalizar_data(f.get("vencimento"))
+        tipo = (f.get("tipo") or "").strip()
+        categoria = (f.get("categoria") or "").strip()
+        descricao = (f.get("descricao") or "").strip()
+        valor = parse_valor(f.get("valor"))
+        membro = (f.get("membro") or "").strip()
+        if pd.isna(vencimento):
+            raise ValueError("Informe uma data de vencimento válida.")
+        if tipo not in ("Pagar", "Receber"):
+            raise ValueError("Selecione pagar ou receber.")
+        tipo_orcamento = "Despesa" if tipo == "Pagar" else "Receita"
+        if (tipo_orcamento, categoria) not in PL.CATEGORIAS_ORCAMENTO:
+            raise ValueError("Selecione uma categoria compatível com o tipo.")
+        if not descricao:
+            raise ValueError("Informe a descrição da conta.")
+        if not math.isfinite(valor) or valor <= 0:
+            raise ValueError("O valor da conta deve ser maior que zero.")
+        if membro and membro not in MEMBROS:
+            raise ValueError("Selecione um membro válido.")
+        _backup_planejamento()
+        db.salvar_linha("Contas Futuras", [
+            PL.novo_id("CF"), vencimento.strftime("%Y-%m-%d"), tipo, categoria,
+            descricao, valor, "Pendente", membro,
+        ])
+        flash("Conta futura registrada.", "success")
+    except ValueError as e:
+        flash(str(e), "error")
+    except Exception as e:
+        app.logger.exception("Falha ao registrar conta futura")
+        flash(f"Erro ao registrar conta: {e}", "error")
+    return redirect(url_for("planejamento_financeiro"))
+
+
+@app.route("/contas-futuras/<registro_id>/status", methods=["POST"])
+@login_required
+def alterar_status_conta(registro_id):
+    _validar_csrf()
+    try:
+        df = carregar_aba("Contas Futuras")
+        if df.empty or "ID" not in df.columns:
+            raise ValueError("Conta não encontrada.")
+        achadas = df[df["ID"].astype(str) == str(registro_id)]
+        if achadas.empty:
+            raise ValueError("Conta não encontrada.")
+        conta = achadas.iloc[0]
+        tipo = str(conta.get("Tipo") or "")
+        status = (request.form.get("status") or "").strip()
+        status_permitidos = {"Pendente", "Pago" if tipo == "Pagar" else "Recebido"}
+        if tipo not in ("Pagar", "Receber") or status not in status_permitidos:
+            raise ValueError("Status inválido para esta conta.")
+        _backup_planejamento()
+
+        def definir_status(df_, mascara):
+            if "Status" not in df_.columns:
+                df_["Status"] = ""
+            df_["Status"] = df_["Status"].astype(object)
+            df_.loc[mascara, "Status"] = status
+            return df_
+
+        _alterar_registro_por_id(
+            "Contas Futuras", registro_id, definir_status,
+        )
+        if status == "Pendente":
+            flash("Conta reaberta. O realizado só muda quando for lançado nas telas financeiras.", "success")
+        else:
+            flash(f"Conta marcada como {status.lower()}. Registre o realizado nas telas financeiras.", "success")
+    except ValueError as e:
+        flash(str(e), "error")
+    except Exception as e:
+        app.logger.exception("Falha ao atualizar status da conta futura")
+        flash(f"Erro ao atualizar conta: {e}", "error")
+    return redirect(url_for("planejamento_financeiro"))
+
+
+@app.route("/contas-futuras/<registro_id>/excluir", methods=["POST"])
+@login_required
+def excluir_conta_futura(registro_id):
+    _validar_csrf()
+    try:
+        _backup_planejamento()
+        _alterar_registro_por_id(
+            "Contas Futuras", registro_id,
+            lambda df, mascara: df.loc[~mascara].reset_index(drop=True),
+        )
+        flash("Conta futura removida.", "success")
+    except ValueError as e:
+        flash(str(e), "error")
+    except Exception as e:
+        app.logger.exception("Falha ao excluir conta futura")
+        flash(f"Erro ao remover conta: {e}", "error")
+    return redirect(url_for("planejamento_financeiro"))
 
 
 @app.route("/resultado")

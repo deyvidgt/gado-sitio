@@ -43,6 +43,7 @@ from config import (
     COLUNAS_ENGORDA_PASTAGEM, COLUNAS_GMD_LOTACAO, COLUNAS_RACAO_CONSUMO,
     COLUNAS_MORTALIDADE_BEZERROS,
     COLUNAS_CONFINAMENTO_LOTES, COLUNAS_GENETICA, COLUNAS_INSUMOS, COLUNAS_COCHOS,  # v5.10
+    COLUNAS_PASTOS_APLICACOES, COLUNAS_ORCAMENTO_PREVISTO, COLUNAS_CONTAS_FUTURAS,
 )
 
 # Mapa aba → colunas esperadas, usado para migrar colunas novas sem perder dados.
@@ -75,6 +76,9 @@ _SCHEMA_ABAS = {
     "Genética": COLUNAS_GENETICA,  # v5.10
     "Insumos": COLUNAS_INSUMOS,  # v5.10 — catálogo de insumos com nutrição
     "Cochos": COLUNAS_COCHOS,   # v5.10 — comedouros: volume, consumo, salga
+    "Pastos Aplicações": COLUNAS_PASTOS_APLICACOES,
+    "Orçamento Previsto": COLUNAS_ORCAMENTO_PREVISTO,
+    "Contas Futuras": COLUNAS_CONTAS_FUTURAS,
 }
 
 # Caminho completo do arquivo de dados
@@ -263,6 +267,9 @@ def inicializar():
         wb.create_sheet("Volumosos").append(COLUNAS_VOLUMOSOS)
         wb.create_sheet("Consumo Volumosos").append(COLUNAS_CONSUMO_VOLUMOSOS)
         wb.create_sheet("Cochos").append(COLUNAS_COCHOS)
+        wb.create_sheet("Pastos Aplicações").append(COLUNAS_PASTOS_APLICACOES)
+        wb.create_sheet("Orçamento Previsto").append(COLUNAS_ORCAMENTO_PREVISTO)
+        wb.create_sheet("Contas Futuras").append(COLUNAS_CONTAS_FUTURAS)
 
         wb.create_sheet("Resumo")
         wb.save(ARQUIVO_PATH)
@@ -414,6 +421,25 @@ def salvar_linha(aba: str, linha: list):
         if aba in _SCHEMA_ABAS:
             _garantir_colunas(ws, _SCHEMA_ABAS[aba])
         ws.append([_preparar_valor(v) for v in linha])
+        _salvar_atomico(wb)
+
+
+def salvar_linhas_atomicas(registros: dict[str, list[list]]):
+    """Grava linhas de várias abas numa única substituição atômica do Excel."""
+    with _trava_escrita():
+        wb = load_workbook(ARQUIVO_PATH)
+        for aba, linhas in registros.items():
+            if aba not in wb.sheetnames:
+                if aba not in _SCHEMA_ABAS:
+                    raise KeyError(f"Aba sem esquema cadastrado: {aba}")
+                ws = wb.create_sheet(aba)
+                ws.append(_SCHEMA_ABAS[aba])
+            else:
+                ws = wb[aba]
+            if aba in _SCHEMA_ABAS:
+                _garantir_colunas(ws, _SCHEMA_ABAS[aba])
+            for linha in linhas:
+                ws.append([_preparar_valor(v) for v in linha])
         _salvar_atomico(wb)
 
 

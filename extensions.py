@@ -209,6 +209,7 @@ def _get_evolucao_cache():
 def _setup_cache_patch():
     import db as _db_mod
     from db import salvar_linha as _sl, reescrever_aba as _ra
+    _sla = _db_mod.salvar_linhas_atomicas
 
     def _salvar_e_invalidar(aba, linha):
         _sl(aba, linha)
@@ -218,8 +219,13 @@ def _setup_cache_patch():
         _ra(aba, df)
         _cache_invalidar()
 
+    def _salvar_linhas_e_invalidar(registros):
+        _sla(registros)
+        _cache_invalidar()
+
     _db_mod.salvar_linha   = _salvar_e_invalidar
     _db_mod.reescrever_aba = _reescrever_e_invalidar
+    _db_mod.salvar_linhas_atomicas = _salvar_linhas_e_invalidar
     return _salvar_e_invalidar, _reescrever_e_invalidar
 
 salvar_linha, reescrever_aba = _setup_cache_patch()

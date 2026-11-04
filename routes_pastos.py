@@ -4,6 +4,7 @@
 Rotas dos Pastos com mapa — Sítio Santo Antonio v5.2
 """
 import json
+import math
 
 import pandas as pd
 from flask import render_template, request, redirect, url_for, flash
@@ -11,9 +12,11 @@ from flask import render_template, request, redirect, url_for, flash
 import animais as A
 import pastos as PA
 import pesagem as P
+import planejamento as PL
+import db
 from calculos import calcular_estoque
 from extensions import (app, _agora, _validar_csrf, login_required, _get_dados_cache,
-                        _ler_sitio_config_disco)
+                        _ler_sitio_config_disco, parse_valor, fmt_brl)
 from routes_animais import _membro_logado, fazer_backup_seguro
 
 
@@ -294,6 +297,91 @@ def mover_gado():
     except ValueError as e:
         flash(str(e), "error")
     return redirect(url_for("pastos"))
+
+
+@app.route("/pastos/aplicacoes", methods=["GET", "POST"])
+@login_required
+def aplicacoes_pastos():
+    if request.method == "POST":
+        _validar_csrf()
+        f = request.form
+        try:
+            data = PL.normalizar_data(f.get("data"))
+            pastos_ativos = PA.ativos(PA.carregar())
+            pasto_id = (f.get("pasto_id") or "").strip()
+            pasto = pastos_ativos[pastos_ativos["ID"].astype(str) == pasto_id]
+            tipo_insumo = (f.get("tipo_insumo") or "").strip()
+            produto = (f.get("produto") or "").strip()
+            unidade = (f.get("unidade") or "").strip()
+            quantidade = parse_valor(f.get("quantidade"))
+            custo = parse_valor(f.get("custo"))
+            if pd.isna(data):
+                raise ValueError("Informe uma data válida.")
+            if pasto.empty:
+                raise ValueError("Selecione um pasto ativo.")
+            if tipo_insumo not in PL.TIPOS_INSUMO_PASTO:
+                raise ValueError("Selecione um tipo de insumo válido.")
+            if not produto:
+                raise ValueError("Informe o produto aplicado.")
+            if (not math.isfinite(quantidade) or not math.isfinite(custo)
+                    or quantidade <= 0 or custo <= 0):
+                raise ValueError("Quantidade e custo total devem ser maiores que zero.")
+            if unidade not in PL.UNIDADES_INSUMO:
+                raise ValueError("Selecione uma unidade válida.")
+
+            app_id = PL.novo_id("AP")
+            responsavel = (f.get("responsavel") or _membro_logado()).strip()
+            categoria_gasto = {
+                "Calcário": "Calcário/Adubação",
+                "Ureia": "Calcário/Adubação",
+                "Superfosfato": "Calcário/Adubação",
+                "Defensivo": "Veneno/Defensivo",
+                "Outro": "Manutenção/Outros",
+            }[tipo_insumo]
+            descricao = f"Aplicação em {pasto_id}: {tipo_insumo} — {produto} (#{app_id})"
+            dados = _get_dados_cache()
+            cabecas = calcular_estoque(
+                dados["Compras"], dados["Vendas"], dados["Manejo"]
+            )
+            cabecas = max(1, cabecas)
+            data_iso = data.strftime("%Y-%m-%d")
+            linha_aplicacao = [
+                app_id, data_iso, pasto_id, tipo_insumo, produto, quantidade,
+                unidade, custo, responsavel,
+            ]
+            linha_gasto = [
+                data_iso, categoria_gasto, descricao, custo, cabecas,
+                round(custo / cabecas, 4), responsavel, "", None, pasto_id, app_id,
+            ]
+            fazer_backup_seguro()
+            db.salvar_linhas_atomicas({
+                "Pastos Aplicações": [linha_aplicacao],
+                "Gastos": [linha_gasto],
+            })
+            flash("Aplicação registrada e vinculada aos Gastos.", "success")
+            return redirect(url_for("aplicacoes_pastos"))
+        except ValueError as e:
+            flash(str(e), "error")
+        except Exception as e:
+            app.logger.exception("Falha ao salvar aplicação de pasto e gasto vinculado")
+            flash(f"Erro ao registrar aplicação: {e}", "error")
+        return redirect(url_for("aplicacoes_pastos"))
+
+    df_pastos = PA.carregar()
+    df_aplicacoes = db.carregar_aba("Pastos Aplicações")
+    aplicacoes = PL.listar_aplicacoes(df_aplicacoes, df_pastos)
+    total_custo = sum(parse_valor(a.get("Custo Total (R$)")) for a in aplicacoes)
+    return render_template(
+        "pastos_aplicacoes.html",
+        pastos=PA.ativos(df_pastos).to_dict("records") if not df_pastos.empty else [],
+        aplicacoes=aplicacoes,
+        tipos_insumo=PL.TIPOS_INSUMO_PASTO,
+        unidades=PL.UNIDADES_INSUMO,
+        total_custo=total_custo,
+        hoje=_agora().strftime("%Y-%m-%d"),
+        responsavel=_membro_logado(),
+        fmt_brl=fmt_brl,
+    )
 
 
 @app.route("/estoque")

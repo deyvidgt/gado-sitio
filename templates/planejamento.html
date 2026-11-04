@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Orçamento e Contas Futuras{% endblock %}
+{% block page_title %}Orçamento e Contas Futuras 📅{% endblock %}
+
+{% block content %}
+{% if proximas %}
+<div class="card" style="border-left:4px solid #f39c12;margin-bottom:16px">
+  <h3>⏰ Vencidas ou vencendo nos próximos 7 dias</h3>
+  {% for conta in proximas %}
+  <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--border)">
+    <span>
+      {% if conta.atrasada %}<b style="color:#c0392b">Atrasada</b>{% else %}<b>{{ conta.vencimento_exibido }}</b>{% endif %}
+      · {{ conta.Tipo }} · {{ conta['Descrição'] }} · {{ conta.Categoria }}
+    </span>
+    <b>{{ conta.valor_formatado }}</b>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <form method="get" action="{{ url_for('planejamento_financeiro') }}" style="display:flex;gap:8px;align-items:center">
+    <label for="ano-planejamento"><b>Comparativo do ano</b></label>
+    <select id="ano-planejamento" name="ano" onchange="this.form.submit()">
+      {% for a in anos %}<option value="{{ a }}" {% if a == ano %}selected{% endif %}>{{ a }}</option>{% endfor %}
+    </select>
+  </form>
+</div>
+
+<div class="tri" style="margin-top:16px">
+  <div><strong>{{ fmt_brl(totais.Despesa.previsto) }}</strong><span>Despesas previstas</span></div>
+  <div><strong>{{ fmt_brl(totais.Despesa.realizado) }}</strong><span>Despesas realizadas</span></div>
+  <div><strong>{{ fmt_brl(totais.Receita.realizado) }}</strong><span>Receitas realizadas</span></div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3>Adicionar previsão ao orçamento</h3>
+  <form method="post" action="{{ url_for('novo_orcamento') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <div class="form-group"><label>Mês</label><input type="month" name="mes" value="{{ ano }}-01" required></div>
+      <div class="form-group">
+        <label>Tipo</label>
+        <select name="tipo" id="orcamento-tipo">
+          <option value="Despesa">Despesa</option><option value="Receita">Receita</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Categoria</label>
+        <select name="categoria" id="orcamento-categoria" required>
+          {% for tipo, categoria in categorias %}
+          <option value="{{ categoria }}" data-tipo="{{ tipo }}" {% if tipo == 'Despesa' %} {% else %}hidden{% endif %}>{{ categoria }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group"><label>Descrição</label><input name="descricao" maxlength="160" required></div>
+      <div class="form-group"><label>Valor previsto (R$)</label><input type="number" name="valor" min="0.01" step="0.01" required></div>
+      <div class="form-group">
+        <label>Membro</label><select name="membro"><option value="">Geral</option>
+          {% for membro in membros %}<option value="{{ membro }}">{{ membro }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary">➕ Adicionar ao orçamento</button>
+  </form>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3>Registrar conta futura</h3>
+  <form method="post" action="{{ url_for('nova_conta_futura') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <div class="form-group"><label>Vencimento</label><input type="date" name="vencimento" value="{{ hoje }}" required></div>
+      <div class="form-group">
+        <label>Tipo</label><select name="tipo" id="conta-tipo">
+          <option value="Pagar">A pagar</option><option value="Receber">A receber</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Categoria</label><select name="categoria" id="conta-categoria" required>
+          {% for tipo, categoria in categorias %}
+          <option value="{{ categoria }}" data-tipo="{{ tipo }}" {% if tipo == 'Despesa' %} {% else %}hidden{% endif %}>{{ categoria }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group"><label>Descrição</label><input name="descricao" maxlength="160" required></div>
+      <div class="form-group"><label>Valor (R$)</label><input type="number" name="valor" min="0.01" step="0.01" required></div>
+      <div class="form-group">
+        <label>Membro</label><select name="membro"><option value="">Geral</option>
+          {% for membro in membros %}<option value="{{ membro }}">{{ membro }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary">➕ Registrar conta</button>
+  </form>
+  <p class="muted" style="margin-top:8px">Marcar uma conta como paga/recebida não cria um lançamento real. Registre-o também em Gastos, Compras ou Vendas para aparecer como realizado.</p>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3>Previsto vs. realizado — {{ ano }}</h3>
+  <p class="muted">Comparação por mês e categoria: Gastos por tipo, Compras como “Compra de gado” e Vendas como “Venda de gado”. Categorias sem orçamento aparecem com previsto zero.</p>
+  <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;min-width:650px">
+      <thead><tr>
+        <th style="text-align:left;padding:10px">Mês</th><th style="text-align:left;padding:10px">Tipo</th>
+        <th style="text-align:left;padding:10px">Categoria</th><th style="text-align:right;padding:10px">Previsto</th>
+        <th style="text-align:right;padding:10px">Realizado</th><th style="text-align:right;padding:10px">Diferença (realizado − previsto)</th>
+      </tr></thead>
+      <tbody>
+      {% for item in comparativo %}
+      <tr style="border-top:1px solid var(--border)">
+        <td style="padding:10px">{{ item.mes }}</td><td style="padding:10px">{{ item.tipo }}</td>
+        <td style="padding:10px">{{ item.categoria }}</td>
+        <td style="padding:10px;text-align:right">{{ fmt_brl(item.previsto) }}</td>
+        <td style="padding:10px;text-align:right">{{ fmt_brl(item.realizado) }}</td>
+        <td style="padding:10px;text-align:right">{{ fmt_brl(item.diferenca) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" style="padding:16px;text-align:center" class="muted">Sem registros reais ou previstos para {{ ano }}.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3>Previsões cadastradas — {{ ano }}</h3>
+  {% for item in orcamentos %}
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--border)">
+    <span><b>{{ item['Mês'] }}</b> · {{ item.Tipo }} · {{ item.Categoria }} · {{ item['Descrição'] }} · {{ item.valor_formatado }}</span>
+    <form method="post" action="{{ url_for('excluir_orcamento', registro_id=item.ID) }}" onsubmit="return confirm('Remover esta previsão?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn-outline btn-sm">Remover</button>
+    </form>
+  </div>
+  {% else %}<p class="muted">Nenhuma previsão cadastrada neste ano.</p>{% endfor %}
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3>Contas a pagar e receber</h3>
+  {% for conta in contas %}
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--border)">
+    <span>
+      <b>{{ conta.vencimento_exibido }}</b> · {{ conta.Tipo }} · {{ conta.Categoria }}
+      · {{ conta['Descrição'] }} · {{ conta.valor_formatado }} · {{ conta.Status or 'Pendente' }}
+      {% if conta.Membro %}· {{ conta.Membro }}{% endif %}
+    </span>
+    <div style="display:flex;gap:6px">
+      <form method="post" action="{{ url_for('alterar_status_conta', registro_id=conta.ID) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        {% if conta.Tipo == 'Pagar' %}
+          <input type="hidden" name="status" value="{% if conta.Status == 'Pago' %}Pendente{% else %}Pago{% endif %}">
+          <button class="btn btn-outline btn-sm">{% if conta.Status == 'Pago' %}Reabrir{% else %}Marcar paga{% endif %}</button>
+        {% else %}
+          <input type="hidden" name="status" value="{% if conta.Status == 'Recebido' %}Pendente{% else %}Recebido{% endif %}">
+          <button class="btn btn-outline btn-sm">{% if conta.Status == 'Recebido' %}Reabrir{% else %}Marcar recebida{% endif %}</button>
+        {% endif %}
+      </form>
+      <form method="post" action="{{ url_for('excluir_conta_futura', registro_id=conta.ID) }}" onsubmit="return confirm('Remover esta conta futura?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-outline btn-sm">Remover</button>
+      </form>
+    </div>
+  </div>
+  {% else %}<p class="muted">Nenhuma conta futura cadastrada.</p>{% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function filtrarCategorias(tipoSelectId, categoriaSelectId, tipoDespesa, tipoReceita) {
+    const tipo = document.getElementById(tipoSelectId);
+    const categoria = document.getElementById(categoriaSelectId);
+    const atualizar = () => {
+      const tipoCategoria = tipo.value === tipoDespesa ? "Despesa" : tipoReceita;
+      const opcoes = [...categoria.options];
+      opcoes.forEach(opcao => { opcao.hidden = opcao.dataset.tipo !== tipoCategoria; });
+      if (categoria.selectedOptions[0]?.hidden) {
+        categoria.value = opcoes.find(opcao => !opcao.hidden)?.value || "";
+      }
+    };
+    tipo.addEventListener("change", atualizar);
+    atualizar();
+  }
+  filtrarCategorias("orcamento-tipo", "orcamento-categoria", "Despesa", "Receita");
+  filtrarCategorias("conta-tipo", "conta-categoria", "Pagar", "Receita");
+</script>
+{% endblock %}

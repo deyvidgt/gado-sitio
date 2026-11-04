@@ -35,9 +35,6 @@ build/
 *.spec.bak
 _internal/
 
-# ── Modelos de IA (gerados por scripts/train_ia_modelos.py) ──
-data/ia_models/
-
 # ── Sistema operacional ─────────────────────────────────
 .DS_Store
 Thumbs.db

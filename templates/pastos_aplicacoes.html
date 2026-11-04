@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Aplicações de Pastagens{% endblock %}
+{% block page_title %}Aplicações de Pastagens 🌱{% endblock %}
+
+{% block content %}
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+  <a href="{{ url_for('pastos') }}" class="btn btn-outline">← Voltar aos Pastos</a>
+</div>
+
+<div class="card">
+  <h3>Registrar aplicação</h3>
+  {% if pastos %}
+  <form method="post" action="{{ url_for('aplicacoes_pastos') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="pasto-id">Pasto</label>
+        <select id="pasto-id" name="pasto_id" required>
+          <option value="">Selecione...</option>
+          {% for pasto in pastos %}
+          <option value="{{ pasto.ID }}">{{ pasto.Nome }} — {{ "%.2f"|format(pasto['Área (ha)'] or 0) }} ha</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="data-aplicacao">Data</label>
+        <input id="data-aplicacao" type="date" name="data" value="{{ hoje }}" required>
+      </div>
+      <div class="form-group">
+        <label for="tipo-insumo">Tipo de insumo</label>
+        <select id="tipo-insumo" name="tipo_insumo" required>
+          <option value="">Selecione...</option>
+          {% for tipo in tipos_insumo %}<option value="{{ tipo }}">{{ tipo }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="produto-aplicado">Produto / formulação</label>
+        <input id="produto-aplicado" name="produto" maxlength="100" required placeholder="Ex.: ureia 45% N">
+      </div>
+      <div class="form-group">
+        <label for="quantidade-aplicada">Quantidade</label>
+        <input id="quantidade-aplicada" type="number" name="quantidade" min="0.01" step="0.01" required>
+      </div>
+      <div class="form-group">
+        <label for="unidade-aplicada">Unidade</label>
+        <select id="unidade-aplicada" name="unidade" required>
+          {% for unidade in unidades %}<option value="{{ unidade }}">{{ unidade }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="custo-aplicacao">Custo total (R$)</label>
+        <input id="custo-aplicacao" type="number" name="custo" min="0.01" step="0.01" required>
+      </div>
+      <div class="form-group">
+        <label for="responsavel-aplicacao">Responsável</label>
+        <input id="responsavel-aplicacao" name="responsavel" value="{{ responsavel }}" maxlength="80">
+      </div>
+    </div>
+    <button class="btn btn-primary">💾 Salvar aplicação e lançar gasto</button>
+  </form>
+  <p class="muted" style="margin-top:12px">
+    O custo será lançado uma única vez em Gastos, vinculado à aplicação e ao pasto.
+    O custo/ha considera a área atual cadastrada do pasto.
+  </p>
+  {% else %}
+  <p>Cadastre um pasto no mapa antes de lançar uma aplicação.</p>
+  <a href="{{ url_for('pastos') }}" class="btn btn-primary">Cadastrar pasto</a>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3>Histórico de aplicações</h3>
+  {% if aplicacoes %}
+  <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;min-width:760px">
+      <thead><tr>
+        <th style="text-align:left;padding:10px">Data</th>
+        <th style="text-align:left;padding:10px">Pasto</th>
+        <th style="text-align:left;padding:10px">Insumo / produto</th>
+        <th style="text-align:right;padding:10px">Quantidade</th>
+        <th style="text-align:right;padding:10px">Custo</th>
+        <th style="text-align:right;padding:10px">Custo/ha</th>
+        <th style="text-align:left;padding:10px">Responsável</th>
+      </tr></thead>
+      <tbody>
+      {% for item in aplicacoes %}
+        <tr style="border-top:1px solid var(--border)">
+          <td style="padding:10px">{{ item['Data exibida'] }}</td>
+          <td style="padding:10px">{{ item['Pasto Nome'] }}</td>
+          <td style="padding:10px">{{ item['Tipo Insumo'] }} · {{ item['Produto'] }}</td>
+          <td style="padding:10px;text-align:right">{{ item['Quantidade'] }} {{ item['Unidade'] }}</td>
+          <td style="padding:10px;text-align:right">{{ fmt_brl(item['Custo Total (R$)']) }}</td>
+          <td style="padding:10px;text-align:right">
+            {% if item['Custo/ha (R$)'] is not none %}{{ fmt_brl(item['Custo/ha (R$)']) }}{% else %}Área indisponível{% endif %}
+          </td>
+          <td style="padding:10px">{{ item['Responsável'] }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+      <tfoot><tr style="border-top:2px solid var(--border)">
+        <th colspan="4" style="text-align:right;padding:10px">Total lançado em Gastos</th>
+        <th style="text-align:right;padding:10px">{{ fmt_brl(total_custo) }}</th>
+        <th colspan="2"></th>
+      </tr></tfoot>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">Nenhuma aplicação registrada ainda.</p>
+  {% endif %}
+</div>
+{% endblock %}

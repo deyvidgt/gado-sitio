@@ -54,3 +54,6 @@ def test_editar_e_remover_cocho_atualiza_pagina(cliente, dados_restaurados, monk
     assert '<div class="resumo-valor">1</div>' in html
     assert "Cocho 1 editado" not in html
     assert "Cocho 2" in html
+    cochos_salvos = db.carregar_aba("Cochos")
+    assert "C01" not in cochos_salvos["ID"].astype(str).tolist()
+    assert "C02" in cochos_salvos["ID"].astype(str).tolist()
