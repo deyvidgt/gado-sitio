@@ -37,6 +37,7 @@
   .print.falhou .print-falha, .print-vazio { display:block; padding:14px; border:1.5px dashed var(--cream-dk);
                                             border-radius:10px; color:var(--text-3); font-size:13px; margin:10px 0 16px; }
   .voltar { font-size:12.5px; margin-top:6px; display:inline-block; }
+  [data-theme="dark"] .ajuda h2 { color:var(--green-300); }
 </style>
 
 <div class="ajuda">
@@ -92,7 +93,7 @@
 <h3>Menu e tema</h3>
 <ul>
   <li>No celular o menu fica escondido: toque no botão <strong>☰</strong> no alto à esquerda.</li>
-  <li>O botão 🌙/☀️ no alto troca entre tema claro e escuro.</li>
+  <li>O botão 🌙/☀️ no alto troca entre tema claro e escuro. A escolha vale para todas as páginas e fica guardada neste navegador e dispositivo.</li>
   <li>O 🎤 no alto abre o <a href="#voz">Comando de Voz</a> de qualquer página (exceto da página de Voz, para não confundir).</li>
   <li>A <strong>barra de busca 🔍 Procurar…</strong> no alto permite buscar rápido por animais, registros e funcionários.</li>
 </ul>
@@ -396,6 +397,9 @@
 <p>Controla a produção, a qualidade, a alimentação e o conforto das vacas leiteiras. Fica
   <strong>separado das contas do gado de corte</strong>: a receita do leite não entra no
   resultado das vendas de boi.</p>
+<p>No <strong>Painel do Leite</strong>, os cartões mostram a produção do dia, da semana, do mês
+  e o acumulado total, além das vacas ativas e em lactação. Use <strong>Atalhos do leite</strong>
+  para abrir as outras áreas sem ocupar a tela com uma faixa de abas.</p>
 
 <h3>Lançar uma ordenha</h3>
 <ol>
@@ -451,6 +455,7 @@
 <p>Fale o que aconteceu e o sistema preenche para você. Ele <strong>mostra o que entendeu antes de salvar</strong>.</p>
 <ol>
   <li>Toque no 🎤 no alto da tela (ou Menu → <strong>🎤 Comando de Voz</strong>).</li>
+  <li>Quando o navegador pedir, permita o acesso ao microfone. A fala precisa de conexão; se não funcionar, digite a frase ou use o microfone do teclado.</li>
   <li>Fale uma frase, por exemplo:
     <ul>
       <li><code>vacina raiva amarelo 21 e 22 com Raivacel</code></li>
@@ -466,7 +471,7 @@
     </ul>
   </li>
   <li>Confira o resumo e toque em <strong>Salvar</strong> — ou corrija o que precisar.</li>
-  <li>Com <strong>Mãos livres</strong> marcado, o sistema lê o resumo em voz alta e salva quando você responde <em>"sim"</em>.</li>
+  <li>Com <strong>Mãos livres</strong> marcado, o sistema lê o resumo em voz alta e salva quando você responde <em>"sim"</em>. Essa preferência fica guardada neste navegador.</li>
 </ol>
 {{ passo('c-voz-1.png', 'Comando de voz') }}
 <div class="dica">Por segurança, a voz <strong>não apaga nem edita</strong> registros — isso só pela tela.
@@ -506,6 +511,23 @@
   <li><strong>🐄 Animais</strong>: lista por brinco, filtro por vivos/vendidos/mortos, conferência "com brinco × estoque" e alerta de brucelose.</li>
   <li><strong>🗓️ Visitas</strong>: todas as visitas com contagem, chuva e insumos.</li>
   <li><strong>📈 Relatórios</strong>: resumo financeiro, indicadores de custo, gastos por categoria, histórico de cada dono, chuvas — e o <strong>PDF</strong>.</li>
+</ul>
+
+<h3>Painéis do rebanho e financeiro</h3>
+<ul>
+  <li><strong>🥣 Cochos</strong>: veja o tipo, o volume atual, a capacidade e o estado de cada cocho.
+    Para registrar uma recarga, toque em <strong>Salgar Cocho</strong>, informe a data e a quantidade em kg
+    e confirme. No cadastro, os tipos incluem <strong>Misto</strong> e <strong>Água / Mistura Húmida</strong>.</li>
+  <li><strong>💰 Financeiro</strong> e <strong>📊 Resultado Membro</strong>: consulte o estoque atual
+    por membro e os valores financeiros de cada um.</li>
+  <li><strong>📊 Fluxo Caixa</strong>: compare receitas e despesas por mês e acompanhe o saldo acumulado.
+    Os gráficos e a tabela usam os meses abreviados em português.</li>
+  <li><strong>🐄 Fluxo Animais</strong>: acompanha as entradas por compras e nascimentos, as saídas por
+    vendas e mortes, e o estoque acumulado desde o primeiro registro.</li>
+  <li><strong>📉 Conversão Alimentar</strong>: mostra a conversão média e os alertas por animal.
+    Sem registros válidos, a média aparece como <strong>0,0</strong>.</li>
+  <li><strong>🩺 Doenças &amp; Carência</strong>: toque em <strong>Registrar Novo Tratamento</strong>,
+    informe o animal, o medicamento e a data. A lista mostra os animais em carência e a data de liberação.</li>
 </ul>
 {{ passo('p-compras.png', 'Lista de compras') }}
 {{ passo('p-manejo.png', 'Lista de manejos') }}

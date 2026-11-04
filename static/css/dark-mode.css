@@ -1,82 +1,107 @@
-/* ═══════════════════════════════════════════════════════════════════════════
-   Dark Mode (v5.7)
-   Suporta: prefers-color-scheme + toggle manual via localStorage
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-:root {
-  /* Light Mode (padrão) */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f5;
-  --bg-tertiary: #efefef;
-  --text-primary: #1a1a1a;
-  --text-secondary: #666666;
-  --text-tertiary: #999999;
-  --accent-green: #52a044;
-  --accent-red: #d32f2f;
-  --accent-yellow: #f57c00;
-  --accent-blue: #1976d2;
-  --border-color: #e0e0e0;
-  --shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg-primary: #121212;
-    --bg-secondary: #1e1e1e;
-    --bg-tertiary: #2a2a2a;
-    --text-primary: #ffffff;
-    --text-secondary: #b0b0b0;
-    --text-tertiary: #808080;
-    --accent-green: #66bb6a;
-    --accent-red: #ef5350;
-    --accent-yellow: #ffb74d;
-    --accent-blue: #42a5f5;
-    --border-color: #333333;
-    --shadow: 0 2px 8px rgba(0,0,0,0.3);
-  }
+/* Ponte de compatibilidade para páginas que ainda usam tokens v5.7. */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-primary: var(--bg);
+  --bg-secondary: var(--surface);
+  --bg-tertiary: var(--bg-2);
+  --text-primary: var(--text);
+  --text-secondary: var(--text-2);
+  --text-tertiary: var(--text-3);
+  --accent-green: var(--green-600);
+  --accent-red: var(--danger);
+  --accent-yellow: var(--warn);
+  --accent-blue: var(--info);
+  --border: var(--bg-2);
+  --surface-1: var(--surface);
+  --border-color: var(--border, var(--bg-2));
 }
 
 :root[data-theme="dark"] {
-  --bg-primary: #121212;
-  --bg-secondary: #1e1e1e;
-  --bg-tertiary: #2a2a2a;
-  --text-primary: #ffffff;
-  --text-secondary: #b0b0b0;
-  --text-tertiary: #808080;
-  --accent-green: #66bb6a;
-  --accent-red: #ef5350;
-  --accent-yellow: #ffb74d;
-  --accent-blue: #42a5f5;
-  --border-color: #333333;
-  --shadow: 0 2px 8px rgba(0,0,0,0.3);
+  color-scheme: dark;
+  --bg-primary: var(--bg);
+  --bg-secondary: var(--surface);
+  --bg-tertiary: var(--bg-2);
+  --text-primary: var(--text);
+  --text-secondary: var(--text-2);
+  --text-tertiary: #a0ad9d;
+  --accent-green: var(--green-300);
+  --accent-red: #ef8178;
+  --accent-yellow: #f4c27a;
+  --accent-blue: #70b8e3;
+  --border: var(--bg-2);
+  --surface-1: var(--surface);
+  --border-color: var(--border, var(--bg-2));
 }
 
-/* ── Aplicar variáveis aos componentes ──────────────────────────────────── */
-
+html,
 body {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  background-color: var(--bg);
+  color: var(--text);
 }
 
-.card, .metric, .surface {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color);
+a {
+  color: var(--accent-blue);
+}
+
+hr,
+.divider {
+  border-color: var(--border);
+}
+
+.card,
+.metric,
+.surface {
+  background-color: var(--surface);
+  border-color: var(--border);
   box-shadow: var(--shadow);
 }
 
-.badge {
-  background-color: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
+.form-card,
+.res-card,
+.modal-content {
+  color: var(--text);
+  border-color: var(--border, var(--bg-2));
 }
 
-.badge-ok { background-color: var(--accent-green); color: white; }
-.badge-aviso { background-color: var(--accent-yellow); color: #000; }
-.badge-ruim { background-color: var(--accent-red); color: white; }
+.badge {
+  background-color: var(--bg-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.badge-ok {
+  background-color: var(--accent-green);
+  color: #fff;
+}
+
+.badge-aviso {
+  background-color: var(--accent-yellow);
+  color: #1c1400;
+}
+
+.badge-ruim {
+  background-color: var(--accent-red);
+  color: #fff;
+}
+
+[data-theme="dark"] .badge-ok {
+  background-color: rgba(144, 201, 127, .16);
+  color: var(--green-300);
+}
+
+[data-theme="dark"] .badge-aviso {
+  background-color: rgba(244, 194, 122, .16);
+  color: var(--accent-yellow);
+}
+
+[data-theme="dark"] .badge-ruim {
+  background-color: rgba(239, 129, 120, .16);
+  color: var(--accent-red);
+}
 
 .barra {
-  background-color: var(--bg-tertiary);
+  background-color: var(--bg-2);
 }
 
 .barra i {
@@ -91,117 +116,118 @@ body {
   background-color: var(--accent-red);
 }
 
-input, textarea, select {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border-color: var(--border-color);
+.badge-venda {
+  background-color: var(--color-success-bg);
+  color: var(--color-success-dark);
 }
 
-input:focus, textarea:focus, select:focus {
+[data-theme="dark"] .badge-venda {
+  background-color: rgba(144, 201, 127, .16);
+  color: var(--green-300);
+}
+
+input,
+textarea,
+select {
+  color-scheme: inherit;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
   border-color: var(--accent-green);
-  box-shadow: 0 0 0 3px rgba(82, 160, 68, 0.1);
 }
 
-button {
-  background-color: var(--accent-green);
-  color: white;
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: var(--surface-2);
+  color: var(--text);
+  border-color: var(--bg-2);
 }
 
-button:hover {
-  opacity: 0.9;
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #a0ad9d;
+  opacity: 1;
 }
 
-a {
-  color: var(--accent-blue);
+[data-theme="dark"] table {
+  color: var(--text);
 }
 
-hr, .divider {
-  border-color: var(--border-color);
+/* Ajusta superfícies neutras ainda declaradas inline em páginas antigas. */
+[data-theme="dark"] [style*="background:#fff;"],
+[data-theme="dark"] [style*="background: #fff;"],
+[data-theme="dark"] [style*="background:#ffffff"],
+[data-theme="dark"] [style*="background: #ffffff"],
+[data-theme="dark"] [style*="background:#f5f5f5"],
+[data-theme="dark"] [style*="background: #f5f5f5"],
+[data-theme="dark"] [style*="background:#f8f9fa"],
+[data-theme="dark"] [style*="background: #f8f9fa"],
+[data-theme="dark"] [style*="background:#ecf0f1"],
+[data-theme="dark"] [style*="background: #ecf0f1"],
+[data-theme="dark"] [style*="background:#f0f0f0"],
+[data-theme="dark"] [style*="background: #f0f0f0"] {
+  background-color: var(--surface-2) !important;
+  color: var(--text) !important;
+  border-color: var(--bg-2) !important;
 }
 
-/* ── Gráficos com Dark Mode ────────────────────────────────────────────── */
-
-/* Chart.js colors */
-canvas {
-  filter: none;
+[data-theme="dark"] [style*="color:#333"],
+[data-theme="dark"] [style*="color: #333"],
+[data-theme="dark"] [style*="color:#444"],
+[data-theme="dark"] [style*="color: #444"],
+[data-theme="dark"] [style*="color:#555"],
+[data-theme="dark"] [style*="color: #555"],
+[data-theme="dark"] [style*="color:#666"],
+[data-theme="dark"] [style*="color: #666"] {
+  color: var(--text-2) !important;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) canvas {
-    filter: brightness(0.9);
-  }
+[data-theme="dark"] canvas {
+  filter: brightness(.92);
 }
-
-:root[data-theme="dark"] canvas {
-  filter: brightness(0.9);
-}
-
-/* ── Dark Mode Toggle Button ───────────────────────────────────────────── */
 
 .dark-mode-toggle {
   position: fixed;
   top: 16px;
   right: 16px;
   z-index: 99;
-  background: var(--surface);
-  border: 1px solid var(--border-color);
-  border-radius: 50%;
   width: 44px;
   height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
   cursor: pointer;
   font-size: 20px;
-  transition: all 0.3s ease;
 }
 
-.dark-mode-toggle:hover {
-  transform: scale(1.1);
-  border-color: var(--accent-green);
-}
-
-/* ── Animação suave de transição ────────────────────────────────────────── */
-
-html {
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-* {
-  transition-property: background-color, border-color, color;
-  transition-duration: 0.3s;
-  transition-timing-function: ease;
-}
-
-/* Desabilitar transições em elementos que não devem animar */
 .no-transition {
   transition: none !important;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
-  }
-}
-
-/* ── Imagens em Dark Mode (opcional filter) ────────────────────────────── */
 
 img.invert-on-dark {
   filter: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) img.invert-on-dark {
-    filter: invert(0.1);
-  }
+[data-theme="dark"] img.invert-on-dark {
+  filter: invert(.1);
 }
 
-:root[data-theme="dark"] img.invert-on-dark {
-  filter: invert(0.1);
-}
-
-/* Não inverter fotos de animais */
 img[data-type="animal"] {
   filter: none !important;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body,
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}

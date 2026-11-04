@@ -31,6 +31,14 @@
   .pend li { font-size:13px; margin:6px 0; list-style:none; display:flex; gap:8px; align-items:center; }
   .opt-linha { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; font-size:13px; color:var(--text-2); margin-bottom:14px; }
   .opt-linha label { display:flex; gap:6px; align-items:center; cursor:pointer; }
+  [data-theme="dark"] .res-card h3,
+  [data-theme="dark"] .exemplos li,
+  [data-theme="dark"] .msg-ok { color:var(--green-300); }
+  [data-theme="dark"] .msg-erro { color:#ef8178; }
+  @media (max-width:480px) {
+    .mic-grande { width:104px; height:104px; }
+    .acoes-res > .btn { flex:1 1 100%; min-height:44px; justify-content:center; }
+  }
 </style>
 
 <div class="voz-wrap">
