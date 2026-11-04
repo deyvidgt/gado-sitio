@@ -35,9 +35,7 @@ def cochos():
     lista = []
     for _, cocho in df_cochos.iterrows():
         cocho_id = str(cocho.get("ID", "")).strip()
-        if not cocho_id:
-            continue
-        if str(cocho.get("Ativo", "Sim")).strip().lower() == "não":
+        if cocho_id not in sit:
             continue
 
         info = sit.get(cocho_id, {})

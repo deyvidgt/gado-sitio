@@ -48,10 +48,26 @@ fi
 # 6) Verificar requirements
 echo ""
 echo "📦 Verificando dependências..."
-pip install -q flask pandas openpyxl numpy bcrypt requests 2>/dev/null && \
+pip install -q flask pandas openpyxl numpy bcrypt requests "scikit-learn>=1.3,<2" 2>/dev/null && \
     echo "✅ Dependências OK"
 
-# 7) Testes automáticos — rodam numa CÓPIA temporária dos dados (nunca no arquivo real)
+# 7) Modelos IA — são gerados localmente e ficam fora do Git
+MODELOS_IA="$PASTA_GADO/data/ia_models"
+if [ ! -s "$MODELOS_IA/modelo_morte.pkl" ] || [ ! -s "$MODELOS_IA/modelo_cio.pkl" ]; then
+    echo ""
+    echo "🤖 Modelos IA ausentes — treinando no servidor (pode levar alguns minutos)..."
+    if (cd "$PASTA_GADO" && python3 scripts/train_ia_modelos.py) && \
+       [ -s "$MODELOS_IA/modelo_morte.pkl" ] && [ -s "$MODELOS_IA/modelo_cio.pkl" ]; then
+        echo "✅ Modelos IA treinados em $MODELOS_IA"
+    else
+        echo "❌ Falha ao treinar os modelos IA. Confira as dependências e o espaço em disco."
+        exit 1
+    fi
+else
+    echo "✅ Modelos IA encontrados em $MODELOS_IA"
+fi
+
+# 8) Testes automáticos — rodam numa CÓPIA temporária dos dados (nunca no arquivo real)
 echo ""
 echo "🧪 Rodando os testes..."
 pip install -q pytest 2>/dev/null
@@ -63,7 +79,7 @@ if (cd "$PASTA_GADO" && python3 -m pytest -q 2>&1 | tail -3); then
     fi
 fi
 
-# 8) Tarefas agendadas (Dashboard → Tasks) que devem existir:
+# 9) Tarefas agendadas (Dashboard → Tasks) que devem existir:
 echo ""
 echo "📅 Confira em Tasks do PythonAnywhere (uma vez só):"
 echo "   python3 $PASTA_GADO/backup_automatico.py   (diário 03:00)"

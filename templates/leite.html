@@ -72,9 +72,9 @@
   <div class="card">
     <h3 style="margin-bottom: 16px">📈 Produção Recente e Gráficos</h3>
     <div class="tri" style="margin-bottom:16px">
-      <div><strong>{{ '%.1f'|format(medias.litros_dia)|replace('.', ',') }} L</strong><small>Média / dia no mês</small></div>
-      <div><strong>{{ '%.1f'|format(medias.litros_vaca_dia)|replace('.', ',') }} L</strong><small>Média / vaca / dia</small></div>
-      <div><strong>{{ contagens.total }}</strong><small>Total rebanho leite</small></div>
+      <div><strong>{{ '%.1f'|format(medias.media_diaria or 0)|replace('.', ',') }} L</strong><small>Média / dia no mês</small></div>
+      <div><strong>{{ '%.1f'|format(medias.media_por_animal_lactacao or medias.media_por_animal or 0)|replace('.', ',') }} L</strong><small>Média / vaca / dia</small></div>
+      <div><strong>{{ contagens.vacas_lactacao or 0 }}</strong><small>Vacas em lactação</small></div>
     </div>
     <div style="margin-top: 16px; text-align: right">
       <a href="{{ url_for('relatorios_leite') }}" class="btn btn-outline btn-sm">Ver relatórios e histórico →</a>

@@ -64,6 +64,13 @@ def _normalizar_numero(valor):
         return None
 
 
+def _cocho_ativo(valor):
+    """Considera ativos os registros legados sem status e os marcados como Sim."""
+    return str(valor if valor is not None else "Sim").strip().casefold() not in {
+        "não", "nao", "inativo", "false", "0"
+    }
+
+
 def extrair_consumo_visitas(df_visitas, dias: int = 60) -> Dict[str, Dict]:
     """
     Extrai consumo de alimentação das visitas dos últimos N dias.
@@ -149,7 +156,7 @@ def calcular_situacao_cochos(df_cochos, df_visitas) -> Dict[str, Dict]:
 
     for _, cocho in df_cochos.iterrows():
         cocho_id = str(cocho.get("ID", "")).strip()
-        if not cocho_id:
+        if not cocho_id or not _cocho_ativo(cocho.get("Ativo", "Sim")):
             continue
 
         nome = str(cocho.get("Nome", "Cocho")).strip()

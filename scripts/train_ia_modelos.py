@@ -32,12 +32,17 @@ def main():
     parser = argparse.ArgumentParser(description="Train ML models on synthetic cattle data")
     parser.add_argument("--n-animais", type=int, default=5000, help="Number of synthetic animals")
     parser.add_argument("--anos", type=int, default=3, help="Years of history to generate")
-    parser.add_argument("--output", type=str, default="data/ia_models", help="Output directory for pkl files")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path(__file__).resolve().parent.parent / "data" / "ia_models",
+        help="Output directory for pkl files",
+    )
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
 
     args = parser.parse_args()
 
-    output_dir = Path(args.output)
+    output_dir = args.output
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\n{'='*70}")
