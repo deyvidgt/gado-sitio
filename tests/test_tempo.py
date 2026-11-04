@@ -126,3 +126,76 @@ def test_alertas_tempo_chuva_extrema():
 
     assert len(alertas) == 1
     assert alertas[0]["nivel"] == "urgente"
+
+
+def test_previsao_extrai_vento_umidade_chuva_e_atualiza_cache_antigo(tmp_path, monkeypatch):
+    agora = datetime(2026, 11, 4, 12)
+    monkeypatch.setattr(tempo, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(tempo, "_configuracao", lambda: {
+        "latitude": -18.9, "longitude": -48.2,
+    })
+    tempo._salvar_cache(
+        {"current": {}, "daily": {"time": ["2026-11-04"]}},
+        datetime(2026, 11, 4, 10),
+    )
+    dados_api = {
+        "current": {},
+        "daily": {
+            "time": ["2026-11-04"],
+            "weather_code": [1],
+            "temperature_2m_max": [29],
+            "temperature_2m_min": [18],
+            "precipitation_probability_max": [0],
+            "precipitation_sum": [0],
+            "wind_speed_10m_max": [17.5],
+            "relative_humidity_2m_mean": [64],
+        },
+    }
+
+    class Resposta:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return dados_api
+
+    chamada = {}
+
+    def requisitar(url, **kwargs):
+        chamada.update(kwargs)
+        return Resposta()
+
+    monkeypatch.setattr(tempo.requests, "get", requisitar)
+
+    previsao = tempo.previsao(agora=agora)
+
+    assert "wind_speed_10m_max" in chamada["params"]["daily"]
+    assert "relative_humidity_2m_mean" in chamada["params"]["daily"]
+    assert previsao["dias"][0]["vento_kmh"] == 17.5
+    assert previsao["dias"][0]["umidade"] == 64
+    assert previsao["dias"][0]["chuva_mm"] == 0
+
+
+def test_tabela_tempo_formata_data_e_mostra_zero_e_dados_diarios(cliente, monkeypatch):
+    previsao = {
+        "status": "atualizado",
+        "mensagem": "Previsão atualizada.",
+        "consultado_em": "2026-11-04T12:00:00",
+        "atual": {"temperatura": 25, "umidade": 0, "vento_kmh": 0, "condicao": "Céu limpo"},
+        "dias": [{
+            "data": "2026-11-04", "minima": 0, "maxima": 0, "chuva_mm": 0,
+            "chuva_probabilidade": 0, "vento_kmh": 17.5, "umidade": 64,
+        }],
+    }
+    monkeypatch.setattr(tempo, "previsao", lambda **kwargs: previsao)
+
+    html = cliente.get("/tempo").get_data(as_text=True)
+
+    assert "04/11/2026" in html
+    assert "2026-11-04</strong>" not in html
+    assert "17.5 km/h" in html
+    assert "64%" in html
+    assert "0mm" in html and "0%</span>" in html
+    assert 'id="chartVentoUmidade"' in html
+    assert "d.vento_kmh ?? null" in html
+    assert "d.umidade ?? null" in html

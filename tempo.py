@@ -12,6 +12,11 @@ import db
 URL_OPEN_METEO = "https://api.open-meteo.com/v1/forecast"
 NOME_CACHE = "tempo_cache.json"
 CACHE_HORAS = 3
+VARIAVEIS_DIARIAS = (
+    "weather_code", "temperature_2m_max", "temperature_2m_min",
+    "precipitation_probability_max", "precipitation_sum",
+    "wind_speed_10m_max", "relative_humidity_2m_mean",
+)
 # Testes podem apontar para uma pasta temporária; em produção o sítio ativo é lido
 # dinamicamente para não misturar caches entre sítios.
 DATA_DIR = None
@@ -120,7 +125,8 @@ def _formatar(dados, cfg, salvo_em, desatualizado=False):
     campos = (
         ("temperature_2m_max", "maxima"), ("temperature_2m_min", "minima"),
         ("precipitation_probability_max", "chuva_probabilidade"),
-        ("precipitation_sum", "chuva_mm"), ("weather_code", "codigo"),
+        ("precipitation_sum", "chuva_mm"), ("wind_speed_10m_max", "vento_kmh"),
+        ("relative_humidity_2m_mean", "umidade"), ("weather_code", "codigo"),
     )
     for i, data in enumerate(datas):
         item = {"data": data}
@@ -252,7 +258,14 @@ def previsao(*, agora=None, latitude=None, longitude=None):
     if cache:
         try:
             salvo = datetime.fromisoformat(cache["salvo_em"])
-            if (agora - salvo).total_seconds() < CACHE_HORAS * 3600:
+            diario_cache = cache["dados"].get("daily") or {}
+            cache_diario_completo = all(
+                isinstance(diario_cache.get(campo), list)
+                and len(diario_cache[campo]) >= len(diario_cache.get("time") or [])
+                for campo in VARIAVEIS_DIARIAS
+            )
+            if (cache_diario_completo
+                    and (agora - salvo).total_seconds() < CACHE_HORAS * 3600):
                 return _formatar(cache["dados"], cfg, cache["salvo_em"])
         except (KeyError, TypeError, ValueError):
             cache = None
@@ -265,7 +278,7 @@ def previsao(*, agora=None, latitude=None, longitude=None):
             params={
                 "latitude": coordenadas[0], "longitude": coordenadas[1],
                 "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code",
-                "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum",
+                "daily": ",".join(VARIAVEIS_DIARIAS),
                 "timezone": "America/Sao_Paulo", "forecast_days": 7,
             },
             timeout=(2, 3),

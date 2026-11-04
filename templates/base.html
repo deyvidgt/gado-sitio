@@ -769,7 +769,7 @@
         </select>
       </form>
       {% endif %}
-      {% if request.endpoint != 'voz' %}
+      {% if request.endpoint not in ('voz', 'ficha_animal') %}
       <a href="{{ url_for('voz', ouvir=1) }}" class="btn-header" id="btn-voz-top" title="Comando de voz" aria-label="Comando de voz">
         🎤
       </a>

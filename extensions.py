@@ -10,7 +10,7 @@ Importado por todos os blueprints — evita importações circulares.
 import os, sys, hashlib, time, threading
 import secrets as _secrets
 from functools import wraps
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import pandas as pd
 from flask import (Flask, session, request, redirect, url_for,
@@ -393,6 +393,13 @@ def fmt_pct(v):
 def fmt_data(v):
     if isinstance(v, pd.Timestamp) and pd.notna(v):
         return v.strftime("%d/%m/%Y")
+    if isinstance(v, (date, datetime)):
+        return v.strftime("%d/%m/%Y")
+    if isinstance(v, str):
+        try:
+            return datetime.strptime(v.strip(), "%Y-%m-%d").strftime("%d/%m/%Y")
+        except ValueError:
+            pass
     return str(v) if v else "—"
 
 

@@ -15,6 +15,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ### Corrigido
 
+- **Previsão do tempo:** agora solicita e mostra vento máximo diário e umidade média junto à precipitação; a página inclui gráfico de vento/umidade, preserva valores zero e formata as datas como `dd/mm/aaaa`. Cache antigo sem esses campos é atualizado na próxima consulta.
+- **Ficha do animal no celular:** removido o microfone duplicado do cabeçalho; ações de foto, movimentação de pasto e baixa ficam acessíveis numa barra acima da navegação, com formulários completos e espaço de rolagem para não serem encobertos.
+- **Datas das salgas dos cochos:** última salga e próxima salga estimada agora aparecem no formato brasileiro `dd/mm/aaaa`.
 - **WhatsApp mais confiável:** a fila é protegida por trava e gravação atômica; avisos com falha ficam pendentes para nova tentativa após 15 minutos, sem reenviar para quem já recebeu. Filas inválidas são preservadas em quarentena. A tela de lembretes agora mostra as preferências reais e o conteúdo/data reais da fila; validações de telefone e opções evitam configurações ambíguas.
 - **WhatsApp por sítio:** o teste usa o nome do sítio atual, e o envio manual da família captura e restaura o sítio correto ao rodar em segundo plano.
 - **Exclusão de cochos:** a rota agora remove fisicamente a linha pelo ID normalizado, salva a aba com segurança e atualiza o painel lendo novamente do Excel.

@@ -357,6 +357,25 @@ def test_paginas_de_animais_abrem(cliente, sem_animais):
     assert "cond-brinco-identidade" in html_mobile and "Amarelo 92" in html_mobile
 
 
+def test_ficha_mobile_mostra_acoes_e_um_microfone(cliente, sem_animais, monkeypatch):
+    import routes_animais
+    monkeypatch.setattr(routes_animais.drive, "configurado", lambda: True)
+    _voz(cliente, "registrar bezerra brinco amarelo 92 deyvid")
+    id_ = A.carregar().iloc[-1]["ID"]
+
+    html = cliente.get(f"/animais/{id_}?modo=mobile").get_data(as_text=True)
+
+    assert 'id="search-mic"' in html
+    assert 'id="btn-voz-top"' not in html
+    assert 'id="cond-foto-arquivo"' in html
+    assert 'aria-label="Tirar foto"' in html
+    assert 'data-cond-abrir="mov-pasto"' in html
+    assert 'id="mov-pasto"' in html
+    assert 'data-cond-abrir="baixa-animal"' in html
+    assert 'id="baixa-animal"' in html
+    assert 'action="/animais/' + id_ + '/baixa"' in html
+
+
 def test_frases_do_usuario_gravam_de_verdade(cliente, sem_animais):
     """As duas frases perguntadas: vacina com produto dito logo após 'vacina' e
     venda de 10 novilhas com brincos de três cores, em sequência sem 'e'."""

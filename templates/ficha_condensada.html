@@ -39,22 +39,36 @@
   .cond-foto img { width: 100%; height: 100%; object-fit: cover; }
   .cond-foto .tipo { position: absolute; bottom: 4px; left: 4px; font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,.6); color: #fff; }
 
-  .cond-botoes { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--bg-2); padding: 12px 16px; display: flex; gap: 8px; flex-wrap: wrap; z-index: 100; }
-  .cond-botoes .btn { flex: 1; min-width: 140px; font-size: 12px; padding: 10px 12px; }
+  .cond-page { padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px)); }
+  .cond-botoes { position: fixed; bottom: calc(56px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--bg-2); padding: 8px 12px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; z-index: 1000; }
+  .cond-botoes .btn { width: 100%; min-width: 0; min-height: 44px; justify-content: center; font-size: 11px; padding: 8px 4px; }
+  .cond-acoes-secundarias { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .cond-page details, .cond-foto-form { scroll-margin-top: 76px; }
+  .cond-foto-form { display: none; margin: 12px 0; padding: 12px; border-radius: 10px; background: var(--surface-2); }
+  .cond-foto-form .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cond-foto-form .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .cond-foto-form .form-group.full { grid-column: 1 / -1; }
 
   @media (max-width: 600px) {
     .cond-resumo { grid-template-columns: 1fr; }
-    .cond-botoes .btn { flex: 0 1 calc(50% - 4px); }
+  }
+
+  @media (max-width: 480px) {
+    .cond-botoes { bottom: calc(52px + env(safe-area-inset-bottom, 0px)); }
+    .cond-foto-form .form-grid { grid-template-columns: 1fr; }
+    .cond-foto-form .form-group.full { grid-column: auto; }
   }
 
   @media (min-width: 769px) {
     .cond-header { margin-bottom: 30px; }
     .cond-resumo { grid-template-columns: repeat(3, 1fr); }
-    .cond-botoes { position: relative; bottom: auto; left: auto; right: auto; background: transparent; border: none; margin-top: 20px; padding: 0; }
-    .cond-botoes .btn { flex: 0 1 auto; min-width: auto; }
+    .cond-page { padding-bottom: 0; }
+    .cond-botoes { position: relative; bottom: auto; left: auto; right: auto; background: transparent; border: none; margin-top: 20px; padding: 0; display: flex; }
+    .cond-botoes .btn { width: auto; min-height: 0; flex: 0 1 auto; min-width: auto; font-size: 12px; padding: 5px 12px; }
   }
 </style>
 
+<div class="cond-page">
 <div class="cond-header">
   {% if fotos|first %}
   <img src="{{ url_for('foto_mini', id_foto=fotos|first.id_foto) }}" alt="{{ a.brinco }}"
@@ -70,9 +84,17 @@
       <span class="badge" style="background: {% if a.status == 'Vivo' %}rgba(82,160,68,.16){% elif a.status == 'Vendido' %}rgba(41,128,185,.15){% else %}rgba(192,57,43,.14){% endif %}; color: {% if a.status == 'Vivo' %}var(--green-600){% elif a.status == 'Vendido' %}var(--info){% else %}var(--danger){% endif %}">{{ a.status }}</span>
     </div>
   </div>
+  <div class="cond-acoes-secundarias">
+    <a href="{{ url_for('editar_animal', id_=a.id) }}" class="btn btn-outline btn-sm">✏️ Editar</a>
+    {% if a.status == 'Vivo' %}
+    <a href="{{ url_for('pesagem', id=a.id) }}" class="btn btn-outline btn-sm">⚖️ Pesar</a>
+    <a href="{{ url_for('novo_manejo', prefill=1, brincos=a.brinco, cabecas=1) }}" class="btn btn-primary btn-sm">🩺 Manejo</a>
+    {% endif %}
+    <a href="{{ url_for('animais') }}" class="btn btn-outline btn-sm">← Voltar</a>
+  </div>
 </div>
 
-<div class="card" style="margin-bottom: 140px;">
+<div class="card" style="margin-bottom: 20px;">
   <div class="cond-resumo">
     <div class="cond-campo">
       <span class="chave">Nome</span>
@@ -163,6 +185,27 @@
   </div>
 
   <div class="cond-painel" id="cond-fotos">
+    {% if fotos_ativas %}
+    <div class="cond-foto-form" id="cond-foto-form">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="cond-foto-tipo">Tipo</label>
+          <select id="cond-foto-tipo">{% for t in TIPOS_FOTO %}<option{{ ' selected' if t == 'Evolução' }}>{{ t }}</option>{% endfor %}</select>
+        </div>
+        <div class="form-group">
+          <label for="cond-foto-data">Data</label>
+          <input type="date" id="cond-foto-data" value="{{ hoje }}">
+        </div>
+        <div class="form-group full">
+          <label for="cond-foto-legenda">Legenda (opcional)</label>
+          <input type="text" id="cond-foto-legenda" maxlength="160" placeholder="ex.: evolução ou machucado">
+        </div>
+      </div>
+      <p class="muted" id="cond-foto-qtd" style="margin:8px 0"></p>
+      <button type="button" class="btn btn-primary btn-sm" id="cond-foto-enviar">📤 Enviar</button>
+      <button type="button" class="btn btn-outline btn-sm" id="cond-foto-cancelar">Cancelar</button>
+    </div>
+    {% endif %}
     {% if fotos %}
     <div class="cond-fotos">
       {% for f in fotos %}
@@ -178,18 +221,63 @@
   </div>
 </div>
 
+{% if a.status == 'Vivo' %}
+<details class="card" style="margin-top:20px" id="mov-pasto">
+  <summary style="cursor:pointer;font-weight:600">📍 Movimentar para pasto</summary>
+  <form method="post" action="{{ url_for('novo_manejo', prefill=1, tipo='Movimentação de Pasto', brincos=a.brinco) }}" style="margin-top:14px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <p class="muted" style="margin-bottom:12px">Registre o pasto onde este animal está agora. A movimentação aparecerá no histórico e no mapa de pastos.</p>
+    <div class="form-grid">
+      <div class="form-group"><label>Data</label><input type="date" name="data" value="{{ hoje }}" required></div>
+      <div class="form-group full"><label>Descrição (opcional)</label><input type="text" name="descricao" maxlength="160" placeholder="ex.: movido pela manhã"></div>
+    </div>
+    <button class="btn btn-primary btn-sm">Registrar movimentação</button>
+    <a href="{{ url_for('pastos') }}" class="btn btn-outline btn-sm">Ver todos os pastos</a>
+  </form>
+</details>
+
+<details class="card" style="margin-top:20px" id="baixa-animal">
+  <summary style="cursor:pointer;font-weight:600">📤 Dar baixa (vendido / morreu)</summary>
+  <form method="post" action="{{ url_for('baixa_animal', id_=a.id) }}" style="margin-top:14px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="cond-sel-baixa">Motivo</label>
+        <select name="status" id="cond-sel-baixa">
+          <option value="Vendido">Vendido</option>
+          <option value="Morto">Morreu / perda</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Data</label><input type="date" name="data" value="{{ hoje }}"></div>
+      <div class="form-group full"><label>Detalhe (opcional)</label><input type="text" name="motivo" maxlength="160" placeholder="ex.: picada de cobra"></div>
+      <div class="form-group full" id="cond-grp-morte" style="display:none">
+        <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:13.5px">
+          <input type="checkbox" name="registrar_morte" value="1" checked style="width:auto">
+          Registrar também a Morte/Perda no Manejo (perda de {{ NOMES.get(a.dono, a.dono) }})
+        </label>
+      </div>
+    </div>
+    <p class="muted" style="margin:10px 0">Vendido: registre o valor em <a href="{{ url_for('nova_venda') }}">Nova Venda</a>. O brinco fica livre para reaproveitar.</p>
+    <button class="btn btn-danger btn-sm">Dar baixa</button>
+  </form>
+</details>
+{% endif %}
+</div>
+
 <div class="cond-botoes">
-  <a href="{{ url_for('editar_animal', id_=a.id) }}" class="btn btn-outline btn-sm">✏️ Editar</a>
-  {% if a.status == 'Vivo' %}
-  <a href="{{ url_for('pesagem', id=a.id) }}" class="btn btn-outline btn-sm">⚖️ Pesar</a>
-  <a href="{{ url_for('novo_manejo', prefill=1, brincos=a.brinco, cabecas=1) }}" class="btn btn-primary btn-sm">🩺 Manejo</a>
-  {% if pasto_id %}
-  <a href="{{ url_for('pastos') }}#pasto-{{ pasto_id }}" class="btn btn-outline btn-sm">📍 {{ pasto_nome or 'Pasto' }}</a>
+  {% if a.status == 'Vivo' and fotos_ativas %}
+  <label for="cond-foto-arquivo" class="btn btn-primary" aria-label="Tirar foto">📷 Tirar foto</label>
+  <input type="file" id="cond-foto-arquivo" accept="image/*" capture="environment" multiple hidden>
+  <button type="button" class="btn btn-outline" data-cond-abrir="mov-pasto" aria-label="Movimentar para pasto">📍 Pasto</button>
+  <button type="button" class="btn btn-danger" data-cond-abrir="baixa-animal" aria-label="Dar baixa, vendido ou morreu">📤 Baixa</button>
+  {% elif a.status == 'Vivo' %}
+  <a href="{{ url_for('configuracoes') }}#fotos" class="btn btn-outline">📷 Fotos</a>
+  <button type="button" class="btn btn-outline" data-cond-abrir="mov-pasto" aria-label="Movimentar para pasto">📍 Pasto</button>
+  <button type="button" class="btn btn-danger" data-cond-abrir="baixa-animal" aria-label="Dar baixa, vendido ou morreu">📤 Baixa</button>
   {% else %}
-  <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mov-pasto').scrollIntoView({behavior:'smooth'})">📍 Pasto</button>
+  <button type="button" class="btn btn-outline" data-cond-abrir="cond-fotos">📷 Fotos</button>
+  <a href="{{ url_for('animais') }}" class="btn btn-outline">← Voltar</a>
   {% endif %}
-  {% endif %}
-  <a href="{{ url_for('animais') }}" class="btn btn-outline btn-sm">← Voltar</a>
 </div>
 
 <div id="visor-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,.88); display: none; align-items: center; justify-content: center; z-index: 200; padding: 16px;">
@@ -206,6 +294,76 @@ document.querySelectorAll(".cond-tab").forEach(tab => {
     document.getElementById("cond-" + tab.dataset.tab).classList.add("ativo");
   });
 });
+
+document.querySelectorAll("[data-cond-abrir]").forEach(botao => {
+  botao.addEventListener("click", () => {
+    const alvo = document.getElementById(botao.dataset.condAbrir);
+    if (!alvo) return;
+    if (alvo.tagName === "DETAILS") alvo.open = true;
+    if (alvo.id === "cond-fotos") {
+      document.querySelector('.cond-tab[data-tab="fotos"]').click();
+    }
+    alvo.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+});
+
+const fotoInput = document.getElementById("cond-foto-arquivo");
+if (fotoInput) {
+  const formFoto = document.getElementById("cond-foto-form");
+  fotoInput.addEventListener("change", () => {
+    if (!fotoInput.files.length) return;
+    document.querySelector('.cond-tab[data-tab="fotos"]').click();
+    document.getElementById("cond-foto-qtd").textContent =
+      fotoInput.files.length + " foto(s) selecionada(s)";
+    formFoto.style.display = "block";
+    formFoto.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  document.getElementById("cond-foto-cancelar").addEventListener("click", () => {
+    fotoInput.value = "";
+    formFoto.style.display = "none";
+  });
+  document.getElementById("cond-foto-enviar").addEventListener("click", async function () {
+    if (!window.FilaFotos) {
+      this.disabled = false;
+      this.textContent = "📤 Enviar";
+      document.getElementById("cond-foto-qtd").textContent =
+        "Envio de fotos indisponível. Atualize a página e tente novamente.";
+      return;
+    }
+    this.disabled = true;
+    this.textContent = "⏳ Enviando...";
+    let resposta;
+    try {
+      resposta = await FilaFotos.enviar("{{ a.id }}", fotoInput.files, {
+        tipo: document.getElementById("cond-foto-tipo").value,
+        legenda: document.getElementById("cond-foto-legenda").value,
+        data: document.getElementById("cond-foto-data").value,
+      });
+    } catch (erro) {
+      this.disabled = false;
+      this.textContent = "📤 Enviar";
+      document.getElementById("cond-foto-qtd").textContent =
+        "Não foi possível preparar as fotos. Tente novamente.";
+      return;
+    }
+    if (resposta && resposta.perdidas) {
+      this.disabled = false;
+      this.textContent = "📤 Enviar";
+      return;
+    }
+    location.reload();
+  });
+}
+
+const baixaSelect = document.getElementById("cond-sel-baixa");
+if (baixaSelect) {
+  const grupoMorte = document.getElementById("cond-grp-morte");
+  const atualizarBaixa = () => {
+    grupoMorte.style.display = baixaSelect.value === "Morto" ? "" : "none";
+  };
+  baixaSelect.addEventListener("change", atualizarBaixa);
+  atualizarBaixa();
+}
 
 function abrirFoto(url) {
   const img = document.getElementById("visor-img");

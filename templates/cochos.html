@@ -356,10 +356,10 @@
       {% if cocho.ultima_salga %}
       <div style="padding: 12px; background: var(--bg-2); border-radius: 8px; margin-bottom: 16px; font-size: 13px">
         <div style="color: var(--text-3); margin-bottom: 4px">Última salga</div>
-        <div style="font-weight: 600">{{ cocho.ultima_salga }}</div>
+        <div style="font-weight: 600">{{ cocho.ultima_salga|data_br }}</div>
         {% if cocho.proxima_salga_estimada %}
         <div style="color: var(--text-3); margin-top: 8px; margin-bottom: 4px">Próxima salga estimada</div>
-        <div style="font-weight: 600">{{ cocho.proxima_salga_estimada }}</div>
+        <div style="font-weight: 600">{{ cocho.proxima_salga_estimada|data_br }}</div>
         {% endif %}
       </div>
       {% endif %}

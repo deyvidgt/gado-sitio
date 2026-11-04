@@ -76,11 +76,11 @@
       <label>Temperatura</label>
     </div>
     <div>
-      <strong>{{ prev.atual.umidade or '—' }}%</strong>
+      <strong>{{ prev.atual.umidade if prev.atual.umidade is not none else '—' }}%</strong>
       <label>Umidade</label>
     </div>
     <div>
-      <strong>{{ prev.atual.vento_kmh or '—' }} km/h</strong>
+      <strong>{{ prev.atual.vento_kmh if prev.atual.vento_kmh is not none else '—' }} km/h</strong>
       <label>Vento</label>
     </div>
   </div>
@@ -97,6 +97,13 @@
   <div class="card-title" style="margin-bottom:20px">Previsão de 7 Dias</div>
   <div class="chart-container">
     <canvas id="chartTempo"></canvas>
+  </div>
+</section>
+
+<section class="card tempo-card">
+  <div class="card-title" style="margin-bottom:20px">Vento e umidade — 7 dias</div>
+  <div class="chart-container">
+    <canvas id="chartVentoUmidade"></canvas>
   </div>
 </section>
 
@@ -126,11 +133,11 @@
   </div>
   {% for dia in prev.dias %}
   <div class="dia-tabela">
-    <div><strong>{{ dia.data }}</strong></div>
-    <div>{{ dia.minima or '—' }}–<strong>{{ dia.maxima or '—' }}</strong>°C</div>
-    <div>{{ dia.chuva_mm or '—' }}mm<br><span style="font-size:0.85em; color:var(--text-3)">{{ dia.chuva_probabilidade or '—' }}%</span></div>
-    <div>{{ dia.get('vento_kmh', '—') }} km/h</div>
-    <div>{{ dia.get('umidade', '—') }}%</div>
+    <div><strong>{{ dia.data|data_br }}</strong></div>
+    <div>{{ dia.get('minima') if dia.get('minima') is not none else '—' }}–<strong>{{ dia.get('maxima') if dia.get('maxima') is not none else '—' }}</strong>°C</div>
+    <div>{{ dia.get('chuva_mm') if dia.get('chuva_mm') is not none else '—' }}mm<br><span style="font-size:0.85em; color:var(--text-3)">{{ dia.get('chuva_probabilidade') if dia.get('chuva_probabilidade') is not none else '—' }}%</span></div>
+    <div>{{ dia.get('vento_kmh') if dia.get('vento_kmh') is not none else '—' }} km/h</div>
+    <div>{{ dia.get('umidade') if dia.get('umidade') is not none else '—' }}%</div>
     <div style="font-size:0.9em">
       {% set alerta_dia = alertas|selectattr('tipo', 'defined')|list %}
       {% if alerta_dia|length > 0 %}
@@ -193,9 +200,9 @@
     return day + '/' + m;
   });
 
-  const temperaturas = dados.map(d => d.maxima || 0);
-  const minimas = dados.map(d => d.minima || 0);
-  const chuvas = dados.map(d => d.chuva_mm || 0);
+  const temperaturas = dados.map(d => d.maxima ?? null);
+  const minimas = dados.map(d => d.minima ?? null);
+  const chuvas = dados.map(d => d.chuva_mm ?? null);
 
   const ctx = document.getElementById('chartTempo').getContext('2d');
   new Chart(ctx, {
@@ -287,6 +294,55 @@
       },
     },
   });
+
+  const ventoUmidadeCanvas = document.getElementById('chartVentoUmidade');
+  if (ventoUmidadeCanvas) {
+    new Chart(ventoUmidadeCanvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Vento (km/h)',
+            data: dados.map(d => d.vento_kmh ?? null),
+            borderColor: 'rgb(46, 125, 180)',
+            backgroundColor: 'rgba(46, 125, 180, 0.12)',
+            tension: 0.25,
+            yAxisID: 'vento',
+          },
+          {
+            label: 'Umidade (%)',
+            data: dados.map(d => d.umidade ?? null),
+            borderColor: 'rgb(46, 125, 79)',
+            backgroundColor: 'rgba(46, 125, 79, 0.12)',
+            tension: 0.25,
+            yAxisID: 'umidade',
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'top' } },
+        scales: {
+          vento: {
+            type: 'linear',
+            position: 'left',
+            title: { display: true, text: 'Vento (km/h)' },
+          },
+          umidade: {
+            type: 'linear',
+            position: 'right',
+            min: 0,
+            max: 100,
+            title: { display: true, text: 'Umidade (%)' },
+            grid: { drawOnChartArea: false },
+          },
+        },
+      },
+    });
+  }
 </script>
 
 {% else %}

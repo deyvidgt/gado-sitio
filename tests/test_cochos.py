@@ -97,3 +97,14 @@ def test_botao_adicionar_cocho_fica_acima_da_navegacao(cliente, dados_restaurado
     assert "bottom: 30px" in html
     assert "right: 30px" in html
     assert "z-index: 1050" in html
+
+
+def test_datas_de_salga_sao_exibidas_no_formato_brasileiro(cliente, dados_restaurados):
+    db.salvar_linha("Cochos", [
+        "C01", "Cocho 1", "sal", "Pasto", 100, 50, "2026-11-03", "", "Sim", "Deyvid"
+    ])
+
+    html = cliente.get("/cochos").get_data(as_text=True)
+
+    assert "03/11/2026" in html
+    assert "2026-11-03" not in html
