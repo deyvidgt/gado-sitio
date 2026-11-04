@@ -5,9 +5,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
+- **Módulos personalizáveis por sítio:** em Configurações → Módulos do sítio, usuários podem ocultar e bloquear Leite, Conforto/Colchão, Reprodução ou Genética/Confinamento; preferências são compartilhadas no sítio e a busca rápida acompanha o menu.
 - **Aplicações de insumos em pastagens:** histórico por pasto com custo/ha; cada aplicação lança atomicamente um gasto vinculado na aba Gastos.
 - **Orçamento e contas futuras:** comparação anual previsto vs. realizado por mês/categoria, contas a pagar/receber e lembrete de vencimentos na Comercialização. Marcar uma conta como paga/recebida não cria um lançamento real.
-- **Busca rápida global:** encontra animais, tarefas, manejo, compras, vendas, gastos, visitas e páginas; ignora acentos, aceita termos combinados e permite navegar pelas sugestões com teclado.
+- **Busca rápida global:** encontra animais, tarefas, registros e telas do menu, incluindo subpáginas de Leite e Pastos; prioriza a tela quando o nome buscado corresponde a ela e abre o destino ao clicar ou pressionar Enter.
 
 ### Corrigido
 - **Exclusão de cochos:** a rota agora remove fisicamente a linha pelo ID normalizado, salva a aba com segurança e atualiza o painel lendo novamente do Excel.

@@ -110,6 +110,18 @@ def _entrar_no_sitio():
     sitios.ativar(slug)
     if logado and permitidos:
         session["sitio"] = slug
+    if logado:
+        import modulos
+        modulo = modulos.modulo_da_rota(request.path)
+        if modulo and not modulos.esta_ativo(modulo, modulos.estado_sitio()):
+            nome = modulos.MODULOS[modulo]["nome"]
+            mensagem = f"O módulo {nome} está desativado neste sítio. Reative-o para continuar."
+            if request.path.startswith("/api/"):
+                return jsonify({"ok": False, "erro": "modulo_desativado",
+                                "modulo": modulo, "mensagem": mensagem}), 403
+            from flask import flash
+            flash(mensagem, "warning")
+            return redirect(url_for("configuracoes_modulos"))
 
 
 @app.teardown_request
@@ -296,6 +308,21 @@ def _inject_sitio_config():
         cfg = _ler_sitio_config_disco()
         _cache_set("sitio_config", cfg)
     return {"sitio_config": cfg, "VERSAO": VERSAO}
+
+
+@app.context_processor
+def _inject_modulos():
+    """Estado efetivo e preferências editáveis do sítio atual."""
+    import modulos
+    cfg = _cache_get("sitio_config")
+    if cfg is None:
+        cfg = _ler_sitio_config_disco()
+        _cache_set("sitio_config", cfg)
+    return {
+        "modulos": modulos.estado_efetivo(cfg),
+        "modulos_preferencias": modulos.preferencias(cfg),
+        "catalogo_modulos": modulos.MODULOS,
+    }
 
 
 # ── Auth helpers ───────────────────────────────────────────────────────────────

@@ -144,6 +144,38 @@ def configuracoes():
                            CORES_BRINCO=CORES_BRINCO)
 
 
+@app.route("/configuracoes/modulos", methods=["GET", "POST"])
+@login_required
+def configuracoes_modulos():
+    import modulos
+    if request.method == "POST":
+        _validar_csrf()
+        campos = set(request.form) - {"csrf_token"}
+        if not campos.issubset(modulos.MODULOS) or any(
+            request.form.getlist(chave) != ["1"] for chave in campos
+        ):
+            flash("As opções de módulos enviadas são inválidas.", "error")
+            return redirect(url_for("configuracoes_modulos"))
+        valores = {
+            chave: request.form.getlist(chave) == ["1"]
+            for chave in modulos.MODULOS
+        }
+        try:
+            modulos.salvar_preferencias(_sitio_config_path(), valores)
+        except ValueError as erro:
+            flash(str(erro), "error")
+            return redirect(url_for("configuracoes_modulos"))
+        _invalidar_cache_sitio()
+        flash("Preferências dos módulos salvas para este sítio.", "success")
+        return redirect(url_for("configuracoes_modulos"))
+
+    return render_template(
+        "configuracoes_modulos.html",
+        catalogo_modulos=modulos.MODULOS,
+        preferencias_modulos=modulos.preferencias(_carregar_sitio_config()),
+    )
+
+
 @app.route("/configuracoes/sitios/criar", methods=["POST"])
 @login_required
 def criar_sitio():

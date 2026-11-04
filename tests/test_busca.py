@@ -5,7 +5,7 @@ Testes da busca rápida global (v5.6)
 """
 import pandas as pd
 import pytest
-from busca import buscar_global
+from busca import ABAS_DISPONIVEIS, buscar_global
 
 
 def test_busca_vazia():
@@ -102,6 +102,29 @@ def test_busca_sem_acento_e_com_varias_palavras(monkeypatch):
     assert any(r["titulo"] == "Comercialização" for r in buscar_global("compras e vendas"))
 
 
+def test_busca_prioriza_tela_exata_e_oferece_telas_do_menu(monkeypatch):
+    animais_df = pd.DataFrame([{
+        "ID": "A0001", "Brinco Cor": "Amarelo", "Brinco Nº": 21,
+        "Nome": "Pasto Norte", "Categoria": "Vaca", "Dono": "Geane",
+        "Status": "Ativo",
+    }])
+    vazio = pd.DataFrame()
+    monkeypatch.setattr("busca.animais.carregar", lambda: animais_df)
+    monkeypatch.setattr("busca.tarefas.carregar", lambda: vazio)
+    monkeypatch.setattr("busca.db.carregar_aba", lambda aba: vazio)
+
+    resultado = buscar_global("aplicações em pastagens")
+    assert resultado[0]["tipo"] == "aba"
+    assert resultado[0]["titulo"] == "Aplicações em Pastagens"
+    assert resultado[0]["link"] == "/pastos/aplicacoes"
+    assert resultado[0]["subtitulo"] == "Abrir tela"
+
+    assert any(r["titulo"] == "Mastite e Qualidade do Leite" and r["link"] == "/leite/saude"
+               for r in buscar_global("mastite"))
+    assert any(r["titulo"] == "Orçamento e Contas" and r["link"] == "/planejamento"
+               for r in buscar_global("orçamento"))
+
+
 def test_busca_encontra_transacao_pelo_brinco(monkeypatch):
     animais_df = pd.DataFrame(columns=[
         "ID", "Brinco Cor", "Brinco Nº", "Nome", "Categoria", "Sexo",
@@ -133,3 +156,9 @@ def test_busca_rapida_tem_sugestoes_acessiveis(cliente):
     assert 'aria-haspopup="listbox"' in html
     assert 'id="search-dropdown" class="search-dropdown" role="listbox" aria-live="polite" hidden' in html
     assert "Ctrl+K" in html or "ctrlKey" in html
+
+
+def test_telas_indexadas_apontam_para_rotas_existentes(flask_app):
+    adaptador = flask_app.url_map.bind("localhost")
+    for aba in ABAS_DISPONIVEIS:
+        adaptador.match(aba["link"], method="GET")

@@ -15,13 +15,30 @@ PALAVRAS_IGNORADAS = {"a", "as", "o", "os", "de", "da", "do", "das", "dos", "e",
 
 ABAS_DISPONIVEIS = [
     {"termo": "dashboard", "titulo": "Painel", "link": "/", "icone": "🏠"},
+    {"termo": "alertas avisos notificacoes notificações", "titulo": "Avisos e Alertas", "link": "/alertas", "icone": "🔔"},
+    {"termo": "familia família sitios sítios", "titulo": "Painel da Família", "link": "/familia", "icone": "👨‍👩‍👧"},
     {"termo": "animais", "titulo": "Animais", "link": "/animais", "icone": "🐄"},
     {"termo": "pesagem peso", "titulo": "Pesagem", "link": "/animais/pesagem", "icone": "⚖️"},
+    {"termo": "animais leite vacas leiteiras", "titulo": "Animais Leite", "link": "/leite/animais", "icone": "🐮"},
     {"termo": "reproducao reprodução", "titulo": "Reprodução", "link": "/reproducao", "icone": "🐮"},
     {"termo": "pastos pastagem", "titulo": "Pastos", "link": "/pastos", "icone": "🗺️"},
+    {"termo": "ocupacao ocupação rotacao rotação pastos", "titulo": "Ocupação e Rotação de Pastos", "link": "/pastos/ocupação", "icone": "🌾"},
+    {"termo": "aplicacao aplicacoes aplicação aplicações insumos pasto custo hectare", "titulo": "Aplicações em Pastagens", "link": "/pastos/aplicacoes", "icone": "🌱"},
     {"termo": "manejo", "titulo": "Manejo", "link": "/manejo", "icone": "🌿"},
     {"termo": "cocho cochos", "titulo": "Cochos", "link": "/cochos", "icone": "🥣"},
     {"termo": "insumos sal racao ração", "titulo": "Insumos e estoque", "link": "/insumos/comparar", "icone": "🧂"},
+    {"termo": "estoque geral", "titulo": "Estoque", "link": "/estoque", "icone": "📦"},
+    {"termo": "parto partos previsao previsão nascimento bezerro", "titulo": "Previsão de Partos", "link": "/partos", "icone": "🍼"},
+    {"termo": "mastite qualidade leite ccs cpp ordenha saude saúde", "titulo": "Mastite e Qualidade do Leite", "link": "/leite/saude", "icone": "💊"},
+    {"termo": "nutricao nutrição alimentacao alimentação leite", "titulo": "Nutrição do Leite", "link": "/leite/nutricao", "icone": "🍽️"},
+    {"termo": "consumo leite", "titulo": "Consumo do Rebanho Leiteiro", "link": "/leite/consumo", "icone": "📊"},
+    {"termo": "volumoso volumosos silagem feno", "titulo": "Volumosos", "link": "/volumosos", "icone": "🌾"},
+    {"termo": "consumo volumoso volumosos silagem", "titulo": "Consumo de Volumosos", "link": "/volumosos/consumo", "icone": "📉"},
+    {"termo": "calculador calculadora racao ração dieta ingredientes", "titulo": "Calculador de Ração", "link": "/racao/calculador", "icone": "🧮"},
+    {"termo": "conforto termico térmico calor", "titulo": "Conforto Térmico", "link": "/leite/conforto", "icone": "🏠"},
+    {"termo": "colchao colchão cama troca", "titulo": "Colchão", "link": "/leite/colchao", "icone": "🛏️"},
+    {"termo": "ordenha registrar producao produção leite", "titulo": "Registrar Ordenha", "link": "/leite/ordenha", "icone": "🥛"},
+    {"termo": "relatorio relatorios relatórios leite", "titulo": "Relatórios do Leite", "link": "/leite/relatorios", "icone": "📈"},
     {"termo": "visita visitas", "titulo": "Visitas", "link": "/visitas", "icone": "🗓️"},
     {"termo": "tarefa tarefas", "titulo": "Tarefas", "link": "/tarefas", "icone": "📋"},
     {"termo": "calendario calendário agenda", "titulo": "Calendário", "link": "/calendario", "icone": "📅"},
@@ -29,9 +46,11 @@ ABAS_DISPONIVEIS = [
     {"termo": "compra compras venda vendas comercializacao comercialização transacao transação", "titulo": "Comercialização", "link": "/transacoes", "icone": "📦🤝"},
     {"termo": "gasto gastos despesa despesas", "titulo": "Gastos", "link": "/gastos", "icone": "💸"},
     {"termo": "lote lotes", "titulo": "Lotes", "link": "/lotes", "icone": "📦"},
-    {"termo": "relatorio relatórios relatorios", "titulo": "Relatórios", "link": "/relatorios", "icone": "📈"},
+    {"termo": "relatorio relatórios relatorios gerais", "titulo": "Relatórios", "link": "/relatorios", "icone": "📈"},
     {"termo": "financeiro", "titulo": "Financeiro", "link": "/financeiro", "icone": "💰"},
+    {"termo": "planejamento orcamento orçamento contas futuras", "titulo": "Orçamento e Contas", "link": "/planejamento", "icone": "📅"},
     {"termo": "resultado membro", "titulo": "Resultado por Membro", "link": "/resultado", "icone": "📊"},
+    {"termo": "comparativo anual financeiro", "titulo": "Comparativo Anual", "link": "/comparativo-anual", "icone": "📈"},
     {"termo": "fluxo caixa", "titulo": "Fluxo de Caixa", "link": "/fluxo-caixa", "icone": "📈"},
     {"termo": "fluxo animais rebanho", "titulo": "Fluxo de Animais", "link": "/fluxo-animais", "icone": "🐄"},
     {"termo": "leite ordenha", "titulo": "Painel do Leite", "link": "/leite", "icone": "🥛"},
@@ -43,11 +62,14 @@ ABAS_DISPONIVEIS = [
     {"termo": "confinamento", "titulo": "Confinamento", "link": "/confinamento", "icone": "🏚️"},
     {"termo": "voz microfone", "titulo": "Comando de Voz", "link": "/voz", "icone": "🎤"},
     {"termo": "ajuda manual", "titulo": "Ajuda", "link": "/ajuda", "icone": "❓"},
-    {"termo": "ocupacao ocupação rotacao rotação pastos", "titulo": "Ocupação de Pastos", "link": "/pastos/ocupação", "icone": "🌾"},
     {"termo": "iatf", "titulo": "IATF", "link": "/reproducao/iatf", "icone": "💉"},
     {"termo": "observacao observação cio", "titulo": "Observação de Cio", "link": "/reproducao/observacao-cio", "icone": "🔥"},
     {"termo": "descarte culling", "titulo": "Sugestões de Descarte", "link": "/reproducao/culling", "icone": "✂️"},
     {"termo": "ia preditiva", "titulo": "IA Preditiva", "link": "/reproducao/ia-predicoes", "icone": "🤖"},
+    {"termo": "ponto corte arroba vender", "titulo": "Ponto de Corte", "link": "/ponto-corte", "icone": "🎯"},
+    {"termo": "tempo clima previsao previsão", "titulo": "Tempo", "link": "/tempo", "icone": "🌤️"},
+    {"termo": "configuracao configurações usuarios usuários sitio sítio", "titulo": "Configurações", "link": "/configuracoes", "icone": "⚙️"},
+    {"termo": "modulos módulos personalizar ativar desativar", "titulo": "Módulos do Sítio", "link": "/configuracoes/modulos", "icone": "🧩"},
 ]
 
 
@@ -89,6 +111,7 @@ def buscar_global(
     termo: str,
     tipo_filtro: str | None = None,
     dados: dict | None = None,
+    modulos: dict[str, bool] | None = None,
 ) -> list[dict]:
     """Busca até 10 resultados por texto, sem diferenciar acentos ou caixa."""
     consulta = _normalizar(termo)
@@ -98,6 +121,8 @@ def buscar_global(
     if not termos:
         return []
     resultados = []
+    if modulos is not None:
+        from modulos import esta_ativo, modulo_da_rota
 
     df_animais = animais.carregar()
     for _, row in df_animais.iterrows():
@@ -194,13 +219,25 @@ def buscar_global(
             )
 
     for aba in ABAS_DISPONIVEIS:
+        if modulos is not None:
+            chave_modulo = modulo_da_rota(aba["link"])
+            if chave_modulo and not esta_ativo(chave_modulo, modulos):
+                continue
         campos = [aba["termo"], aba["titulo"]]
         corresponde, alvo = _contem_termos(termos, campos)
         if corresponde:
             _adicionar(
-                resultados, "aba", aba["titulo"], "Abrir página",
+                resultados, "aba", aba["titulo"], "Abrir tela",
                 aba["link"], aba["icone"], alvo, consulta,
             )
+            titulo = _normalizar(aba["titulo"]).split()
+            palavras_aba = set(titulo)
+            if consulta == " ".join(titulo):
+                resultados[-1]["_relevancia"] += 250
+            elif consulta in titulo:
+                resultados[-1]["_relevancia"] += 200
+            elif all(termo in palavras_aba for termo in termos):
+                resultados[-1]["_relevancia"] += 150
 
     if tipo_filtro:
         resultados = [r for r in resultados if r["tipo"] == tipo_filtro]

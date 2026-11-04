@@ -779,7 +779,9 @@
       <div class="nav-group-title">Rebanho & Manejo</div>
       <a href="{{ url_for('animais') }}" class="drawer-link">🐄 Animais</a>
       <a href="{{ url_for('pesagem') }}" class="drawer-link">⚖️ Pesagem</a>
+      {% if modulos.leite %}
       <a href="{{ url_for('animais_leite') }}" class="drawer-link">🐮 Animais Leite</a>
+      {% endif %}
       <a href="{{ url_for('pastos') }}" class="drawer-link">🗺️ Pastos</a>
       <a href="{{ url_for('dashboard_ocupacao_pastos') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📍 Ocupação & Rotação</a>
       <a href="{{ url_for('aplicacoes_pastos') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🌱 Aplicações e custos/ha</a>
@@ -787,6 +789,7 @@
       <a href="{{ url_for('cochos') }}" class="drawer-link">🥣 Cochos</a>
 
       <!-- ═══ REPRODUÇÃO ═══ -->
+      {% if modulos.reproducao %}
       <div class="nav-group-title">Reprodução</div>
       <a href="{{ url_for('reproducao') }}" class="drawer-link">🐮 Painel Reprodutivo</a>
       <a href="{{ url_for('calendario_partos') }}" class="drawer-link">🍼 Previsão de Partos</a>
@@ -794,6 +797,7 @@
       <a href="{{ url_for('reproducao_observacao_cio') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🔥 Observação de Cio</a>
       <a href="{{ url_for('reproducao_culling') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  ✂️ Sugestões de Descarte</a>
       <a href="{{ url_for('ia_predicoes') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🤖 IA Preditiva</a>
+      {% endif %}
 
       <!-- ═══ SANIDADE & FARMÁCIA ═══ -->
       <div class="nav-group-title">Sanidade & Farmácia</div>
@@ -804,20 +808,26 @@
 
       <!-- ═══ NUTRIÇÃO & LEITE ═══ -->
       <div class="nav-group-title">Nutrição & Leite</div>
+      {% if modulos.leite %}
       <a href="{{ url_for('painel_leite') }}" class="drawer-link">🥛 Painel Leite</a>
+      {% endif %}
       <a href="{{ url_for('nutricao_leite') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🍽️ Nutrição</a>
       <a href="{{ url_for('consumo_leite') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  📊 Consumo</a>
       <a href="{{ url_for('painel_volumosos') }}" class="drawer-link">🌾 Volumosos</a>
       <a href="{{ url_for('comparar_insumos') }}" class="drawer-link">🧂 Insumos & Estoque</a>
       <a href="{{ url_for('calculador_racao_avancado') }}" class="drawer-link">🧮 Calculador Ração</a>
       <a href="{{ url_for('dashboard_conversao') }}" class="drawer-link">📉 Conversão Alimentar</a>
+      {% if modulos.leite and modulos.conforto %}
       <a href="{{ url_for('operacao_leite', tipo='conforto') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🏠 Conforto Térmico</a>
       <a href="{{ url_for('operacao_leite', tipo='colchao') }}" class="drawer-link" style="font-size:13px;padding-left:28px">  🛏️ Colchão</a>
+      {% endif %}
 
       <!-- ═══ GENÉTICA & ENGORDA ═══ -->
+      {% if modulos.genetica_confinamento %}
       <div class="nav-group-title">Genética & Engorda</div>
       <a href="{{ url_for('genetica') }}" class="drawer-link">🧬 Genética & Consanguinidade</a>
       <a href="{{ url_for('confinamento') }}" class="drawer-link">🏚️ Confinamento</a>
+      {% endif %}
 
       <!-- ═══ REGISTROS & EVENTOS ═══ -->
       <div class="nav-group-title">Registros & Eventos</div>
@@ -848,6 +858,7 @@
       <!-- ═══ ADMINISTRAÇÃO ═══ -->
       <div class="nav-group-title">Administração</div>
       <a href="{{ url_for('configuracoes') }}" class="drawer-link">⚙️ Configurações</a>
+      <a href="{{ url_for('configuracoes_modulos') }}" class="drawer-link">🧩 Módulos do sítio</a>
       <a href="{{ url_for('logout') }}" class="drawer-link" style="color:var(--danger)">🚪 Sair</a>
     </nav>
   </div>
@@ -1115,7 +1126,7 @@ function dispensarInstall() {
       tipo.className = 'search-result-type';
       tipo.textContent = ({
         animal: 'Animal', tarefa: 'Tarefa', evento: 'Manejo',
-        registro: 'Registro', aba: 'Tela'
+        registro: 'Registro', aba: 'Abrir tela'
       })[resultado.tipo] || 'Resultado';
       link.append(icone, texto, tipo);
       dropdown.appendChild(link);

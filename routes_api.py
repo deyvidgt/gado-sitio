@@ -505,7 +505,9 @@ def api_busca():
     """Busca rápida global: GET /api/busca?q=termo&tipo=animal"""
     q = request.args.get("q", "").strip()[:80]
     tipo = request.args.get("tipo", "").strip() or None
-    resultados = buscar_global(q, tipo, dados=_get_dados_cache())
+    import modulos
+    resultados = buscar_global(q, tipo, dados=_get_dados_cache(),
+                               modulos=modulos.estado_sitio())
     return jsonify({"resultados": resultados})
 
 

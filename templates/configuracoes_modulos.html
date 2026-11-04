@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Módulos — Configurações{% endblock %}
+{% block page_title %}Módulos do sítio{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Preferências compartilhadas</span>
+    <h2>Escolha o que aparece neste sítio</h2>
+    <p style="color:var(--text-2);margin-top:6px">
+      A alteração vale para todas as pessoas que acessam este sítio. Os dados não são apagados.
+    </p>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('configuracoes_modulos') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Módulos opcionais</div>
+    <p style="color:var(--text-2);font-size:13px;margin-bottom:16px">
+      Desative o que não usa para simplificar o menu. Módulos desligados também ficam bloqueados
+      quando alguém tenta abrir um link antigo.
+    </p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px">
+      {% for chave, item in catalogo_modulos.items() %}
+      <label for="modulo-{{ chave }}" style="display:flex;align-items:flex-start;gap:12px;padding:15px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)">
+        <input id="modulo-{{ chave }}" name="{{ chave }}" type="checkbox" value="1"
+               {% if preferencias_modulos[chave] %}checked{% endif %}
+               style="width:20px;height:20px;flex:0 0 20px;margin-top:1px;accent-color:var(--green-600)">
+        <span>
+          <strong style="display:block;color:var(--text-primary)">{{ item.nome }}</strong>
+          <span style="display:block;margin-top:4px;color:var(--text-2);font-size:13px">{{ item.descricao }}</span>
+          {% if item.depende_de %}
+          <span style="display:block;margin-top:7px;color:var(--warn);font-size:12px">
+            Disponível somente quando {{ catalogo_modulos[item.depende_de].nome }} também estiver ativo.
+          </span>
+          {% endif %}
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Sempre disponíveis</div>
+    <p style="color:var(--text-2);font-size:13px">
+      Animais e Manejo, Sanidade e Farmácia, Nutrição, Pastos, Cochos, Registros,
+      Financeiro, Relatórios e utilidades permanecem ativos.
+    </p>
+  </div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-primary" type="submit">Salvar preferências</button>
+    <a class="btn btn-outline" href="{{ url_for('configuracoes') }}">Voltar às configurações</a>
+  </div>
+</form>
+{% endblock %}

@@ -18,6 +18,7 @@
 <!-- ═══ CARDS CLICÁVEIS (v5.6) ════════════════════════════════════════════ -->
 <div class="cards-grid" style="margin-bottom:20px">
   {% for card in cards %}
+  {% if (card.link != 'painel_leite' or modulos.leite) and (card.link != 'reproducao' or modulos.reproducao) %}
   <a href="{{ url_for(card.link) }}" class="card-link" style="text-decoration:none;color:inherit">
     <div class="card-clickable" style="background:var(--surface);border:1.5px solid var(--cream-dk);border-radius:12px;padding:16px;cursor:pointer;transition:all .2s;position:relative">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
@@ -38,6 +39,7 @@
       {% endif %}
     </div>
   </a>
+  {% endif %}
   {% endfor %}
 </div>
 
@@ -50,6 +52,7 @@
 <!-- ════════════════════════════════════════════════════════════════════════ -->
 
 <!-- ═══ RESUMO LEITEIRO (v5.4) - PRIORIDADE ALTA ════════════════════════════════ -->
+{% if modulos.leite %}
 <section class="card" style="margin-bottom:20px">
   <div class="section-head" style="margin-bottom:12px"><h2>🥛 Resumo Leiteiro</h2><a class="btn btn-outline" href="{{ url_for('painel_leite') }}">Abrir módulo</a></div>
   <div class="tri">
@@ -58,6 +61,7 @@
     <div><b>{{ resumo_leite.mes|br_num(1) }} L</b>mês</div>
   </div>
 </section>
+{% endif %}
 
 <!-- v5.10 Onda 1 — Mastite Alerts Widget -->
 <section class="card" style="margin-bottom:20px">
@@ -265,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
   {% endfor %}
 </div>
 
-{% if repro %}
+{% if modulos.reproducao and repro %}
 <div class="card" style="margin-bottom:24px">
   <div style="display:flex;justify-content:space-between;align-items:center">
     <div class="card-title" style="margin-bottom:0">🐮 Reprodução</div>

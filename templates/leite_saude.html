@@ -4,7 +4,9 @@
 
 {% block content %}
 {% set leite_breadcrumb = 'Saúde' %}
-{% set leite_voltar_url = url_for('painel_leite') %}
+{% if modulos.leite %}
+  {% set leite_voltar_url = url_for('painel_leite') %}
+{% endif %}
 {% set leite_voltar_label = 'Painel do leite' %}
 {% include '_leite_nav.html' %}
 <style>
@@ -107,8 +109,10 @@
 
 <!-- Links Úteis -->
 <div style="margin-top:20px;text-align:center;">
+  {% if modulos.leite %}
   <a href="{{ url_for('painel_leite') }}" class="btn" style="display:inline-block;">← Voltar ao Painel</a>
   <a href="{{ url_for('ordenha_leite') }}" class="btn btn-registrar-ordenha" style="display:inline-block;">📝 Registrar Ordenha</a>
+  {% endif %}
 </div>
 
 {% endblock %}

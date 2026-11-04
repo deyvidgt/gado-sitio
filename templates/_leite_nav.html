@@ -1,26 +1,34 @@
 <nav class="leite-nav" aria-label="Navegação do módulo leiteiro">
   <div class="leite-nav-head">
-    <div class="leite-breadcrumb"><a href="{{ url_for('painel_leite') }}">Leite</a>{% if leite_breadcrumb %}<span aria-hidden="true"> / </span><span>{{ leite_breadcrumb }}</span>{% endif %}</div>
-    {% if leite_voltar_url %}
+    <div class="leite-breadcrumb">
+      {% if modulos.leite %}<a href="{{ url_for('painel_leite') }}">Leite</a>
+      {% else %}<span>Nutrição e Sanidade</span>{% endif %}
+      {% if leite_breadcrumb %}<span aria-hidden="true"> / </span><span>{{ leite_breadcrumb }}</span>{% endif %}
+    </div>
+    {% if leite_voltar_url and modulos.leite %}
     <a class="btn btn-outline leite-nav-back" href="{{ leite_voltar_url }}" data-leite-back data-leite-back-url="{{ leite_voltar_url }}">← {{ leite_voltar_label or 'Voltar' }}</a>
     {% endif %}
   </div>
   <details class="leite-nav-menu">
-    <summary>Atalhos do leite <span aria-hidden="true">⌄</span></summary>
-    <div class="leite-nav-links" aria-label="Atalhos do leite">
+    <summary>Atalhos <span aria-hidden="true">⌄</span></summary>
+    <div class="leite-nav-links" aria-label="Atalhos">
+    {% if modulos.leite %}
     <a href="{{ url_for('painel_leite') }}">Painel</a>
     <a href="{{ url_for('ordenha_leite') }}">Ordenha</a>
     <a href="{{ url_for('animais_leite') }}">Vacas</a>
+    <a href="{{ url_for('operacao_leite', tipo='tratamentos') }}">Tratamentos</a>
+    <a href="{{ url_for('relatorios_leite') }}">Relatórios</a>
+    <a href="{{ url_for('comparativo_leite') }}">Comparativo</a>
+    {% endif %}
     <a href="{{ url_for('alimentacao_leite') }}">Alimentação</a>
     <a href="{{ url_for('consumo_leite') }}">Consumo</a>
     <a href="{{ url_for('nutricao_leite') }}">Nutrição</a>
     <a href="{{ url_for('calculador_leite') }}">Calculador</a>
     <a href="{{ url_for('saude_leite') }}">Saúde</a>
-    <a href="{{ url_for('operacao_leite', tipo='tratamentos') }}">Tratamentos</a>
+    {% if modulos.conforto %}
     <a href="{{ url_for('operacao_leite', tipo='conforto') }}">Conforto</a>
     <a href="{{ url_for('listar_colchao') }}">Colchões</a>
-    <a href="{{ url_for('relatorios_leite') }}">Relatórios</a>
-    <a href="{{ url_for('comparativo_leite') }}">Comparativo</a>
+    {% endif %}
     </div>
   </details>
   <div class="leite-swipe-hint" data-leite-swipe-hint aria-live="polite" hidden>← Solte para voltar</div>
