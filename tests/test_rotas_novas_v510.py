@@ -162,6 +162,34 @@ def test_rota_fluxo_animais(cliente):
     assert b"Fluxo" in rv.data or b"fluxo" in rv.data.lower()
 
 
+def test_fluxo_animais_consolida_historico_completo_e_saldo(monkeypatch):
+    from datetime import datetime
+    import pandas as pd
+    import routes_financeiro_novo as financeiro
+
+    monkeypatch.setattr(financeiro, "_agora", lambda: datetime(2026, 1, 15))
+    compras = pd.DataFrame([
+        {"Data": "01/11/2025", "Qtd Cabeças": 10},
+    ])
+    vendas = pd.DataFrame([
+        {"Data": "15/12/2025", "Qtd Cabeças": 3},
+    ])
+    manejo = pd.DataFrame([
+        {"Data": "02/01/2026", "Tipo": "Nascimento", "Qtd Cabeças": 2},
+        {"Data": "10/01/2026", "Tipo": "Morte/Perda", "Qtd Cabeças": 1},
+    ])
+
+    fluxo = financeiro._calcular_fluxo_animais(compras, vendas, manejo)
+
+    assert fluxo["datas"] == ["Nov/25", "Dez/25", "Jan/26"]
+    assert fluxo["entrada"] == [10, 0, 2]
+    assert fluxo["saida"] == [0, 3, 1]
+    assert fluxo["estoque"] == [10, 7, 8]
+    assert fluxo["entrada_total"] == 12
+    assert fluxo["saida_total"] == 4
+    assert fluxo["saldo"] == fluxo["estoque_atual"] == 8
+
+
 def test_rota_lembretes_whatsapp(cliente):
     """GET /lembretes-whatsapp deve retornar 200."""
     rv = cliente.get("/lembretes-whatsapp")

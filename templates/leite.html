@@ -3,6 +3,8 @@
 {% block page_title %}Painel do Leite 🥛{% endblock %}
 
 {% block content %}
+{% include '_leite_nav.html' %}
+
 <style>
   .leite-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
   .leite-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); }
@@ -50,16 +52,24 @@
 <!-- KPIs Principais em Destaque -->
 <div class="leite-kpis">
   <div class="leite-kpi">
-    <div class="leite-kpi-lbl">Acumulado do Dia</div>
+    <div class="leite-kpi-lbl">Acumulado do dia</div>
     <div class="leite-kpi-val">{{ '%.1f'|format(acumulado.dia)|replace('.', ',') }} <small style="font-size:14px">L</small></div>
   </div>
   <div class="leite-kpi">
-    <div class="leite-kpi-lbl">Acumulado da Semana</div>
+    <div class="leite-kpi-lbl">Acumulado da semana</div>
     <div class="leite-kpi-val" style="color: #2980b9">{{ '%.1f'|format(acumulado.semana)|replace('.', ',') }} <small style="font-size:14px">L</small></div>
   </div>
   <div class="leite-kpi">
-    <div class="leite-kpi-lbl">Acumulado do Mês</div>
+    <div class="leite-kpi-lbl">Acumulado do mês</div>
     <div class="leite-kpi-val" style="color: #8e44ad">{{ '%.1f'|format(acumulado.mes)|replace('.', ',') }} <small style="font-size:14px">L</small></div>
+  </div>
+  <div class="leite-kpi">
+    <div class="leite-kpi-lbl">Acumulado total</div>
+    <div class="leite-kpi-val" style="color: #1d7a67">{{ '%.1f'|format(acumulado.total)|replace('.', ',') }} <small style="font-size:14px">L</small></div>
+  </div>
+  <div class="leite-kpi">
+    <div class="leite-kpi-lbl">Animais ativos</div>
+    <div class="leite-kpi-val" style="color: #6b7280">{{ contagens.animais_ativos }}</div>
   </div>
   <div class="leite-kpi">
     <div class="leite-kpi-lbl">Vacas em Lactação</div>
@@ -73,7 +83,7 @@
     <h3 style="margin-bottom: 16px">📈 Produção Recente e Gráficos</h3>
     <div class="tri" style="margin-bottom:16px">
       <div><strong>{{ '%.1f'|format(medias.media_diaria or 0)|replace('.', ',') }} L</strong><small>Média / dia no mês</small></div>
-      <div><strong>{{ '%.1f'|format(medias.media_por_animal_lactacao or medias.media_por_animal or 0)|replace('.', ',') }} L</strong><small>Média / vaca / dia</small></div>
+      <div><strong>{{ '%.1f'|format(medias.media_por_animal_lactacao or medias.media_por_animal or 0)|replace('.', ',') }} L</strong><small>Média por animal / dia</small></div>
       <div><strong>{{ contagens.vacas_lactacao or 0 }}</strong><small>Vacas em lactação</small></div>
     </div>
     <div style="margin-top: 16px; text-align: right">

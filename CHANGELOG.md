@@ -16,6 +16,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 - **Conversão Alimentar sem dados:** o cartão de conversão média exibe `0.0` sem animais ou resultados numéricos válidos, em vez de `None`/`NaN`.
 - **Botão de tratamento em Doenças:** ganhou destaque verde, foco visível e área de toque maior, ocupando a largura da tela no celular.
 - **Estoque por membro no Financeiro:** a tabela agora usa o mesmo cálculo de estoque individual exibido em Resultado por Membro.
+- **Fluxo de Animais completo:** compras, vendas, nascimentos e mortes/perdas são consolidados por cabeça e mês desde o primeiro movimento, com estoque acumulado e atual.
+- **Painel do Leite:** atalhos do módulo agora ficam recolhidos e responsivos; KPIs incluem acumulado histórico e totais calculados dos registros da planilha.
 
 ## [5.19.0] — 2026-11-03
 

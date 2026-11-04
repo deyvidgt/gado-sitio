@@ -454,7 +454,7 @@ def fluxo_caixa():
 @app.route("/fluxo-animais")
 @login_required
 def fluxo_animais():
-    """Página de fluxo de animais (entrada de compras/nascimento, saída de vendas/morte)."""
+    """Página do histórico completo de entradas, saídas e estoque de animais."""
     dados = _get_dados_cache()
     compras = dados.get("Compras", pd.DataFrame())
     vendas = dados.get("Vendas", pd.DataFrame())
@@ -530,59 +530,76 @@ def _calcular_fluxo_mensal(vendas, compras, gastos, meses=12):
     return fluxo_list
 
 
-def _calcular_fluxo_animais(compras, vendas, manejo, dias=90):
-    """Calcula fluxo de animais (entrada/saída) nos últimos dias."""
-    agora = _agora()
-    data_inicio = agora - timedelta(days=dias)
+def _calcular_fluxo_animais(compras, vendas, manejo):
+    """Consolida mensalmente o histórico completo do rebanho por cabeças."""
+    agora = pd.Timestamp(_agora()).normalize()
 
-    fluxo_list = []
-    entrada_total = 0
-    saida_total = 0
+    def _movimentos(df, tipos=None):
+        if df is None or df.empty or "Data" not in df.columns or "Qtd Cabeças" not in df.columns:
+            return pd.DataFrame(columns=["mes", "cabecas"])
 
-    for i in range(dias):
-        data = data_inicio + timedelta(days=i)
+        datas = pd.to_datetime(df["Data"], dayfirst=True, format="mixed", errors="coerce")
+        quantidades = pd.to_numeric(df["Qtd Cabeças"], errors="coerce").fillna(0)
+        validos = datas.notna() & (datas <= agora)
+        if tipos is not None:
+            if "Tipo" not in df.columns:
+                return pd.DataFrame(columns=["mes", "cabecas"])
+            tipos_normalizados = df["Tipo"].fillna("").astype(str).str.strip().str.casefold()
+            validos &= tipos_normalizados.isin(tipos)
 
-        # Entrada: compras + nascimentos
-        entrada = 0
-        if not compras.empty:
-            c = compras[pd.to_datetime(compras["Data"], format="%d/%m/%Y", errors="coerce").dt.date == data.date()]
-            entrada += len(c)
-        if not manejo.empty:
-            n = manejo[(manejo["Tipo"] == "Nascimento") &
-                      (pd.to_datetime(manejo["Data"], format="%d/%m/%Y", errors="coerce").dt.date == data.date())]
-            entrada += len(n)
+        if not validos.any():
+            return pd.DataFrame(columns=["mes", "cabecas"])
+        return pd.DataFrame({
+            "mes": datas.loc[validos].dt.to_period("M"),
+            "cabecas": quantidades.loc[validos],
+        })
 
-        # Saída: vendas + mortes + perdas
-        saida = 0
-        if not vendas.empty:
-            v = vendas[pd.to_datetime(vendas["Data"], format="%d/%m/%Y", errors="coerce").dt.date == data.date()]
-            if not v.empty:
-                saida += int(pd.to_numeric(v["Qtd Cabeças"], errors="coerce").sum())
-        if not manejo.empty:
-            # O tipo na aba é "Morte/Perda" (config.TIPOS_MANEJO) — com ["Morte","Perda"]
-            # nenhuma morte entrava na saída.
-            m = manejo[(manejo["Tipo"].astype(str).str.strip().isin(["Morte/Perda", "Morte", "Perda"])) &
-                      (pd.to_datetime(manejo["Data"], format="%d/%m/%Y", errors="coerce").dt.date == data.date())]
-            if not m.empty:
-                saida += int(pd.to_numeric(m["Qtd Cabeças"], errors="coerce").fillna(0).sum())
+    entradas = pd.concat([
+        _movimentos(compras),
+        _movimentos(manejo, {"nascimento"}),
+    ], ignore_index=True)
+    saidas = pd.concat([
+        _movimentos(vendas),
+        _movimentos(manejo, {"morte/perda", "morte", "perda"}),
+    ], ignore_index=True)
 
-        entrada_total += entrada
-        saida_total += saida
+    if entradas.empty and saidas.empty:
+        return {
+            "datas": [],
+            "entrada": [],
+            "saida": [],
+            "estoque": [],
+            "entrada_total": 0,
+            "saida_total": 0,
+            "saldo": 0,
+            "estoque_atual": 0,
+        }
 
-        if (i % 7 == 0) or (i == dias - 1):  # Mostrar a cada semana
-            fluxo_list.append({
-                "data": data.strftime("%d/%m"),
-                "entrada": entrada_total,
-                "saida": saida_total,
-            })
+    primeiro_mes = min(
+        movimentos["mes"].min()
+        for movimentos in (entradas, saidas)
+        if not movimentos.empty
+    )
+    ultimo_mes = agora.to_period("M")
+    meses = pd.period_range(primeiro_mes, ultimo_mes, freq="M")
+    entradas_mes = entradas.groupby("mes")["cabecas"].sum().reindex(meses, fill_value=0)
+    saidas_mes = saidas.groupby("mes")["cabecas"].sum().reindex(meses, fill_value=0)
+
+    entrada_por_mes = entradas_mes.round().astype(int)
+    saida_por_mes = saidas_mes.round().astype(int)
+    saldo_acumulado = (entrada_por_mes - saida_por_mes).cumsum().clip(lower=0)
+    entrada_total = int(entrada_por_mes.sum())
+    saida_total = int(saida_por_mes.sum())
 
     return {
-        "datas": [f["data"] for f in fluxo_list],
-        "entrada": [f["entrada"] for f in fluxo_list],
-        "saida": [f["saida"] for f in fluxo_list],
+        "datas": [f"{_MESES_ABREV_PT[mes.month - 1]}/{str(mes.year)[-2:]}" for mes in meses],
+        "entrada": entrada_por_mes.tolist(),
+        "saida": saida_por_mes.tolist(),
+        "estoque": saldo_acumulado.tolist(),
         "entrada_total": entrada_total,
         "saida_total": saida_total,
         "saldo": entrada_total - saida_total,
+        "estoque_atual": int(saldo_acumulado.iloc[-1]),
     }
 
 

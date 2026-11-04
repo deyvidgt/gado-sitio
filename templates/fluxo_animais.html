@@ -5,22 +5,22 @@
 {% block content %}
 <div style="max-width:1000px;margin:0 auto;padding:16px">
 
-  {% if fluxo.entrada_total >= 0 %}
+  {% if fluxo.datas %}
   <!-- Resumo Geral -->
   <div class="secao">
-    <h2 class="secao-titulo">Movimento Recente (90 dias)</h2>
+    <h2 class="secao-titulo">Movimentação desde o primeiro registro</h2>
     <div class="card" style="background:linear-gradient(135deg, var(--surface) 0%, var(--bg-2) 100%)">
       <div class="tri">
         <div><span style="font-size:11px;color:var(--text-3);text-transform:uppercase">Entrada</span><br><b>{{ fluxo.entrada_total }}</b><span style="font-size:12px;color:var(--text-3)">cabeças</span></div>
         <div><span style="font-size:11px;color:var(--text-3);text-transform:uppercase">Saída</span><br><b>{{ fluxo.saida_total }}</b><span style="font-size:12px;color:var(--text-3)">cabeças</span></div>
-        <div><span style="font-size:11px;color:var(--text-3);text-transform:uppercase">Saldo</span><br><b class="{{ 'pos' if fluxo.saldo >= 0 else 'neg' }}">{% if fluxo.saldo >= 0 %}+{% endif %}{{ fluxo.saldo }}</b></div>
+        <div><span style="font-size:11px;color:var(--text-3);text-transform:uppercase">Estoque atual</span><br><b>{{ fluxo.estoque_atual }}</b><span style="font-size:12px;color:var(--text-3)">cabeças</span></div>
       </div>
     </div>
   </div>
 
   <!-- Gráfico -->
   <div class="secao">
-    <h2 class="secao-titulo">Entrada vs Saída</h2>
+    <h2 class="secao-titulo">Entradas e saídas por mês</h2>
     <div class="grafico-container">
       <div class="grafico">
         <canvas id="chart-fluxo-animais"></canvas>
@@ -50,6 +50,15 @@
             borderColor: 'rgba(244, 67, 54, 1)',
             borderWidth: 1,
             borderRadius: 4,
+          },
+          {
+            label: 'Estoque acumulado',
+            data: {{ fluxo.estoque|tojson }},
+            type: 'line',
+            backgroundColor: 'rgba(33, 150, 243, 0.12)',
+            borderColor: 'rgba(33, 150, 243, 1)',
+            borderWidth: 2,
+            tension: 0.25,
           }
         ]
       },
@@ -78,9 +87,13 @@
           <span class="lista-item-valor ruim">{{ fluxo.saida_total }} cabeças</span>
         </li>
         <li class="lista-item">
-          <span class="lista-item-label">Saldo Líquido</span>
+          <span class="lista-item-label">Estoque atual</span>
+          <span class="lista-item-valor">{{ fluxo.estoque_atual }} cabeças</span>
+        </li>
+        <li class="lista-item">
+          <span class="lista-item-label">Saldo líquido histórico</span>
           <span class="lista-item-valor {% if fluxo.saldo >= 0 %}aviso{% else %}ruim{% endif %}">
-            {% if fluxo.saldo >= 0 %}+{% endif %}{{ fluxo.saldo }} cabeças
+            {{ fluxo.saldo }} cabeças
           </span>
         </li>
       </ul>

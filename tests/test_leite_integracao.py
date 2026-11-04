@@ -31,6 +31,9 @@ def test_navegacao_do_painel_leiteiro(cliente):
     resposta = cliente.get("/leite")
     html = resposta.get_data(as_text=True)
     assert 'class="leite-nav"' in html
+    assert 'class="leite-nav-menu"' in html
+    assert 'class="leite-nav-links"' in html
+    assert "flex-wrap:wrap" in html
     assert 'data-leite-back-url="/leite"' not in html
     assert "static/leite_nav.js" in html
     assert 'href="/leite/ordenha"' in html
