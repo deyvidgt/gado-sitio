@@ -26,11 +26,25 @@ import pandas as pd
 from db import carregar_aba
 
 
+def normalizar_cochos(df):
+    """Remove IDs repetidos, preservando o registro mais recente."""
+    if df is None:
+        return pd.DataFrame()
+    if df.empty or "ID" not in df.columns:
+        return df.copy()
+
+    resultado = df.copy()
+    ids = resultado["ID"].fillna("").astype(str).str.strip()
+    manter = ids.eq("") | ~ids.duplicated(keep="last")
+    resultado["ID"] = ids
+    return resultado.loc[manter].reset_index(drop=True)
+
+
 def carregar():
     """Carrega aba 'Cochos' do Excel."""
     try:
         df = carregar_aba("Cochos")
-        return df if df is not None else pd.DataFrame()
+        return normalizar_cochos(df)
     except Exception:
         return pd.DataFrame()
 

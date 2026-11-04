@@ -81,3 +81,7 @@ def test_tela_doencas_usa_a_fonte_unica(cliente, monkeypatch):
 
     html = cliente.get("/doencas").get_data(as_text=True)
     assert "EM CARÊNCIA" in html
+    assert 'class="btn doencas-acao-principal"' in html
+    assert "background: #28a745" in html
+    assert "min-height: 48px" in html
+    assert "width: 100%" in html

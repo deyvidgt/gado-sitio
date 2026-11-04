@@ -63,9 +63,27 @@ def novo_cocho():
     """Cria novo cocho."""
     _validar_csrf()
     try:
-        from db import salvar_linha
+        from db import carregar_aba, reescrever_aba, salvar_linha
+        cocho_id = request.form.get("id", "").strip()
+        if not cocho_id:
+            flash("Informe um ID para o cocho.", "error")
+            return redirect(url_for("cochos"))
+
+        df_original = carregar_aba("Cochos")
+        df_cochos = CO.normalizar_cochos(df_original)
+        if len(df_cochos) != len(df_original):
+            fazer_backup_seguro()
+            reescrever_aba("Cochos", _preparar_para_editar(df_cochos))
+
+        if (
+            "ID" in df_cochos.columns
+            and df_cochos["ID"].fillna("").astype(str).str.strip().eq(cocho_id).any()
+        ):
+            flash(f"Já existe um cocho com o ID {cocho_id}. Edite o registro existente.", "error")
+            return redirect(url_for("cochos"))
+
         linha = [
-            request.form.get("id", "").strip(),  # ID
+            cocho_id,  # ID
             request.form.get("nome", "").strip(),  # Nome
             request.form.get("tipo", "").strip(),  # Tipo
             request.form.get("local", "").strip(),  # Local
@@ -81,6 +99,9 @@ def novo_cocho():
         fazer_backup_seguro()
     except ValueError as e:
         flash(str(e), "error")
+    except Exception as e:
+        app.logger.exception("Falha ao cadastrar cocho")
+        flash(f"Erro ao cadastrar cocho: {e}", "error")
     return redirect(url_for("cochos"))
 
 

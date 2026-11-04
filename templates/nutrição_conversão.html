@@ -8,7 +8,7 @@
 <!-- Resumo -->
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;">
   <div class="metric" style="border-left:3px solid var(--blue-600);">
-    <div style="font-size:24px;font-weight:bold;">{{ resumo.conversao_media }}</div>
+    <div style="font-size:24px;font-weight:bold;">{{ resumo.conversao_media|default(0.0, true) }}</div>
     <div style="font-size:12px;color:var(--text-3);">Conversao Media</div>
   </div>
   <div class="metric" style="border-left:3px solid {% if resumo.eficiencia_rebanho_percent >= 85 %}var(--green-600){% elif resumo.eficiencia_rebanho_percent >= 70 %}var(--orange-600){% else %}var(--red-600){% endif %};">

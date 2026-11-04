@@ -3,10 +3,40 @@
 {% block title %}Histórico de Doenças e Carência{% endblock %}
 
 {% block content %}
+<style>
+  .doencas-acao-principal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    background: #28a745;
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .doencas-acao-principal:hover {
+    background: #218838;
+    color: #fff;
+  }
+  .doencas-acao-principal:focus-visible {
+    outline: 3px solid #155724;
+    outline-offset: 3px;
+  }
+  @media (max-width: 640px) {
+    .doencas-acao-principal {
+      display: flex;
+      width: 100%;
+      box-sizing: border-box;
+    }
+  }
+</style>
+
 <h1>📋 Histórico de Doenças — Status de Carência</h1>
 
 <div style="margin-bottom:20px;">
-  <a href="{{ url_for('registrar_doenca') }}" class="btn" style="background:var(--green-600);">🩺 Registrar Novo Tratamento</a>
+  <a href="{{ url_for('registrar_doenca') }}" class="btn doencas-acao-principal">🩺 Registrar Novo Tratamento</a>
 </div>
 
 {% if animais_com_alerta %}

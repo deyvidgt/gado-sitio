@@ -57,3 +57,43 @@ def test_editar_e_remover_cocho_atualiza_pagina(cliente, dados_restaurados, monk
     cochos_salvos = db.carregar_aba("Cochos")
     assert "C01" not in cochos_salvos["ID"].astype(str).tolist()
     assert "C02" in cochos_salvos["ID"].astype(str).tolist()
+
+
+def test_novo_cocho_rejeita_id_duplicado_e_limpa_planilha(cliente, dados_restaurados, monkeypatch):
+    import routes_cochos
+
+    monkeypatch.setattr(routes_cochos, "fazer_backup_seguro", lambda: None)
+    db.salvar_linha("Cochos", ["C01", "Cocho antigo", "sal", "Pasto", 100, 25, "", "", "Sim", "Deyvid"])
+    db.salvar_linha("Cochos", ["C01", "Cocho atual", "sal", "Pasto", 100, 50, "", "", "Sim", "Deyvid"])
+    with cliente.session_transaction() as sess:
+        sess["csrf_token"] = "token-teste"
+
+    html_antes = cliente.get("/cochos").get_data(as_text=True)
+    assert "Cocho atual" in html_antes
+    assert "Cocho antigo" not in html_antes
+
+    resposta = cliente.post("/cochos/novo", data={
+        "csrf_token": "token-teste",
+        "id": "C01",
+        "nome": "Cadastro duplicado",
+        "tipo": "sal",
+        "local": "Pasto",
+        "capacidade": "100",
+        "volume_atual": "80",
+    }, follow_redirects=True)
+
+    salvos = db.carregar_aba("Cochos")
+    assert resposta.status_code == 200
+    assert "Já existe um cocho com o ID C01" in resposta.get_data(as_text=True)
+    assert salvos["ID"].astype(str).tolist() == ["C01"]
+    assert salvos.iloc[0]["Nome"] == "Cocho atual"
+    assert salvos.iloc[0]["Volume Atual (kg)"] == 50
+
+
+def test_botao_adicionar_cocho_fica_acima_da_navegacao(cliente, dados_restaurados):
+    html = cliente.get("/cochos").get_data(as_text=True)
+
+    assert 'id="btn-novo-cocho"' in html
+    assert "bottom: 30px" in html
+    assert "right: 30px" in html
+    assert "z-index: 1050" in html

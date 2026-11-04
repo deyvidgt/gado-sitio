@@ -10,6 +10,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ### Corrigido
 - **Exclusão de cochos:** a rota agora remove fisicamente a linha pelo ID normalizado, salva a aba com segurança e atualiza o painel lendo novamente do Excel.
+- **IDs duplicados em Cochos:** a listagem mantém apenas o registro mais recente por ID, e o cadastro rejeita IDs já existentes e limpa duplicatas antigas ao salvar.
+- **Botão flutuante de Cochos:** elevado acima da navegação e reposicionado a 30 px das bordas.
+- **Meses no Fluxo de Caixa:** rótulos dos gráficos e da tabela agora usam abreviações em português, independentemente da localidade do servidor.
+- **Conversão Alimentar sem dados:** o cartão de conversão média exibe `0.0` sem animais ou resultados numéricos válidos, em vez de `None`/`NaN`.
+- **Botão de tratamento em Doenças:** ganhou destaque verde, foco visível e área de toque maior, ocupando a largura da tela no celular.
+- **Estoque por membro no Financeiro:** a tabela agora usa o mesmo cálculo de estoque individual exibido em Resultado por Membro.
 
 ## [5.19.0] — 2026-11-03
 

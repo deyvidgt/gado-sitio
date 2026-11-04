@@ -8,6 +8,7 @@ Calcula: kg ração consumida / kg ganho = conversão alimentar (ideal: 5-8 para
 Detecta desperdício (>15%) e sugere otimizações.
 """
 import pandas as pd
+import math
 from datetime import date, datetime, timedelta
 
 
@@ -381,7 +382,7 @@ def resumo_conversao_alimentar() -> Dict:
             return {
                 "total_animais": 0,
                 "animais_com_dados": 0,
-                "conversao_media": None,
+                "conversao_media": 0.0,
                 "animais_ok": 0,
                 "animais_aviso": 0,
                 "animais_criticos": 0,
@@ -406,10 +407,16 @@ def resumo_conversao_alimentar() -> Dict:
             consumo_total += resultado.get('consumo_total_kg', 0)
             ganho_total += resultado.get('ganho_total_kg', 0)
 
-            if resultado.get('conversao_alimentar'):
-                conversoes.append(resultado['conversao_alimentar'])
+            conversoes.append(resultado.get('conversao_alimentar'))
 
-        conversao_media = round(sum(conversoes) / len(conversoes), 2) if conversoes else None
+        serie_conversoes = pd.to_numeric(
+            pd.Series(conversoes, dtype="object"), errors="coerce"
+        )
+        serie_conversoes = serie_conversoes[serie_conversoes.map(math.isfinite)]
+        conversao_media = (
+            round(float(serie_conversoes.mean()), 2)
+            if not serie_conversoes.empty else 0.0
+        )
 
         return {
             "total_animais": total_animais,
@@ -427,7 +434,7 @@ def resumo_conversao_alimentar() -> Dict:
         return {
             "total_animais": 0,
             "animais_com_dados": 0,
-            "conversao_media": None,
+            "conversao_media": 0.0,
             "animais_ok": 0,
             "animais_aviso": 0,
             "animais_criticos": 0,

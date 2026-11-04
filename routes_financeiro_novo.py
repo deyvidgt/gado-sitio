@@ -27,6 +27,16 @@ import os
 import json
 
 
+_MESES_ABREV_PT = (
+    "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+    "Jul", "Ago", "Set", "Out", "Nov", "Dez",
+)
+
+
+def _rotulo_mes_pt(data):
+    return f"{_MESES_ABREV_PT[data.month - 1]}/{data.strftime('%y')}"
+
+
 def _grafico_receita_vs_custo(dados, r, meses=12):
     """Gráfico duplo-eixo: Receita (esquerda) vs Custo (direita) últimos N meses.
 
@@ -95,7 +105,7 @@ def _grafico_resultado_por_membro(membros_dict, r_membros):
         return None
 
 
-def _tabela_status_membros(r_membros):
+def _tabela_status_membros(r_membros, estoque_membros):
     """Tabela com cores: Estoque, Resultado, Capital, Índices por membro.
 
     Retorna lista de dicts com status e cor para renderizar no template.
@@ -120,7 +130,7 @@ def _tabela_status_membros(r_membros):
             rows.append({
                 "membro": NOMES_MEMBROS.get(membro, membro),
                 "emoji": EMOJIS_MEMBROS.get(membro, ""),
-                "estoque": res.get("estoque", 0),
+                "estoque": estoque_membros.get(membro, 0),
                 "resultado": resultado,
                 "capital": res.get("capital_imobilizado", 0),
                 "ctcab": res.get("ctcab", 0),
@@ -144,11 +154,14 @@ def financeiro():
     # Calcular resultado por membro
     from calculos import calcular_todos_membros
     r_membros = calcular_todos_membros(dados["Compras"], dados["Gastos"], dados["Vendas"], dados["Manejo"])
+    estoque_membros = calcular_estoque_por_membro(
+        dados["Compras"], dados["Vendas"], dados["Manejo"]
+    )
 
     # Gráficos Onda 8.2 (Financeiro)
     grafico_receita_custo = _grafico_receita_vs_custo(dados, r)
     grafico_resultado_membro = _grafico_resultado_por_membro(membros_dict, r_membros)
-    tabela_membros = _tabela_status_membros(r_membros)
+    tabela_membros = _tabela_status_membros(r_membros, estoque_membros)
 
     return render_template("financeiro.html", r=r,
                           grafico_receita_custo=grafico_receita_custo,
@@ -507,7 +520,7 @@ def _calcular_fluxo_mensal(vendas, compras, gastos, meses=12):
         saldo_acum += saldo_mes
 
         fluxo_list.append({
-            "mes": data_fim.strftime("%b/%y"),
+            "mes": _rotulo_mes_pt(data_fim),
             "receita": receita,
             "despesa": despesa,
             "saldo_mes": saldo_mes,
