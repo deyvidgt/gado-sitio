@@ -47,7 +47,8 @@ def test_pagina_ajuda_abre_com_drive(cliente, com_drive):
     html = r.get_data(as_text=True)
     assert r.status_code == 200
     assert "/ajuda/img/p-login.png" in html
-    for assunto in ("Visita ao Sítio", "Fotos do animal", "Comando de Voz", "Backups"):
+    for assunto in ("Visita ao Sítio", "Fotos do animal", "Comando de Voz", "Backups",
+                    "BCS de 1 a 9", "Conferir PDF antes de enviar", "Bulas e embalagens"):
         assert assunto in html
 
 
