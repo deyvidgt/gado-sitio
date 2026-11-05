@@ -68,15 +68,6 @@ def validar_url_oficial(url: str) -> str:
         raise BulaFonteErro(
             "URL não reconhecida como fonte oficial. Use HTTPS em domínio .gov, .gov.br, "
             ".gov.pt, fabricante veterinário permitido ou órgão regulador cadastrado."
-=======
-    oficial = host == "gov.br" or host.endswith(".gov.br") or any(
-        host == dominio or host.endswith("." + dominio)
-        for dominio in _DOMINIOS_OFICIAIS
-    )
-    if partes.scheme != "https" or not host or not porta_ok or partes.username or partes.password or not oficial:
-        raise BulaFonteErro(
-            "Use uma URL HTTPS de domínio .gov.br ou de um fabricante veterinário oficial conhecido."
->>>>>>> f98ba577cb0a04c0a1e525a4d8fb26a1bf3d8dbc
         )
     return partes.geturl()
 
