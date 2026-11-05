@@ -58,7 +58,6 @@ def validar_url_oficial(url: str) -> str:
         porta_ok = partes.port in (None, 443)
     except ValueError as e:
         raise BulaFonteErro("URL da bula inválida.") from e
-<<<<<<< HEAD
     oficial = (
         host == "gov" or host.endswith((".gov", ".gov.br", ".gov.pt"))
         or any(host == dominio or host.endswith("." + dominio)

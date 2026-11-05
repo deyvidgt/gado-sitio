@@ -78,25 +78,18 @@ def test_arquivo_inexistente_ou_nome_invalido_404(cliente, com_drive):
 
 def test_url_da_fonte_deve_ser_https_e_oficial():
     assert bulas.validar_url_oficial("https://zoetis.com.br/bulas/produto.pdf")
-<<<<<<< HEAD
     assert bulas.validar_url_oficial("https://docs.gov/bula.pdf")
     assert bulas.validar_url_oficial("https://docs.gov.br/bula.pdf")
     assert bulas.validar_url_oficial("https://documentos.gov.pt/bula.pdf")
     assert bulas.validar_url_oficial("https://www.boehringer-ingelheim.pt/bulas/produto.pdf")
     assert bulas.validar_url_oficial("https://www.merial.com/bulas/produto.pdf")
     assert bulas.validar_url_oficial("https://www.woah.org/bulas/produto.pdf")
-=======
-    assert bulas.validar_url_oficial("https://docs.gov.br/bula.pdf")
->>>>>>> f98ba577cb0a04c0a1e525a4d8fb26a1bf3d8dbc
     for url in (
         "http://zoetis.com.br/bula.pdf",
         "https://zoetis.com.br.example.org/bula.pdf",
         "https://site-desconhecido.example/bula.pdf",
-<<<<<<< HEAD
         "https://fabricante-falso.com.br/bula.pdf",
         "https://qualquer-site.org/bula.pdf",
-=======
->>>>>>> f98ba577cb0a04c0a1e525a4d8fb26a1bf3d8dbc
         "https://usuario@zoetis.com.br/bula.pdf",
         "https://zoetis.com.br:8443/bula.pdf",
     ):
@@ -104,14 +97,9 @@ def test_url_da_fonte_deve_ser_https_e_oficial():
             bulas.validar_url_oficial(url)
 
 
-<<<<<<< HEAD
 def test_mensagem_de_url_nao_oficial_informa_fontes_aceitas():
     with pytest.raises(bulas.BulaFonteErro, match="URL não reconhecida como fonte oficial"):
         bulas.validar_url_oficial("https://fabricante-desconhecido.pt/bula.pdf")
-
-
-=======
->>>>>>> f98ba577cb0a04c0a1e525a4d8fb26a1bf3d8dbc
 def test_baixar_bula_valida_pdf_e_restringe_redirecionamento(monkeypatch):
     class Resposta:
         status_code = 200
