@@ -4,9 +4,9 @@
 routes_agenda_unificada.py — Agenda Unificada (Calendário + Tarefas) v5.10
 """
 
-from flask import render_template, request
-from extensions import app, login_required, fmt_data, _agora
-from tarefas import carregar as tarefas_carregar, pendentes as tarefas_pendentes
+from flask import render_template, request, redirect, url_for, flash
+from extensions import app, login_required, fmt_data, _agora, _get_dados_cache, _validar_csrf
+from tarefas import carregar as tarefas_carregar, pendentes as tarefas_pendentes, criar as tarefa_criar
 from routes_calendario import _eventos_mes
 from config import REPETICOES_TAREFA, NOMES_MEMBROS, MEMBROS
 from datetime import date, datetime, timedelta
@@ -55,6 +55,11 @@ def agenda_unificada():
     df_tarefas = tarefas_carregar()
     hoje_ts = pd.Timestamp(_agora()).normalize()
     tarefas_pend = tarefas_pendentes(df_tarefas, hoje_ts, limite_dias=365)
+    import animais as A
+    import agenda_manejo
+    sugestoes_manejo = agenda_manejo.sugestoes(
+        _get_dados_cache()["Manejo"], A.carregar(), hoje
+    )
 
     # Próximos 14 dias
     proximos = []
@@ -124,4 +129,24 @@ def agenda_unificada():
                           proximos_14_dias=proximos[:20],
                           todos_eventos=todos_eventos,
                           proximos_7_dias=proximos_7_dias,
+                          sugestoes_manejo=sugestoes_manejo,
                           fmt_data=fmt_data)
+
+
+@app.route("/agenda/manejo/tarefa", methods=["POST"])
+@login_required
+def criar_tarefa_manejo_sugerido():
+    """Cria tarefa somente após confirmação explícita na agenda."""
+    _validar_csrf()
+    f = request.form
+    titulo = (f.get("titulo") or "").strip()
+    data = (f.get("data") or "").strip()
+    obs = (f.get("observacoes") or "").strip()
+    try:
+        tarefa_criar(titulo, data, responsavel="", repetir="Não", obs=obs,
+                     criado_por="Sistema")
+    except ValueError as e:
+        flash(str(e), "error")
+    else:
+        flash("Sugestão adicionada às tarefas pendentes; confirme o manejo antes de executá-lo.", "success")
+    return redirect(url_for("agenda_unificada"))

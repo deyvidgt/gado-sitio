@@ -15,26 +15,30 @@ import animais
 @app.route("/doencas", methods=["GET"])
 @login_required
 def listar_doencas():
-    """Lista todos os registros de doença/tratamento e status de carência."""
-    # Fonte única: as 3 abas de medicação, não só `Tratamentos`.
-    status_todos = status_por_animal("leite")
+    """Lista animais com histórico e carência separada para leite e carne."""
+    status_leite = status_por_animal("leite")
+    status_carne = status_por_animal("carne")
+    df_animais = animais.carregar()
+    por_id = ({str(r["ID"]): r for _, r in df_animais.iterrows()}
+              if not df_animais.empty and "ID" in df_animais.columns else {})
 
     animais_com_alerta = []
-    for vaca_id, status in status_todos.items():
-        try:
-            df_animais = animais.carregar()
-            animal = df_animais[df_animais['ID'].astype(str) == str(vaca_id)].iloc[0] if not df_animais.empty else {}
-            brinco_desc = f"{animal.get('Brinco Cor', '')} {int(animal.get('Brinco Nº', 0)) or '??'}"
-        except Exception:
-            brinco_desc = f"ID {vaca_id}"
-
+    for vaca_id in sorted(set(status_leite) | set(status_carne)):
+        animal = por_id.get(str(vaca_id))
+        brinco_desc = animais.ref(animal) if animal is not None else f"ID {vaca_id}"
+        leite = status_leite.get(vaca_id)
+        carne = status_carne.get(vaca_id)
         animais_com_alerta.append({
             "vaca_id": vaca_id,
             "brinco": brinco_desc,
-            "em_carencia": status['em_carencia'],
-            "dias_restantes": status['dias_restantes'],
-            "medicamento": status['medicamento'],
-            "data_liberacao": status['data_liberacao'],
+            "leite": leite,
+            "carne": carne,
+            "em_carencia": bool((leite and leite["em_carencia"]) or
+                                (carne and carne["em_carencia"])),
+            "dias_restantes": min(
+                [s["dias_restantes"] for s in (leite, carne) if s and s["em_carencia"]],
+                default=0,
+            ),
         })
 
     # Ordena: em carência primeiro
@@ -112,7 +116,8 @@ def registrar_doenca():
 def historico_doencas(animal_id):
     """Histórico de doenças de um animal específico."""
     historico = historico_animal(animal_id, dias=365)
-    status = obter_status_carencia(animal_id, "leite")
+    status_leite = obter_status_carencia(animal_id, "leite")
+    status_carne = obter_status_carencia(animal_id, "carne")
 
     try:
         df_animais = animais.carregar()
@@ -125,7 +130,8 @@ def historico_doencas(animal_id):
                           animal_id=animal_id,
                           animal_desc=animal_desc,
                           historico=historico,
-                          status_carencia=status)
+                          status_carencia=status_leite,
+                          status_carne=status_carne)
 
 
 @app.route("/api/doencas/validar-venda", methods=["POST"])
@@ -143,6 +149,8 @@ def api_validar_venda():
 
     return jsonify({
         "pode_vender": pode_vender,
+        "em_carencia": not pode_vender,
+        "venda_bloqueada": False,
         "motivo": motivo,
         "animal_id": animal_id,
         "tipo_produto": tipo_produto
@@ -162,8 +170,19 @@ def api_resumo_carencias():
         }
         for s in status_por_animal("leite").values() if s["em_carencia"]
     ]
+    animais_carne_em_carencia = [
+        {
+            "vaca_id": s["animal_id"],
+            "medicamento": s["medicamento"],
+            "dias_restantes": s["dias_restantes"],
+            "data_liberacao": s["data_liberacao"].isoformat() if s["data_liberacao"] else None,
+        }
+        for s in status_por_animal("carne").values() if s["em_carencia"]
+    ]
 
     return jsonify({
         "total_em_carencia": len(animais_em_carencia),
-        "animais": animais_em_carencia
+        "animais": animais_em_carencia,
+        "total_carne_em_carencia": len(animais_carne_em_carencia),
+        "animais_carne": animais_carne_em_carencia,
     })

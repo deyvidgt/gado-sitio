@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Evolução do Sítio{% endblock %}
+{% block page_title %}Evolução do Sítio 📈{% endblock %}
+
+{% block content %}
+<section class="card" style="margin-bottom:16px">
+  <h2>⚖️ Evolução do peso</h2>
+  <p class="hint">Média dos animais pesados em cada data; o tamanho da amostra varia. Apenas pesagens de balança.</p>
+  {% if curva_peso %}
+  <div style="height:300px;position:relative"><canvas id="grafico-peso"></canvas></div>
+  {% else %}<p class="hint">Ainda não há pesagens para montar a série.</p>{% endif %}
+</section>
+
+<section class="card" style="margin-bottom:16px">
+  <h2>🐄 Evolução do rebanho</h2>
+  <p class="hint">Cabeças no fim do mês e movimentações de entrada e saída, conforme a série financeira do rebanho.</p>
+  {% if evolucao %}
+  <div style="height:300px;position:relative"><canvas id="grafico-rebanho"></canvas></div>
+  {% else %}<p class="hint">Ainda não há registros para montar a série.</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>💰 Fluxo financeiro mensal</h2>
+  <p class="hint">Entradas de vendas, saídas de compras/gastos e saldo de caixa. Fluxo de caixa não é o resultado econômico oficial do rebanho.</p>
+  {% if financeiro.labels %}
+  <div style="height:300px;position:relative"><canvas id="grafico-financeiro"></canvas></div>
+  {% else %}<p class="hint">Ainda não há movimentações financeiras datadas.</p>{% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  if (typeof Chart === "undefined") return;
+  const peso = {{ curva_peso|tojson }};
+  if (peso.length) {
+    new Chart(document.getElementById("grafico-peso"), {
+      type: "line",
+      data: { labels: peso.map(p => p.data_br), datasets: [{
+        label: "Peso médio (kg)", data: peso.map(p => p.kg), borderColor: "#4363d8",
+        backgroundColor: "rgba(67,99,216,.12)", tension: .25, fill: true
+      }]},
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+        plugins: { tooltip: { callbacks: { afterLabel: c => `${peso[c.dataIndex].n} animais pesados` } } },
+        scales: { y: { title: { display: true, text: "kg" } } } }
+    });
+  }
+  const evolucao = {{ evolucao|tojson }};
+  if (evolucao.length) {
+    new Chart(document.getElementById("grafico-rebanho"), {
+      type: "bar",
+      data: { labels: evolucao.map(p => p.label), datasets: [
+        { label: "Cabeças no fim do mês", data: evolucao.map(p => p.cabecas), type: "line",
+          borderColor: "#3d7a34", backgroundColor: "rgba(61,122,52,.1)", yAxisID: "y", tension: .25 },
+        { label: "Entradas", data: evolucao.map(p => p.entradas), backgroundColor: "rgba(41,128,185,.65)", yAxisID: "y" },
+        { label: "Saídas", data: evolucao.map(p => p.saidas), backgroundColor: "rgba(192,57,43,.6)", yAxisID: "y" }
+      ]},
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+        scales: { y: { beginAtZero: true, title: { display: true, text: "cabeças" } } } }
+    });
+  }
+  const financeiro = {{ financeiro|tojson }};
+  if (financeiro.labels.length) {
+    new Chart(document.getElementById("grafico-financeiro"), {
+      type: "bar",
+      data: { labels: financeiro.labels, datasets: [
+        { label: "Entradas (R$)", data: financeiro.entradas, backgroundColor: "rgba(61,122,52,.7)" },
+        { label: "Saídas (R$)", data: financeiro.saidas, backgroundColor: "rgba(192,57,43,.65)" },
+        { label: "Saldo (R$)", data: financeiro.saldo, type: "line", borderColor: "#19316f", tension: .2 }
+      ]},
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+        scales: { y: { ticks: { callback: v => "R$ " + Number(v).toLocaleString("pt-BR") } } } }
+    });
+  }
+});
+</script>
+{% endblock %}

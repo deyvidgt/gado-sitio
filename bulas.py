@@ -7,16 +7,19 @@ nomeados `<slug>__bula.pdf` e `<slug>__embalagem.jpg`. O site lista a pasta uma
 vez e mostra o catálogo; quem quiser o arquivo baixa pelo próprio site (o Drive
 é privado). Sem Drive, a página continua com o catálogo e diz o que falta.
 
-`python subir_bulas.py <pasta local>` envia os arquivos (mesmo padrão do
-subir_prints_ajuda.py).
+Administradores também podem baixar um PDF de URL oficial permitida, conferir a
+prévia e enviá-lo pela página. `python subir_bulas.py <pasta local>` continua
+disponível para envio manual.
 """
 from __future__ import annotations
 
 import logging
 import os
 import re
+from urllib.parse import urljoin, urlparse
 
 import drive
+import requests
 from doencas_carencia import PERIODOS_CARENCIA_PADRAO
 from routes_fotos import cache_dir, limpar_cache
 from saude import SUGESTOES_PRODUTO
@@ -25,6 +28,79 @@ from sitios import slug_do_nome
 NOME_PASTA = "Bulas e embalagens"
 SUFIXOS = {"bula": ".pdf", "embalagem": ".jpg"}
 _RE_ARQUIVO = re.compile(r"[a-z0-9][a-z0-9-]*__(bula\.pdf|embalagem\.(jpg|png|webp))")
+_DOMINIOS_OFICIAIS = (
+    "zoetis.com", "zoetis.com.br", "msd-saude-animal.com.br", "msd-animal-health.com", "msd.com",
+    "boehringer-ingelheim.com", "boehringer-ingelheim.com.br", "elanco.com",
+    "elanco.com.br", "ourofinosaudeanimal.com", "ourofinosaudeanimal.com.br",
+    "ceva.com", "ceva.com.br", "virbac.com", "virbac.com.br", "dechra.com",
+    "dechra.com.br", "vetnil.com.br", "hertape.com.br", "biogenesisbago.com",
+    "biogenesisbago.com.br", "vetoquinol.com", "vetoquinol.com.br",
+    "agener.com.br", "vallee.com.br", "bimeda.com", "bimeda.com.br",
+    "labovet.com.br",
+)
+LIMITE_BULA_BYTES = 25 * 1024 * 1024
+MAX_REDIRECTS = 5
+
+
+class BulaFonteErro(ValueError):
+    """URL não oficial, PDF inválido ou falha ao baixar a bula."""
+
+
+def validar_url_oficial(url: str) -> str:
+    """Aceita apenas HTTPS em domínio governamental ou fabricante conhecido."""
+    try:
+        partes = urlparse(str(url or "").strip())
+        host = (partes.hostname or "").rstrip(".").lower()
+        porta_ok = partes.port in (None, 443)
+    except ValueError as e:
+        raise BulaFonteErro("URL da bula inválida.") from e
+    oficial = host == "gov.br" or host.endswith(".gov.br") or any(
+        host == dominio or host.endswith("." + dominio)
+        for dominio in _DOMINIOS_OFICIAIS
+    )
+    if partes.scheme != "https" or not host or not porta_ok or partes.username or partes.password or not oficial:
+        raise BulaFonteErro(
+            "Use uma URL HTTPS de domínio .gov.br ou de um fabricante veterinário oficial conhecido."
+        )
+    return partes.geturl()
+
+
+def baixar_bula(url: str) -> tuple[bytes, str]:
+    """Baixa um PDF de domínio oficial permitido, inclusive redirecionamentos verificados."""
+    destino = validar_url_oficial(url)
+    for tentativa in range(MAX_REDIRECTS + 1):
+        try:
+            resposta = requests.get(
+                destino, timeout=(5, 25), stream=True, allow_redirects=False,
+                headers={"User-Agent": "GadoSitio/1.0 (download de bula veterinaria)"},
+            )
+        except requests.RequestException as e:
+            raise BulaFonteErro(f"Não foi possível baixar a bula: {e}") from e
+        try:
+            if resposta.is_redirect or resposta.is_permanent_redirect:
+                local = resposta.headers.get("Location")
+                if not local or tentativa == MAX_REDIRECTS:
+                    raise BulaFonteErro("A fonte redirecionou demais ou sem destino.")
+                destino = validar_url_oficial(urljoin(destino, local))
+                continue
+            if resposta.status_code != 200:
+                raise BulaFonteErro(f"A fonte oficial respondeu HTTP {resposta.status_code}.")
+            blocos = []
+            total = 0
+            for bloco in resposta.iter_content(64 * 1024):
+                if not bloco:
+                    continue
+                total += len(bloco)
+                if total > LIMITE_BULA_BYTES:
+                    raise BulaFonteErro("O PDF excede o limite de 25 MB.")
+                blocos.append(bloco)
+            conteudo = b"".join(blocos)
+            if not conteudo.startswith(b"%PDF-"):
+                raise BulaFonteErro("O arquivo recebido não é um PDF válido.")
+            return conteudo, destino
+        finally:
+            resposta.close()
+    raise BulaFonteErro("Não foi possível obter o PDF da fonte oficial.")
 
 
 def slug(produto: str) -> str:

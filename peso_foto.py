@@ -15,6 +15,7 @@ calibração melhora com o tempo e recalcula o que se mostra. Nunca entra no GMD
 """
 from __future__ import annotations
 
+import re
 import statistics
 
 import pandas as pd
@@ -35,11 +36,45 @@ FATOR_MIN, FATOR_MAX = 0.7, 1.3
 FATOR_BCS = {
     1: 0.82, 2: 0.88, 3: 0.94, 4: 0.97, 5: 1.0, 6: 1.03, 7: 1.06, 8: 1.12, 9: 1.18
 }
+_RE_BCS = re.compile(r"\bBCS\s+([1-9])\s+\(fator\s+(\d+(?:[.,]\d+)?)\)", re.I)
 
 
 def estimar_bruto(comp_cm: float, prof_cm: float) -> float:
     perimetro = FATOR_PERIMETRO * prof_cm
     return perimetro ** 2 * comp_cm / CONST_SCHAEFFER
+
+
+def _estimativas(df_man: pd.DataFrame) -> dict[str, list[tuple[pd.Timestamp, float, float]]]:
+    """{ID: [(data, peso-base, fator-BCS)]}; mantém compatibilidade com registros antigos."""
+    out: dict[str, list[tuple[pd.Timestamp, float, float]]] = {}
+    if df_man is None or df_man.empty or "Tipo" not in df_man.columns:
+        return out
+    for _, row in df_man.iterrows():
+        if row.get("Tipo") != P.TIPO_ESTIMADO:
+            continue
+        data = pd.to_datetime(row.get("Data"), dayfirst=True, errors="coerce")
+        if pd.isna(data):
+            continue
+        descricao = str(row.get("Descrição") or "")
+        bcs = _RE_BCS.search(descricao)
+        fator_bcs = FATOR_BCS[int(bcs.group(1))] if bcs else 1.0
+        for id_, kg in P.pesos_da_linha(row).items():
+            out.setdefault(id_, []).append((data.normalize(), kg, fator_bcs))
+    for lista in out.values():
+        lista.sort(key=lambda item: item[0])
+    return out
+
+
+def fator_bcs(valor) -> float:
+    if valor in (None, ""):
+        return 1.0
+    try:
+        bcs = int(valor)
+    except (ValueError, TypeError):
+        raise ValueError("BCS inválido. Use um número de 1 a 9.")
+    if not 1 <= bcs <= 9:
+        raise ValueError("BCS deve estar entre 1 e 9.")
+    return FATOR_BCS[bcs]
 
 
 def validar(comp_cm, prof_cm, ref_cm, bcs=None) -> tuple[float, float, float, int | None]:
@@ -63,10 +98,9 @@ def validar(comp_cm, prof_cm, ref_cm, bcs=None) -> tuple[float, float, float, in
     if bcs is not None:
         try:
             bcs_val = int(bcs)
-            if not 1 <= bcs_val <= 9:
-                raise ValueError("BCS deve estar entre 1 e 9.")
         except (ValueError, TypeError):
             raise ValueError("BCS inválido. Use um número de 1 a 9.")
+        fator_bcs(bcs_val)
 
     return tuple(valores) + (bcs_val,)
 
@@ -74,15 +108,16 @@ def validar(comp_cm, prof_cm, ref_cm, bcs=None) -> tuple[float, float, float, in
 def fator_calibracao(df_man: pd.DataFrame) -> tuple[float, int]:
     """(fator, nº de pares). Par = estimativa e balança do mesmo animal a ≤15 dias.
     Mediana (um par errado não estraga), limitada a 0,7–1,3; menos de 3 pares → 1."""
-    estimados = P.todas(df_man, estimados=True)
+    estimados = _estimativas(df_man)
     balanca = P.todas(df_man)
     razoes = []
     for id_, lista in estimados.items():
-        for data_e, bruto in lista:
+        for data_e, bruto, fator_bcs in lista:
             perto = [(abs((data_b - data_e).days), kg) for data_b, kg in balanca.get(id_, [])
                      if abs((data_b - data_e).days) <= DIAS_PAR]
-            if perto and bruto > 0:
-                razoes.append(min(perto)[1] / bruto)
+            peso_ajustado = bruto * fator_bcs
+            if perto and peso_ajustado > 0:
+                razoes.append(min(perto)[1] / peso_ajustado)
     if len(razoes) < MIN_PARES:
         return 1.0, len(razoes)
     return min(max(statistics.median(razoes), FATOR_MIN), FATOR_MAX), len(razoes)
@@ -110,19 +145,21 @@ def registrar(id_: str, comp_cm, prof_cm, ref_cm, data=None, responsavel: str = 
 
 def ultima_estimativa(id_: str, df_man: pd.DataFrame) -> dict | None:
     """Última estimativa do animal, já com o fator do sítio aplicado."""
-    lista = P.todas(df_man, estimados=True).get(id_)
+    lista = _estimativas(df_man).get(id_)
     if not lista:
         return None
-    data, bruto = lista[-1]
+    data, bruto, fator_bcs = lista[-1]
+    peso_ajustado = bruto * fator_bcs
     fator, n = fator_calibracao(df_man)
-    return {"kg": bruto * fator, "bruto": bruto, "data": data, "fator": fator,
+    return {"kg": peso_ajustado * fator, "bruto": bruto, "peso_bcs": peso_ajustado,
+            "fator_bcs": fator_bcs, "data": data, "fator": fator,
             "n_pares": n, "faixa_pct": 10 if n >= MIN_PARES else 15}
 
 
 def historico_estimativas(id_: str, df_man: pd.DataFrame, limite_dias: int = 180) -> list[dict]:
     """Retorna histórico de estimativas do animal (últimos N dias) com calibração aplicada.
     Útil para gráfico de evolução de peso estimado ao longo do tempo."""
-    estimados = P.todas(df_man, estimados=True).get(id_, [])
+    estimados = _estimativas(df_man).get(id_, [])
     if not estimados:
         return []
 
@@ -130,15 +167,18 @@ def historico_estimativas(id_: str, df_man: pd.DataFrame, limite_dias: int = 180
     agora = pd.Timestamp.now()
 
     resultado = []
-    for data, bruto in estimados:
+    for data, bruto, fator_bcs in estimados:
         dias_atras = (agora - data).days
         if dias_atras <= limite_dias and bruto > 0:
+            peso_ajustado = bruto * fator_bcs
             resultado.append({
                 "data": data,
                 "bruto": round(bruto, 1),
-                "calibrado": round(bruto * fator, 1),
+                "peso_bcs": round(peso_ajustado, 1),
+                "calibrado": round(peso_ajustado * fator, 1),
                 "dias_atras": dias_atras,
-                "fator": fator
+                "fator": fator,
+                "fator_bcs": fator_bcs,
             })
 
     return sorted(resultado, key=lambda x: x["data"])
@@ -147,15 +187,15 @@ def historico_estimativas(id_: str, df_man: pd.DataFrame, limite_dias: int = 180
 def comparar_estimativa_vs_balanca(id_: str, df_man: pd.DataFrame) -> dict | None:
     """Compara a última estimativa com a última pesagem do mesmo animal (se houver).
     Retorna {'estimativa_kg', 'balanca_kg', 'diferenca_pct', 'dias_diferenca'} ou None."""
-    estimados = P.todas(df_man, estimados=True).get(id_, [])
+    estimados = _estimativas(df_man).get(id_, [])
     balanca = P.todas(df_man).get(id_, [])
 
     if not estimados or not balanca:
         return None
 
-    data_e, bruto = estimados[-1]
+    data_e, bruto, fator_bcs = estimados[-1]
     fator, _ = fator_calibracao(df_man)
-    estimativa_calibrada = bruto * fator
+    estimativa_calibrada = bruto * fator_bcs * fator
 
     # Procura a pesagem mais próxima da estimativa (até 30 dias)
     pares = [(abs((data_b - data_e).days), data_b, kg)

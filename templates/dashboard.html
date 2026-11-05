@@ -579,8 +579,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <section class="card" style="margin-bottom:24px">
   <div class="card-title">Tendência de peso</div>
-  {% if tendencia_peso %}<p class="hint">{{ tendencia_peso|length }} pontos de pesagem disponíveis.</p>{% else %}<p class="hint">Registre ao menos duas pesagens para acompanhar o ganho médio diário.</p>{% endif %}
+  {% if tendencia_peso|length >= 2 %}
+  <p class="hint">Média dos animais pesados em cada data; o tamanho da amostra varia.</p>
+  <div style="position:relative;height:220px"><canvas id="grafico-peso-dashboard"></canvas></div>
+  <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const pontos = {{ tendencia_peso|tojson }};
+    const el = document.getElementById("grafico-peso-dashboard");
+    if (el && typeof Chart !== "undefined") new Chart(el, {
+      type: "line",
+      data: { labels: pontos.map(p => p.data_br), datasets: [{
+        label: "Peso médio (kg)", data: pontos.map(p => p.kg),
+        borderColor: "#4363d8", backgroundColor: "rgba(67,99,216,.12)", tension: .25, fill: true
+      }]},
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { tooltip: { callbacks: { afterLabel: c => `${pontos[c.dataIndex].n} animais pesados` } } },
+        scales: { y: { title: { display: true, text: "kg" } } } }
+    });
+  });
+  </script>
+  {% else %}<p class="hint">Registre ao menos duas pesagens para acompanhar o ganho médio diário.</p>{% endif %}
   <a class="btn btn-outline btn-sm" href="{{ url_for('pesagem') }}">Ver pesagens</a>
+  <a class="btn btn-outline btn-sm" href="{{ url_for('evolucao_rebanho') }}">Ver todas as evoluções</a>
 </section>
 
 <!-- Fluxo de Caixa + Resultado por Membro movidos para /fluxo-caixa e /resultado (v5.10) -->

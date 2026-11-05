@@ -42,11 +42,12 @@ class DriveFalso:
             self.pastas[id_animal] = self._novo_id("pasta")
         return self.pastas[id_animal]
 
-    def enviar(self, pasta_id, nome, conteudo, mime, props):
+    def enviar(self, pasta_id, nome, conteudo, mime, props, descricao=""):
         self._checar()
         fid = self._novo_id("arq")
         self.arquivos[fid] = {"nome": nome, "conteudo": conteudo, "mime": mime,
-                              "props": dict(props), "pasta": pasta_id, "lixeira": False}
+                              "props": dict(props), "pasta": pasta_id, "lixeira": False,
+                              "descricao": descricao}
         return fid
 
     def achar_por_envio(self, id_envio):

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Índices Zootécnicos{% endblock %}
+{% block page_title %}Índices Zootécnicos 📊{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:16px">
+  <strong>Os valores consolidados vêm dos registros já lançados.</strong>
+  <span class="hint">Períodos e amostras diferem por indicador; quando faltam dados, a tela mostra “—”, não zero.</span>
+</div>
+
+{% for grupo in grupos %}
+<section class="card" style="margin-bottom:16px">
+  <h2>{{ grupo.nome }}</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">
+    {% for item in grupo.itens %}
+    <a href="{{ url_for(item.link) }}" style="text-decoration:none;color:inherit">
+      <article style="height:100%;box-sizing:border-box;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--surface)">
+        <div style="font-size:12px;color:var(--text-3);font-weight:600">{{ item.nome }}</div>
+        <div style="font-size:26px;font-weight:700;color:var(--green-700);margin:7px 0">
+          {{ item.valor }} <small style="font-size:13px;font-weight:500">{{ item.unidade }}</small>
+        </div>
+        <div class="hint">{{ item.detalhe }}</div>
+      </article>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+
+<div class="card">
+  <h2>Como interpretar</h2>
+  <ul>
+    <li><strong>GMD individual</strong> é a média dos últimos intervalos disponíveis por animal pesado; não representa todo o rebanho.</li>
+    <li><strong>Taxa de prenhez</strong> considera diagnósticos lançados; <strong>IEP</strong> considera os nascimentos registrados por mãe.</li>
+    <li><strong>Lotação e GMD de pasto</strong> mostram o registro mais recente lançado, não uma estimativa automática da situação atual.</li>
+    <li><strong>Consumo de ração e mortalidade</strong> dependem do preenchimento das abas de indicadores.</li>
+  </ul>
+</div>
+{% endblock %}

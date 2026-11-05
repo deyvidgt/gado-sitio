@@ -391,6 +391,13 @@ def fmt_pct(v):
 
 @app.template_filter("data_br")
 def fmt_data(v):
+    if v is None:
+        return ""
+    try:
+        if pd.isna(v):
+            return ""
+    except (TypeError, ValueError):
+        pass
     if isinstance(v, pd.Timestamp) and pd.notna(v):
         return v.strftime("%d/%m/%Y")
     if isinstance(v, (date, datetime)):

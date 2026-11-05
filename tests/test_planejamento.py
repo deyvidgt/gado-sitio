@@ -160,4 +160,4 @@ def test_rotas_de_planejamento_exigem_csrf(cliente):
 
 
 def test_gastos_esquema_preserva_colunas_anteriores():
-    assert COLUNAS_GASTOS[-2:] == ["Pasto ID", "Aplicação ID"]
+    assert COLUNAS_GASTOS[-3:] == ["Pasto ID", "Aplicação ID", "Categoria"]

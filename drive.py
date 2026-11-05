@@ -118,9 +118,12 @@ class Drive:
             "appProperties": {"animal": id_animal}})
         return r.json()["id"]
 
-    def enviar(self, pasta_id: str, nome: str, conteudo: bytes, mime: str, props: dict) -> str:
+    def enviar(self, pasta_id: str, nome: str, conteudo: bytes, mime: str, props: dict,
+               descricao: str = "") -> str:
         meta = {"name": nome, "parents": [pasta_id],
                 "appProperties": {k: str(v) for k, v in props.items()}}
+        if descricao:
+            meta["description"] = descricao
         fronteira = uuid.uuid4().hex
         corpo = (
             f"--{fronteira}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"

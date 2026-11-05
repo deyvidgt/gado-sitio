@@ -30,6 +30,18 @@
             {% endfor %}
           </select>
         </div>
+        <div class="form-group">
+          <label>Categoria financeira</label>
+          <select name="categoria" id="categoria-in" required>
+            {% for categoria in CATEGORIAS_GASTO %}
+              <option value="{{ categoria }}"
+                {{ 'selected' if modo == 'editar' and row and row.get('Categoria') == categoria
+                   else 'selected' if categoria == 'Outros' and (modo != 'editar' or not row or not row.get('Categoria')) }}>
+                {{ categoria }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
         <div class="form-group full">
           <label>Descrição</label>
           <input type="text" name="descricao"
@@ -114,6 +126,24 @@
 
   // Produto/sacos só aparecem em compra de Sal/Proteinado
   const tipo = document.getElementById("tipo-in");
+  const categoria = document.getElementById("categoria-in");
+  const novaDespesa = {{ 'true' if modo != 'editar' else 'false' }};
+  const categoriasSugeridas = {
+    "Remédio/Vacina": "Sanidade",
+    "Veneno/Defensivo": "Sanidade",
+    "Sal/Proteínado": "Nutrição",
+    "Calcário/Adubação": "Nutrição",
+    "Gasolina/Transporte": "Manutenção",
+    "Manutenção/Outros": "Manutenção"
+  };
+  function sugerirCategoria() {
+    if (novaDespesa && categoriasSugeridas[tipo.value]) {
+      categoria.value = categoriasSugeridas[tipo.value];
+    }
+  }
+  tipo.addEventListener("change", sugerirCategoria);
+  sugerirCategoria();
+
   function mostrarInsumo() {
     const sim = tipo.value === "Sal/Proteínado";
     document.querySelectorAll(".campo-insumo").forEach(el => el.style.display = sim ? "" : "none");

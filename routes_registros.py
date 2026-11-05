@@ -12,7 +12,8 @@ from calculos import (
     dividir_cotas,
 )
 from config import (TIPOS_GASTO, TIPOS_MANEJO, MEMBROS, NOMES_MEMBROS, COLUNAS_VENDAS, COLUNAS_COMPRAS,
-                    TIPOS_COM_PRODUTO, INSUMOS)
+                    TIPOS_COM_PRODUTO, INSUMOS, CATEGORIAS_GASTO, CAUSAS_MORTIS)
+from gastos import categoria_legada
 from extensions import (
     app, _agora, _validar_csrf, login_required,
     _get_dados_cache, _get_resumo_cache,
@@ -213,7 +214,7 @@ def gastos():
     return render_template("lista.html", titulo="Gastos 💸", secao="gastos", aba="Gastos",
                            colunas=["Data","Tipo","Descrição","Valor Total (R$)",
                                     "Qtd Cabeças","Valor/Cabeça (R$)","Registrado Por",
-                                    "Produto","Qtd Sacos"],
+                                    "Categoria","Produto","Qtd Sacos"],
                            rows=rows, ordem=ordem,
                            anos_disponiveis=_anos_de(df),
                            tipos_disponiveis=_tipos_de(df),
@@ -241,7 +242,11 @@ def gravar_gasto(f, estoque: int):
         cab = max(1, estoque)
     v_cab = round(valor / cab, 4) if cab > 0 else 0
     produto, sacos = _insumo_do_form(f)
-    salvar_linha("Gastos", [data, tipo, desc, valor, cab, v_cab, membro, produto, sacos])
+    categoria = f.get("categoria", "").strip()
+    if categoria not in CATEGORIAS_GASTO:
+        categoria = categoria_legada(tipo, desc)
+    salvar_linha("Gastos", [data, tipo, desc, valor, cab, v_cab, membro, produto, sacos,
+                            "", "", categoria])
 
 
 @app.route("/gastos/novo", methods=["GET", "POST"])
@@ -257,7 +262,8 @@ def novo_gasto():
         flash(f"Gasto registrado! {fmt_brl(parse_valor(f.get('valor', 0)))} ({f.get('tipo', '')})", "success")
         return redirect(url_for("gastos"))
     return render_template("form_gasto.html", estoque=estoque, gpcab=gpcab, INSUMOS=INSUMOS,
-                           TIPOS=TIPOS_GASTO, MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
+                       TIPOS=TIPOS_GASTO, CATEGORIAS_GASTO=CATEGORIAS_GASTO,
+                       MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            hoje=_agora().strftime("%Y-%m-%d"))
 
 @app.route("/gastos/editar/<int:idx>", methods=["GET", "POST"])
@@ -289,7 +295,10 @@ def editar_gasto(idx):
                    "Tipo": tipo, "Descrição": desc,
                    "Valor Total (R$)": valor, "Qtd Cabeças": cab,
                    "Valor/Cabeça (R$)": v_cab, "Registrado Por": membro,
-                   "Produto": produto, "Qtd Sacos": sacos}
+                   "Produto": produto, "Qtd Sacos": sacos,
+                   "Categoria": (f.get("categoria", "").strip()
+                                 if f.get("categoria", "").strip() in CATEGORIAS_GASTO
+                                 else categoria_legada(tipo, desc))}
         _aplicar_updates(df, idx, updates)
         reescrever_aba("Gastos", df)
         flash("Gasto atualizado!", "success")
@@ -299,7 +308,8 @@ def editar_gasto(idx):
     row["data_input"] = df.iloc[idx]["Data"].strftime("%Y-%m-%d") if pd.notna(df.iloc[idx].get("Data")) else ""
     return render_template("form_gasto.html", modo="editar", row=row, idx=idx,
                            estoque=estoque, gpcab=gpcab, INSUMOS=INSUMOS,
-                           TIPOS=TIPOS_GASTO, MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
+                           TIPOS=TIPOS_GASTO, CATEGORIAS_GASTO=CATEGORIAS_GASTO,
+                           MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            hoje=_agora().strftime("%Y-%m-%d"))
 
 
@@ -531,7 +541,9 @@ def manejo():
         rows.append(d)
 
     return render_template("lista.html", titulo="Manejo 🩺", secao="manejo", aba="Manejo",
-                           colunas=["Data","Tipo","Qtd Cabeças","Produto","Brincos","Descrição","Responsável","Perda De","Nascimento De"],
+                           colunas=["Data","Tipo","Qtd Cabeças","Produto","Brincos","Descrição",
+                                    "Causa Mortis","Laudo/Observações","Responsável",
+                                    "Perda De","Nascimento De"],
                            rows=rows, ordem=ordem,
                            anos_disponiveis=_anos_de(df),
                            tipos_disponiveis=_tipos_de(df),
@@ -572,6 +584,11 @@ def novo_manejo():
         # "Perda De" só faz sentido quando o manejo é Morte/Perda
         perda_de = f.get("perda_de", "") if f.get("tipo") == "Morte/Perda" else ""
         nasc_de  = f.get("nascimento_de", "") if f.get("tipo") == "Nascimento" else ""
+        causa_mortis = f.get("causa_mortis", "") if f.get("tipo") == "Morte/Perda" else ""
+        laudo = f.get("laudo", "").strip() if f.get("tipo") == "Morte/Perda" else ""
+        if f.get("tipo") == "Morte/Perda" and causa_mortis not in CAUSAS_MORTIS:
+            flash("Selecione a causa da morte.", "error")
+            return redirect(url_for("novo_manejo"))
         produto = _produto_do_form(f)
         if f.get("tipo") in TIPOS_COM_PRODUTO and not produto:
             flash("Informe qual remédio/produto foi usado.", "error")
@@ -582,7 +599,8 @@ def novo_manejo():
             return redirect(url_for("novo_manejo"))
         salvar_linha("Manejo", [f.get("data") or _agora().strftime("%d/%m/%Y"), f.get("tipo"), _int_form(f.get("cabecas")),
                                 f.get("descricao", "").strip(), f.get("responsavel", ""),
-                                perda_de, produto, nasc_de, form["brincos_refs"]])
+                                perda_de, produto, nasc_de, form["brincos_refs"], "", "",
+                                causa_mortis, laudo])
         # v5.8 — coleta automática de dados para indicadores
         processar_manejo_automatico(
             tipo_manejo=f.get("tipo", ""),
@@ -602,6 +620,7 @@ def novo_manejo():
     return render_template("form_manejo.html", estoque=estoque, TIPOS=TIPOS_MANEJO,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            TIPOS_COM_PRODUTO=TIPOS_COM_PRODUTO,
+                           CAUSAS_MORTIS=CAUSAS_MORTIS,
                            produtos_usados=_produtos_usados(dados["Manejo"]),
                            produtos_sugeridos=_produtos_sugeridos(_produtos_usados(dados["Manejo"])),
                            hoje=_agora().strftime("%Y-%m-%d"))
@@ -635,7 +654,12 @@ def editar_manejo(idx):
             "Perda De":    f.get("perda_de", "") if f.get("tipo") == "Morte/Perda" else "",
             "Produto":     _produto_do_form(f),
             "Nascimento De": f.get("nascimento_de", "") if f.get("tipo") == "Nascimento" else "",
+            "Causa Mortis": f.get("causa_mortis", "") if f.get("tipo") == "Morte/Perda" else "",
+            "Laudo/Observações": f.get("laudo", "").strip() if f.get("tipo") == "Morte/Perda" else "",
         }
+        if f.get("tipo") == "Morte/Perda" and updates["Causa Mortis"] not in CAUSAS_MORTIS:
+            flash("Selecione a causa da morte.", "error")
+            return redirect(url_for("editar_manejo", idx=idx))
         _aplicar_updates(df, idx, updates)
         reescrever_aba("Manejo", df)
         # v5.8 — coleta automática de dados para indicadores (edição)
@@ -652,11 +676,16 @@ def editar_manejo(idx):
     row["data_input"] = df.iloc[idx]["Data"].strftime("%Y-%m-%d") if pd.notna(df.iloc[idx].get("Data")) else ""
     if pd.isna(row.get("Produto")):
         row["Produto"] = ""
+    if pd.isna(row.get("Causa Mortis")) or not str(row.get("Causa Mortis") or "").strip():
+        row["Causa Mortis"] = "Desconhecida"
+    if pd.isna(row.get("Laudo/Observações")):
+        row["Laudo/Observações"] = ""
     row["brincos_txt"] = _brincos_legiveis(row.get("Brincos"))
     return render_template("form_manejo.html", modo="editar", row=row, idx=idx,
                            estoque=estoque, TIPOS=TIPOS_MANEJO,
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            TIPOS_COM_PRODUTO=TIPOS_COM_PRODUTO,
+                           CAUSAS_MORTIS=CAUSAS_MORTIS,
                            produtos_usados=_produtos_usados(df),
                            produtos_sugeridos=_produtos_sugeridos(_produtos_usados(df)),
                            hoje=_agora().strftime("%Y-%m-%d"))

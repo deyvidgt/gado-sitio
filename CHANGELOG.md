@@ -4,8 +4,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ## [Não lançado]
 
+## [5.20.0] — 2026-11-04
+
 ### Adicionado
 
+- **Peso por foto com ajuste de condição corporal:** o BCS selecionado agora ajusta a estimativa exibida, a calibração, a comparação com a balança e o histórico; registros antigos com BCS também passam a aplicar o ajuste. A tela reforça o posicionamento da foto e deixa claro que a correção por BCS é aproximada.
+- **Envio administrativo de bulas oficiais:** em Bulas, administradores podem informar uma URL HTTPS de fabricante conhecido ou domínio `.gov.br`, conferir o PDF e confirmar o envio ao Google Drive. A pasta é criada automaticamente se faltar; o sistema limita o tamanho e rejeita conteúdo que não seja PDF.
+- **Carência e estoque de medicamentos:** carência consultável por animal após tratamentos; entradas e saídas manuais registram lote e validade, com alertas sem bloquear vendas. As telas de evolução e o painel de índices zootécnicos consolidam peso, rebanho e resultados financeiros.
+- **Categorias de gastos e causas de morte:** gastos antigos são classificados por regras, com fallback para “Outros”; novos gastos aceitam Nutrição, Sanidade, Mão de obra, Manutenção, Impostos e outras categorias. Mortes/perdas registram causa padronizada e laudo/observações opcionais.
+- **Mineralização e matéria seca de pastagens:** cochos registram reposições e sobras para estimar consumo por cabeça/dia; medições de altura estimam MS por pasto com coeficiente configurável e indicação de que o valor é aproximado.
+- **Sugestões de manejo por histórico:** a agenda sugere ações para animais e pastos/lotes com base nos últimos manejos e intervalos ajustáveis; cada sugestão precisa ser confirmada para virar tarefa.
 - **Módulos personalizáveis por sítio:** em Configurações → Módulos do sítio, usuários podem ocultar e bloquear Leite, Conforto térmico e descanso, Reprodução ou Genética/Confinamento; Conforto é independente de Leite e pode ser usado no gado de corte.
 - **Aplicações de insumos em pastagens:** histórico por pasto com custo/ha; cada aplicação lança atomicamente um gasto vinculado na aba Gastos.
 - **Orçamento e contas futuras:** comparação anual previsto vs. realizado por mês/categoria, contas a pagar/receber e lembrete de vencimentos na Comercialização. Marcar uma conta como paga/recebida não cria um lançamento real.

@@ -51,6 +51,23 @@
             A cabeça perdida é debitada do estoque desse dono. Em branco, a perda é dividida entre todos os donos.
           </small>
         </div>
+        <div class="form-group" id="grupo-causa-morte" style="display:none">
+          <label>Causa da morte</label>
+          <select name="causa_mortis" id="sel-causa-morte">
+            <option value="">Selecione...</option>
+            {% for causa in CAUSAS_MORTIS %}
+              <option value="{{ causa }}"
+                {{ 'selected' if modo == 'editar' and row and row.get('Causa Mortis', 'Desconhecida') == causa }}>
+                {{ causa }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group full" id="grupo-laudo" style="display:none">
+          <label>Laudo / observações da ocorrência (opcional)</label>
+          <textarea name="laudo" rows="2" maxlength="500"
+                    placeholder="Ex.: observações do veterinário ou circunstâncias">{{ row.get('Laudo/Observações','') if modo == 'editar' and row else '' }}</textarea>
+        </div>
         <div class="form-group" id="grupo-nasc" style="display:none">
           <label>De quem é o bezerro?</label>
           <select name="nascimento_de" id="sel-nasc">
@@ -100,6 +117,9 @@
 (function () {
   const selTipo  = document.querySelector("select[name='tipo']");
   const grpPerda = document.getElementById("grupo-perda");
+  const grpCausa = document.getElementById("grupo-causa-morte");
+  const grpLaudo = document.getElementById("grupo-laudo");
+  const selCausa = document.getElementById("sel-causa-morte");
   const grpNasc  = document.getElementById("grupo-nasc");
   // Em registro novo a quantidade vem com o rebanho todo (bom p/ vacina); em
   // nascimento/morte isso induziria a registrar 28 bezerros — sugere 1.
@@ -111,6 +131,9 @@
   function toggle() {
     const tipo = selTipo ? selTipo.value : "";
     grpPerda.style.display = tipo === "Morte/Perda" ? "" : "none";
+    grpCausa.style.display = tipo === "Morte/Perda" ? "" : "none";
+    grpLaudo.style.display = tipo === "Morte/Perda" ? "" : "none";
+    selCausa.required = tipo === "Morte/Perda";
     grpNasc.style.display  = tipo === "Nascimento"  ? "" : "none";
     if (NOVO && inpQtd) {
       const individual = tipo === "Nascimento" || tipo === "Morte/Perda";

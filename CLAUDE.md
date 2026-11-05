@@ -28,7 +28,7 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 
 ## ⚠️ Dados / banco (LER ANTES DE MEXER)
 
-- Os dados ficam em **`gado_familia.xlsx`** (abas: Compras, Gastos, Vendas, Manejo, Visitas, Animais, Fotos, Pastos, Tarefas).
+- Os dados ficam em **`gado_familia.xlsx`** (abas: Compras, Gastos, Vendas, Manejo, Visitas, Animais, Fotos, Pastos, Pastos Medições, Movimentos Cocho, Estoque Medicamentos, Tarefas).
 - Em produção o arquivo mora em **`~/gado-dados/`**, **fora do Git**, para o `git pull`
   nunca apagar dados. Resolução do caminho: `db.py: _resolver_data_dir()`
   (ordem: `GADO_DATA_DIR` → `~/gado-dados/` → pasta do .exe → pasta do script).
@@ -76,12 +76,18 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 | `relatorios.py` / `exportar.py` | Geração de relatórios e exportação |
 | `alertas_whatsapp.py` | Notificações via CallMeBot: Task diária só com urgentes (sem repetir), resumo semanal na segunda com "Na semana"; preferências por pessoa (`receber` em `usuarios.json`: urgentes/semanal/visita/eventos/mensal/valores); fila atômica de avisos (`avisos_pendentes.json`) com nova tentativa só para destinatários que falharam e preservação de arquivo inválido em quarentena. Testes nunca enviam (fixture autouse no `conftest`) |
 | `saude.py` | Calendário sanitário (Triângulo Mineiro): vacina por tipo, campanha de brucelose, vermifugação 5-7-9 — fonte única p/ painel, calendário e WhatsApp |
+| `doencas_carencia.py` / `estoque_medicamentos.py` | Carência unificada por animal a partir dos históricos de tratamento; estoque manual por produto/lote/validade, com alertas e sem baixa automática nem bloqueio de venda |
+| `gastos.py` | Classifica gastos existentes por regras e mantém a categoria financeira para análise por tipo |
+| `agenda_manejo.py` / `routes_agenda_unificada.py` | Sugestões de manejo baseadas no último registro e nos intervalos configurados; adicionar uma sugestão à agenda cria uma tarefa, não registra o manejo |
+| `cochos.py` / `routes_cochos.py` | Movimentos de reposição e sobra; consumo estimado por cabeça/dia após leituras suficientes |
+| `pastos_ms.py` | Histórico de medições de altura e estimativa de matéria seca por pasto; estimativa não substitui amostragem |
+| `routes_indicadores.py` | Painel consolidado de índices zootécnicos e telas de evolução de peso, rebanho e finanças |
 | `backup_automatico.py` | Backup diário (Task do PythonAnywhere) |
 | `resumo_mensal.py` | Resumo do mês no WhatsApp no dia 1º (Task diária; `--teste` só mostra) |
 | `insumos.py` | Estoque de Sal/Proteinado/Ração: sacos em estoque contados nas visitas + compras (Gastos: Produto/Qtd Sacos) → consumo e "acaba em" (painel e WhatsApp). Comparador (v5.3): `comparar()` (R$/kg, R$/cab/dia, mês) e `ultimo_preco_saco()`; página `/insumos/comparar` (`routes_insumos.py`) é só cálculo, GET, não grava |
 | `animais.py` | Cadastro individual por brinco (aba `Animais`): cor por dono, nº 01–99 reaproveitado, ID `A0001` liga o histórico (`Brincos` em Manejo/Vendas = "Amarelo 21 #A0003"); baixa, brucelose por animal |
 | `pesagem.py` | Peso por animal (v4.6): coluna `Pesos` da linha "Pesagem" do Manejo (`"Amarelo 21 #A0003: 320 kg"`; legado: peso na Descrição) → último peso, @, GMD; página `/animais/pesagem`. `todas()` só lê balança; `todas(estimados=True)` só as estimativas por foto |
-| `peso_foto.py` | Peso estimado por foto (v5.1): medidas da foto (tela `peso_foto.html`, canvas) → perímetro ≈ 2,6 × peito → Schaeffer; grava "Peso Estimado" no Manejo com o peso **bruto**; `fator_calibracao()` = mediana balança/bruto (≥3 pares a ≤15 dias, 0,7–1,3). Nunca entra no GMD |
+| `peso_foto.py` | Peso estimado por foto (v5.1): medidas da foto (tela `peso_foto.html`, canvas) → perímetro ≈ 2,6 × peito → Schaeffer; BCS aplica ajuste aproximado antes da calibração. `fator_calibracao()` compara o peso ajustado com a balança (≥3 pares do mesmo animal a ≤15 dias, 0,7–1,3). Nunca entra no GMD |
 | `pastos.py` / `routes_pastos.py` | Pastos com mapa (v5.2): aba `Pastos` (contorno GeoJSON, área calculada no servidor); "Movimentação de Pasto" no Manejo com o ID na coluna `Pasto` (Brincos vazio = rebanho todo); `situacao()` → cabeças, dias e UA/ha por pasto. Página `/pastos` (Leaflet + Leaflet.draw, satélite Esri, importação .kmz/.kml e foco/atalho por pasto). Lotação (v5.3): `nivel()`/`total_lotacao()` comparam a UA/ha com `capacidade_ua_ha` do `sitio_config.json`; `animais.composicao()` dá as cabeças por categoria/sexo (painel e Pastos). Aplicações em `/pastos/aplicacoes` registram histórico, custo/ha e um gasto vinculado na mesma gravação atômica |
 | `planejamento.py` | Cálculos do comparativo previsto vs. realizado por mês/categoria, lembretes de vencimento e custo por hectare das aplicações em pastos. |
 | `routes_financeiro_novo.py` | Páginas financeiras `/financeiro`, `/resultado` e `/planejamento`; orçamento e contas futuras ficam em abas próprias e só entram no realizado quando o lançamento real for feito nas telas financeiras. |
@@ -97,7 +103,7 @@ python app.py            # sobe em http://localhost:5000 e abre o navegador
 | `static/voz_campos.js` | Prefill de formulário por `?prefill=1&campo=valor` e 🎤 de ditado nos campos de texto |
 | `drive.py` | Cliente mínimo do Google Drive (só `requests`, OAuth com refresh token em `<dados>/drive_token.json`); só opera dentro da pasta raiz |
 | `fotos.py` / `routes_fotos.py` | Fotos dos animais (v4.4): aba `Fotos` + arquivos no Drive; site faz proxy das imagens com cache em `<dados>/cache_fotos/`. `configurar_drive.py` autoriza uma vez (ver `docs/FOTOS_DRIVE.md`) |
-| `bulas.py` / `routes_bulas.py` | Bulas e embalagens (v5.16): PDF da bula e foto da embalagem de cada remédio/vacina no Drive (pasta "Bulas e embalagens", arquivo `<slug>__bula.pdf` / `<slug>__embalagem.jpg`, marcado com `appProperties bulas=<nome>`). Catálogo vem da tabela de carência + `saude.SUGESTOES_PRODUTO`; `/bulas` lista e `/bulas/<nome>` serve (cache em `cache_fotos/`). `subir_bulas.py <pasta>` envia |
+| `bulas.py` / `routes_bulas.py` | Bulas oficiais: catálogo vem da tabela de carência + `saude.SUGESTOES_PRODUTO`; `/bulas` lista e `/bulas/<nome>` serve (cache em `cache_fotos/`). Administrador informa URL HTTPS de domínio oficial permitido, confere o PDF e confirma em `/bulas/atualizar`; a pasta `Bulas e embalagens` é criada no Drive quando necessário. `subir_bulas.py <pasta>` continua disponível para envio manual |
 | `routes_ajuda.py` / `templates/ajuda.html` | Aba ❓ Ajuda (v4.5): manual com passo a passo; prints no Drive (marca `ajuda=<nome>`, `c-` celular / `p-` computador), enviados por `subir_prints_ajuda.py`. Mudou uma tela? Atualize o texto e o print |
 | `static/fila_fotos.js` | Foto offline: reduz no celular (1600 px), guarda no IndexedDB (mesmo banco das visitas, v2) e envia por `/api/fotos` |
 | `static/fila_visitas.js` | Visita offline: guarda no celular (IndexedDB) e envia por `/api/visitas` quando há sinal; `ID Envio` evita duplicata |

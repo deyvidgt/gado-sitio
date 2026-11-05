@@ -49,6 +49,17 @@ def carregar():
         return pd.DataFrame()
 
 
+def carregar_movimentos():
+    """Carrega o histórico de reposições e leituras manuais dos cochos."""
+    df = carregar_aba("Movimentos Cocho")
+    if df is None or df.empty:
+        return pd.DataFrame(columns=[
+            "ID", "Data", "Cocho ID", "Tipo", "Quantidade (kg)", "Cabeças",
+            "Observações", "Responsável",
+        ])
+    return df
+
+
 def _normalizar_data(valor):
     """Normaliza data em vários formatos."""
     if isinstance(valor, datetime):
@@ -142,7 +153,7 @@ def extrair_consumo_visitas(df_visitas, dias: int = 60) -> Dict[str, Dict]:
     return consumo
 
 
-def calcular_situacao_cochos(df_cochos, df_visitas) -> Dict[str, Dict]:
+def calcular_situacao_cochos(df_cochos, df_visitas, df_movimentos=None) -> Dict[str, Dict]:
     """
     Calcula situação de cada cocho: volume, dias restantes, próxima salga.
 
@@ -178,10 +189,49 @@ def calcular_situacao_cochos(df_cochos, df_visitas) -> Dict[str, Dict]:
         capacidade = _normalizar_numero(cocho.get("Capacidade (kg)")) or 500
         volume_atual = _normalizar_numero(cocho.get("Volume Atual (kg)")) or 0
         ultima_salga = _normalizar_data(cocho.get("Última Salga"))
+        consumo_g_cab_dia = None
+        cabecas_ultima_leitura = 0
+
+        if df_movimentos is not None and not df_movimentos.empty:
+            historico = df_movimentos[
+                df_movimentos.get("Cocho ID", pd.Series(dtype=str)).astype(str).str.strip() == cocho_id
+            ].copy()
+            if not historico.empty:
+                historico["_data"] = historico["Data"].apply(_normalizar_data)
+                historico = historico.dropna(subset=["_data"])
+                historico = historico[historico["_data"] <= _hoje_br()].sort_values(
+                    "_data", kind="stable"
+                )
+                saldo = volume_atual
+                leitura_anterior = None
+                reposicoes = 0.0
+                for _, mov in historico.iterrows():
+                    quantidade = _normalizar_numero(mov.get("Quantidade (kg)")) or 0
+                    tipo_mov = str(mov.get("Tipo", "")).strip()
+                    if tipo_mov == "Reposição":
+                        saldo += quantidade
+                        reposicoes += quantidade
+                        ultima_salga = mov["_data"]
+                    elif tipo_mov == "Leitura":
+                        if leitura_anterior:
+                            dias = (mov["_data"] - leitura_anterior["data"]).days
+                            cabecas = _normalizar_numero(mov.get("Cabeças")) or 0
+                            consumido = leitura_anterior["saldo"] + reposicoes - quantidade
+                            if dias > 0 and cabecas > 0 and consumido >= 0:
+                                consumo_g_cab_dia = consumido * 1_000 / cabecas / dias
+                        cabecas_ultima_leitura = _normalizar_numero(mov.get("Cabeças")) or 0
+                        saldo = quantidade
+                        reposicoes = 0.0
+                        leitura_anterior = {
+                            "data": mov["_data"], "saldo": quantidade,
+                        }
+                volume_atual = saldo
 
         # Busca consumo médio diário do tipo de cocho
         consumo_info = consumo_visitas.get(tipo, {})
         consumo_dia = consumo_info.get("media_dia", 0)
+        if consumo_g_cab_dia is not None:
+            consumo_dia = consumo_g_cab_dia * cabecas_ultima_leitura / 1_000
 
         # Calcula dias restantes
         dias_restantes = 0
@@ -209,6 +259,8 @@ def calcular_situacao_cochos(df_cochos, df_visitas) -> Dict[str, Dict]:
             "percentual": int(percentual),
             "estado": estado,
             "consumo_dia_kg": round(consumo_dia, 2),
+            "consumo_g_cab_dia": (round(consumo_g_cab_dia, 1)
+                                  if consumo_g_cab_dia is not None else None),
             "dias_restantes": dias_restantes,
             "ultima_salga": ultima_salga.strftime("%Y-%m-%d") if ultima_salga else None,
             "proxima_salga_estimada": proxima_salga
@@ -217,9 +269,9 @@ def calcular_situacao_cochos(df_cochos, df_visitas) -> Dict[str, Dict]:
     return situacao
 
 
-def resumo_cochos(df_cochos, df_visitas) -> Dict:
+def resumo_cochos(df_cochos, df_visitas, df_movimentos=None) -> Dict:
     """Retorna resumo geral dos cochos."""
-    sit = calcular_situacao_cochos(df_cochos, df_visitas)
+    sit = calcular_situacao_cochos(df_cochos, df_visitas, df_movimentos)
 
     if not sit:
         return {

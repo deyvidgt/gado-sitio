@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Estoque de Medicamentos{% endblock %}
+{% block page_title %}Estoque de Medicamentos 💊{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:16px">
+  <p style="margin:0">Controle manual por lote. O registro de uma medicação em animal não baixa este estoque automaticamente.</p>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+  <section class="card">
+    <h2>📥 Registrar entrada de lote</h2>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="movimento" value="Entrada">
+      <div class="form-grid">
+        <div class="form-group"><label>Data de entrada</label><input type="date" name="data" value="{{ hoje }}" required></div>
+        <div class="form-group"><label>Medicamento / produto</label><input name="produto" maxlength="100" required></div>
+        <div class="form-group"><label>Princípio ativo</label><input name="principio" maxlength="100" required></div>
+        <div class="form-group"><label>Lote do fabricante</label><input name="lote" maxlength="60" required></div>
+        <div class="form-group"><label>Validade</label><input type="date" name="validade" min="{{ hoje }}" required></div>
+        <div class="form-group"><label>Quantidade</label><input type="number" name="quantidade" min="0.001" step="0.001" required></div>
+        <div class="form-group"><label>Unidade</label>
+          <input name="unidade" list="unidades-medicamento" maxlength="20" placeholder="ex.: frasco, mL, dose" required>
+          <datalist id="unidades-medicamento"><option value="frasco"><option value="mL"><option value="L"><option value="comprimido"><option value="dose"><option value="unidade"></datalist>
+        </div>
+        <div class="form-group"><label>Fornecedor / referência</label><input name="fornecedor" maxlength="100"></div>
+        <div class="form-group full"><label>Observações</label><input name="observacoes" maxlength="200"></div>
+      </div>
+      <button class="btn btn-primary" type="submit">Registrar entrada</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>📤 Registrar saída ou descarte</h2>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="form-grid">
+        <div class="form-group"><label>Data</label><input type="date" name="data" value="{{ hoje }}" required></div>
+        <div class="form-group"><label>Movimento</label>
+          <select name="movimento" required><option value="Saída">Saída / uso</option><option value="Descarte">Descarte</option></select>
+        </div>
+        <div class="form-group full"><label>Lote</label>
+          <select name="lote_id" required>
+            <option value="">Selecione um lote com saldo</option>
+            {% for lote in lotes %}
+            <option value="{{ lote.id }}">{{ lote.produto }} · lote {{ lote.lote }} · {{ lote.saldo|br_num(3) }} {{ lote.unidade }} · validade {{ lote.validade|data_br }}{% if lote.vencido %} · VENCIDO (descarte){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><label>Quantidade</label><input type="number" name="quantidade" min="0.001" step="0.001" required></div>
+        <div class="form-group full"><label>Observações (ex.: motivo ou referência)</label><input name="observacoes" maxlength="200"></div>
+      </div>
+      <button class="btn btn-primary" type="submit">Registrar movimento</button>
+    </form>
+    <p class="hint" style="margin-bottom:0">Lotes vencidos não podem ser lançados como uso; registre o descarte para retirar o saldo.</p>
+  </section>
+</div>
+
+<section class="card" style="margin-top:16px">
+  <h2>📦 Lotes com saldo</h2>
+  {% if lotes %}
+  <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr><th>Medicamento</th><th>Princípio ativo</th><th>Lote</th><th>Saldo</th><th>Validade</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for lote in lotes %}
+      <tr>
+        <td>{{ lote.produto }}</td><td>{{ lote.principio }}</td><td>{{ lote.lote }}</td>
+        <td>{{ lote.saldo|br_num(3) }} {{ lote.unidade }}</td>
+        <td>{{ lote.validade|data_br }}</td>
+        <td>
+          {% if lote.vencido %}<span class="badge badge-ruim">Vencido · descarte</span>
+          {% elif lote.vence_em_breve %}<span class="badge badge-aviso">Vence em {{ lote.dias_validade }} dia(s)</span>
+          {% else %}<span class="badge badge-ok">Dentro da validade</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}<p class="hint">Nenhum medicamento com saldo registrado.</p>{% endif %}
+</section>
+
+<section class="card" style="margin-top:16px">
+  <h2>🧾 Movimentações recentes</h2>
+  {% if movimentos_recentes %}
+  <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr><th>Data</th><th>Movimento</th><th>Medicamento</th><th>Lote</th><th>Quantidade</th><th>Observação</th></tr></thead>
+      <tbody>{% for m in movimentos_recentes %}
+        <tr><td>{{ m['Data'] }}</td><td>{{ m['Movimento'] }}</td><td>{{ m['Produto'] }}</td><td>{{ m['Lote'] }}</td><td>{{ m['Quantidade'] }} {{ m['Unidade'] }}</td><td>{{ m['Observações'] }}</td></tr>
+      {% endfor %}</tbody>
+    </table>
+  </div>
+  {% else %}<p class="hint">Ainda não há movimentações.</p>{% endif %}
+</section>
+{% endblock %}

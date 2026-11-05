@@ -6,6 +6,7 @@ Rotas de Cochos (comedouros) — Integração com Visitas e Edição/Exclusão R
 
 from flask import render_template, request, redirect, url_for, flash, abort
 from datetime import datetime
+import uuid
 
 import cochos as CO
 from extensions import (app, _agora, _validar_csrf, login_required, _get_dados_cache)
@@ -28,8 +29,9 @@ def cochos():
     if df_visitas is None:
         df_visitas = __import__("db").carregar_aba("Visitas")
 
-    sit = CO.calcular_situacao_cochos(df_cochos, df_visitas)
-    resumo = CO.resumo_cochos(df_cochos, df_visitas)
+    movimentos = CO.carregar_movimentos()
+    sit = CO.calcular_situacao_cochos(df_cochos, df_visitas, movimentos)
+    resumo = CO.resumo_cochos(df_cochos, df_visitas, movimentos)
 
     # Prepara lista para template (ordenada por dias restantes)
     lista = []
@@ -111,36 +113,80 @@ def salgar_cocho(cocho_id):
     """Registra salga (reposição) do cocho com dados do modal."""
     _validar_csrf()
     try:
-        from db import reescrever_aba
-        df = _preparar_para_editar(CO.carregar())
-
-        cocho = df[df["ID"].astype(str) == str(cocho_id)]
+        from db import salvar_linha
+        import math
+        df = CO.carregar()
+        cocho = df[df["ID"].astype(str).str.strip() == str(cocho_id).strip()]
         if cocho.empty:
             abort(404)
-
-        cocho_idx = df[df["ID"].astype(str) == str(cocho_id)].index[0]
-
         data_str = request.form.get("data", "").strip()
-        if data_str and "-" in data_str:
-            try:
-                dt_obj = datetime.strptime(data_str, "%Y-%m-%d")
-                data_str = dt_obj.strftime("%d/%m/%Y")
-            except ValueError:
-                data_str = _agora().strftime("%d/%m/%Y")
-        else:
-            data_str = _agora().strftime("%d/%m/%Y")
-
-        volume_recarregado = request.form.get("volume", "")
-
-        df.at[cocho_idx, "Última Salga"] = data_str
-        df.at[cocho_idx, "Volume Atual (kg)"] = volume_recarregado
-
-        reescrever_aba("Cochos", df)
-        flash(f"✨ Cocho salgado com sucesso em {data_str}!", "success")
+        try:
+            data_obj = datetime.strptime(data_str, "%Y-%m-%d").date()
+        except ValueError:
+            raise ValueError("Informe uma data válida para a reposição.")
+        quantidade = float(request.form.get("volume", "").replace(",", "."))
+        if not math.isfinite(quantidade) or quantidade <= 0:
+            raise ValueError("A quantidade reposta deve ser maior que zero.")
+        dados = _get_dados_cache()
+        situacao = CO.calcular_situacao_cochos(
+            df, dados.get("Visitas"), CO.carregar_movimentos()
+        ).get(str(cocho_id), {})
+        capacidade = CO._normalizar_numero(cocho.iloc[0].get("Capacidade (kg)")) or 500
+        saldo = situacao.get("volume_kg", 0)
+        if quantidade + saldo > capacidade + 1e-9:
+            raise ValueError(f"A reposição excede a capacidade: cabem {max(0, capacidade - saldo):g} kg.")
         fazer_backup_seguro()
+        salvar_linha("Movimentos Cocho", [
+            uuid.uuid4().hex[:12].upper(), data_obj.strftime("%d/%m/%Y"),
+            str(cocho_id), "Reposição", quantidade, "", "",
+            _membro_logado(),
+        ])
+        flash(f"✨ Reposição de {quantidade:g} kg registrada em {data_obj:%d/%m/%Y}.", "success")
+    except ValueError as e:
+        flash(str(e), "error")
     except Exception as e:
-        flash(f"Erro ao registrar salga: {e}", "error")
+        app.logger.exception("Falha ao registrar reposição no cocho %s", cocho_id)
+        flash(f"Erro ao registrar reposição: {e}", "error")
 
+    return redirect(url_for("cochos"))
+
+
+@app.route("/cochos/leitura/<cocho_id>", methods=["POST"])
+@login_required
+def registrar_leitura_cocho(cocho_id):
+    """Registra a sobra e o número de cabeças para medir consumo/cabeça/dia."""
+    _validar_csrf()
+    try:
+        import math
+        from db import salvar_linha
+        df = CO.carregar()
+        cocho = df[df["ID"].astype(str).str.strip() == str(cocho_id).strip()]
+        if cocho.empty:
+            abort(404)
+        data_str = request.form.get("data", "").strip()
+        try:
+            data_obj = datetime.strptime(data_str, "%Y-%m-%d").date()
+        except ValueError:
+            raise ValueError("Informe uma data válida para a leitura.")
+        sobra = float(request.form.get("sobra", "").replace(",", "."))
+        cabecas = int(request.form.get("cabecas", "0"))
+        capacidade = CO._normalizar_numero(cocho.iloc[0].get("Capacidade (kg)")) or 500
+        if not math.isfinite(sobra) or sobra < 0 or sobra > capacidade:
+            raise ValueError(f"A sobra deve estar entre 0 e {capacidade:g} kg.")
+        if cabecas <= 0:
+            raise ValueError("Informe o número de cabeças atendidas pelo cocho.")
+        fazer_backup_seguro()
+        salvar_linha("Movimentos Cocho", [
+            uuid.uuid4().hex[:12].upper(), data_obj.strftime("%d/%m/%Y"),
+            str(cocho_id), "Leitura", sobra, cabecas,
+            request.form.get("observacoes", "").strip(), _membro_logado(),
+        ])
+        flash("Leitura do cocho registrada; o consumo/cabeça/dia será calculado quando houver duas leituras.", "success")
+    except ValueError as e:
+        flash(str(e), "error")
+    except Exception as e:
+        app.logger.exception("Falha ao registrar leitura do cocho %s", cocho_id)
+        flash(f"Erro ao registrar leitura: {e}", "error")
     return redirect(url_for("cochos"))
 
 
