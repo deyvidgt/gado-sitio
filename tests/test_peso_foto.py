@@ -180,3 +180,27 @@ def test_fator_bcs_aplica():
     assert F.FATOR_BCS[1] == 0.82
     # BCS 9 (muito gordo) sobrestima, fator 1.18
     assert F.FATOR_BCS[9] == 1.18
+
+
+def test_bcs_altera_estimativa_e_historico(um_animal):
+    bruto = F.registrar(um_animal, 160, 70, 100, "2026-10-01", bcs=7)
+    man = db.carregar_aba("Manejo")
+    estimativa = F.ultima_estimativa(um_animal, man)
+    historico = F.historico_estimativas(um_animal, man)
+    assert estimativa["bruto"] == pytest.approx(bruto)
+    assert estimativa["peso_bcs"] == pytest.approx(bruto * F.FATOR_BCS[7])
+    assert estimativa["kg"] == pytest.approx(bruto * F.FATOR_BCS[7])
+    assert historico[-1]["calibrado"] == pytest.approx(bruto * F.FATOR_BCS[7], abs=0.1)
+
+
+def test_calibracao_compara_peso_ajustado_por_bcs():
+    linhas = []
+    for i, data in enumerate(("2026-01-01", "2026-02-01", "2026-03-01")):
+        ref = "Amarelo 21 #A0001"
+        linhas += [
+            _linha(data, "Peso Estimado", f"{ref}: 400 kg", ref)
+        ]
+        linhas[-1]["Descrição"] = "Foto · BCS 7 (fator 1.06)"
+        linhas.append(_linha(pd.Timestamp(data) + pd.Timedelta(days=1), "Pesagem",
+                             f"{ref}: 424 kg", ref))
+    assert F.fator_calibracao(_df(*linhas)) == pytest.approx((1.0, 3))

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Conferir bula — {{ pendente.nome }}{% endblock %}
+{% block page_title %}Conferir bula oficial 📄{% endblock %}
+
+{% block content %}
+<div class="section-head">
+  <h2>{{ pendente.nome }}</h2>
+  <a href="{{ url_for('atualizar_bulas') }}" class="btn btn-outline btn-sm">← Cancelar</a>
+</div>
+<div class="card">
+  <p style="font-size:13px;margin-bottom:8px">
+    <b>Fonte:</b>
+    <a href="{{ pendente.fonte }}" target="_blank" rel="noopener noreferrer">{{ pendente.fonte }}</a>
+  </p>
+  <p class="linha-sub" style="margin-bottom:12px">
+    Confira no documento a marca e a formulação. Só confirme se esta for a bula correta para o produto.
+  </p>
+  <iframe title="Prévia da bula de {{ pendente.nome }}"
+          src="{{ url_for('visualizar_bula_pendente', token=pendente.token) }}"
+          style="width:100%;height:min(70vh,800px);border:1px solid var(--border);border-radius:8px">
+  </iframe>
+  <form method="post" action="{{ url_for('confirmar_bula') }}" style="margin-top:14px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="token" value="{{ pendente.token }}">
+    <button class="btn btn-primary" type="submit">Confirmo a bula e enviar ao Drive</button>
+  </form>
+</div>
+{% endblock %}

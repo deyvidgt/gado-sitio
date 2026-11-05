@@ -17,7 +17,8 @@ import pesagem as P
 import peso_foto as PF
 from calculos import calcular_estoque, calcular_estoque_por_membro
 from config import (LOGIN_MEMBRO, MEMBROS, NOMES_MEMBROS, CORES_BRINCO, CATEGORIAS_ANIMAL,
-                    ORIGENS_ANIMAL, COLUNAS_MANEJO, TIPOS_COM_PRODUTO, TIPOS_FOTO)
+                    ORIGENS_ANIMAL, COLUNAS_MANEJO, TIPOS_COM_PRODUTO, TIPOS_FOTO,
+                    CAUSAS_MORTIS)
 from db import fazer_backup
 from routes_visitas import _enviar_avisos_depois
 from extensions import (app, _agora, _validar_csrf, login_required, _get_dados_cache,
@@ -299,7 +300,8 @@ def peso_foto(id_):
         except ValueError as e:
             flash(str(e), "error")
             return redirect(url_for("peso_foto", id_=id_))
-        flash(f"📷 Peso estimado: ~{bruto * fator:.0f} kg (estimativa, não é balança).", "success")
+        flash(f"📷 Peso estimado: ~{bruto * PF.fator_bcs(f.get('bcs')) * fator:.0f} kg "
+              "(estimativa, não é balança).", "success")
         return redirect(url_for("ficha_animal", id_=id_) + "#peso")
     return render_template("peso_foto.html", a=_linha_animal(a, _agora()), fator=fator,
                            n_pares=n_pares, PF=PF, **_ctx_templates())
@@ -336,6 +338,7 @@ def ficha_animal(id_):
 
     ctx = {
         "a": _linha_animal(a, hoje), "raw": a,
+        "CAUSAS_MORTIS": CAUSAS_MORTIS,
         "nascimento": fmt_data(a["Nascimento"]) if pd.notna(a["Nascimento"]) else "",
         "mae_txt": A._RE_ID.sub("", a["Mãe"]).strip(), "mae_id": mae_id,
         "filhos": [_linha_animal(x, hoje) for _, x in filhos.iterrows()],
@@ -464,7 +467,9 @@ def baixa_animal(id_):
         fazer_backup_seguro()
         feitos = A.dar_baixa([id_], status, f.get("data") or None, responsavel=_membro_logado(),
                              registrar_morte=bool(f.get("registrar_morte")),
-                             motivo=f.get("motivo", "").strip())
+                             motivo=f.get("motivo", "").strip(),
+                             causa_mortis=f.get("causa_mortis", ""),
+                             laudo=f.get("laudo", "").strip())
     except ValueError as e:
         flash(str(e), "error")
         return redirect(url_for("ficha_animal", id_=id_))

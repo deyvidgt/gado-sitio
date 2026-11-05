@@ -11,6 +11,7 @@ from flask import render_template, request, redirect, url_for, flash
 
 import animais as A
 import pastos as PA
+import pastos_ms as PMS
 import pesagem as P
 import planejamento as PL
 import db
@@ -175,6 +176,38 @@ def pastos():
                            hoje=pd.Timestamp(_agora()).strftime("%Y-%m-%d"))
 
 
+@app.route("/pastos/medicoes", methods=["GET", "POST"])
+@login_required
+def medicoes_pastos():
+    if request.method == "POST":
+        _validar_csrf()
+        f = request.form
+        try:
+            estimativa = PMS.registrar(
+                f.get("pasto_id"), f.get("data"), f.get("altura"),
+                f.get("coeficiente"), f.get("observacoes", ""), _membro_logado(),
+            )
+            flash(
+                f"Medição registrada: {estimativa['altura_cm']:g} cm; "
+                f"MS estimada em {estimativa['ms_kg_ha']:g} kg/ha.",
+                "success",
+            )
+        except ValueError as e:
+            flash(str(e), "error")
+        return redirect(url_for("medicoes_pastos"))
+
+    df = PMS.carregar()
+    if not df.empty:
+        df = df.sort_values("Data", ascending=False, na_position="last")
+    return render_template(
+        "pastos_medicoes.html",
+        pastos=PA.ativos(PA.carregar()).to_dict("records"),
+        coeficientes=PMS.coeficientes_atuais(),
+        medicoes=df.head(50).to_dict("records"),
+        hoje=_agora().strftime("%Y-%m-%d"),
+    )
+
+
 @app.route("/pastos/novo", methods=["POST"])
 @login_required
 def novo_pasto():
@@ -303,6 +336,8 @@ def aplicacoes_pastos():
                 "Defensivo": "Veneno/Defensivo",
                 "Outro": "Manutenção/Outros",
             }[tipo_insumo]
+            categoria_financeira = "Sanidade" if tipo_insumo == "Defensivo" else (
+                "Manutenção" if tipo_insumo == "Outro" else "Nutrição")
             descricao = f"Aplicação em {pasto_id}: {tipo_insumo} — {produto} (#{app_id})"
             dados = _get_dados_cache()
             cabecas = calcular_estoque(
@@ -317,6 +352,7 @@ def aplicacoes_pastos():
             linha_gasto = [
                 data_iso, categoria_gasto, descricao, custo, cabecas,
                 round(custo / cabecas, 4), responsavel, "", None, pasto_id, app_id,
+                categoria_financeira,
             ]
             fazer_backup_seguro()
             db.salvar_linhas_atomicas({

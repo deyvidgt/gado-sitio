@@ -140,6 +140,42 @@
 
     <!-- ── Próximos eventos e tarefas (direita) ── -->
     <div>
+      <div class="card" style="margin-bottom:16px">
+        <h3 style="margin-top:0">🩺 Sugestões de manejo</h3>
+        <p class="muted">
+          Calculadas do último manejo registrado e do intervalo configurado; só viram tarefa se você confirmar.
+          <a href="{{ url_for('configuracoes') }}#alertas-saude">Ajustar intervalos</a>.
+        </p>
+        {% if sugestoes_manejo %}
+          <ul class="lista-items">
+            {% for item in sugestoes_manejo %}
+              <li class="lista-item" style="align-items:flex-start">
+                <span class="lista-item-icon">
+                  {% if item.status == 'vencido' %}🔴{% elif item.status == 'hoje' %}🟡{% else %}🟢{% endif %}
+                </span>
+                <div class="lista-item-content" style="flex:1">
+                  <div class="lista-item-label">{{ item.tipo }} · {{ item.pasto }}</div>
+                  <div class="lista-item-desc">
+                    {{ item.animais|length }} animal(is) · último em {{ item.ultima|data_br }} ·
+                    previsto {{ item.prevista|data_br }} · intervalo {{ item.intervalo }} dias
+                  </div>
+                  <small class="muted">{{ item.animais|join(', ') }}</small>
+                  <form method="post" action="{{ url_for('criar_tarefa_manejo_sugerido') }}" style="margin-top:8px">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="titulo" value="{{ item.titulo }}">
+                    <input type="hidden" name="data" value="{{ item.prevista.strftime('%Y-%m-%d') }}">
+                    <input type="hidden" name="observacoes" value="{{ item.animais|join(', ') }}">
+                    <button class="btn btn-outline btn-sm">Adicionar tarefa (confirmar)</button>
+                  </form>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">Sem manejos com histórico vencidos ou previstos para os próximos 30 dias.</p>
+        {% endif %}
+      </div>
+
       <!-- Próximos 14 dias -->
       <div class="card" style="margin-bottom:16px">
         <h3 style="margin-top:0">⏰ Próximos 14 dias</h3>

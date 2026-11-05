@@ -255,6 +255,17 @@
         <label>Detalhe (opcional)</label>
         <input type="text" name="motivo" maxlength="160" placeholder="ex: picada de cobra">
       </div>
+      <div class="form-group" id="grp-causa-morte" style="display:none">
+        <label>Causa da morte</label>
+        <select name="causa_mortis" id="sel-causa-morte">
+          <option value="">Selecione...</option>
+          {% for causa in CAUSAS_MORTIS %}<option value="{{ causa }}">{{ causa }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group full" id="grp-laudo" style="display:none">
+        <label>Laudo / observações (opcional)</label>
+        <textarea name="laudo" rows="2" maxlength="500"></textarea>
+      </div>
       <div class="form-group full" id="grp-morte" style="display:none">
         <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:13.5px">
           <input type="checkbox" name="registrar_morte" value="1" checked style="width:auto">
@@ -381,8 +392,17 @@
 
 (function () {
   const sel = document.getElementById("sel-baixa"), grp = document.getElementById("grp-morte");
+  const causaGrupo = document.getElementById("grp-causa-morte");
+  const laudoGrupo = document.getElementById("grp-laudo");
+  const causa = document.getElementById("sel-causa-morte");
   if (!sel) return;
-  const t = () => grp.style.display = sel.value === "Morto" ? "" : "none";
+  const t = () => {
+    const morte = sel.value === "Morto";
+    grp.style.display = morte ? "" : "none";
+    causaGrupo.style.display = morte ? "" : "none";
+    laudoGrupo.style.display = morte ? "" : "none";
+    causa.required = morte;
+  };
   sel.addEventListener("change", t); t();
 })();
 </script>

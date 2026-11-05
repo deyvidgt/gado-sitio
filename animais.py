@@ -321,10 +321,12 @@ def normalizar(dados: dict, df: pd.DataFrame, reservados_num=None, exceto_id=Non
 
 
 def _linha_manejo(data, tipo, qtd, desc, responsavel, perda_de="", produto="",
-                  nasc_de="", brincos="", pesos="", pasto="") -> list:
+                  nasc_de="", brincos="", pesos="", pasto="", causa_mortis="",
+                  laudo="") -> list:
     vals = {"Data": data, "Tipo": tipo, "Qtd Cabeças": qtd, "Descrição": desc,
             "Responsável": responsavel, "Perda De": perda_de, "Produto": produto,
-            "Nascimento De": nasc_de, "Brincos": brincos, "Pesos": pesos, "Pasto": pasto}
+            "Nascimento De": nasc_de, "Brincos": brincos, "Pesos": pesos, "Pasto": pasto,
+            "Causa Mortis": causa_mortis, "Laudo/Observações": laudo}
     return [vals.get(c, "") for c in COLUNAS_MANEJO]
 
 
@@ -407,7 +409,8 @@ def atualizar(id_: str, dados: dict):
 # ── Baixa (venda / morte) ─────────────────────────────────────────────────────
 
 def dar_baixa(ids: list[str], status: str, data=None, responsavel: str = "",
-              registrar_morte: bool = True, motivo: str = "") -> list[str]:
+              registrar_morte: bool = True, motivo: str = "", causa_mortis: str = "",
+              laudo: str = "") -> list[str]:
     """Marca os animais como Vendido/Morto (libera o brinco para reaproveitar).
 
     Morte: grava também a Morte/Perda no Manejo — uma linha por dono, com
@@ -417,6 +420,11 @@ def dar_baixa(ids: list[str], status: str, data=None, responsavel: str = "",
     """
     if status not in ("Vendido", "Morto"):
         raise ValueError("Status de baixa inválido.")
+    if status == "Morto" and registrar_morte:
+        from config import CAUSAS_MORTIS
+        causa_mortis = str(causa_mortis or "Desconhecida").strip()
+        if causa_mortis not in CAUSAS_MORTIS:
+            raise ValueError("Selecione uma causa de morte válida.")
     df = carregar()
     data_ts = _data(data) if data else pd.Timestamp(datetime.now().date())
     if pd.isna(data_ts):
@@ -444,7 +452,8 @@ def dar_baixa(ids: list[str], status: str, data=None, responsavel: str = "",
         for dono, refs in por_dono.items():
             db.salvar_linha("Manejo", _linha_manejo(
                 data_ts, "Morte/Perda", len(refs), motivo or "Baixa pelo cadastro de animais",
-                responsavel, perda_de=dono, brincos="; ".join(refs)))
+                responsavel, perda_de=dono, brincos="; ".join(refs),
+                causa_mortis=causa_mortis, laudo=str(laudo or "").strip()[:500]))
             avisar_manejo("Morte/Perda", len(refs), "; ".join(refs), dono, motivo,
                           registrado_por=responsavel)
     return feitos

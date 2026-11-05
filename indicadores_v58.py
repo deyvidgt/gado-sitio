@@ -15,6 +15,12 @@ from db import carregar_aba
 from extensions import _agora
 
 
+def _carregar_aba(dados: dict, nome: str) -> pd.DataFrame:
+    """Usa a aba recebida quando existe; DataFrame não tem valor booleano."""
+    df = dados.get(nome)
+    return df if df is not None else carregar_aba(nome)
+
+
 def engorda_pastagem_resumo(dados: dict = None) -> dict:
     """
     Retorna resumo de engorda vs pastagem do período atual.
@@ -29,7 +35,7 @@ def engorda_pastagem_resumo(dados: dict = None) -> dict:
     """
     try:
         abas = dados or {}
-        engorda = abas.get("Engorda Pastagem") or carregar_aba("Engorda Pastagem")
+        engorda = _carregar_aba(abas, "Engorda Pastagem")
 
         if engorda.empty:
             return {"lotes_ativos": 0, "ganho_medio": 0, "melhor_lote": {}, "tabela": []}
@@ -67,7 +73,7 @@ def gmd_lotacao_analise(dados: dict = None) -> dict:
     """
     try:
         abas = dados or {}
-        historico = abas.get("GMD Lotação") or carregar_aba("GMD Lotação")
+        historico = _carregar_aba(abas, "GMD Lotação")
 
         if historico.empty:
             return {"periodos": [], "correlacao": 0, "recomendacao": ""}
@@ -109,7 +115,7 @@ def racao_consumo_analise(dados: dict = None) -> dict:
     """
     try:
         abas = dados or {}
-        racao = abas.get("Ração Consumo") or carregar_aba("Ração Consumo")
+        racao = _carregar_aba(abas, "Ração Consumo")
 
         if racao.empty:
             return {"consumo_medio": 0, "desperdicio_medio": 0, "custo_total_mes": 0, "tabela": []}
@@ -149,7 +155,7 @@ def mortalidade_bezerros_analise(dados: dict = None) -> dict:
     """
     try:
         abas = dados or {}
-        mortalidade = abas.get("Mortalidade Bezerros") or carregar_aba("Mortalidade Bezerros")
+        mortalidade = _carregar_aba(abas, "Mortalidade Bezerros")
 
         if mortalidade.empty:
             return {

@@ -8,6 +8,7 @@ from urllib.parse import quote
 
 import animais
 import db
+import pandas as pd
 import tarefas
 
 
@@ -142,6 +143,8 @@ def _normalizar(valor) -> str:
 
 def _texto(valor) -> str:
     if valor is None:
+        return ""
+    if pd.isna(valor):
         return ""
     if isinstance(valor, (date, datetime)):
         return valor.strftime("%d/%m/%Y %Y-%m-%d")

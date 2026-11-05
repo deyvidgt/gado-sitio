@@ -23,6 +23,13 @@ def novo_id(prefixo):
 
 
 def normalizar_data(valor):
+    if valor is None:
+        return pd.NaT
+    try:
+        if pd.isna(valor):
+            return pd.NaT
+    except (TypeError, ValueError):
+        pass
     if isinstance(valor, (datetime, date, pd.Timestamp)):
         return pd.Timestamp(valor).normalize()
     texto = str(valor or "").strip()

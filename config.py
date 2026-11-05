@@ -20,7 +20,7 @@ for _stream in ("stdout", "stderr"):
         pass
 
 ARQUIVO_DADOS = "gado_familia.xlsx"
-VERSAO = "5.19.0"
+VERSAO = "5.20.0"
 NOME_SITIO = "Sítio Santo Antonio"
 
 # ── Donos (sócios) do sítio ─────────────────────────────────────────────────
@@ -144,6 +144,23 @@ TIPOS_GASTO = [
     "Calcário/Adubação",
     "Manutenção/Outros",
 ]
+CATEGORIAS_GASTO = [
+    "Nutrição",
+    "Sanidade",
+    "Mão de obra",
+    "Manutenção",
+    "Impostos",
+    "Outros",
+]
+CAUSAS_MORTIS = [
+    "Botulismo",
+    "Raio",
+    "Picada",
+    "Acidente",
+    "Doença",
+    "Desconhecida",
+    "Outros",
+]
 
 TIPOS_MANEJO = [
     "Vacina Raiva",
@@ -192,6 +209,8 @@ COLUNAS_GASTOS = [
     "Produto", "Qtd Sacos",
     # Aplicação de insumo em pastagem vinculada à aba "Pastos Aplicações".
     "Pasto ID", "Aplicação ID",
+    # Categoria consolidada para análise financeira.
+    "Categoria",
 ]
 COLUNAS_MANEJO = [
     "Data", "Tipo", "Qtd Cabeças", "Descrição", "Responsável",
@@ -207,6 +226,7 @@ COLUNAS_MANEJO = [
     "Pesos",
     # NOVO v5.2: para qual pasto (ID P01…) foi a "Movimentação de Pasto" — pastos.py.
     "Pasto",
+    "Causa Mortis", "Laudo/Observações",
 ]
 
 # Tipos de manejo em que o formulário pergunta qual remédio/produto foi usado.
@@ -264,6 +284,14 @@ COLUNAS_FOTOS = [
 ]
 # v5.2 — Pastos desenhados no mapa (pastos.py). Contorno = GeoJSON do polígono.
 COLUNAS_PASTOS = ["ID", "Nome", "Área (ha)", "Contorno", "Cor", "Ativo", "Observações", "Criado Por"]
+COLUNAS_PASTOS_MEDICOES = [
+    "ID", "Data", "Pasto ID", "Altura (cm)", "Coeficiente MS (kg/ha/cm)",
+    "MS Estimada (kg/ha)", "Observações", "Responsável",
+]
+COLUNAS_MOVIMENTOS_COCHO = [
+    "ID", "Data", "Cocho ID", "Tipo", "Quantidade (kg)", "Cabeças",
+    "Observações", "Responsável",
+]
 # v5.3 — Agenda de tarefas (tarefas.py). "Feito Em" vazio = ainda pendente.
 COLUNAS_TAREFAS = ["ID", "Data", "Título", "Responsável", "Repetir", "Feito Em",
                    "Observações", "Criado Por"]
@@ -289,6 +317,11 @@ COLUNAS_MEDICACOES = [
     "Data", "Brincos", "Tipo Medicação", "Princípio Ativo",
     "Dosagem", "Via", "Motivo", "Quarentena Leite (dias)",
     "Data Liberação", "Custo (R$)", "Responsável", "Observações",
+]
+COLUNAS_ESTOQUE_MEDICAMENTOS = [
+    "ID Movimento", "Data", "Movimento", "Produto", "Princípio Ativo",
+    "Lote", "Validade", "Quantidade", "Unidade", "ID Lote",
+    "Fornecedor/Referência", "Observações", "Responsável",
 ]
 
 # v5.4 — módulo leiteiro. Abas novas; as colunas entram somente no fim do

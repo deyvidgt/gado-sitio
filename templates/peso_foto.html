@@ -21,9 +21,9 @@
   <a href="{{ url_for('ficha_animal', id_=a.id) }}" class="btn btn-outline btn-sm">← Ficha</a></div>
 
 <div class="aviso-pf">
-  ⚠️ <b>É uma estimativa</b>: erro de uns {{ 10 if n_pares >= 3 else 15 }}%
+  ⚠️ <b>É uma estimativa</b>: faixa aproximada de ±{{ 10 if n_pares >= 3 else 15 }}%
   {% if n_pares >= 3 %}(calibrada com {{ n_pares }} pesagens de balança deste sítio){% else %}— melhora sozinha
-  quando houver 3 animais com foto e balança no mesmo período{% endif %}.
+  quando houver 3 pares de estimativa e balança no mesmo animal, em até 15 dias{% endif %}.
   Serve para acompanhar o ganho e decidir a venda, não para negociar.
 </div>
 
@@ -32,6 +32,7 @@
   <ul style="font-size:13.5px;margin-left:18px;line-height:1.6">
     <li>O animal <b>de lado</b>, parado e reto; você a uns <b>4 metros</b>, com o celular na altura do meio dele.</li>
     <li>Uma <b>referência de tamanho conhecido</b> no mesmo plano do animal: uma vara de 1 m encostada nele, ou a tábua da cerca já medida.</li>
+    <li>Evite foto inclinada, animal curvado, terreno em declive ou referência mais perto/longe que o animal.</li>
     <li>Depois toque nos pontos. Dá para <b>arrastar</b> cada ponto para acertar.</li>
   </ul>
   <label class="btn btn-primary" style="cursor:pointer;margin-top:10px">📷 Tirar / escolher foto
@@ -39,7 +40,8 @@
 </div>
 
 <div class="card" style="margin-top:16px" id="pf-medir" data-fator="{{ fator }}"
-     data-perimetro="{{ PF.FATOR_PERIMETRO }}" data-schaeffer="{{ PF.CONST_SCHAEFFER }}">
+     data-perimetro="{{ PF.FATOR_PERIMETRO }}" data-schaeffer="{{ PF.CONST_SCHAEFFER }}"
+     data-bcs="{{ PF.FATOR_BCS | tojson | forceescape }}">
   <div class="pf-passos" id="pf-passos">
     <div class="pf-passo" data-par="0"><span class="bol" style="background:#f4c430"></span>1. As <b>duas pontas da referência</b></div>
     <div class="pf-passo" data-par="1"><span class="bol" style="background:#4fc3f7"></span>2. <b>Ponta do ombro</b> e <b>ponta da nádega</b> (comprimento)</div>
@@ -62,7 +64,7 @@
       <div class="form-group"><label>Profundidade do peito (cm)</label>
         <input type="text" name="profundidade" id="pf-prof" inputmode="decimal" required placeholder="sai da foto"></div>
       <div class="form-group"><label>Body Condition Score (BCS) — opcional</label>
-        <select name="bcs">
+        <select name="bcs" id="pf-bcs">
           <option value="">— Sem ajuste de condição</option>
           <option value="1">1 — Muito magro</option>
           <option value="2">2 — Magro</option>
@@ -76,7 +78,10 @@
         </select>
       </div>
     </div>
-    <p class="muted" style="margin-top:6px">Mediu com fita métrica? Digite as duas medidas direto, sem foto.</p>
+    <p class="muted" style="margin-top:6px">
+      O BCS aplica um ajuste aproximado à fórmula, sem validação específica para este rebanho.
+      Deixe em branco se não tiver segurança para avaliar. Mediu com fita métrica? Digite as duas medidas direto.
+    </p>
     <div class="pf-res" aria-live="polite">
       <div><span class="muted">Perímetro do peito</span><b id="pf-perim">—</b></div>
       <div><span class="muted">Peso estimado</span><b id="pf-peso">—</b><span class="muted" id="pf-faixa"></span></div>
@@ -91,12 +96,12 @@
 (function () {
   const caixa = document.getElementById("pf-medir");
   const FATOR = parseFloat(caixa.dataset.fator), K_PER = parseFloat(caixa.dataset.perimetro),
-        K_SCH = parseFloat(caixa.dataset.schaeffer);
+        K_SCH = parseFloat(caixa.dataset.schaeffer), FATOR_BCS = JSON.parse(caixa.dataset.bcs);
   const FAIXA = {{ 10 if n_pares >= 3 else 15 }};
   const CORES = ["#f4c430", "#4fc3f7", "#ef5350"];
   const tela = document.getElementById("pf-tela"), ctx = tela.getContext("2d");
   const inComp = document.getElementById("pf-comp"), inProf = document.getElementById("pf-prof"),
-        inRef = document.getElementById("pf-ref");
+        inRef = document.getElementById("pf-ref"), inBcs = document.getElementById("pf-bcs");
   let img = null, pontos = [], arrastando = -1;
 
   const num = v => parseFloat(String(v).replace(",", "."));
@@ -105,7 +110,9 @@
   function calcular() {
     const comp = num(inComp.value), prof = num(inProf.value);
     if (!(comp > 0 && prof > 0)) { pf("—", "—", ""); return; }
-    const perim = K_PER * prof, kg = perim * perim * comp / K_SCH * FATOR;
+    const perim = K_PER * prof, bcs = Number(inBcs.value),
+          ajusteBcs = inBcs.value ? (FATOR_BCS[bcs] || 1) : 1,
+          kg = perim * perim * comp / K_SCH * ajusteBcs * FATOR;
     pf(perim.toFixed(0) + " cm", "~" + kg.toFixed(0) + " kg",
        "entre " + (kg * (1 - FAIXA / 100)).toFixed(0) + " e " + (kg * (1 + FAIXA / 100)).toFixed(0) + " kg");
   }
@@ -181,6 +188,7 @@
   document.getElementById("pf-desfazer").onclick = () => { pontos.pop(); desenhar(); };
   document.getElementById("pf-limpar").onclick = () => { pontos = []; desenhar(); };
   [inComp, inProf].forEach(i => i.addEventListener("input", calcular));
+  inBcs.addEventListener("change", calcular);
   inRef.addEventListener("input", () => { medidas(); calcular(); });
 })();
 </script>

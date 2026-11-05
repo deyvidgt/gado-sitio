@@ -7,6 +7,11 @@
 <p style="color:var(--text-3);font-size:13px;margin-top:-6px">
   Bula em PDF e foto da embalagem de cada remédio e vacina. Toque para abrir.
 </p>
+{% if pode_atualizar and drive_ok %}
+<a href="{{ url_for('atualizar_bulas') }}" class="btn btn-primary" style="margin:8px 0 16px">
+  ⬇️ Buscar bula oficial
+</a>
+{% endif %}
 
 {% if not drive_ok %}
 <div class="card" style="border-left:4px solid var(--warn);margin-bottom:16px">
@@ -46,9 +51,8 @@
 {% if sem_bula %}
 <h2 style="font-size:15px;margin:22px 0 10px">Ainda sem bula ({{ sem_bula|length }})</h2>
 <p class="linha-sub" style="margin-bottom:10px">
-  Faltam estes arquivos no Drive. Para incluir, coloque os PDFs numa pasta e rode
-  <code>python subir_bulas.py &lt;pasta&gt;</code> — o nome do arquivo é o produto
-  (ex.: <code>ivermectina.pdf</code>).
+  Faltam estes arquivos no Drive. O administrador pode cadastrar a URL da bula
+  oficial, conferir o PDF e confirmar o envio.
 </p>
 <div style="display:flex;flex-wrap:wrap;gap:6px">
   {% for p in sem_bula %}

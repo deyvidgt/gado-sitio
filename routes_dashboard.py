@@ -373,12 +373,14 @@ def dashboard():
     grafico_cmp_gpcab = _grafico_cmp_gpcab_evolucao(r)
     grafico_gastos = _grafico_gastos_por_tipo(dados)
 
+    import pesagem
+    tendencia_peso = pesagem.curva_evolucao_peso(dados["Manejo"])[-24:]
     return render_template("dashboard.html", r=r, membros=membros_r, insumos=insumos,
                            estoque_membro=estoque_membro, recentes=recentes[:6],
                            alertas=alertas, indicadores=indicadores, rebanho_est=rebanho_est,
                            estado_sitio=estado_sitio, acoes_rapidas=acoes_rapidas,
                            atencao_agora=atencao_agora, ocorrencias=recentes[:6],
-                           resumo_leite=resumo_leite, saude_leite=saude_leite, tendencia_peso=[], cards=cards,
+                           resumo_leite=resumo_leite, saude_leite=saude_leite, tendencia_peso=tendencia_peso, cards=cards,
                            entrada_saida=entrada_saida, tempo=tempo_previsao, pastos_disponivel=pastos_disponivel,
                            grafico_resultado=grafico_resultado, grafico_cmp_gpcab=grafico_cmp_gpcab,
                            grafico_gastos=grafico_gastos,
@@ -677,5 +679,4 @@ def dashboard_exemplo_graficos():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-
 

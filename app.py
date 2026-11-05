@@ -121,6 +121,7 @@ from routes_genetica import *   # noqa: F401, F403
 
 # v5.7 — Histórico de medicações (medicacoes.py)
 from routes_medicacoes import * # noqa: F401, F403
+from routes_estoque_medicamentos import *  # noqa: F401, F403
 
 # v5.8 — Indicadores (engorda, GMD, ração, mortalidade)
 from routes_indicadores import * # noqa: F401, F403

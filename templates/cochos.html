@@ -332,8 +332,10 @@
           <div class="cocho-stat-label">Volume Atual</div>
         </div>
         <div class="cocho-stat">
-          <div class="cocho-stat-valor">{{ cocho.consumo_dia_kg }}</div>
-          <div class="cocho-stat-label">Consumo/dia</div>
+          <div class="cocho-stat-valor">
+            {{ cocho.consumo_g_cab_dia if cocho.consumo_g_cab_dia is not none else '—' }}
+          </div>
+          <div class="cocho-stat-label">g/cab/dia</div>
         </div>
         <div class="cocho-stat">
           <div class="cocho-stat-valor">{{ cocho.dias_restantes }}</div>
@@ -382,6 +384,20 @@
               <button class="btn btn-outline btn-sm" style="width: 100%">🗑️ Remover</button>
             </form>
           </div>
+          <details style="margin-top:12px">
+            <summary style="cursor:pointer;font-weight:600">📏 Registrar sobra e cabeças</summary>
+            <form method="post" action="{{ url_for('registrar_leitura_cocho', cocho_id=cocho.id) }}"
+                  style="margin-top:10px;display:grid;gap:8px">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <label>Data <input type="date" name="data" value="{{ hoje }}" required></label>
+              <label>Sobra atual (kg) <input type="number" name="sobra" min="0" max="{{ cocho.capacidade_kg }}"
+                     step="0.1" value="{{ cocho.volume_kg }}" required></label>
+              <label>Cabeças atendidas <input type="number" name="cabecas" min="1" step="1" required></label>
+              <label>Observações <input type="text" name="observacoes" maxlength="200"></label>
+              <button class="btn btn-outline btn-sm">Salvar leitura</button>
+            </form>
+            <small class="muted">O consumo só é estimado após duas leituras; anote também cada reposição.</small>
+          </details>
         </details>
       </div>
     </div>
@@ -410,7 +426,7 @@
         <input type="date" name="data" id="modal-data" value="{{ hoje }}" required>
       </div>
       <div class="form-group">
-        <label>Quantidade fornecida (kg)</label>
+        <label>Quantidade a repor (kg)</label>
         <div style="display: flex; gap: 8px">
           <input type="number" step="0.1" name="volume" id="modal-volume" required placeholder="Ex: 50">
           <button type="button" class="btn btn-outline btn-sm" onclick="encherCapacidadeTotal()" title="Preencher com capacidade máxima">
@@ -529,6 +545,7 @@
 {% block scripts %}
 <script>
   let capacidadeAtualCocho = 0;
+  let volumeAtualCocho = 0;
 
   function mostrarNovoCocho() {
     document.getElementById("novo-cocho-form").style.display = "block";
@@ -544,8 +561,9 @@
 
   function abrirModalSalgar(id, nome, capacidade, volumeAtual) {
     capacidadeAtualCocho = parseFloat(capacidade) || 0;
+    volumeAtualCocho = parseFloat(volumeAtual) || 0;
     document.getElementById("modal-cocho-nome").value = nome + " (Cap.: " + capacidade + " kg)";
-    document.getElementById("modal-volume").value = volumeAtual || capacidade;
+    document.getElementById("modal-volume").value = Math.max(0, capacidadeAtualCocho - volumeAtualCocho);
     document.getElementById("form-salgar").action = "/cochos/salgar/" + id;
     document.getElementById("modal-salgar").style.display = "flex";
   }
@@ -555,7 +573,7 @@
   }
 
   function encherCapacidadeTotal() {
-    document.getElementById("modal-volume").value = capacidadeAtualCocho;
+    document.getElementById("modal-volume").value = Math.max(0, capacidadeAtualCocho - volumeAtualCocho);
   }
 
   function editarCocho(id, nome, tipo, local, capacidade, volume, observacoes) {

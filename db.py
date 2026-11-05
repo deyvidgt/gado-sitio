@@ -44,6 +44,8 @@ from config import (
     COLUNAS_MORTALIDADE_BEZERROS,
     COLUNAS_CONFINAMENTO_LOTES, COLUNAS_GENETICA, COLUNAS_INSUMOS, COLUNAS_COCHOS,  # v5.10
     COLUNAS_PASTOS_APLICACOES, COLUNAS_ORCAMENTO_PREVISTO, COLUNAS_CONTAS_FUTURAS,
+    COLUNAS_ESTOQUE_MEDICAMENTOS,
+    COLUNAS_PASTOS_MEDICOES, COLUNAS_MOVIMENTOS_COCHO,
 )
 
 # Mapa aba → colunas esperadas, usado para migrar colunas novas sem perder dados.
@@ -56,6 +58,7 @@ _SCHEMA_ABAS = {
     "Animais": COLUNAS_ANIMAIS,   # v4.3 — criada sozinha no arquivo existente
     "Fotos":   COLUNAS_FOTOS,     # v4.4
     "Pastos":  COLUNAS_PASTOS,    # v5.2
+    "Pastos Medições": COLUNAS_PASTOS_MEDICOES,
     "Tarefas": COLUNAS_TAREFAS,   # v5.3
     "Medicações": COLUNAS_MEDICACOES,  # v5.7 — histórico de medicações
     "Leite Produção": COLUNAS_LEITE_PRODUCAO,
@@ -76,9 +79,11 @@ _SCHEMA_ABAS = {
     "Genética": COLUNAS_GENETICA,  # v5.10
     "Insumos": COLUNAS_INSUMOS,  # v5.10 — catálogo de insumos com nutrição
     "Cochos": COLUNAS_COCHOS,   # v5.10 — comedouros: volume, consumo, salga
+    "Movimentos Cocho": COLUNAS_MOVIMENTOS_COCHO,
     "Pastos Aplicações": COLUNAS_PASTOS_APLICACOES,
     "Orçamento Previsto": COLUNAS_ORCAMENTO_PREVISTO,
     "Contas Futuras": COLUNAS_CONTAS_FUTURAS,
+    "Estoque Medicamentos": COLUNAS_ESTOQUE_MEDICAMENTOS,
 }
 
 # Caminho completo do arquivo de dados
@@ -255,6 +260,7 @@ def inicializar():
 
         wb.create_sheet("Fotos").append(COLUNAS_FOTOS)
         wb.create_sheet("Pastos").append(COLUNAS_PASTOS)
+        wb.create_sheet("Pastos Medições").append(COLUNAS_PASTOS_MEDICOES)
         wb.create_sheet("Tarefas").append(COLUNAS_TAREFAS)
         wb.create_sheet("Medicações").append(COLUNAS_MEDICACOES)
         wb.create_sheet("Leite Produção").append(COLUNAS_LEITE_PRODUCAO)
@@ -267,9 +273,11 @@ def inicializar():
         wb.create_sheet("Volumosos").append(COLUNAS_VOLUMOSOS)
         wb.create_sheet("Consumo Volumosos").append(COLUNAS_CONSUMO_VOLUMOSOS)
         wb.create_sheet("Cochos").append(COLUNAS_COCHOS)
+        wb.create_sheet("Movimentos Cocho").append(COLUNAS_MOVIMENTOS_COCHO)
         wb.create_sheet("Pastos Aplicações").append(COLUNAS_PASTOS_APLICACOES)
         wb.create_sheet("Orçamento Previsto").append(COLUNAS_ORCAMENTO_PREVISTO)
         wb.create_sheet("Contas Futuras").append(COLUNAS_CONTAS_FUTURAS)
+        wb.create_sheet("Estoque Medicamentos").append(COLUNAS_ESTOQUE_MEDICAMENTOS)
 
         wb.create_sheet("Resumo")
         wb.save(ARQUIVO_PATH)
@@ -292,6 +300,22 @@ def inicializar():
                 if _garantir_colunas(wb[aba], colunas):
                     alterado = True
                     print(f"✅ Colunas garantidas em '{aba}'.")
+                if aba == "Gastos":
+                    ws = wb[aba]
+                    cabecalho = {str(c.value or "").strip(): c.column
+                                 for c in ws[1] if c.value is not None}
+                    coluna_categoria = cabecalho.get("Categoria")
+                    if coluna_categoria:
+                        from gastos import categoria_legada
+                        for linha in range(2, ws.max_row + 1):
+                            if str(ws.cell(linha, coluna_categoria).value or "").strip():
+                                continue
+                            categoria = categoria_legada(
+                                ws.cell(linha, cabecalho["Tipo"]).value,
+                                ws.cell(linha, cabecalho["Descrição"]).value,
+                            )
+                            ws.cell(linha, coluna_categoria, categoria)
+                            alterado = True
             if alterado:
                 _salvar_atomico(wb)
     except Exception as e:

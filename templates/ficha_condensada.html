@@ -250,6 +250,17 @@
       </div>
       <div class="form-group"><label>Data</label><input type="date" name="data" value="{{ hoje }}"></div>
       <div class="form-group full"><label>Detalhe (opcional)</label><input type="text" name="motivo" maxlength="160" placeholder="ex.: picada de cobra"></div>
+      <div class="form-group" id="cond-grp-causa" style="display:none">
+        <label>Causa da morte</label>
+        <select name="causa_mortis" id="cond-causa-morte">
+          <option value="">Selecione...</option>
+          {% for causa in CAUSAS_MORTIS %}<option value="{{ causa }}">{{ causa }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group full" id="cond-grp-laudo" style="display:none">
+        <label>Laudo / observações (opcional)</label>
+        <textarea name="laudo" rows="2" maxlength="500"></textarea>
+      </div>
       <div class="form-group full" id="cond-grp-morte" style="display:none">
         <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:13.5px">
           <input type="checkbox" name="registrar_morte" value="1" checked style="width:auto">
@@ -358,8 +369,15 @@ if (fotoInput) {
 const baixaSelect = document.getElementById("cond-sel-baixa");
 if (baixaSelect) {
   const grupoMorte = document.getElementById("cond-grp-morte");
+  const grupoCausa = document.getElementById("cond-grp-causa");
+  const grupoLaudo = document.getElementById("cond-grp-laudo");
+  const causa = document.getElementById("cond-causa-morte");
   const atualizarBaixa = () => {
-    grupoMorte.style.display = baixaSelect.value === "Morto" ? "" : "none";
+    const morte = baixaSelect.value === "Morto";
+    grupoMorte.style.display = morte ? "" : "none";
+    grupoCausa.style.display = morte ? "" : "none";
+    grupoLaudo.style.display = morte ? "" : "none";
+    causa.required = morte;
   };
   baixaSelect.addEventListener("change", atualizarBaixa);
   atualizarBaixa();
