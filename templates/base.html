@@ -7,7 +7,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Sítio SA">
-  <meta name="theme-color" content="#1a3a1f">
+  <meta name="theme-color" content="#2e7d32">
+  <meta name="description" content="Sistema de gestão pecuária Sítio Santo Antonio.">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/icon.png') }}">
   <title>{% block title %}Gado — Sítio Santo Antonio{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
   <link rel="apple-touch-icon" href="/static/icon192.png">
@@ -257,6 +259,22 @@
     #search-btn:active {
       transform: scale(0.98);
     }
+
+    #search-mic {
+      display: none;
+      min-width: 40px;
+      min-height: 40px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+
+    #search-mic.ouvindo { background:var(--danger); color:#fff; }
 
     .search-input:focus {
       border-color: var(--green-600);
@@ -745,6 +763,7 @@
              aria-controls="search-dropdown" aria-expanded="false" aria-haspopup="listbox"
              role="combobox" autocomplete="off">
       <button type="button" id="search-btn" aria-label="Executar busca" title="Buscar (Enter)">🔎</button>
+      <button type="button" id="search-mic" aria-label="Buscar por voz" title="Falar o que deseja buscar">🎤</button>
       <div id="search-dropdown" class="search-dropdown" role="listbox" aria-live="polite" hidden></div>
     </div>
 
@@ -1266,6 +1285,55 @@ function dispensarInstall() {
     e.preventDefault();
     buscarENavegar();
   });
+
+  const mic = document.getElementById('search-mic');
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (mic && SpeechRecognition) {
+    mic.style.display = 'block';
+    const reconhecimento = new SpeechRecognition();
+    reconhecimento.lang = 'pt-BR';
+    reconhecimento.interimResults = false;
+    reconhecimento.continuous = false;
+    reconhecimento.onstart = () => {
+      mic.classList.add('ouvindo');
+      mic.setAttribute('aria-label', 'Parar busca por voz');
+      mic.title = 'Ouvindo… toque para parar';
+    };
+    reconhecimento.onresult = evento => {
+      const consulta = Array.from(evento.results)
+        .map(resultado => resultado[0].transcript).join(' ').trim();
+      if (!consulta) {
+        mostrarMensagem('Não ouvi o termo. Toque no microfone e tente novamente.', true);
+        return;
+      }
+      input.value = consulta;
+      updateButtonVisibility();
+      buscar(consulta);
+    };
+    reconhecimento.onerror = evento => {
+      mostrarMensagem(evento.error === 'not-allowed'
+        ? 'Permita o acesso ao microfone para buscar por voz.'
+        : evento.error === 'no-speech'
+          ? 'Não ouvi o termo. Toque no microfone e tente novamente.'
+          : `Busca por voz indisponível (${evento.error}).`, true);
+    };
+    reconhecimento.onend = () => {
+      mic.classList.remove('ouvindo');
+      mic.setAttribute('aria-label', 'Buscar por voz');
+      mic.title = 'Falar o que deseja buscar';
+    };
+    mic.addEventListener('click', () => {
+      if (mic.classList.contains('ouvindo')) {
+        reconhecimento.stop();
+        return;
+      }
+      try {
+        reconhecimento.start();
+      } catch (erro) {
+        mostrarMensagem('Não foi possível iniciar o microfone. Tente novamente.', true);
+      }
+    });
+  }
 
   input.addEventListener('focus', () => {
     if (input.value.trim().length >= 2 && dropdown.childElementCount) {

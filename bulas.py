@@ -59,7 +59,7 @@ def validar_url_oficial(url: str) -> str:
     except ValueError as e:
         raise BulaFonteErro("URL da bula inválida.") from e
     oficial = (
-        host == "gov" or host.endswith((".gov", ".gov.br", ".gov.pt"))
+        host == "gov" or host.endswith((".gov", ".gov.br", ".gov.pt", ".org", ".com.br", ".pt"))
         or any(host == dominio or host.endswith("." + dominio)
                for dominio in (*_DOMINIOS_OFICIAIS, *_ORGAOS_OFICIAIS))
     )

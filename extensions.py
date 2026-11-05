@@ -7,7 +7,7 @@ Objeto Flask, cache, CSRF, filtros de template e helpers compartilhados.
 Importado por todos os blueprints — evita importações circulares.
 """
 
-import os, sys, hashlib, time, threading
+import os, sys, hashlib, time, threading, gzip
 import secrets as _secrets
 from functools import wraps
 from datetime import date, datetime, timedelta
@@ -36,6 +36,24 @@ app = Flask(
     template_folder=os.path.join(BUNDLE_DIR, "templates"),
     static_folder=os.path.join(BUNDLE_DIR, "static"),
 )
+
+
+@app.after_request
+def _comprimir_resposta(response):
+    if response.status_code < 200 or response.status_code >= 300 or 'gzip' not in request.headers.get('Accept-Encoding', ''):
+        return response
+    if 'Content-Encoding' in response.headers or 'image/' in (response.content_type or '') or 'pdf' in (response.content_type or ''):
+        return response
+    data = response.get_data()
+    if len(data) < 512:
+        return response
+    compressed = gzip.compress(data)
+    if len(compressed) >= len(data):
+        return response
+    response.set_data(compressed)
+    response.headers['Content-Encoding'] = 'gzip'
+    response.headers['Content-Length'] = str(len(compressed))
+    return response
 
 from config import SECRET_KEY, SESSAO_MINUTOS, CACHE_RESUMO_TTL, VERSAO, MEMBROS, NOMES_MEMBROS
 

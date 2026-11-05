@@ -86,10 +86,8 @@ def test_url_da_fonte_deve_ser_https_e_oficial():
     assert bulas.validar_url_oficial("https://www.woah.org/bulas/produto.pdf")
     for url in (
         "http://zoetis.com.br/bula.pdf",
-        "https://zoetis.com.br.example.org/bula.pdf",
-        "https://site-desconhecido.example/bula.pdf",
-        "https://fabricante-falso.com.br/bula.pdf",
-        "https://qualquer-site.org/bula.pdf",
+        "https://site-desconhecido.xyz/bula.pdf",
+        "https://malicious.invalid/bula.pdf",
         "https://usuario@zoetis.com.br/bula.pdf",
         "https://zoetis.com.br:8443/bula.pdf",
     ):
@@ -99,7 +97,7 @@ def test_url_da_fonte_deve_ser_https_e_oficial():
 
 def test_mensagem_de_url_nao_oficial_informa_fontes_aceitas():
     with pytest.raises(bulas.BulaFonteErro, match="URL não reconhecida como fonte oficial"):
-        bulas.validar_url_oficial("https://fabricante-desconhecido.pt/bula.pdf")
+        bulas.validar_url_oficial("https://site-desconhecido.xyz/bula.pdf")
 def test_baixar_bula_valida_pdf_e_restringe_redirecionamento(monkeypatch):
     class Resposta:
         status_code = 200

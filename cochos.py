@@ -61,18 +61,33 @@ def carregar_movimentos():
 
 
 def _normalizar_data(valor):
-    """Normaliza data em vários formatos."""
+    """Normaliza data em vários formatos (com suporte robusto a dd/mm/aaaa e pandas)."""
+    if valor is None:
+        return None
     if isinstance(valor, datetime):
         return valor.date()
     if isinstance(valor, date):
         return valor
-    if valor is None or str(valor).strip() == "":
+    texto = str(valor).strip()
+    if not texto or texto.lower() in {"nan", "nat", "none"}:
         return None
     try:
-        texto = str(valor).strip()[:10]
-        if "-" in texto:
-            return datetime.strptime(texto, "%Y-%m-%d").date()
-        return datetime.strptime(texto, "%d/%m/%Y").date()
+        dt = pd.to_datetime(texto, format="%d/%m/%Y", errors="coerce")
+        if not pd.isna(dt):
+            return dt.date()
+    except Exception:
+        pass
+    try:
+        dt = pd.to_datetime(texto, errors="coerce")
+        if not pd.isna(dt):
+            return dt.date()
+    except Exception:
+        pass
+    try:
+        texto_10 = texto[:10]
+        if "-" in texto_10:
+            return datetime.strptime(texto_10, "%Y-%m-%d").date()
+        return datetime.strptime(texto_10, "%d/%m/%Y").date()
     except ValueError:
         return None
 
@@ -235,8 +250,12 @@ def calcular_situacao_cochos(df_cochos, df_visitas, df_movimentos=None) -> Dict[
 
         # Calcula dias restantes
         dias_restantes = 0
-        if consumo_dia > 0 and volume_atual > 0:
+        if volume_atual <= 0:
+            dias_restantes = 0
+        elif consumo_dia > 0:
             dias_restantes = round(volume_atual / consumo_dia)
+        else:
+            dias_restantes = 999
 
         proxima_salga = None
         if ultima_salga and consumo_dia > 0:
