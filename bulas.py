@@ -29,7 +29,6 @@ NOME_PASTA = "Bulas e embalagens"
 SUFIXOS = {"bula": ".pdf", "embalagem": ".jpg"}
 _RE_ARQUIVO = re.compile(r"[a-z0-9][a-z0-9-]*__(bula\.pdf|embalagem\.(jpg|png|webp))")
 _DOMINIOS_OFICIAIS = (
-<<<<<<< HEAD
     "zoetis.com", "zoetis.com.br", "zoetis.pt",
     "msd-saude-animal.com.br", "msd-animal-health.com", "msd-animal-health.pt", "msd.com",
     "boehringer-ingelheim.com", "boehringer-ingelheim.com.br", "boehringer-ingelheim.pt",
@@ -43,17 +42,6 @@ _DOMINIOS_OFICIAIS = (
     "merial.com", "ivomec.com", "ivomec.com.br",
 )
 _ORGAOS_OFICIAIS = ("woah.org", "europa.eu")
-=======
-    "zoetis.com", "zoetis.com.br", "msd-saude-animal.com.br", "msd-animal-health.com", "msd.com",
-    "boehringer-ingelheim.com", "boehringer-ingelheim.com.br", "elanco.com",
-    "elanco.com.br", "ourofinosaudeanimal.com", "ourofinosaudeanimal.com.br",
-    "ceva.com", "ceva.com.br", "virbac.com", "virbac.com.br", "dechra.com",
-    "dechra.com.br", "vetnil.com.br", "hertape.com.br", "biogenesisbago.com",
-    "biogenesisbago.com.br", "vetoquinol.com", "vetoquinol.com.br",
-    "agener.com.br", "vallee.com.br", "bimeda.com", "bimeda.com.br",
-    "labovet.com.br",
-)
->>>>>>> f98ba577cb0a04c0a1e525a4d8fb26a1bf3d8dbc
 LIMITE_BULA_BYTES = 25 * 1024 * 1024
 MAX_REDIRECTS = 5
 
