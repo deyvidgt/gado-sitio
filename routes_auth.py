@@ -167,9 +167,10 @@ def trocar_sitio():
     return redirect(url_for("dashboard"))   # índices de um sítio não valem no outro
 
 
-@app.route("/logout", methods=["POST"])
+@app.route("/logout", methods=["GET", "POST"])
 def logout():
-    _validar_csrf()
+    if request.method == "POST":
+        _validar_csrf()
     usuario = session.get("usuario", "")
     session.clear()
     flash(f"Até logo, {usuario.capitalize()}! 👋", "success")

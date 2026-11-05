@@ -81,6 +81,12 @@ def baixar_bula(url: str) -> tuple[bytes, str]:
                 headers={"User-Agent": "GadoSitio/1.0 (download de bula veterinaria)"},
             )
         except requests.RequestException as e:
+            if isinstance(e, requests.exceptions.ProxyError) or "proxy" in str(e).lower() or "403" in str(e):
+                raise BulaFonteErro(
+                    "O download direto foi bloqueado por restrições de rede ou proxy (403/Proxy). "
+                    "Por favor, descarregue o PDF da bula no seu computador e adicione-o "
+                    "diretamente na pasta 'Bulas e embalagens' do Google Drive ou faça o upload manual."
+                ) from e
             raise BulaFonteErro(f"Não foi possível baixar a bula: {e}") from e
         try:
             if resposta.is_redirect or resposta.is_permanent_redirect:
@@ -89,6 +95,12 @@ def baixar_bula(url: str) -> tuple[bytes, str]:
                     raise BulaFonteErro("A fonte redirecionou demais ou sem destino.")
                 destino = validar_url_oficial(urljoin(destino, local))
                 continue
+            if resposta.status_code == 403:
+                raise BulaFonteErro(
+                    "A fonte oficial negou o acesso (HTTP 403 / bloqueio de proxy ou origem). "
+                    "Por favor, descarregue o PDF da bula no seu computador e adicione-o "
+                    "diretamente na pasta 'Bulas e embalagens' do Google Drive ou faça o upload manual."
+                )
             if resposta.status_code != 200:
                 raise BulaFonteErro(f"A fonte oficial respondeu HTTP {resposta.status_code}.")
             blocos = []
