@@ -5,7 +5,7 @@ routes_dashboard.py — Sítio Santo Antonio
 Rota principal do dashboard e lógica de alertas WhatsApp automáticos.
 """
 import threading
-from flask import render_template, session, jsonify
+from flask import render_template, session, jsonify, abort
 import pandas as pd
 from datetime import datetime, timedelta
 from db import carregar_aba
@@ -450,6 +450,8 @@ def familia():
     """Só leitura. Entra em cada sítio dentro deste pedido (a trava já é nossa) e
     volta ao sítio do usuário no fim — o resto da página usa os donos dele."""
     import sitios
+    if not sitios.e_admin(session.get("usuario")):
+        abort(403)
     volta = sitios.atual()
     linhas = []
     try:
