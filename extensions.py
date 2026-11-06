@@ -41,7 +41,11 @@ app = Flask(
 )
 
 from db import RAIZ
-app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(RAIZ, 'sitio.db')}"
+import os
+db_path = "/home/deyvidgt16/gado-dados/sitio.db"
+if not os.path.exists("/home/deyvidgt16/gado-dados") and (os.name == 'nt' or not os.path.exists('/home/deyvidgt16')):
+    db_path = os.path.join(RAIZ, 'sitio.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:////home/deyvidgt16/gado-dados/sitio.db' if os.path.exists('/home/deyvidgt16') else f'sqlite:///{db_path}')
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
