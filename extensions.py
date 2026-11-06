@@ -15,6 +15,9 @@ from datetime import date, datetime, timedelta
 import pandas as pd
 from flask import (Flask, session, request, redirect, url_for,
                    abort, jsonify, g)
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
 
 try:
     from zoneinfo import ZoneInfo
@@ -36,6 +39,11 @@ app = Flask(
     template_folder=os.path.join(BUNDLE_DIR, "templates"),
     static_folder=os.path.join(BUNDLE_DIR, "static"),
 )
+
+from db import RAIZ
+app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(RAIZ, 'sitio.db')}"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db.init_app(app)
 
 
 @app.after_request

@@ -344,9 +344,9 @@
       </div>
 
       <!-- Aviso se próximo a vencer -->
-      {% if cocho.volume_kg <= 0 or not cocho.ultima_salga %}
+      {% if cocho.volume_kg <= 0 %}
       <div class="cocho-aviso show" style="background: #f8d7da; border-color: #f5c6cb; color: #721c24">
-        🚨 <strong>Crítico:</strong> Cocho vazio ou com data de salga inválida!
+        🚨 <strong>Crítico:</strong> Cocho vazio!
       </div>
       {% elif cocho.dias_restantes <= 3 and cocho.dias_restantes > 0 and cocho.dias_restantes < 999 %}
       <div class="cocho-aviso show" style="background: #fff3cd; border-color: #ffc107; color: #856404">
