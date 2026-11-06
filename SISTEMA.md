@@ -1,4 +1,4 @@
-# 📚 Documentação Completa do Sistema — Gado v5.8.0
+# 📚 Documentação Completa do Sistema — Gado v5.25.0
 
 ## 🏗️ Arquitetura Geral
 

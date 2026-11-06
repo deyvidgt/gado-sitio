@@ -4,6 +4,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
 ## [Não lançado]
 
+## [5.25.0] — 2026-11-06
+
+### Adicionado
+
+- Atualização da versão do sistema para **v5.25.0**.
+
 ## [5.20.0] — 2026-11-04
 
 ### Adicionado
