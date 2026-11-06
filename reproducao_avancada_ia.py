@@ -36,15 +36,26 @@ def alertas_ia_preditiva(df_animais, df_manejo, df_compras, df_vendas, hoje=None
     """
     hoje = pd.Timestamp(hoje or datetime.now()).normalize()
 
-    # Carrega modelos (cache em memória)
+    # Carrega modelos (com fallback automático para retreino se houver incompatibilidade de versão do scikit-learn)
     try:
         with open(MODELOS_DIR / 'modelo_morte.pkl', 'rb') as f:
             modelo_morte = pickle.load(f)
         with open(MODELOS_DIR / 'modelo_cio.pkl', 'rb') as f:
             modelo_cio = pickle.load(f)
-    except FileNotFoundError:
-        logger.warning("❌ Modelos IA não encontrados. Execute: python scripts/train_ia_modelos.py")
-        return {"urgentes": [], "avisos": [], "total": 0, "timestamp": hoje.isoformat()}
+    except Exception as e:
+        logger.warning(f"⚠️ Erro ao carregar modelos IA ({e}). Retreinando automaticamente...")
+        try:
+            import subprocess
+            import sys
+            script_path = Path(__file__).parent / "scripts" / "train_ia_modelos.py"
+            subprocess.run([sys.executable, str(script_path), "--n-animais", "200"], check=True, capture_output=True)
+            with open(MODELOS_DIR / 'modelo_morte.pkl', 'rb') as f:
+                modelo_morte = pickle.load(f)
+            with open(MODELOS_DIR / 'modelo_cio.pkl', 'rb') as f:
+                modelo_cio = pickle.load(f)
+        except Exception as e2:
+            logger.error(f"❌ Falha no retreino automático dos modelos IA: {e2}")
+            return {"urgentes": [], "avisos": [], "total": 0, "timestamp": hoje.isoformat()}
 
     alertas_urgentes = []
     alertas_avisos = []

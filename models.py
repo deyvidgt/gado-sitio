@@ -90,3 +90,13 @@ class CochoModel(db.Model):
     capacidade = db.Column(db.Float)
     volume_atual = db.Column(db.Float)
     ativo = db.Column(db.String(10), default='Sim')
+
+class RegistroGenerico(db.Model):
+    __tablename__ = 'registros_genericos'
+    id = db.Column(db.Integer, primary_key=True)
+    fazenda_id = db.Column(db.Integer, db.ForeignKey('fazendas.id'), nullable=False, index=True)
+    aba = db.Column(db.String(50), nullable=False, index=True)
+    dados_json = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
