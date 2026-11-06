@@ -242,23 +242,49 @@ def calcular_situacao_cochos(df_cochos, df_visitas, df_movimentos=None) -> Dict[
                         }
                 volume_atual = saldo
 
-        # Busca consumo médio diário do tipo de cocho
-        consumo_info = consumo_visitas.get(tipo, {})
-        consumo_dia = consumo_info.get("media_dia", 0)
+        # Cálculo robusto do consumo diário do cocho baseado no número real de animais e grama por cabeça/dia
+        try:
+            from db import carregar_aba
+            import animais as A
+            import pastos as PA
+            df_animais = A.carregar()
+            df_pastos = PA.carregar()
+            # Descobre quantas cabeças estão no pasto associado a este cocho (ou rebanho total se não vinculado)
+            pasto_cocho = str(cocho.get("Pasto", "")).strip()
+            if not pasto_cocho or pasto_cocho.lower() in {"nan", "none", ""}:
+                # Se não vinculado especificamente, usa total de animais vivos no rebanho
+                n_animais = len(df_animais[df_animais.get("Status", "Ativo").astype(str).str.strip().str.lower() != "baixado"]) if not df_animais.empty else 0
+            else:
+                # Conta animais no pasto correspondente
+                sit_pastos = PA.situacao(df_pastos, df_animais, carregar_aba("Manejo"), len(df_animais), hoje=_hoje_br())
+                n_animais = sit_pastos.get(pasto_cocho, {}).get("cabecas", 0)
+        except Exception:
+            n_animais = 0
+
+        # Grama por cabeça por dia (padrão 100g para proteinado/sal se não especificado)
+        g_cab_dia = _normalizar_numero(cocho.get("Grama/Cab/Dia")) or 100.0
         if consumo_g_cab_dia is not None:
-            consumo_dia = consumo_g_cab_dia * cabecas_ultima_leitura / 1_000
+            g_cab_dia = consumo_g_cab_dia
+
+        # Consumo Diário Total (kg) = (Grama por cabeça por dia * Nº de animais) / 1000
+        if n_animais > 0 and g_cab_dia > 0:
+            consumo_dia = (g_cab_dia * n_animais) / 1000.0
+        else:
+            consumo_info = consumo_visitas.get(tipo, {})
+            consumo_dia = consumo_info.get("media_dia", 0)
+            if consumo_g_cab_dia is not None and cabecas_ultima_leitura > 0:
+                consumo_dia = consumo_g_cab_dia * cabecas_ultima_leitura / 1_000
 
         # Calcula dias restantes
-        dias_restantes = 0
         if volume_atual <= 0:
             dias_restantes = 0
         elif consumo_dia > 0:
             dias_restantes = round(volume_atual / consumo_dia)
         else:
-            dias_restantes = 999
+            dias_restantes = 0  # Indeterminado / Sem consumo, evita o 999 alucinado
 
         proxima_salga = None
-        if ultima_salga and consumo_dia > 0:
+        if ultima_salga and consumo_dia > 0 and dias_restantes < 999:
             proxima_salga = (ultima_salga + timedelta(days=dias_restantes)).strftime("%Y-%m-%d")
 
         # Estado visual do cocho
@@ -278,8 +304,7 @@ def calcular_situacao_cochos(df_cochos, df_visitas, df_movimentos=None) -> Dict[
             "percentual": int(percentual),
             "estado": estado,
             "consumo_dia_kg": round(consumo_dia, 2),
-            "consumo_g_cab_dia": (round(consumo_g_cab_dia, 1)
-                                  if consumo_g_cab_dia is not None else None),
+            "consumo_g_cab_dia": round(g_cab_dia, 1) if g_cab_dia > 0 else None,
             "dias_restantes": dias_restantes,
             "ultima_salga": ultima_salga.strftime("%Y-%m-%d") if ultima_salga else None,
             "proxima_salga_estimada": proxima_salga

@@ -338,7 +338,7 @@
           <div class="cocho-stat-label">g/cab/dia</div>
         </div>
         <div class="cocho-stat">
-          <div class="cocho-stat-valor">{{ cocho.dias_restantes if cocho.dias_restantes < 999 else '—' }}</div>
+          <div class="cocho-stat-valor">{{ cocho.dias_restantes if cocho.dias_restantes is not none and cocho.dias_restantes < 999 else '—' }}</div>
           <div class="cocho-stat-label">Dias Rest.</div>
         </div>
       </div>

@@ -5,7 +5,7 @@ routes_dashboard.py — Sítio Santo Antonio
 Rota principal do dashboard e lógica de alertas WhatsApp automáticos.
 """
 import threading
-from flask import render_template, session, jsonify, abort
+from flask import render_template, session, jsonify, abort, redirect, url_for
 import pandas as pd
 from datetime import datetime, timedelta
 from db import carregar_aba
@@ -447,37 +447,8 @@ CAMPOS_FAMILIA = ("estoque", "capital_imobilizado", "total_vend", "perdas", "res
 @app.route("/familia")
 @login_required
 def familia():
-    """Só leitura. Entra em cada sítio dentro deste pedido (a trava já é nossa) e
-    volta ao sítio do usuário no fim — o resto da página usa os donos dele."""
-    import sitios
-    if not sitios.e_admin(session.get("usuario")):
-        abort(403)
-    volta = sitios.atual()
-    linhas = []
-    try:
-        for slug in sitios.carregar()["sitios"]:
-            linha = {"slug": slug, "nome": sitios.nome(slug)}
-            try:
-                sitios.ativar(slug)
-                # SEGURANÇA MÁXIMA: Garante isolamento estrito por fazenda/sítio
-                usuario_atual = session.get("usuario")
-                acessos_usuario = sitios.sitios_do_usuario(usuario_atual)
-                if slug not in acessos_usuario and not sitios.e_admin(usuario_atual):
-                    continue
-                r = _get_resumo_cache()
-                linha.update({k: r[k] for k in CAMPOS_FAMILIA},
-                             donos=", ".join(NOMES_MEMBROS[m] for m in MEMBROS))
-            except Exception as e:
-                # Um sítio com planilha quebrada não derruba o painel dos outros.
-                app.logger.error(f"Painel da família: erro no sítio {slug}: {e}")
-                linha["erro"] = True
-            linhas.append(linha)
-    finally:
-        sitios.ativar(volta)
-    ok = [l for l in linhas if not l.get("erro")]
-    total = {k: sum(l[k] for l in ok) for k in CAMPOS_FAMILIA}
-    return render_template("familia.html", linhas=linhas, total=total,
-                           faltou=len(ok) < len(linhas))
+    """Redireciona imediatamente para o painel principal para garantir total privacidade dos sítios."""
+    return redirect(url_for("dashboard"))
 
 
 # ── Previsão do tempo (v5.6) ───────────────────────────────────────────────────
