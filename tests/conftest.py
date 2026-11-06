@@ -57,6 +57,13 @@ def pytest_sessionfinish(session, exitstatus):
 @pytest.fixture(scope="session")
 def flask_app():
     _app_mod.app.config.update(TESTING=True)
+    with _app_mod.app.app_context():
+        from extensions import db
+        db.create_all()
+        excel_test_path = os.path.join(DATA_DIR_TESTE, "gado_familia.xlsx")
+        if os.path.exists(excel_test_path):
+            from scripts.migrar_dados import migrar
+            migrar(excel_path=excel_test_path)
     return _app_mod.app
 
 

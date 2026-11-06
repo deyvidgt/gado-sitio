@@ -459,6 +459,11 @@ def familia():
             linha = {"slug": slug, "nome": sitios.nome(slug)}
             try:
                 sitios.ativar(slug)
+                # SEGURANÇA MÁXIMA: Garante isolamento estrito por fazenda/sítio
+                usuario_atual = session.get("usuario")
+                acessos_usuario = sitios.acessos(usuario_atual)
+                if slug not in acessos_usuario and not sitios.e_admin(usuario_atual):
+                    continue
                 r = _get_resumo_cache()
                 linha.update({k: r[k] for k in CAMPOS_FAMILIA},
                              donos=", ".join(NOMES_MEMBROS[m] for m in MEMBROS))

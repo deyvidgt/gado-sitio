@@ -110,8 +110,8 @@
   <div class="card-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
     <span>⚖️ Peso</span>
     {% if a.status == 'Vivo' %}
-    <a href="{{ url_for('peso_foto', id_=a.id) }}" class="btn btn-outline btn-sm" style="margin-left:auto">📷 Estimar por foto</a>
-    <a href="{{ url_for('pesagem', id=a.id) }}" class="btn btn-primary btn-sm">⚖️ Pesar agora</a>{% endif %}
+    <a href="{{ url_for('peso_foto', id_=a.id) }}" class="btn btn-outline btn-sm d-inline-block" style="margin-left:auto">📷 Estimar por foto</a>
+    <a href="{{ url_for('pesagem', id=a.id) }}" class="btn btn-primary btn-sm d-inline-block">⚖️ Pesar agora</a>{% endif %}
   </div>
   {% if peso %}
   <div class="peso-kpis">

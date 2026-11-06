@@ -6,7 +6,7 @@ Gerado automaticamente — não editar diretamente.
 """
 from flask import render_template, request, redirect, url_for, flash
 import pandas as pd
-from db import carregar_aba, carregar_todas, fazer_backup
+from db_adapter import carregar_aba, carregar_todas, salvar_linha, reescrever_aba, fazer_backup
 from calculos import (
     calcular_estoque, calcular_cmp, calcular_gpcab, custo_medio_movel_venda,
     dividir_cotas,
@@ -17,7 +17,6 @@ from gastos import categoria_legada
 from extensions import (
     app, _agora, _validar_csrf, login_required,
     _get_dados_cache, _get_resumo_cache,
-    salvar_linha, reescrever_aba,
     _limpar_backups_antigos,
     fmt_brl, fmt_data, parse_valor,
     BASE_DIR,
