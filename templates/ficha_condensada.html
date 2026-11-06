@@ -87,6 +87,7 @@
   <div class="cond-acoes-secundarias">
     <a href="{{ url_for('editar_animal', id_=a.id) }}" class="btn btn-outline btn-sm">✏️ Editar</a>
     {% if a.status == 'Vivo' %}
+    <a href="{{ url_for('peso_foto', id_=a.id) }}" class="btn btn-outline btn-sm">📷 Estimar foto</a>
     <a href="{{ url_for('pesagem', id=a.id) }}" class="btn btn-outline btn-sm">⚖️ Pesar</a>
     <a href="{{ url_for('novo_manejo', prefill=1, brincos=a.brinco, cabecas=1) }}" class="btn btn-primary btn-sm">🩺 Manejo</a>
     {% endif %}
@@ -126,6 +127,12 @@
       <span class="chave">Peso</span>
       <span class="valor">—</span>
       <span class="sub">Não pesado</span>
+    </div>
+    {% endif %}
+    {% if estimativa %}
+    <div class="cond-campo full" style="grid-column: 1 / -1; background: var(--surface-2); padding: 8px 12px; border-radius: 8px;">
+      <span class="chave">📷 Estimado por foto</span>
+      <span class="valor" style="font-size: 14px;">~{{ '%.0f' % estimativa.kg }} kg <span class="muted" style="font-size: 11px; font-weight: normal;">(±{{ estimativa.faixa_pct }}%, em {{ estimativa.data|data_br }}{% if estimativa.n_pares >= 3 %}, calibrado{% endif %})</span></span>
     </div>
     {% endif %}
     {% if ultimo_parto %}

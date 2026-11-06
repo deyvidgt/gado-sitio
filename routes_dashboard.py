@@ -461,7 +461,7 @@ def familia():
                 sitios.ativar(slug)
                 # SEGURANÇA MÁXIMA: Garante isolamento estrito por fazenda/sítio
                 usuario_atual = session.get("usuario")
-                acessos_usuario = sitios.acessos(usuario_atual)
+                acessos_usuario = sitios.sitios_do_usuario(usuario_atual)
                 if slug not in acessos_usuario and not sitios.e_admin(usuario_atual):
                     continue
                 r = _get_resumo_cache()
