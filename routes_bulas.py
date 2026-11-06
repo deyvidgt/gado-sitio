@@ -112,14 +112,28 @@ def previsualizar_bula():
     if produto is None:
         flash("Selecione um produto válido que ainda não tenha bula.", "error")
         return redirect(url_for("atualizar_bulas"))
-    if drive.cliente() is None:
-        flash("Configure o Google Drive antes de enviar bulas.", "warning")
-        return redirect(url_for("listar_bulas"))
-    try:
-        conteudo, fonte = bulas.baixar_bula(request.form.get("url", ""))
-    except bulas.BulaFonteErro as e:
-        flash(str(e), "error")
-        return redirect(url_for("atualizar_bulas"))
+
+    # Suporte a upload direto de ficheiro PDF (bypass de proxy/403 do PythonAnywhere)
+    arquivo_up = request.files.get("bula_pdf")
+    if arquivo_up and arquivo_up.filename:
+        if not arquivo_up.filename.lower().endswith(".pdf"):
+            flash("O arquivo enviado deve ser um PDF válido.", "error")
+            return redirect(url_for("atualizar_bulas"))
+        try:
+            conteudo = arquivo_up.read()
+            if not conteudo.startswith(b"%PDF-"):
+                flash("O arquivo enviado não é um PDF válido.", "error")
+                return redirect(url_for("atualizar_bulas"))
+            fonte = f"Upload direto: {arquivo_up.filename}"
+        except Exception as e:
+            flash(f"Erro ao ler arquivo PDF enviado: {e}", "error")
+            return redirect(url_for("atualizar_bulas"))
+    else:
+        try:
+            conteudo, fonte = bulas.baixar_bula(request.form.get("url", ""))
+        except bulas.BulaFonteErro as e:
+            flash(str(e), "error")
+            return redirect(url_for("atualizar_bulas"))
 
     _remover_pendente()
     token = uuid.uuid4().hex

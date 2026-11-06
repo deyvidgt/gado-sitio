@@ -11,12 +11,11 @@
 
 <div class="card">
   <p style="font-size:13px;color:var(--text-3);margin-bottom:14px">
-    Informe o endereço HTTPS direto do PDF publicado pelo fabricante ou por órgão oficial.
-    O sistema aceita domínios <code>.gov.br</code> e fabricantes veterinários conhecidos.
+    Pode carregar o ficheiro PDF da bula diretamente do seu computador (evitando bloqueios de rede/proxy no PythonAnywhere) ou informar o endereço HTTPS oficial.
     A pasta <b>Bulas e embalagens</b> será criada no Drive se ainda não existir.
   </p>
   {% if faltantes %}
-  <form method="post" action="{{ url_for('previsualizar_bula') }}">
+  <form method="post" action="{{ url_for('previsualizar_bula') }}" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="form-group">
       <label for="produto">Produto sem bula</label>
@@ -27,8 +26,13 @@
       </select>
     </div>
     <div class="form-group" style="margin-top:12px">
+      <label for="bula_pdf">Upload Direto do Ficheiro PDF (Recomendado)</label>
+      <input id="bula_pdf" type="file" name="bula_pdf" accept=".pdf" class="form-control">
+    </div>
+    <div style="text-align: center; margin: 10px 0; color: var(--text-3);">— OU —</div>
+    <div class="form-group">
       <label for="url">URL oficial do PDF</label>
-      <input id="url" type="url" name="url" required inputmode="url"
+      <input id="url" type="url" name="url" inputmode="url"
              placeholder="https://fabricante.com.br/bula-produto.pdf">
     </div>
     <p class="linha-sub" style="margin:10px 0">
