@@ -52,6 +52,8 @@ db.init_app(app)
 
 @app.after_request
 def _comprimir_resposta(response):
+    if getattr(response, 'direct_passthrough', False):
+        return response
     if response.status_code < 200 or response.status_code >= 300 or 'gzip' not in request.headers.get('Accept-Encoding', ''):
         return response
     if 'Content-Encoding' in response.headers or 'image/' in (response.content_type or '') or 'pdf' in (response.content_type or ''):
