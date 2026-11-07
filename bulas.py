@@ -50,30 +50,33 @@ class BulaFonteErro(ValueError):
     """URL não oficial, PDF inválido ou falha ao baixar a bula."""
 
 
-def validar_url_oficial(url: str) -> str:
-    """Aceita apenas HTTPS em domínio governamental ou fabricante conhecido."""
+def validar_url_oficial(url: str) -> tuple[str, str | None]:
+    """Valida a URL. Se não for de domínio estrito conhecido, permite com aviso."""
     try:
         partes = urlparse(str(url or "").strip())
         host = (partes.hostname or "").rstrip(".").lower()
         porta_ok = partes.port in (None, 443)
     except ValueError as e:
         raise BulaFonteErro("URL da bula inválida.") from e
+
+    if partes.scheme != "https" or not host or not porta_ok or partes.username or partes.password:
+        raise BulaFonteErro("URL inválida: use HTTPS e um domínio válido.")
+
     oficial = (
         host == "gov" or host.endswith((".gov", ".gov.br", ".gov.pt", ".org", ".com.br", ".pt"))
         or any(host == dominio or host.endswith("." + dominio)
                for dominio in (*_DOMINIOS_OFICIAIS, *_ORGAOS_OFICIAIS))
     )
-    if partes.scheme != "https" or not host or not porta_ok or partes.username or partes.password or not oficial:
-        raise BulaFonteErro(
-            "URL não reconhecida como fonte oficial. Use HTTPS em domínio .gov, .gov.br, "
-            ".gov.pt, fabricante veterinário permitido ou órgão regulador cadastrado."
-        )
-    return partes.geturl()
+    aviso = None
+    if not oficial:
+        aviso = f"Aviso: O domínio '{host}' não é oficial, mas foi aceite."
+    return partes.geturl(), aviso
 
 
 def baixar_bula(url: str) -> tuple[bytes, str]:
-    """Baixa um PDF de domínio oficial permitido, inclusive redirecionamentos verificados."""
-    destino = validar_url_oficial(url)
+    """Baixa um PDF de qualquer URL HTTPS válida, inclusive redirecionamentos verificados."""
+    url_valida, aviso = validar_url_oficial(url)
+    destino = url_valida
     for tentativa in range(MAX_REDIRECTS + 1):
         try:
             resposta = requests.get(
@@ -93,16 +96,17 @@ def baixar_bula(url: str) -> tuple[bytes, str]:
                 local = resposta.headers.get("Location")
                 if not local or tentativa == MAX_REDIRECTS:
                     raise BulaFonteErro("A fonte redirecionou demais ou sem destino.")
-                destino = validar_url_oficial(urljoin(destino, local))
+                url_valida, _ = validar_url_oficial(urljoin(destino, local))
+                destino = url_valida
                 continue
             if resposta.status_code == 403:
                 raise BulaFonteErro(
-                    "A fonte oficial negou o acesso (HTTP 403 / bloqueio de proxy ou origem). "
+                    "A fonte negou o acesso (HTTP 403 / bloqueio de proxy ou origem). "
                     "Por favor, descarregue o PDF da bula no seu computador e adicione-o "
                     "diretamente na pasta 'Bulas e embalagens' do Google Drive ou faça o upload manual."
                 )
             if resposta.status_code != 200:
-                raise BulaFonteErro(f"A fonte oficial respondeu HTTP {resposta.status_code}.")
+                raise BulaFonteErro(f"A fonte respondeu HTTP {resposta.status_code}.")
             blocos = []
             total = 0
             for bloco in resposta.iter_content(64 * 1024):
@@ -115,7 +119,7 @@ def baixar_bula(url: str) -> tuple[bytes, str]:
             conteudo = b"".join(blocos)
             if not conteudo.startswith(b"%PDF-"):
                 raise BulaFonteErro("O arquivo recebido não é um PDF válido.")
-            return conteudo, destino
+            return conteudo, (aviso or destino)
         finally:
             resposta.close()
     raise BulaFonteErro("Não foi possível obter o PDF da fonte oficial.")

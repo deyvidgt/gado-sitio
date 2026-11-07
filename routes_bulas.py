@@ -137,7 +137,10 @@ def previsualizar_bula():
             flash("Envie um arquivo PDF ou informe uma URL oficial.", "error")
             return redirect(url_for("atualizar_bulas"))
         try:
+            url_valida, aviso_url = bulas.validar_url_oficial(url_pdf)
             conteudo, fonte = bulas.baixar_bula(url_pdf)
+            if aviso_url:
+                flash(aviso_url, "warning")
         except bulas.BulaFonteErro as e:
             flash(str(e), "error")
             return redirect(url_for("atualizar_bulas"))
@@ -180,9 +183,8 @@ def confirmar_bula():
     if pendente is None:
         flash("A prévia expirou. Confira o PDF novamente.", "warning")
         return redirect(url_for("atualizar_bulas"))
-    if not any(p["slug"] == pendente["produto"] for p in _bulas_faltantes()):
-        flash("Este produto já tem uma bula no Drive; a prévia não foi enviada.", "warning")
-        return redirect(url_for("listar_bulas"))
+    # Permite substituir bula existente, mantendo a atualização atômica.
+    # Apenas prossegue se a prévia for válida.
     cli = drive.cliente()
     if cli is None:
         flash("Configure o Google Drive antes de enviar bulas.", "warning")
