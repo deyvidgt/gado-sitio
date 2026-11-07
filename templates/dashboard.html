@@ -97,6 +97,39 @@
 </section>
 {% endif %}
 
+<!-- IA Preditiva Alerts Widget (Onda 19) -->
+{% if ia_alertas and ia_alertas.total > 0 %}
+<section class="card" style="margin-bottom:20px">
+  <div class="section-head" style="margin-bottom:12px">
+    <h2>🤖 Alertas de IA Preditiva</h2>
+    <a class="btn btn-outline" href="{{ url_for('ia_predicoes') }}">Ver todos</a>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+    <div style="text-align:center; padding:10px; background:rgba(220,38,38,.1); border-radius:4px;">
+      <div style="font-size:20px;font-weight:bold;color:var(--red-600);">{{ ia_alertas.urgentes|length }}</div>
+      <div style="font-size:11px;color:var(--text-3);">🚨 Urgentes</div>
+    </div>
+    <div style="text-align:center; padding:10px; background:rgba(234,179,8,.1); border-radius:4px;">
+      <div style="font-size:20px;font-weight:bold;color:var(--orange-600);">{{ ia_alertas.avisos|length }}</div>
+      <div style="font-size:11px;color:var(--text-3);">⚠️ Avisos</div>
+    </div>
+  </div>
+
+  {% for alerta in ia_alertas.urgentes[:3] %}
+    <div style="background:rgba(220,38,38,.08); border-left:3px solid var(--red-600); padding:8px 10px; margin-bottom:6px; font-size:12px; border-radius:2px;">
+      <strong>{{ alerta.tipo }}</strong> — {{ alerta.animal }}: {{ alerta.acao }}
+    </div>
+  {% endfor %}
+
+  {% for alerta in ia_alertas.avisos[:2] %}
+    <div style="background:rgba(234,179,8,.08); border-left:3px solid var(--orange-600); padding:8px 10px; margin-bottom:6px; font-size:12px; border-radius:2px;">
+      <strong>{{ alerta.tipo }}</strong> — {{ alerta.animal }}
+    </div>
+  {% endfor %}
+</section>
+{% endif %}
+
 <!-- ═══ PREVISÃO DO TEMPO (v5.9) ═════════════════════════════════════════════ -->
 {% if tempo.status != 'indisponível' %}
 <section class="card" style="margin-bottom:20px">

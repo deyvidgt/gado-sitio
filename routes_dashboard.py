@@ -346,6 +346,15 @@ def dashboard():
     except Exception as erro:
         app.logger.warning(f"Painel: saúde do leite indisponível: {erro}")
         saude_leite = {"total_vacas": 0, "alertas_urgentes": 0, "alertas_aviso": 0}
+
+    # IA Preditiva (Onda 19)
+    try:
+        from reproducao_avancada_ia import alertas_ia_preditiva
+        ia_alertas = alertas_ia_preditiva(A.carregar(), dados["Manejo"], dados["Compras"], dados["Vendas"])
+    except Exception as erro:
+        app.logger.warning(f"Painel: IA preditiva indisponível: {erro}")
+        ia_alertas = {"urgentes": [], "avisos": [], "total": 0}
+
     extras = _cards_extras(dados, r)
     alertas = _gerar_alertas(dados)
     estado_sitio = {"cabecas": r.get("estoque", 0), "peso_medio": peso_medio,
@@ -380,7 +389,7 @@ def dashboard():
                            alertas=alertas, indicadores=indicadores, rebanho_est=rebanho_est,
                            estado_sitio=estado_sitio, acoes_rapidas=acoes_rapidas,
                            atencao_agora=atencao_agora, ocorrencias=recentes[:6],
-                           resumo_leite=resumo_leite, saude_leite=saude_leite, tendencia_peso=tendencia_peso, cards=cards,
+                           resumo_leite=resumo_leite, saude_leite=saude_leite, ia_alertas=ia_alertas, tendencia_peso=tendencia_peso, cards=cards,
                            entrada_saida=entrada_saida, tempo=tempo_previsao, pastos_disponivel=pastos_disponivel,
                            grafico_resultado=grafico_resultado, grafico_cmp_gpcab=grafico_cmp_gpcab,
                            grafico_gastos=grafico_gastos,

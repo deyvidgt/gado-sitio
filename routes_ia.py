@@ -6,11 +6,11 @@ Somente leitura: lê os modelos de data/ia_models/ e mostra as previsões.
 Se os modelos não foram treinados, explica como treinar.
 """
 import logging
-
-from flask import render_template
+from flask import render_template, jsonify
 
 import animais as A
 import db
+import ia_modelos
 from extensions import app, login_required
 from reproducao_avancada_ia import alertas_ia_preditiva
 
@@ -33,3 +33,15 @@ def ia_predicoes():
                            avisos=resultado.get("avisos", []),
                            total=resultado.get("total", 0),
                            timestamp=resultado.get("timestamp", ""))
+
+
+@app.route("/api/ia/alertas")
+@login_required
+def api_ia_alertas():
+    """Endpoint unificado para alertas de IA."""
+    df_an = A.carregar()
+    df_man = db.carregar_aba("Manejo")
+    df_compras = db.carregar_aba("Compras")
+    df_vendas = db.carregar_aba("Vendas")
+
+    return jsonify(alertas_ia_preditiva(df_an, df_man, df_compras, df_vendas))
