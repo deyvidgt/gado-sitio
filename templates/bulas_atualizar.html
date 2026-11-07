@@ -14,7 +14,7 @@
     Pode carregar o ficheiro PDF da bula diretamente do seu computador (evitando bloqueios de rede/proxy no PythonAnywhere) ou informar o endereço HTTPS oficial.
     A pasta <b>Bulas e embalagens</b> será criada no Drive se ainda não existir.
   </p>
-  {% if faltantes %}
+  {% if catalogo %}
   <form method="post" action="{{ url_for('previsualizar_bula') }}" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="form-group">

@@ -92,7 +92,17 @@ def resumo(hist: list, rendimento: float = 0.52) -> dict | None:
     """Último peso, @ (carcaça) e GMD do último intervalo e desde a 1ª pesagem."""
     if not hist:
         return None
-    ultimo = hist[-1]
+    # Se hist for uma lista de listas ou objetos incorretos, converte ou trata de forma segura
+    try:
+        ultimo = hist[-1]
+        if isinstance(ultimo, dict):
+            # Caso venha um dicionário por engano
+            pass
+        elif not isinstance(ultimo, (list, tuple)) or len(ultimo) < 2:
+            return None
+    except Exception:
+        return None
+
     anteriores = [h for h in hist if h[0] < ultimo[0]]
     return {
         "kg": ultimo[1], "data": ultimo[0],

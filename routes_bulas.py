@@ -107,11 +107,14 @@ def atualizar_bulas():
 def previsualizar_bula():
     _so_admin()
     _validar_csrf()
-    chave = request.form.get("produto", "")
-    produto = next((p for p in _bulas_faltantes() if p["slug"] == chave), None)
-    if produto is None:
-        flash("Selecione um produto válido que ainda não tenha bula.", "error")
+
+    # Pode vir 'produto' (slug) ou 'produto_nome' (texto vindo da datalist/input livre)
+    nome_produto = request.form.get("produto_nome", "").strip() or request.form.get("produto", "").strip()
+    if not nome_produto:
+        flash("Informe o nome do produto.", "error")
         return redirect(url_for("atualizar_bulas"))
+
+    chave = bulas.slug(nome_produto)
 
     # Suporte a upload direto de ficheiro PDF (bypass de proxy/403 do PythonAnywhere)
     arquivo_up = request.files.get("bula_pdf")
@@ -129,8 +132,12 @@ def previsualizar_bula():
             flash(f"Erro ao ler arquivo PDF enviado: {e}", "error")
             return redirect(url_for("atualizar_bulas"))
     else:
+        url_pdf = request.form.get("url", "").strip()
+        if not url_pdf:
+            flash("Envie um arquivo PDF ou informe uma URL oficial.", "error")
+            return redirect(url_for("atualizar_bulas"))
         try:
-            conteudo, fonte = bulas.baixar_bula(request.form.get("url", ""))
+            conteudo, fonte = bulas.baixar_bula(url_pdf)
         except bulas.BulaFonteErro as e:
             flash(str(e), "error")
             return redirect(url_for("atualizar_bulas"))
@@ -140,7 +147,7 @@ def previsualizar_bula():
     os.makedirs(_bulas_pendentes(), exist_ok=True)
     with open(_caminho_pendente(token), "wb") as arquivo_pdf:
         arquivo_pdf.write(conteudo)
-    pendente = {"token": token, "produto": chave, "nome": produto["nome"],
+    pendente = {"token": token, "produto": chave, "nome": nome_produto,
                 "fonte": fonte, "site": sitios.atual(), "criado": time.time()}
     session["bula_pendente"] = pendente
     return render_template("bulas_confirmar.html", pendente=pendente)

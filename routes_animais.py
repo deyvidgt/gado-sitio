@@ -348,9 +348,17 @@ def ficha_animal(id_):
         )
 
         estimativa_debug = PF.ultima_estimativa(id_, dados["Manejo"])
-        peso_debug = P.resumo(hist_peso, _rendimento())
         print(f"DEBUG: estimativa type={type(estimativa_debug)} value={estimativa_debug}")
-        print(f"DEBUG: peso type={type(peso_debug)} value={peso_debug}")
+        #peso_debug = P.resumo(hist_peso, _rendimento())
+        #print(f"DEBUG: peso type={type(peso_debug)} value={peso_debug}")
+
+        peso_debug = None
+        if hist_peso:
+            peso_debug = P.resumo(hist_peso, _rendimento())
+            print(f"DEBUG: peso type={type(peso_debug)} value={peso_debug}")
+        else:
+            print("DEBUG: peso list empty, skipping P.resumo")
+
         ctx = {
             "a": _linha_animal(a, hoje), "raw": a,
             "CAUSAS_MORTIS": CAUSAS_MORTIS,
