@@ -71,7 +71,7 @@
 <div class="cond-page">
 <div class="cond-header">
   {% if fotos|first %}
-  <img src="{{ url_for('foto_mini', id_foto=fotos|first.id_foto) }}" alt="{{ a.brinco }}"
+  <img src="{{ url_for('foto_mini', id_foto=(fotos|first).id_foto) }}" alt="{{ a.brinco }}"
        style="width: 100px; height: 100px; border-radius: 10px; object-fit: cover; box-shadow: var(--shadow); flex: none;">
   {% endif %}
   <div class="cond-brinco" style="background: {{ a.hex }}; color: {{ a.texto_hex }}" aria-label="Brinco {{ a.brinco }}">
