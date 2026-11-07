@@ -371,8 +371,10 @@ def ficha_animal(id_):
         template = "ficha_condensada.html" if eh_mobile else "ficha_animal.html"
         return render_template(template, **ctx)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Erro em ficha_animal ({id_}): {e}")
-        flash("Erro ao carregar a ficha do animal. Tente novamente.", "error")
+        flash(f"Erro ao carregar a ficha: {e}", "error")
         return redirect(url_for("animais"))
 
 
