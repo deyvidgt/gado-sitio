@@ -96,37 +96,42 @@ def _linha_animal(a, hoje):
 @app.route("/animais")
 @login_required
 def animais():
-    dados = _get_dados_cache()
-    df = A.carregar()
-    hoje = _agora()
-    status = request.args.get("status", "Vivo")
-    busca = request.args.get("q", "").strip().lower()
-    categoria = request.args.get("categoria", "").strip()
-    sexo = request.args.get("sexo", "").strip()
-    lista = df if status == "todos" else df[df["Status"] == status]
-    if categoria:
-        lista = lista[lista["Categoria"].astype(str) == categoria]
-    if sexo:
-        lista = lista[lista["Sexo"].astype(str) == sexo]
-    if busca and not lista.empty:
-        texto = lista.astype(str).agg(" ".join, axis=1)
-        lista = lista[texto.str.lower().str.contains(busca, regex=False)]
-    lista = lista.sort_values(["Brinco Cor", "Brinco Nº"], na_position="last")
-    est_m = calcular_estoque_por_membro(dados["Compras"], dados["Vendas"], dados["Manejo"])
-    proximos = {m: A.proximo_numero(df, c) for m, c in A.cores_brinco().items()}
-    pesos = P.todas(dados["Manejo"])
-    rows = [{**_linha_animal(a, hoje), "peso": P.resumo(pesos.get(a["ID"], []))}
-            for _, a in lista.iterrows()]
-    categorias = sorted({str(v) for v in df["Categoria"].dropna() if str(v).strip()})
-    return render_template("animais.html", rows=rows,
-                           status=status, q=busca, categoria=categoria, sexo=sexo,
-                           categorias=categorias, total_vivos=len(A.vivos(df)),
-                           conferencia=A.conferencia(lista, est_m),
-                           brucelose=[{**_linha_animal(b["animal"], hoje), "msg": b["msg"],
-                                       "situacao": b["situacao"]}
-                                      for b in A.janela_brucelose(df, dados["Manejo"], hoje)],
-                           proximos=proximos, fotos_principais=F.principais(),
-                           **_ctx_templates())
+    try:
+        dados = _get_dados_cache()
+        df = A.carregar()
+        hoje = _agora()
+        status = request.args.get("status", "Vivo")
+        busca = str(request.args.get("q", "")).strip().lower()
+        categoria = str(request.args.get("categoria", "")).strip()
+        sexo = str(request.args.get("sexo", "")).strip()
+        lista = df if status == "todos" else df[df["Status"].astype(str) == status]
+        if categoria and not lista.empty:
+            lista = lista[lista["Categoria"].astype(str) == categoria]
+        if sexo and not lista.empty:
+            lista = lista[lista["Sexo"].astype(str) == sexo]
+        if busca and not lista.empty:
+            texto = lista.astype(str).agg(" ".join, axis=1)
+            lista = lista[texto.str.lower().str.contains(busca, regex=False)]
+        lista = lista.sort_values(["Brinco Cor", "Brinco Nº"], na_position="last")
+        est_m = calcular_estoque_por_membro(dados.get("Compras", pd.DataFrame()), dados.get("Vendas", pd.DataFrame()), dados.get("Manejo", pd.DataFrame()))
+        proximos = {m: A.proximo_numero(df, c) for m, c in A.cores_brinco().items()}
+        pesos = P.todas(dados.get("Manejo", pd.DataFrame()))
+        rows = [{**_linha_animal(a, hoje), "peso": P.resumo(pesos.get(a["ID"], []))}
+                for _, a in lista.iterrows()]
+        categorias = sorted({str(v) for v in df["Categoria"].dropna() if str(v).strip()})
+        return render_template("animais.html", rows=rows,
+                               status=status, q=busca, categoria=categoria, sexo=sexo,
+                               categorias=categorias, total_vivos=len(A.vivos(df)),
+                               conferencia=A.conferencia(lista, est_m),
+                               brucelose=[{**_linha_animal(b["animal"], hoje), "msg": b["msg"],
+                                           "situacao": b["situacao"]}
+                                          for b in A.janela_brucelose(df, dados.get("Manejo", pd.DataFrame()), hoje)],
+                               proximos=proximos, fotos_principais=F.principais(),
+                               **_ctx_templates())
+    except Exception as e:
+        print(f"Erro na listagem de animais: {e}")
+        flash("Erro ao carregar a lista de animais. Tente novamente.", "error")
+        return redirect(url_for("painel"))
 
 
 @app.route("/animais/cores", methods=["POST"])
@@ -310,81 +315,20 @@ def peso_foto(id_):
 @app.route("/animais/<id_>")
 @login_required
 def ficha_animal(id_):
-    dados = _get_dados_cache()
-    df = A.carregar()
-    a = A.por_id(df, id_)
-    if a is None:
-        flash("Animal não encontrado.", "error")
-        return redirect(url_for("animais"))
-    hoje = _agora()
-    filhos = df[df["Mãe"].astype(str).str.contains(f"#{id_}", regex=False)]
-    mae_id = (A.ids_de(a["Mãe"]) or [None])[0]
-    hist_peso = P.todas(dados["Manejo"]).get(id_, [])
+    try:
+        dados = _get_dados_cache()
+        df = A.carregar()
+        a = A.por_id(df, id_)
+        if a is None:
+            flash("Animal não encontrado.", "error")
+            return redirect(url_for("animais"))
+        hoje = _agora()
+        filhos = df[df["Mãe"].astype(str).str.contains(f"#{id_}", regex=False)]
+        mae_id = (A.ids_de(a["Mãe"]) or [None])[0]
+        hist_peso = P.todas(dados["Manejo"]).get(id_, [])
 
-    # Obtém pasto onde o animal está
-    pasto_id, _ = PA.pasto_do_animal(id_, dados["Manejo"])
-    pasto_nome = None
-    if pasto_id:
-        df_p = PA.carregar()
-        p = df_p[df_p["ID"] == pasto_id]
-        if not p.empty:
-            pasto_nome = p.iloc[0]["Nome"]
-
-    # Detecta mobile por User-Agent ou query param
-    eh_mobile = request.args.get("modo") == "mobile" or (
-        "mobile" in request.headers.get("User-Agent", "").lower() or
-        "android" in request.headers.get("User-Agent", "").lower()
-    )
-
-    ctx = {
-        "a": _linha_animal(a, hoje), "raw": a,
-        "CAUSAS_MORTIS": CAUSAS_MORTIS,
-        "nascimento": fmt_data(a["Nascimento"]) if pd.notna(a["Nascimento"]) else "",
-        "mae_txt": A._RE_ID.sub("", a["Mãe"]).strip(), "mae_id": mae_id,
-        "filhos": [_linha_animal(x, hoje) for _, x in filhos.iterrows()],
-        "historico": A.historico(id_, dados["Manejo"], dados["Vendas"]),
-        "pesos": hist_peso, "peso": P.resumo(hist_peso, _rendimento()),
-        "estimativa": PF.ultima_estimativa(id_, dados["Manejo"]),
-        "fotos": F.listar(id_), "fotos_ativas": drive.configurado() or drive.cliente() is not None,
-        "TIPOS_FOTO": TIPOS_FOTO,
-        "ultimo_parto": fmt_data(a["Último Parto"]) if pd.notna(a["Último Parto"]) else "",
-        "pasto_id": pasto_id, "pasto_nome": pasto_nome,
-        **_ctx_templates()
-    }
-
-    # Adiciona dias em lactação se houver data de parto
-    if pd.notna(a["Último Parto"]):
-        dias = (hoje.date() - pd.to_datetime(a["Último Parto"]).date()).days
-        ctx["dias_lactacao"] = max(0, dias)
-
-    template = "ficha_condensada.html" if eh_mobile else "ficha_animal.html"
-    return render_template(template, **ctx)
-
-
-@app.route("/animais/dono/<dono>")
-@login_required
-def animais_por_dono(dono):
-    """Lista todos os animais de um dono específico com informações resumidas."""
-    if dono not in MEMBROS:
-        flash(f"Dono '{dono}' não encontrado.", "error")
-        return redirect(url_for("animais"))
-
-    dados = _get_dados_cache()
-    df = A.carregar()
-    hoje = _agora()
-
-    # Filtra animais do dono
-    df_dono = df[df["Dono"] == dono]
-
-    # Formata animais com informações resumidas
-    animais_list = []
-    for _, animal in df_dono.iterrows():
-        animal_id = animal["ID"]
-        hist_peso = P.todas(dados["Manejo"]).get(animal_id, [])
-        peso_resumo = P.resumo(hist_peso, _rendimento())
-
-        # Pasto atual
-        pasto_id, _ = PA.pasto_do_animal(animal_id, dados["Manejo"])
+        # Obtém pasto onde o animal está
+        pasto_id, _ = PA.pasto_do_animal(id_, dados["Manejo"])
         pasto_nome = None
         if pasto_id:
             df_p = PA.carregar()
@@ -392,34 +336,105 @@ def animais_por_dono(dono):
             if not p.empty:
                 pasto_nome = p.iloc[0]["Nome"]
 
-        animais_list.append({
-            "linha": _linha_animal(animal, hoje),
-            "peso": peso_resumo,
-            "pasto_id": pasto_id,
-            "pasto_nome": pasto_nome,
-        })
+        # Detecta mobile por User-Agent ou query param
+        eh_mobile = request.args.get("modo") == "mobile" or (
+            "mobile" in request.headers.get("User-Agent", "").lower() or
+            "android" in request.headers.get("User-Agent", "").lower()
+        )
 
-    # Contadores
-    vivos = len(df_dono[df_dono["Status"] == "Vivo"])
-    vendidos = len(df_dono[df_dono["Status"] == "Vendido"])
-    mortos = len(df_dono[df_dono["Status"] == "Morto"])
+        ctx = {
+            "a": _linha_animal(a, hoje), "raw": a,
+            "CAUSAS_MORTIS": CAUSAS_MORTIS,
+            "nascimento": fmt_data(a["Nascimento"]) if pd.notna(a["Nascimento"]) else "",
+            "mae_txt": A._RE_ID.sub("", a["Mãe"]).strip(), "mae_id": mae_id,
+            "filhos": [_linha_animal(x, hoje) for _, x in filhos.iterrows()],
+            "historico": A.historico(id_, dados["Manejo"], dados["Vendas"]),
+            "pesos": hist_peso, "peso": P.resumo(hist_peso, _rendimento()),
+            "estimativa": PF.ultima_estimativa(id_, dados["Manejo"]),
+            "fotos": F.listar(id_), "fotos_ativas": drive.configurado() or drive.cliente() is not None,
+            "TIPOS_FOTO": TIPOS_FOTO,
+            "ultimo_parto": fmt_data(a["Último Parto"]) if pd.notna(a["Último Parto"]) else "",
+            "pasto_id": pasto_id, "pasto_nome": pasto_nome,
+            **_ctx_templates()
+        }
 
-    # Total de peso
-    peso_total = sum(a["peso"].kg for a in animais_list if a["peso"].kg)
+        # Adiciona dias em lactação se houver data de parto
+        if pd.notna(a["Último Parto"]):
+            dias = (hoje.date() - pd.to_datetime(a["Último Parto"]).date()).days
+            ctx["dias_lactacao"] = max(0, dias)
 
-    ctx = {
-        "dono": dono,
-        "nome_dono": NOMES_MEMBROS.get(dono, dono),
-        "animais": sorted(animais_list, key=lambda x: (x["linha"]["cor"], x["linha"]["num"] or 999)),
-        "total": len(df_dono),
-        "vivos": vivos,
-        "vendidos": vendidos,
-        "mortos": mortos,
-        "peso_total": peso_total,
-        **_ctx_templates()
-    }
+        template = "ficha_condensada.html" if eh_mobile else "ficha_animal.html"
+        return render_template(template, **ctx)
+    except Exception as e:
+        print(f"Erro em ficha_animal ({id_}): {e}")
+        flash("Erro ao carregar a ficha do animal. Tente novamente.", "error")
+        return redirect(url_for("animais"))
 
-    return render_template("animais_por_dono.html", **ctx)
+
+@app.route("/animais/dono/<dono>")
+@login_required
+def animais_por_dono(dono):
+    """Lista todos os animais de um dono específico com informações resumidas."""
+    try:
+        if dono not in MEMBROS:
+            flash(f"Dono '{dono}' não encontrado.", "error")
+            return redirect(url_for("animais"))
+
+        dados = _get_dados_cache()
+        df = A.carregar()
+        hoje = _agora()
+
+        # Filtra animais do dono
+        df_dono = df[df["Dono"] == dono]
+
+        # Formata animais com informações resumidas
+        animais_list = []
+        for _, animal in df_dono.iterrows():
+            animal_id = animal["ID"]
+            hist_peso = P.todas(dados.get("Manejo", pd.DataFrame())).get(animal_id, [])
+            peso_resumo = P.resumo(hist_peso, _rendimento())
+
+            # Pasto atual
+            pasto_id, _ = PA.pasto_do_animal(animal_id, dados.get("Manejo", pd.DataFrame()))
+            pasto_nome = None
+            if pasto_id:
+                df_p = PA.carregar()
+                p = df_p[df_p["ID"] == pasto_id]
+                if not p.empty:
+                    pasto_nome = p.iloc[0]["Nome"]
+
+            animais_list.append({
+                "linha": _linha_animal(animal, hoje),
+                "peso": peso_resumo,
+                "pasto_id": pasto_id,
+                "pasto_nome": pasto_nome,
+            })
+
+        # Contadores
+        vivos = len(df_dono[df_dono["Status"] == "Vivo"])
+        vendidos = len(df_dono[df_dono["Status"] == "Vendido"])
+        mortos = len(df_dono[df_dono["Status"] == "Morto"])
+
+        # Total de peso
+        peso_total = sum(a["peso"].kg for a in animais_list if a["peso"] and a["peso"].kg)
+
+        ctx = {
+            "dono": dono,
+            "nome_dono": NOMES_MEMBROS.get(dono, dono),
+            "animais": sorted(animais_list, key=lambda x: (x["linha"]["cor"], x["linha"]["num"] or 999)),
+            "total": len(df_dono),
+            "vivos": vivos,
+            "vendidos": vendidos,
+            "mortos": mortos,
+            "peso_total": peso_total,
+            **_ctx_templates()
+        }
+
+        return render_template("animais_por_dono.html", **ctx)
+    except Exception as e:
+        print(f"Erro em animais_por_dono ({dono}): {e}")
+        flash("Erro ao carregar os animais do dono. Tente novamente.", "error")
+        return redirect(url_for("animais"))
 
 
 @app.route("/animais/<id_>/editar", methods=["GET", "POST"])

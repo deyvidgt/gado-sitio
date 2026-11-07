@@ -11,6 +11,7 @@ appProperties — o reenvio do celular o encontra e só grava a linha.
 """
 from __future__ import annotations
 
+import io
 import logging
 import os
 import threading
@@ -35,6 +36,25 @@ _TEXTO = ("ID Foto", "Animal", "Tipo", "Legenda", "Principal", "Drive ID",
 
 class FotoInvalida(ValueError):
     """Pedido recusado (mensagem pronta para a tela)."""
+
+
+def _comprimir_imagem(conteudo: bytes) -> tuple[bytes, str]:
+    """Redimensiona e comprime a imagem usando Pillow para evitar uploads pesados e timeout.
+    Gera JPEG com no máximo 1200px em qualquer lado e qualidade 82.
+    Se falhar (ex: formato não suportado ou sem PIL), devolve o original e o mime detectado.
+    """
+    mime = e_imagem(conteudo)
+    if not mime:
+        return conteudo, ""
+    try:
+        from PIL import Image, ImageOps
+        img = ImageOps.exif_transpose(Image.open(io.BytesIO(conteudo))).convert("RGB")
+        img.thumbnail((1200, 1200))
+        buf = io.BytesIO()
+        img.save(buf, "JPEG", quality=82, optimize=True)
+        return buf.getvalue(), "image/jpeg"
+    except Exception:
+        return conteudo, mime
 
 
 def e_imagem(conteudo: bytes) -> str | None:
@@ -132,7 +152,8 @@ def _enviar(id_animal, conteudo, data, tipo, legenda, enviado_por, id_envio) -> 
         raise FotoInvalida(f"Tipo inválido: {tipo}")
     if len(conteudo) > MAX_BYTES:
         raise FotoInvalida("Foto grande demais (máximo 8 MB).")
-    mime = e_imagem(conteudo)
+    
+    conteudo, mime = _comprimir_imagem(conteudo)
     if not mime:
         raise FotoInvalida("O arquivo enviado não é uma foto.")
     quando = _data(data)
