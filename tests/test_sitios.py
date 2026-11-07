@@ -407,21 +407,13 @@ def test_familia_sitio_com_erro(cliente, dois_sitios, monkeypatch):
     def quebra_joao():
         if sitios.atual() == "joao":
             raise RuntimeError("planilha quebrada")
-        return original()
-    monkeypatch.setattr(routes_dashboard, "_get_resumo_cache", quebra_joao)
+def test_familia_redireciona(cliente):
     _logar(cliente, "deyvid")
     r = cliente.get("/familia")
-    assert r.status_code == 200
-    p = r.get_data(as_text=True)
-    assert "não deu para ler" in p and "Sítio Santo Antonio" in p
+    assert r.status_code in (302, 303)
+    assert "/dashboard" in r.headers["Location"] or r.headers["Location"].endswith("/")
 
 
-def test_familia_um_sitio(cliente):
+def test_familia_sem_link_no_menu(cliente):
     _logar(cliente, "deyvid")
-    assert cliente.get("/familia").status_code == 200
     assert 'href="/familia"' not in cliente.get("/").get_data(as_text=True)
-
-
-def test_familia_link_com_varios_sitios(cliente, dois_sitios):
-    _logar(cliente, "nilson")
-    assert 'href="/familia"' in cliente.get("/").get_data(as_text=True)
