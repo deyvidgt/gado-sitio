@@ -13,7 +13,7 @@
       O cadastro não mexe nas contas — a cabeça já entrou pela compra ou pelo nascimento.
       Só a origem <b>Nascimento</b> grava também o Nascimento no Manejo.
     </p>
-    <form method="post" action="{{ url_for('editar_animal', id_=id_) if modo == 'editar' else url_for('novo_animal') }}">
+    <form method="post" action="{{ url_for('editar_animal', id_=id_) if modo == 'editar' else url_for('novo_animal') }}" enctype="multipart/form-data">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="ref_compra" value="{{ v.get('ref_compra', '') }}">
       <div class="form-grid">
@@ -85,6 +85,17 @@
           <input type="text" name="mae" maxlength="60" placeholder="ex: amarelo 08"
                  value="{{ v.get('mae', '') }}">
           <small style="color:var(--text-3);font-size:11px">Se a mãe tem brinco, escreva cor e número. As fichas da mãe e do bezerro ficam ligadas.</small>
+        </div>
+        <div class="form-group full">
+          <label>Foto do perfil do animal (câmera ou galeria)</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="file" name="foto_animal" id="foto-animal" accept="image/*" class="form-control" style="flex:1;min-width:200px">
+            <label class="btn btn-outline btn-sm" style="cursor:pointer;margin:0;display:inline-flex;align-items:center">
+              📷 Tirar com Câmera
+              <input type="file" name="foto_camera" accept="image/*" capture="environment" hidden onchange="document.getElementById('foto-animal').files = this.files;">
+            </label>
+          </div>
+          <small style="color:var(--text-3);font-size:11px">A imagem será comprimida automaticamente para um tamanho seguro.</small>
         </div>
         <div class="form-group full">
           <label>Observações</label>
