@@ -109,18 +109,18 @@
       <span class="chave">Idade</span>
       <span class="valor">{{ a.idade or '—' }}</span>
     </div>
-    {% if peso %}
+    {% if peso and peso.kg %}
     <div class="cond-campo">
       <span class="chave">Peso atual</span>
       <span class="valor">{{ '%.0f' % peso.kg }} kg</span>
-      <span class="sub">{{ peso.data|data_br }}</span>
+      <span class="sub">{{ peso.data|data_br if peso.data else '—' }}</span>
     </div>
     <div class="cond-campo">
       <span class="chave">GMD</span>
       <span class="valor" style="color: {% if peso.gmd is not none and peso.gmd >= 0 %}var(--green-600){% elif peso.gmd is not none %}var(--danger){% else %}var(--text-3){% endif %}">
         {% if peso.gmd is not none %}{{ '%.2f' % peso.gmd }} kg/dia{% else %}—{% endif %}
       </span>
-      {% if peso.gmd is not none %}<span class="sub">em {{ peso.dias }} dias</span>{% endif %}
+      {% if peso.gmd is not none %}<span class="sub">em {{ peso.dias|default('0') }} dias</span>{% endif %}
     </div>
     {% else %}
     <div class="cond-campo">
@@ -129,10 +129,10 @@
       <span class="sub">Não pesado</span>
     </div>
     {% endif %}
-    {% if estimativa %}
+    {% if estimativa and estimativa.kg %}
     <div class="cond-campo full" style="grid-column: 1 / -1; background: var(--surface-2); padding: 8px 12px; border-radius: 8px;">
       <span class="chave">📷 Estimado por foto</span>
-      <span class="valor" style="font-size: 14px;">~{{ '%.0f' % estimativa.kg }} kg <span class="muted" style="font-size: 11px; font-weight: normal;">(±{{ estimativa.faixa_pct }}%, em {{ estimativa.data|data_br }}{% if estimativa.n_pares >= 3 %}, calibrado{% endif %})</span></span>
+      <span class="valor" style="font-size: 14px;">~{{ '%.0f' % estimativa.kg }} kg <span class="muted" style="font-size: 11px; font-weight: normal;">(±{{ estimativa.faixa_pct|default('—') }}%, em {{ estimativa.data|data_br if estimativa.data else '—' }}{% if estimativa.n_pares and estimativa.n_pares >= 3 %}, calibrado{% endif %})</span></span>
     </div>
     {% endif %}
     {% if ultimo_parto %}
@@ -213,7 +213,7 @@
       <button type="button" class="btn btn-outline btn-sm" id="cond-foto-cancelar">Cancelar</button>
     </div>
     {% endif %}
-    {% if fotos %}
+    {% if fotos and fotos|length > 0 %}
     <div class="cond-fotos">
       {% for f in fotos %}
       <div class="cond-foto" onclick="abrirFoto('{{ url_for('foto_inteira', id_foto=f.id_foto) }}')" style="cursor: pointer;">

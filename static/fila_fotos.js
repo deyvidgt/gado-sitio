@@ -194,7 +194,12 @@
 
   if (!window.indexedDB) return;
   window.addEventListener("online", enviarPendentes);
-  document.addEventListener("DOMContentLoaded", () => { atualizarAviso(); enviarPendentes(); });
+  const iniciar = () => { atualizarAviso(); enviarPendentes(); };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", iniciar);
+  } else {
+    iniciar();
+  }
   setInterval(async () => {
     try { if ((await listar()).length) enviarPendentes(); } catch (e) {}
   }, 60000);
