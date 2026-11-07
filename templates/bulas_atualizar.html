@@ -18,20 +18,22 @@
   <form method="post" action="{{ url_for('previsualizar_bula') }}" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="form-group">
-      <label for="produto">Produto sem bula</label>
-      <select id="produto" name="produto" required>
-        {% for p in faltantes %}
-        <option value="{{ p.slug }}">{{ p.nome }}</option>
+      <label for="produto_nome">Produto</label>
+      <input id="produto_nome" name="produto_nome" list="produtos-disponiveis" required
+             placeholder="Selecione ou digite o nome do produto">
+      <datalist id="produtos-disponiveis">
+        {% for p in catalogo %}
+        <option value="{{ p.nome }}">
         {% endfor %}
-      </select>
+      </datalist>
     </div>
     <div class="form-group" style="margin-top:12px">
-      <label for="bula_pdf">Upload Direto do Ficheiro PDF (Recomendado)</label>
+      <label for="bula_pdf">Upload Direto do Ficheiro PDF</label>
       <input id="bula_pdf" type="file" name="bula_pdf" accept=".pdf" class="form-control">
     </div>
     <div style="text-align: center; margin: 10px 0; color: var(--text-3);">— OU —</div>
     <div class="form-group">
-      <label for="url">URL oficial do PDF</label>
+      <label for="url">URL oficial do PDF (Opcional)</label>
       <input id="url" type="url" name="url" inputmode="url"
              placeholder="https://fabricante.com.br/bula-produto.pdf">
     </div>

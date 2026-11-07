@@ -99,7 +99,7 @@ def atualizar_bulas():
     if drive.cliente() is None:
         flash("Configure o Google Drive antes de enviar bulas.", "warning")
         return redirect(url_for("listar_bulas"))
-    return render_template("bulas_atualizar.html", faltantes=_bulas_faltantes())
+    return render_template("bulas_atualizar.html", catalogo=bulas.catalogo())
 
 
 @app.route("/bulas/atualizar/previsualizar", methods=["POST"])
