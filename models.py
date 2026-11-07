@@ -45,3 +45,9 @@ class Manejo(db.Model):
     tipo = db.Column(db.String)
     qtd_cabecas = db.Column(db.Integer)
     descricao = db.Column(db.String)
+
+class Fazenda(db.Model):
+    __tablename__ = 'fazendas'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), nullable=False)
+    slug = db.Column(db.String(50), unique=True, nullable=False)
