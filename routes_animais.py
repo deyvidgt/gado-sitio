@@ -286,30 +286,35 @@ def pesagem():
 @login_required
 def peso_foto(id_):
     """Peso estimado pela foto de lado: a tela mede, o servidor valida e calcula."""
-    a = A.por_id(A.carregar(), id_)
-    if a is None:
-        flash("Animal não encontrado.", "error")
+    try:
+        a = A.por_id(A.carregar(), id_)
+        if a is None:
+            flash("Animal não encontrado.", "error")
+            return redirect(url_for("animais"))
+        if a["Status"] != "Vivo":
+            flash("Só dá para estimar o peso de um animal vivo.", "warning")
+            return redirect(url_for("ficha_animal", id_=id_))
+        dados = _get_dados_cache()
+        fator, n_pares = PF.fator_calibracao(dados.get("Manejo", pd.DataFrame()))
+        if request.method == "POST":
+            _validar_csrf()
+            f = request.form
+            try:
+                bruto = PF.registrar(id_, f.get("comprimento"), f.get("profundidade"),
+                                     f.get("referencia"), f.get("data"), responsavel=_membro_logado(),
+                                     bcs=f.get("bcs"))
+            except ValueError as e:
+                flash(str(e), "error")
+                return redirect(url_for("peso_foto", id_=id_))
+            flash(f"📷 Peso estimado: ~{bruto * PF.fator_bcs(f.get('bcs')) * fator:.0f} kg "
+                  "(estimativa, não é balança).", "success")
+            return redirect(url_for("ficha_animal", id_=id_) + "#peso")
+        return render_template("peso_foto.html", a=_linha_animal(a, _agora()), fator=fator,
+                               n_pares=n_pares, PF=PF, **_ctx_templates())
+    except Exception as e:
+        print(f"Erro em peso_foto ({id_}): {e}")
+        flash("Erro ao carregar a estimativa por foto. Tente novamente.", "error")
         return redirect(url_for("animais"))
-    if a["Status"] != "Vivo":
-        flash("Só dá para estimar o peso de um animal vivo.", "warning")
-        return redirect(url_for("ficha_animal", id_=id_))
-    dados = _get_dados_cache()
-    fator, n_pares = PF.fator_calibracao(dados["Manejo"])
-    if request.method == "POST":
-        _validar_csrf()
-        f = request.form
-        try:
-            bruto = PF.registrar(id_, f.get("comprimento"), f.get("profundidade"),
-                                 f.get("referencia"), f.get("data"), responsavel=_membro_logado(),
-                                 bcs=f.get("bcs"))
-        except ValueError as e:
-            flash(str(e), "error")
-            return redirect(url_for("peso_foto", id_=id_))
-        flash(f"📷 Peso estimado: ~{bruto * PF.fator_bcs(f.get('bcs')) * fator:.0f} kg "
-              "(estimativa, não é balança).", "success")
-        return redirect(url_for("ficha_animal", id_=id_) + "#peso")
-    return render_template("peso_foto.html", a=_linha_animal(a, _agora()), fator=fator,
-                           n_pares=n_pares, PF=PF, **_ctx_templates())
 
 
 @app.route("/animais/<id_>")

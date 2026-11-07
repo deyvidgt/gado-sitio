@@ -24,6 +24,7 @@ flask>=3.0.0,<4
 pandas>=2.0.0,<3
 openpyxl>=3.1.0,<4
 numpy>=1.26.0,<3
+pillow
 
 # ── Segurança ────────────────────────────────────────────────
 # bcrypt: hashing seguro de senhas (recomendado, mas opcional)
