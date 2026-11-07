@@ -258,14 +258,14 @@
     </summary>
     <div class="card-mobile-body">
       {% for membro in estoque_por_membro %}
-      <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--bg-2)">
-        <div style="font-weight: 600; color: var(--text); margin-bottom: 8px">{{ membro.nome }}</div>
+      <a href="{{ url_for('animais_por_dono', dono=membro.nome) }}" style="text-decoration: none; color: inherit; display: block; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--bg-2)">
+        <div style="font-weight: 600; color: var(--text); margin-bottom: 8px">{{ membro.nome }} ➔</div>
         <div class="tri-card">
           <div><b>{{ membro.cabecas }}</b>cabeças</div>
           <div><b>{{ '%.0f'|format(membro.kg_vivo or 0) }}</b>kg vivo</div>
           <div><b>{{ membro.resultado|brl }}</b>resultado</div>
         </div>
-      </div>
+      </a>
       {% endfor %}
     </div>
   </details>
