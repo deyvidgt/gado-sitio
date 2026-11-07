@@ -51,3 +51,10 @@ class Fazenda(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
     slug = db.Column(db.String(50), unique=True, nullable=False)
+
+class RegistroGenerico(db.Model):
+    __tablename__ = 'registros_genericos'
+    id = db.Column(db.Integer, primary_key=True)
+    fazenda_id = db.Column(db.Integer, db.ForeignKey('fazendas.id'), nullable=False)
+    aba = db.Column(db.String(50), nullable=False)
+    dados_json = db.Column(db.Text, nullable=False)
