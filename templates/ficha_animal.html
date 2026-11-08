@@ -297,8 +297,7 @@
 </details>
 {% endif %}
 
-<form method="post" action="{{ url_for('excluir_animal', id_=a.id) }}" style="margin-top:20px"
-      onsubmit="return confirm('Excluir este cadastro feito por engano? (Manejo e Vendas não mudam)')">
+<form method="post" action="{{ url_for('excluir_animal', id_=a.id) }}" style="margin-top:20px" onsubmit="return confirm('Excluir este cadastro feito por engano? (Manejo e Vendas não mudam)')">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <button class="btn btn-outline btn-sm" style="color:var(--danger)">🗑️ Excluir cadastro</button>
   <a href="{{ url_for('animais') }}" class="btn btn-outline btn-sm">← Voltar</a>
