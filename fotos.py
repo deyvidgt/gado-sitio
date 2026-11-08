@@ -49,9 +49,9 @@ def _comprimir_imagem(conteudo: bytes) -> tuple[bytes, str]:
     try:
         from PIL import Image, ImageOps
         img = ImageOps.exif_transpose(Image.open(io.BytesIO(conteudo))).convert("RGB")
-        img.thumbnail((1200, 1200))
+        img.thumbnail((1024, 1024))
         buf = io.BytesIO()
-        img.save(buf, "JPEG", quality=82, optimize=True)
+        img.save(buf, "JPEG", quality=85, optimize=True)
         return buf.getvalue(), "image/jpeg"
     except Exception:
         return conteudo, mime

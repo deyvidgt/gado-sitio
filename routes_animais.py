@@ -303,12 +303,14 @@ def peso_foto(id_):
                 bruto = PF.registrar(id_, f.get("comprimento"), f.get("profundidade"),
                                      f.get("referencia"), f.get("data"), responsavel=_membro_logado(),
                                      bcs=f.get("bcs"))
-            except ValueError as e:
-                flash(str(e), "error")
+                flash(f"📷 Peso estimado: ~{bruto * PF.fator_bcs(f.get('bcs')) * fator:.0f} kg "
+                      "(estimativa, não é balança).", "success")
+                return redirect(url_for("ficha_animal", id_=id_) + "#peso")
+            except Exception as e:
+                import logging
+                logging.exception(f"Erro ao processar estimativa de peso para {id_}: {e}")
+                flash("Não foi possível processar a imagem ou calcular o peso. Tente novamente.", "error")
                 return redirect(url_for("peso_foto", id_=id_))
-            flash(f"📷 Peso estimado: ~{bruto * PF.fator_bcs(f.get('bcs')) * fator:.0f} kg "
-                  "(estimativa, não é balança).", "success")
-            return redirect(url_for("ficha_animal", id_=id_) + "#peso")
         return render_template("peso_foto.html", a=_linha_animal(a, _agora()), fator=fator,
                                n_pares=n_pares, PF=PF, **_ctx_templates())
     except Exception as e:

@@ -86,7 +86,7 @@
       <div><span class="muted">Perímetro do peito</span><b id="pf-perim">—</b></div>
       <div><span class="muted">Peso estimado</span><b id="pf-peso">—</b><span class="muted" id="pf-faixa"></span></div>
     </div>
-    <button class="btn btn-primary" style="margin-top:14px">💾 Salvar estimativa</button>
+    <button class="btn btn-primary" style="margin-top:14px" id="pf-btn-salvar">💾 Salvar estimativa</button>
   </form>
 </div>
 {% endblock %}
@@ -94,6 +94,13 @@
 {% block scripts %}
 <script>
 (function () {
+  const btnSalvar = document.getElementById("pf-btn-salvar");
+  if(btnSalvar) {
+    btnSalvar.addEventListener('click', () => {
+      btnSalvar.disabled = true;
+      btnSalvar.textContent = "⏳ A processar imagem...";
+    });
+  }
   const caixa = document.getElementById("pf-medir");
   const FATOR = parseFloat(caixa.dataset.fator), K_PER = parseFloat(caixa.dataset.perimetro),
         K_SCH = parseFloat(caixa.dataset.schaeffer), FATOR_BCS = JSON.parse(caixa.dataset.bcs);
