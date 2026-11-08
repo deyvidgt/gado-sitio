@@ -70,8 +70,8 @@
 
 <div class="cond-page">
 <div class="cond-header">
-  {% if fotos|first %}
-  <img src="{{ url_for('foto_mini', id_foto=(fotos|first).id_foto) }}" alt="{{ a.brinco }}"
+  {% if fotos %}
+  <img src="{{ url_for('foto_mini', id_foto=fotos[0].id_foto) }}" alt="{{ a.brinco }}"
        style="width: 100px; height: 100px; border-radius: 10px; object-fit: cover; box-shadow: var(--shadow); flex: none;">
   {% endif %}
   <div class="cond-brinco" style="background: {{ a.hex }}; color: {{ a.texto_hex }}" aria-label="Brinco {{ a.brinco }}">
@@ -216,7 +216,7 @@
     {% if fotos and fotos|length > 0 %}
     <div class="cond-fotos">
       {% for f in fotos %}
-      <div class="cond-foto" onclick="abrirFoto('{{ url_for('foto_inteira', id_foto=f.id_foto) }}')" style="cursor: pointer;">
+      <div class="cond-foto" onclick="abrirFoto('{{ url_for('foto_inteira', id_foto=f.id_foto) }}', '{{ f.id_foto }}')" style="cursor: pointer;">
         <img loading="lazy" src="{{ url_for('foto_mini', id_foto=f.id_foto) }}" alt="{{ f.tipo }}">
         <span class="tipo">{{ f.tipo }}</span>
       </div>
@@ -298,9 +298,15 @@
   {% endif %}
 </div>
 
-<div id="visor-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,.88); display: none; align-items: center; justify-content: center; z-index: 200; padding: 16px;">
-  <img id="visor-img" style="max-width: 100%; max-height: 80vh; border-radius: 10px;" alt="">
-  <button onclick="document.getElementById('visor-modal').style.display='none'" style="position: absolute; top: 16px; right: 16px; background: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 18px;">✕</button>
+<div id="visor-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,.88); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 200; padding: 16px;">
+  <img id="visor-img" style="max-width: 100%; max-height: 75vh; border-radius: 10px;" alt="">
+  <div style="margin-top: 12px; display: flex; gap: 8px;">
+    <form id="visor-form-excluir" method="post" style="display:inline;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Excluir esta foto?')">🗑️ Excluir foto</button>
+    </form>
+    <button onclick="document.getElementById('visor-modal').style.display='none'" class="btn btn-outline btn-sm" style="background:#fff">✕ Fechar</button>
+  </div>
 </div>
 
 <script>
@@ -390,10 +396,22 @@ if (baixaSelect) {
   atualizarBaixa();
 }
 
-function abrirFoto(url) {
+function abrirFoto(url, idFoto) {
   const img = document.getElementById("visor-img");
   img.src = url;
+  const formExcluir = document.getElementById("visor-form-excluir");
+  if (idFoto) {
+    formExcluir.action = "{{ url_for('excluir_foto', id_foto='F00000') }}".replace("F00000", idFoto);
+    formExcluir.style.display = "inline";
+  } else {
+    formExcluir.style.display = "none";
+  }
   document.getElementById("visor-modal").style.display = "flex";
 }
 </script>
+
+<form method="post" action="{{ url_for('excluir_animal', id_=a.id) }}" style="margin: 20px 12px 40px 12px;" onsubmit="return confirm('Excluir este cadastro? (Manejo e Vendas não mudam)')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button class="btn btn-danger" style="width: 100%;">🗑️ Excluir cadastro</button>
+</form>
 {% endblock %}
