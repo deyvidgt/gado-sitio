@@ -15,6 +15,8 @@ import pandas as pd
 from datetime import datetime, timedelta
 import pesagem
 import animais as A
+from calculos import calcular_indicadores_extras
+from db import carregar_aba
 
 
 def simular_ponto_corte(animal_id: str, df_man: pd.DataFrame, df_animais: pd.DataFrame,
@@ -47,37 +49,40 @@ def simular_ponto_corte(animal_id: str, df_man: pd.DataFrame, df_animais: pd.Dat
         dias_simular = [0, 7, 14, 30]
 
     try:
-        # 1. Peso atual do animal (só balança; estimativa por foto não entra no GMD)
+        # 1. Peso atual do animal (balança ou peso estimado por foto/último registro)
         hist = pesagem.todas(df_man).get(animal_id)
         if not hist:
-            return {"erro": f"{animal_id} sem pesagem registrada"}
+            hist_foto = pesagem.todas(df_man, estimados=True).get(animal_id)
+            if hist_foto:
+                hist = hist_foto
+            else:
+                return {"erro": f"{animal_id} sem pesagem registrada"}
 
         peso_atual = hist[-1][1]
 
-        # 2. GMD: usa a tendência do animal; sem 2 pesagens, cai para o padrão de pasto
+        # 2. GMD: usa a tendência do animal; sem 2 pesagens, cai para o padrão de pasto (0.9 kg/dia)
         if gmd_esperado is not None:
             gmd_estimado = gmd_esperado
         else:
-            res = pesagem.resumo(hist)
-            gmd_estimado = (res or {}).get("gmd_total") or 0.9
+            res = pesagem.resumo(hist, rendimento=rendimento)
+            gmd_estimado = (res or {}).get("gmd") or (res or {}).get("gmd_total") or 0.9
 
         # 3. Custo diário por cabeça: o mesmo indicador que o painel já calcula
         if custo_diario is None:
-            from calculos import calcular_indicadores_extras
-            from db import carregar_aba
             extra = calcular_indicadores_extras(
                 carregar_aba("Compras"), carregar_aba("Gastos"),
                 carregar_aba("Vendas"), df_man, 0.0, preço_arroba)
-            custo_estimado = extra.get("custo_dia_cab") or 0.0
+            custo_estimado = extra.get("custo_dia_cab") or 3.50
+            if custo_estimado <= 0:
+                custo_estimado = 3.50
         else:
             custo_estimado = custo_diario
 
-        # 4. Simular cada dia. O preço da arroba é mantido (não há previsão de
-        # mercado no sistema); o que muda é o peso e o custo de manter o animal.
+        # 4. Simular cada dia. O preço da arroba é mantido constante; o que muda é o peso e o custo.
         simulacao = []
         for dia in dias_simular:
             peso_futuro = peso_atual + (gmd_estimado * dia)
-            arrobas = peso_futuro * rendimento / 15.0
+            arrobas = (peso_futuro * rendimento) / 15.0
             receita = arrobas * preço_arroba
             custo_continuado = custo_estimado * dia
             resultado = receita - custo_continuado
@@ -97,7 +102,7 @@ def simular_ponto_corte(animal_id: str, df_man: pd.DataFrame, df_animais: pd.Dat
         for sim in simulacao:
             if sim is melhor:
                 sim["status"] = ("✅ VENDER HOJE — melhor opção" if sim["dias"] == 0
-                                 else f"✅ Melhor esperar {sim['dias']}d")
+                                 else f"✅ Melhor esperar {sim['dias']} dias")
             elif sim["dias"] == 0:
                 sim["status"] = "Vender hoje"
             else:
