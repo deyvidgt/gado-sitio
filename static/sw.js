@@ -54,8 +54,7 @@ self.addEventListener('activate', (event) => {
         cacheNames.map((cacheName) => {
           // Deletar caches de versões antigas
           if (
-            !cacheName.includes(CACHE_VERSION) &&
-            (cacheName.includes('v5') || cacheName.includes('gado'))
+            !cacheName.includes(CACHE_VERSION)
           ) {
             console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
@@ -91,9 +90,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // ========== STALE-WHILE-REVALIDATE: Páginas HTML ==========
+  // ========== NETWORK-FIRST: Páginas HTML ==========
+  // Sempre busca no servidor para evitar páginas obsoletas no telemóvel.
   if (request.destination === 'document' || request.destination === '') {
-    event.respondWith(staleWhileRevalidate(request, CACHE_PAGES));
+    event.respondWith(networkFirst(request, CACHE_PAGES));
     return;
   }
 
