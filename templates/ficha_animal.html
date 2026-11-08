@@ -5,6 +5,19 @@
 {% block content %}
 <style>
   .ficha-top { display:flex; gap:18px; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
+  @media (max-width: 600px) {
+    .ficha-top { flex-direction:column; text-align:center; }
+    .ficha-top > div:last-child { margin-left:0 !important; width:100%; justify-content:center; }
+    .ficha-top .btn { flex:1; }
+  }
+  .ficha-acoes { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  /* No mobile, os botões de ação do perfil ocupam a largura toda e empilham,
+     para ficarem 100% visíveis e fáceis de tocar no telemóvel. */
+  @media (max-width: 640px) {
+    .ficha-top { gap:12px; }
+    .ficha-acoes { margin-left:0; width:100%; }
+    .ficha-acoes .btn { flex:1 1 auto; text-align:center; min-width:44px; min-height:40px; }
+  }
   .brinco-grande { width:84px; height:84px; border-radius:50% 50% 50% 8px; display:flex; align-items:center;
                    justify-content:center; font-size:30px; font-weight:700; border:3px solid rgba(0,0,0,.2);
                    box-shadow:var(--shadow); flex:none; }
