@@ -9,7 +9,7 @@
  *   return send_file('static/sw.js', mimetype='application/javascript')
  */
 
-const CACHE_VERSION = 'v5.7';
+const CACHE_VERSION = 'v5.8';
 const CACHE_ASSETS = `${CACHE_VERSION}-assets`;
 const CACHE_PAGES = `${CACHE_VERSION}-pages`;
 const CACHE_API = `${CACHE_VERSION}-api`;
@@ -30,7 +30,7 @@ const CRITICAL_ASSETS = [
  * INSTALL: Pre-cache assets críticos
  */
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing v5.7...');
+  console.log('[SW] Installing v5.8...');
   event.waitUntil(
     caches.open(CACHE_ASSETS).then((cache) => {
       console.log('[SW] Pre-caching critical assets');
@@ -345,4 +345,4 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-console.log('[SW] Service Worker v5.7 loaded');
+console.log('[SW] Service Worker v5.8 loaded');
