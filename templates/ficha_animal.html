@@ -52,6 +52,10 @@
   .visor .info { color:#fff; margin:10px 0; font-size:13.5px; text-align:center; }
   .visor .acoes { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
   .visor .acoes .btn { background:#fff; }
+  @media (max-width: 600px) {
+    .visor .acoes { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    .visor .acoes button, .visor .acoes .btn { width: 100%; }
+  }
   .visor .editar { display:none; background:var(--surface); padding:12px; border-radius:10px; margin-top:10px; width:min(420px,100%); }
 </style>
 
