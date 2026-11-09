@@ -25,6 +25,7 @@ def test_editar_e_remover_cocho_atualiza_pagina(cliente, dados_restaurados, monk
     import routes_cochos
 
     monkeypatch.setattr(routes_cochos, "fazer_backup_seguro", lambda: None)
+    db.reescrever_aba("Cochos", pd.DataFrame(columns=COLUNAS_COCHOS))
     db.salvar_linha("Cochos", ["C01", "Cocho 1", "sal", "Pasto", 100, 50, "", "", "Sim", "Deyvid"])
     db.salvar_linha("Cochos", ["C02", "Cocho 2", "sal", "Pasto", 100, 75, "", "", "Sim", "Deyvid"])
     with cliente.session_transaction() as sess:
@@ -63,6 +64,7 @@ def test_novo_cocho_rejeita_id_duplicado_e_limpa_planilha(cliente, dados_restaur
     import routes_cochos
 
     monkeypatch.setattr(routes_cochos, "fazer_backup_seguro", lambda: None)
+    db.reescrever_aba("Cochos", pd.DataFrame(columns=COLUNAS_COCHOS))
     db.salvar_linha("Cochos", ["C01", "Cocho antigo", "sal", "Pasto", 100, 25, "", "", "Sim", "Deyvid"])
     db.salvar_linha("Cochos", ["C01", "Cocho atual", "sal", "Pasto", 100, 50, "", "", "Sim", "Deyvid"])
     with cliente.session_transaction() as sess:

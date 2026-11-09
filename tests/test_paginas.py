@@ -4,9 +4,8 @@ Smoke test das páginas: abre todas as rotas GET (logado) e garante que
 nenhuma devolve erro 500. Roda numa cópia temporária dos dados.
 """
 import os
-
+import pandas as pd
 import pytest
-
 import db
 
 # Rotas que dependem de internet (cotações/chuva) — ficam de fora do teste.

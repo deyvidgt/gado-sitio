@@ -33,6 +33,26 @@ for _nome in ("gado_familia.xlsx", "usuarios.json", "sitio_config.json"):
 
 os.environ["GADO_DATA_DIR"] = DATA_DIR_TESTE
 
+sitio_config_path = os.path.join(DATA_DIR_TESTE, "sitio_config.json")
+import json
+try:
+    if os.path.exists(sitio_config_path):
+        cfg = json.loads(open(sitio_config_path, "r", encoding="utf-8").read())
+    else:
+        cfg = {}
+    if not isinstance(cfg.get("modulos"), dict):
+        cfg["modulos"] = {}
+    cfg["modulos"].update({
+        "leite": True,
+        "conforto": True,
+        "reproducao": True,
+        "genetica_confinamento": True
+    })
+    with open(sitio_config_path, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+except Exception:
+    pass
+
 import app as _app_mod  # noqa: E402  (precisa vir depois do GADO_DATA_DIR)
 import db  # noqa: E402
 

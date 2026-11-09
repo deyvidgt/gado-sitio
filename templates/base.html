@@ -1412,6 +1412,180 @@ function dispensarInstall() {
 
 <script src="/static/js/bottom-nav.js"></script>
 
+<!-- Floating Action Button (FAB) para Ações Rápidas no Mobile -->
+<button id="fab-quick-action" aria-label="Ações Rápidas" title="Ações Rápidas">
+  <span>+</span>
+</button>
+
+<div id="fab-modal" class="fab-modal" hidden>
+  <div class="fab-modal-content">
+    <div class="fab-modal-header">
+      <h3>⚡ Ações Rápidas</h3>
+      <button id="fab-close" class="fab-close">&times;</button>
+    </div>
+    <div class="fab-grid">
+      <a href="/manejo/novo" class="fab-item">
+        <span class="fab-icon">🐄</span>
+        <span>Registrar Manejo</span>
+      </a>
+      <a href="/compras/nova" class="fab-item">
+        <span class="fab-icon">🛒</span>
+        <span>Nova Compra</span>
+      </a>
+      <a href="/gastos/nova" class="fab-item">
+        <span class="fab-icon">💰</span>
+        <span>Novo Gasto</span>
+      </a>
+      <a href="/vendas/nova" class="fab-item">
+        <span class="fab-icon">📈</span>
+        <span>Nova Venda</span>
+      </a>
+      <a href="/tarefas/nova" class="fab-item">
+        <span class="fab-icon">🗓️</span>
+        <span>Nova Tarefa</span>
+      </a>
+      <a href="/visitas/nova" class="fab-item">
+        <span class="fab-icon">📝</span>
+        <span>Registrar Visita</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+#fab-quick-action {
+  position: fixed;
+  bottom: 75px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, var(--green-600), var(--green-700));
+  color: white;
+  border-radius: 50%;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1050;
+  transition: transform 0.2s, background 0.2s;
+}
+#fab-quick-action:hover {
+  transform: scale(1.08);
+  background: linear-gradient(135deg, var(--green-500), var(--green-600));
+}
+#fab-quick-action:active {
+  transform: scale(0.95);
+}
+.fab-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 1100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+.fab-modal[hidden] {
+  display: none;
+}
+.fab-modal-content {
+  background: var(--surface);
+  width: 100%;
+  max-width: 500px;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 -4px 25px rgba(0,0,0,0.25);
+  animation: slideUp 0.25s ease;
+}
+.fab-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--bg-2);
+  padding-bottom: 10px;
+}
+.fab-modal-header h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  color: var(--green-700);
+}
+[data-theme="dark"] .fab-modal-header h3 { color: var(--green-300); }
+.fab-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-2);
+}
+.fab-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+.fab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--bg-2);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 13px;
+  gap: 8px;
+  transition: all 0.18s;
+}
+.fab-item:hover {
+  background: var(--green-50);
+  border-color: var(--green-300);
+  color: var(--green-700);
+  transform: translateY(-2px);
+}
+[data-theme="dark"] .fab-item:hover {
+  background: rgba(144,201,127,0.12);
+  color: var(--green-300);
+}
+.fab-icon {
+  font-size: 26px;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const fabBtn = document.getElementById('fab-quick-action');
+  const fabModal = document.getElementById('fab-modal');
+  const fabClose = document.getElementById('fab-close');
+
+  if (fabBtn && fabModal) {
+    fabBtn.addEventListener('click', () => {
+      fabModal.removeAttribute('hidden');
+    });
+    if (fabClose) {
+      fabClose.addEventListener('click', () => {
+        fabModal.setAttribute('hidden', '');
+      });
+    }
+    fabModal.addEventListener('click', (e) => {
+      if (e.target === fabModal) {
+        fabModal.setAttribute('hidden', '');
+      }
+    });
+  }
+});
+</script>
+
 <!-- v5.7 Sprint 4: Component Library -->
 <script src="/static/js/components/modal.js"></script>
 <script src="/static/js/components/toast.js"></script>

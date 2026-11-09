@@ -1,0 +1,8 @@
+{
+  "modulos": {
+    "leite": false,
+    "conforto": true,
+    "reproducao": false,
+    "genetica_confinamento": false
+  }
+}
