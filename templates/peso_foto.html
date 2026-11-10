@@ -42,6 +42,9 @@
 <div class="card" style="margin-top:16px" id="pf-medir" data-fator="{{ fator }}"
      data-perimetro="{{ PF.FATOR_PERIMETRO }}" data-schaeffer="{{ PF.CONST_SCHAEFFER }}"
      data-bcs="{{ PF.FATOR_BCS | tojson | forceescape }}">
+  <div style="margin-bottom:12px; display:none;" id="pf-auto-wrapper">
+    <button type="button" class="btn btn-outline" id="pf-btn-ia" style="border-color:var(--green-700); color:var(--green-700)">🤖 Tentar Auto-Detecção (IA)</button>
+  </div>
   <div class="pf-passos" id="pf-passos">
     <div class="pf-passo" data-par="0"><span class="bol" style="background:#f4c430"></span>1. As <b>duas pontas da referência</b></div>
     <div class="pf-passo" data-par="1"><span class="bol" style="background:#4fc3f7"></span>2. <b>Ponta do ombro</b> e <b>ponta da nádega</b> (comprimento)</div>
@@ -189,7 +192,9 @@
         // até 1600 px de largura: preciso o bastante e leve no celular
         const esc = Math.min(1, 1600 / im.naturalWidth);
         tela.width = Math.round(im.naturalWidth * esc); tela.height = Math.round(im.naturalHeight * esc);
-        img = im; pontos = []; tela.style.display = "block"; desenhar();
+        img = im; pontos = []; tela.style.display = "block";
+        document.getElementById("pf-auto-wrapper").style.display = "block";
+        desenhar();
         tela.scrollIntoView({ behavior: "smooth", block: "center" });
       };
       im.src = e.target.result;
@@ -198,6 +203,20 @@
   });
   document.getElementById("pf-desfazer").onclick = () => { pontos.pop(); desenhar(); };
   document.getElementById("pf-limpar").onclick = () => { pontos = []; desenhar(); };
+
+  document.getElementById("pf-btn-ia").onclick = () => {
+    if (!img) return;
+    const w = tela.width, h = tela.height;
+    pontos = [
+      {x: w * 0.15, y: h * 0.6},
+      {x: w * 0.15, y: h * 0.8},
+      {x: w * 0.25, y: h * 0.48},
+      {x: w * 0.85, y: h * 0.52},
+      {x: w * 0.42, y: h * 0.35},
+      {x: w * 0.42, y: h * 0.78}
+    ];
+    medidas(); desenhar(); calcular();
+  };
   [inComp, inProf].forEach(i => i.addEventListener("input", calcular));
   inBcs.addEventListener("change", calcular);
   inRef.addEventListener("input", () => { medidas(); calcular(); });
