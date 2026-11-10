@@ -3,10 +3,23 @@
 {% block page_title %}Pastos 🗺️{% endblock %}
 
 {% block content %}
-<div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-  <a href="{{ url_for('medicoes_pastos') }}" class="btn btn-outline" style="margin-right:8px">📏 Altura / MS estimada</a>
-  <a href="{{ url_for('aplicacoes_pastos') }}" class="btn btn-outline">🌱 Aplicações de insumos e custo/ha</a>
+<div style="display:flex;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap">
+  <button type="button" class="btn btn-primary" onclick="document.getElementById('form-novo-pasto').style.display='block'">➕ Novo Pasto</button>
+  <div style="display:flex;gap:8px">
+    <a href="{{ url_for('medicoes_pastos') }}" class="btn btn-outline" style="margin-right:8px">📏 Altura / MS estimada</a>
+    <a href="{{ url_for('aplicacoes_pastos') }}" class="btn btn-outline">🌱 Aplicações de insumos e custo/ha</a>
+  </div>
 </div>
+
+<form method="post" action="{{ url_for('novo_pasto_simples') }}" id="form-novo-pasto" style="display:none;margin-bottom:12px;padding:12px;background:var(--bg-2,#f8f9fa);border:1px solid var(--border);border-radius:8px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div style="display:flex;flex-direction:column;gap:8px">
+        <input type="text" name="nome" placeholder="Nome do Pasto" required class="form-input">
+        <input type="number" name="area_ha" placeholder="Área (hectares)" step="0.01" required class="form-input">
+        <button type="submit" class="btn btn-primary">Salvar Pasto</button>
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('form-novo-pasto').style.display='none'">Cancelar</button>
+    </div>
+</form>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
 <style>
@@ -79,15 +92,14 @@
 
   /* ── Mobile responsivo (< 768px) ── */
   @media (max-width: 768px) {
-    #mapa { height: 56vh; min-height: 300px; }
-    .mapa-shell { margin-inline: -4px; }
-    .mapa-fab { right:calc(14px + env(safe-area-inset-right, 0px)); bottom:calc(18px + env(safe-area-inset-bottom, 0px)); width:58px; height:58px; }
-    .pasto-pin { width:96px; }
-    .pasto-pin-circulo { width:58px; height:58px; }
-    .pasto-pin-cabezas { font-size:19px; }
-    .pasto-pin-etiqueta { max-width:96px; font-size:10px; }
-    .mapa-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-    .mapa-controls .btn { min-height: 44px; }
+    #mapa { height: 50vh; min-height: 250px; }
+    .mapa-shell { margin-bottom: 70px; }
+    .mapa-fab { right: 10px; bottom: 10px; }
+    .pasto-pin { width: 60px; }
+    .pasto-pin-circulo { width: 30px; height: 30px; font-size: 10px; }
+    .pasto-pin-etiqueta { font-size: 9px; max-width: 60px; }
+    .mapa-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 8px; }
+    .mapa-controls .btn { min-height: 36px; font-size: 12px; }
     .legenda-lotacao { gap: 8px; padding: 8px; }
     .legenda-item { flex: 1 1 42%; font-size: 12px; }
   }

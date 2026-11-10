@@ -220,6 +220,20 @@ def novo_pasto():
     return redirect(url_for("pastos"))
 
 
+@app.route("/pastos/novo-simples", methods=["POST"])
+@login_required
+def novo_pasto_simples():
+    _validar_csrf()
+    try:
+        nome = request.form.get("nome")
+        area = float(request.form.get("area_ha", 0))
+        PA.criar_simples(nome, area, _membro_logado())
+        flash(f"✅ Pasto {nome} criado!", "success")
+    except Exception as e:
+        flash(f"Erro: {str(e)}", "error")
+    return redirect(url_for("pastos"))
+
+
 @app.route("/pastos/importar-kmz", methods=["POST"])
 @login_required
 def importar_kmz():

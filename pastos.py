@@ -229,6 +229,29 @@ def criar(nome, contorno_json, criado_por: str = "") -> str:
     return id_
 
 
+def criar_simples(nome, area_ha, criado_por: str = "") -> str:
+    df = carregar()
+    nome = _nome(nome, df)
+    # Cria um polígono "quadrado" dummy de 1x1 grau centrado num ponto qualquer,
+    # ajustado para ter aproximadamente a área informada
+    lado = math.sqrt(area_ha * 10000) / 111320
+    geo = {
+        "type": "Polygon",
+        "coordinates": [[
+            [-48.28 - lado/2, -18.92 - lado/2],
+            [-48.28 + lado/2, -18.92 - lado/2],
+            [-48.28 + lado/2, -18.92 + lado/2],
+            [-48.28 - lado/2, -18.92 + lado/2],
+            [-48.28 - lado/2, -18.92 - lado/2]
+        ]]
+    }
+    nums = [int(i[1:]) for i in df["ID"] if re.fullmatch(r"P\d+", i)]
+    id_ = f"P{max(nums, default=0) + 1:02d}"
+    db.salvar_linha(ABA, [id_, nome, area_ha, json.dumps(geo), CORES[len(df) % len(CORES)],
+                          "Sim", "Criado via formulário simples", criado_por])
+    return id_
+
+
 def _linha(df, id_):
     m = df.index[(df["ID"] == id_) & (df["Ativo"] != "Não")]
     if m.empty:
