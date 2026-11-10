@@ -226,9 +226,9 @@
       <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600;margin-bottom:6px">🐄 Brincos no Pasto ({{ p.animais_dados|length }})</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         {% for a in p.animais_dados[:12] %}
-          <span style="background:{{ a.cor }}; color:#111; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:700; border:1px solid rgba(0,0,0,0.15)">
+          <a href="{{ url_for('ficha_animal', id_=a.id) }}" style="background:{{ a.cor }}; color:#111; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:700; border:1px solid rgba(0,0,0,0.15); text-decoration:none; display:inline-block;">
             🏷️ {{ a.brinco }}
-          </span>
+          </a>
         {% endfor %}
         {% if p.animais_dados|length > 12 %}
           <span style="color:var(--text-3);font-size:12px;align-self:center">
