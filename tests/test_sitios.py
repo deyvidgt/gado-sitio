@@ -382,31 +382,8 @@ def test_tela_lista_sitios_para_admin(cliente, dois_sitios):
     assert "🏡 Sítios" in p and "Sítio do João" in p
 
 
-# ── Fase 4: painel da Família ─────────────────────────────────────────────────
+# ── Painel da Família (v5.0 fase 4): privado / redireciona ────────────────────
 
-def test_familia_soma_e_volta_ao_sitio(cliente, dois_sitios):
-    from calculos import calcular_estoque
-    sitios.ativar("joao")
-    db.salvar_linha("Compras", ["10/01/2025", 5, 10_000, 2_000, 2, 3, "", "Joao"])
-    sitios.ativar("santo-antonio")
-    d = db.carregar_todas()
-    est_sa = calcular_estoque(d["Compras"], d["Vendas"], d["Manejo"])
-    _logar(cliente, "nilson")
-    p = cliente.get("/familia").get_data(as_text=True)
-    assert "Sítio Santo Antonio" in p and "Sítio do João" in p and "João, Ana" in p
-    assert f'data-total-cab="{est_sa + 5}"' in p
-    # o próximo pedido continua no sítio do Nilson
-    assert "Geane" in cliente.get("/compras/nova").get_data(as_text=True)
-    assert sitios.atual() == "santo-antonio"
-
-
-def test_familia_sitio_com_erro(cliente, dois_sitios, monkeypatch):
-    import routes_dashboard
-    original = routes_dashboard._get_resumo_cache
-
-    def quebra_joao():
-        if sitios.atual() == "joao":
-            raise RuntimeError("planilha quebrada")
 def test_familia_redireciona(cliente):
     _logar(cliente, "deyvid")
     r = cliente.get("/familia")

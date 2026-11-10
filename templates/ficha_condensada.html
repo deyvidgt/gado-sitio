@@ -401,7 +401,7 @@ function abrirFoto(url, idFoto) {
   img.src = url;
   const formExcluir = document.getElementById("visor-form-excluir");
   if (idFoto) {
-    formExcluir.action = "{{ url_for('excluir_foto', id_foto='F00000') }}".replace("F00000", idFoto);
+    formExcluir.action = "{{ url_for('foto_excluir', id_foto='F00000') }}".replace("F00000", idFoto);
     formExcluir.style.display = "inline";
   } else {
     formExcluir.style.display = "none";
