@@ -166,7 +166,7 @@
   <div class="cond-painel ativo" id="cond-acoes">
     <div class="cond-acoes">
       {% if historico|length > 0 %}
-        {% for h in historico|slice(5)|list %}
+        {% for h in historico[:5] %}
         <div class="cond-acao">
           <span class="data">{{ h.data|data_br }}</span>
           <span class="tipo">{{ h.tipo }}</span>

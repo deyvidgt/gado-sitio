@@ -7,7 +7,7 @@
 <p style="color:var(--text-3);font-size:13px;margin-top:-6px">
   Bula em PDF e foto da embalagem de cada remédio e vacina. Toque para abrir.
 </p>
-{% if pode_atualizar and drive_ok %}
+{% if pode_atualizar %}
 <a href="{{ url_for('atualizar_bulas') }}" class="btn btn-primary" style="margin:8px 0 16px">
   ⬇️ Buscar bula oficial
 </a>

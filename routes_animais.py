@@ -349,17 +349,8 @@ def ficha_animal(id_):
             "android" in request.headers.get("User-Agent", "").lower()
         )
 
-        estimativa_debug = PF.ultima_estimativa(id_, dados["Manejo"])
-        print(f"DEBUG: estimativa type={type(estimativa_debug)} value={estimativa_debug}")
-        #peso_debug = P.resumo(hist_peso, _rendimento())
-        #print(f"DEBUG: peso type={type(peso_debug)} value={peso_debug}")
-
-        peso_debug = None
-        if hist_peso:
-            peso_debug = P.resumo(hist_peso, _rendimento())
-            print(f"DEBUG: peso type={type(peso_debug)} value={peso_debug}")
-        else:
-            print("DEBUG: peso list empty, skipping P.resumo")
+        estimativa = PF.ultima_estimativa(id_, dados["Manejo"])
+        peso = P.resumo(hist_peso, _rendimento()) if hist_peso else None
 
         ctx = {
             "a": _linha_animal(a, hoje), "raw": a,
@@ -368,8 +359,8 @@ def ficha_animal(id_):
             "mae_txt": A._RE_ID.sub("", a["Mãe"]).strip(), "mae_id": mae_id,
             "filhos": [_linha_animal(x, hoje) for _, x in filhos.iterrows()],
             "historico": A.historico(id_, dados["Manejo"], dados["Vendas"]),
-            "pesos": hist_peso, "peso": peso_debug,
-            "estimativa": estimativa_debug,
+            "pesos": hist_peso, "peso": peso,
+            "estimativa": estimativa,
             "fotos": F.listar(id_), "fotos_ativas": drive.configurado() or drive.cliente() is not None,
             "TIPOS_FOTO": TIPOS_FOTO,
             "ultimo_parto": fmt_data(a["Último Parto"]) if pd.notna(a["Último Parto"]) else "",

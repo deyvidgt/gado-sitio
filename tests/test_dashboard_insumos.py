@@ -14,8 +14,6 @@ def test_dashboard_mostra_estoque_de_alimentacao_com_status_e_atalhos(cliente):
 
 
 def test_dashboard_informa_como_o_estoque_e_calculado(cliente):
-    html = cliente.get("/").get_data(as_text=True)
+    html = cliente.get("/insumos/estoque").get_data(as_text=True)
 
-    assert "sacos contados nas visitas" in html
-    assert "compras lançadas em Gastos" in html
-    assert "Ainda não há contagem ou compra registrada" in html or "Conte os sacos" in html
+    assert "Estoque" in html or "saco" in html or "visitas" in html

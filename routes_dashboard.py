@@ -350,7 +350,7 @@ def dashboard():
     # IA Preditiva (Onda 19)
     try:
         from reproducao_avancada_ia import alertas_ia_preditiva
-        ia_alertas = alertas_ia_preditiva(A.carregar(), dados["Manejo"], dados["Compras"], dados["Vendas"])
+        ia_alertas = alertas_ia_preditiva(carregar_aba("Animais"), dados["Manejo"], dados["Compras"], dados["Vendas"])
     except Exception as erro:
         app.logger.warning(f"Painel: IA preditiva indisponível: {erro}")
         ia_alertas = {"urgentes": [], "avisos": [], "total": 0}

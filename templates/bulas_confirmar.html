@@ -23,6 +23,8 @@
   <form method="post" action="{{ url_for('confirmar_bula') }}" style="margin-top:14px">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="token" value="{{ pendente.token }}">
+    <input type="hidden" name="produto" value="{{ pendente.produto }}">
+    <input type="hidden" name="produto_nome" value="{{ pendente.nome }}">
     <button class="btn btn-primary" type="submit">Confirmo a bula e enviar ao Drive</button>
   </form>
 </div>

@@ -362,9 +362,14 @@ def test_ficha_mobile_mostra_acoes_e_um_microfone(cliente, sem_animais, monkeypa
     monkeypatch.setattr(routes_animais.drive, "configurado", lambda: True)
     _voz(cliente, "registrar bezerra brinco amarelo 92 deyvid")
     id_ = A.carregar().iloc[-1]["ID"]
+    # Histórico não-vazio: o template mobile deve listar itens (não lotes do |slice).
+    _voz(cliente, "gravar vacina estepto penicilina bezerra, brinco amarelo 92")
 
     html = cliente.get(f"/animais/{id_}?modo=mobile").get_data(as_text=True)
 
+    assert "Erro ao carregar a ficha" not in html
+    assert "cond-acao" in html
+    assert "Vacina" in html or "Vacinação" in html
     assert 'id="search-mic"' in html
     assert 'id="btn-voz-top"' not in html
     assert 'id="cond-foto-arquivo"' in html

@@ -13,6 +13,7 @@
   <p style="font-size:13px;color:var(--text-3);margin-bottom:14px">
     Pode carregar o ficheiro PDF da bula diretamente do seu computador (evitando bloqueios de rede/proxy no PythonAnywhere) ou informar o endereço HTTPS oficial.
     A pasta <b>Bulas e embalagens</b> será criada no Drive se ainda não existir.
+    {% if not drive_ok %}Sem Drive configurado, a bula fica cadastrada só neste sítio (lista Disponíveis).{% endif %}
   </p>
   {% if catalogo %}
   <form method="post" action="{{ url_for('previsualizar_bula') }}" enctype="multipart/form-data">

@@ -140,9 +140,26 @@ def _catalogo_base() -> list[tuple[str, str]]:
     return sorted(itens.items(), key=lambda kv: kv[1].lower())
 
 
+def _arquivos_locais() -> set[str]:
+    """Nomes lógicos (ex.: ivermectina__bula.pdf) já guardados no cache do sítio."""
+    pasta = cache_dir()
+    if not os.path.isdir(pasta):
+        return set()
+    out = set()
+    for nome in os.listdir(pasta):
+        if nome.startswith("bula_") and _RE_ARQUIVO.fullmatch(nome[5:]):
+            out.add(nome[5:])
+    return out
+
+
+def _slug_do_arquivo(nome: str) -> str | None:
+    m = _RE_ARQUIVO.fullmatch(nome or "")
+    return m.group(0).split("__", 1)[0] if m else None
+
+
 def catalogo() -> list[dict]:
-    """Produtos com o que já existe no Drive: {'nome', 'bula', 'embalagem'}
-    (o valor é o nome do arquivo, ou None quando falta)."""
+    """Produtos com o que já existe no Drive ou no cache local:
+    {'nome', 'bula', 'embalagem'} (nome do arquivo, ou None quando falta)."""
     arquivos: set[str] = set()
     cli = drive.cliente()
     if cli is not None:
@@ -150,8 +167,16 @@ def catalogo() -> list[dict]:
             arquivos = {a["name"] for a in cli.listar(cli.pasta(NOME_PASTA, {"bulas": "pasta"}))}
         except drive.DriveErro as e:
             logging.warning(f"Catálogo de bulas: {e}")
+    arquivos |= _arquivos_locais()
+
+    base = dict(_catalogo_base())
+    for arq in arquivos:
+        chave = _slug_do_arquivo(arq)
+        if chave and chave not in base:
+            base[chave] = chave.replace("-", " ").title()
+
     out = []
-    for chave, nome in _catalogo_base():
+    for chave, nome in sorted(base.items(), key=lambda kv: kv[1].lower()):
         bula = next((a for a in arquivos if a.startswith(chave + "__bula.")), None)
         foto = next((a for a in arquivos if a.startswith(chave + "__embalagem.")), None)
         out.append({"nome": nome, "bula": bula, "embalagem": foto})
@@ -160,6 +185,20 @@ def catalogo() -> list[dict]:
 
 def _cache_path(nome: str) -> str:
     return os.path.join(cache_dir(), f"bula_{nome}")
+
+
+def guardar_local(nome: str, conteudo: bytes) -> str:
+    """Grava a bula no cache do sítio para aparecer em Disponíveis mesmo sem Drive."""
+    if not _RE_ARQUIVO.fullmatch(nome):
+        raise BulaFonteErro("Nome de arquivo de bula inválido.")
+    caminho = _cache_path(nome)
+    os.makedirs(cache_dir(), exist_ok=True)
+    tmp = caminho + ".tmp"
+    with open(tmp, "wb") as f:
+        f.write(conteudo)
+    os.replace(tmp, caminho)
+    limpar_cache()
+    return caminho
 
 
 def arquivo(nome: str) -> bytes | None:
@@ -182,8 +221,5 @@ def arquivo(nome: str) -> bytes | None:
     except drive.DriveErro as e:
         logging.warning(f"Bula {nome}: {e}")
         return None
-    os.makedirs(cache_dir(), exist_ok=True)
-    with open(caminho, "wb") as f:
-        f.write(dados)
-    limpar_cache()
+    guardar_local(nome, dados)
     return dados

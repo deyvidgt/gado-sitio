@@ -96,10 +96,9 @@ def bula_arquivo(nome):
 @login_required
 def atualizar_bulas():
     _so_admin()
-    if drive.cliente() is None:
-        flash("Configure o Google Drive antes de enviar bulas.", "warning")
-        return redirect(url_for("listar_bulas"))
-    return render_template("bulas_atualizar.html", catalogo=bulas.catalogo())
+    # Sem Drive ainda dá para conferir e cadastrar localmente (fallback de rede).
+    return render_template("bulas_atualizar.html", catalogo=bulas.catalogo(),
+                           drive_ok=drive.cliente() is not None)
 
 
 @app.route("/bulas/atualizar/previsualizar", methods=["POST"])
@@ -183,30 +182,58 @@ def confirmar_bula():
     if pendente is None:
         flash("A prévia expirou. Confira o PDF novamente.", "warning")
         return redirect(url_for("atualizar_bulas"))
-    # Permite substituir bula existente, mantendo a atualização atômica.
-    # Apenas prossegue se a prévia for válida.
-    cli = drive.cliente()
-    if cli is None:
-        flash("Configure o Google Drive antes de enviar bulas.", "warning")
-        return redirect(url_for("listar_bulas"))
 
+    # Formulário de pré-conferência manda o produto em campos hidden para
+    # garantir a associação correta mesmo se a sessão for parcial.
+    produto_form = (request.form.get("produto") or "").strip()
+    nome_form = (request.form.get("produto_nome") or request.form.get("nome") or "").strip()
+    if produto_form:
+        pendente["produto"] = bulas.slug(produto_form)
+    if nome_form:
+        pendente["nome"] = nome_form
+    if not pendente.get("produto"):
+        flash("Produto da bula não informado.", "error")
+        return redirect(url_for("atualizar_bulas"))
+    pendente.setdefault("nome", pendente["produto"])
+
+    nome_arquivo = f"{pendente['produto']}__bula.pdf"
     try:
         with open(_caminho_pendente(pendente["token"]), "rb") as arquivo_pdf:
             conteudo = arquivo_pdf.read()
-        nome_arquivo = f"{pendente['produto']}__bula.pdf"
-        pasta = cli.pasta(bulas.NOME_PASTA, {"bulas": "pasta"})
-        antigo = cli.achar_por_prop("bulas", nome_arquivo)
-        novo = cli.enviar(
-            pasta, nome_arquivo, conteudo, "application/pdf",
-            {"bulas": nome_arquivo},
-            descricao=f"Fonte oficial conferida: {pendente['fonte']}",
-        )
-        if antigo and antigo != novo:
-            cli.lixeira(antigo)
-    except (OSError, drive.DriveErro) as e:
-        flash(f"Não foi possível enviar a bula ao Google Drive: {e}", "error")
+        # Cache local primeiro: o produto entra em Disponíveis mesmo se o Drive falhar.
+        bulas.guardar_local(nome_arquivo, conteudo)
+    except (OSError, bulas.BulaFonteErro) as e:
+        print(e)
+        flash(f"Não foi possível guardar a bula localmente: {e}", "error")
         return redirect(url_for("atualizar_bulas"))
 
+    drive_ok = False
+    cli = drive.cliente()
+    if cli is None:
+        flash("Google Drive não configurado — bula cadastrada só neste sítio.", "warning")
+    else:
+        try:
+            pasta = cli.pasta(bulas.NOME_PASTA, {"bulas": "pasta"})
+            antigo = cli.achar_por_prop("bulas", nome_arquivo)
+            novo = cli.enviar(
+                pasta, nome_arquivo, conteudo, "application/pdf",
+                {"bulas": nome_arquivo},
+                descricao=f"Fonte oficial conferida: {pendente['fonte']}",
+            )
+            if antigo and antigo != novo:
+                cli.lixeira(antigo)
+            drive_ok = True
+        except Exception as e:
+            print(e)
+            flash(
+                f"Falha ao enviar ao Google Drive ({e}). "
+                f"A bula de {pendente['nome']} ficou cadastrada localmente.",
+                "warning",
+            )
+
     _remover_pendente()
-    flash(f"Bula de {pendente['nome']} enviada ao Drive.", "success")
+    if drive_ok:
+        flash(f"Bula de {pendente['nome']} enviada ao Drive.", "success")
+    else:
+        flash(f"Bula de {pendente['nome']} cadastrada e disponível na lista.", "success")
     return redirect(url_for("listar_bulas"))
