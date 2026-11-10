@@ -216,8 +216,8 @@ document.addEventListener('DOMContentLoaded', function() {
 {% if grafico_gastos %}
 <section class="card" style="margin-bottom:20px">
   <div class="card-title">💸 Gastos por Tipo</div>
-  <div class="grafico-container" style="position:relative;height:280px;margin-top:16px">
-    <canvas id="grafico_gastos"></canvas>
+  <div class="grafico-container" style="position:relative;width:100%;height:250px;min-height:250px;margin-top:16px">
+    <canvas id="grafico_gastos" style="width:100%;height:250px;display:block"></canvas>
   </div>
 </section>
 
