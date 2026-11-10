@@ -26,27 +26,24 @@ class TestBottomNavHTML:
         assert 'class="bottom-nav"' in content
 
     def test_nav_items_in_html(self):
-        """Verify all 5 nav items are in HTML"""
+        """Verify all nav items are in HTML with correct routes"""
         with open('templates/base.html', 'r', encoding='utf-8') as f:
             content = f.read()
 
         # Check for nav items with correct routes
-        assert 'data-route="dashboard"' in content
-        assert 'data-route="tarefas"' in content
-        assert 'data-route="relatorios"' in content
-        assert 'data-route="central_alertas"' in content
-        assert 'data-route="configuracoes"' in content
+        assert 'url_for(\'dashboard\')' in content
+        assert 'url_for(\'dashboard_ocupacao_pastos\')' in content
+        assert 'url_for(\'evolucao_rebanho\')' in content
+        assert 'url_for(\'tarefas\')' in content
+        assert 'url_for(\'central_alertas\')' in content
+        assert 'url_for(\'animais\')' in content
 
     def test_nav_icons_present(self):
-        """Verify emoji icons for nav items"""
+        """Verify clean SVG icons for nav items"""
         with open('templates/base.html', 'r', encoding='utf-8') as f:
             content = f.read()
 
-        assert '🏠' in content  # Painel
-        assert '🗓️' in content  # Agenda
-        assert '📊' in content  # Relatórios
-        assert '🔔' in content  # Alertas
-        assert '👤' in content  # Perfil
+        assert '<svg class="nav-icon"' in content
 
     def test_badge_elements_present(self):
         """Verify badge elements for notifications"""
@@ -246,10 +243,11 @@ class TestBottomNavAccessibility:
 
         # Check that nav items have title attributes
         assert 'title="Painel"' in content
+        assert 'title="Pastos"' in content
+        assert 'title="Rebanho"' in content
         assert 'title="Agenda"' in content
-        assert 'title="Relatórios"' in content
         assert 'title="Alertas"' in content
-        assert 'title="Perfil"' in content
+        assert 'title="Animais"' in content
 
     def test_focus_visible_styling(self):
         """Verify focus-visible styling for keyboard users"""
