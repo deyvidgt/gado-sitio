@@ -56,6 +56,7 @@
     padding:3px 9px; border:1px solid rgba(255,255,255,.9); border-radius:999px;
     background:#142a21; color:#fff; font-size:11px; line-height:1.2; font-weight:800;
   }
+  .brincos-lista-wrapper.expanded .brinco-extra { display: inline-block !important; }
   .pasto-popup { min-width:150px; color:#26352c; }
   .pasto-popup b { font-size:14px; }
   .pasto-popup-status { display:inline-block; margin-top:5px; font-weight:800; }
@@ -224,16 +225,21 @@
     {% if p.animais_dados %}
     <div style="margin-top:12px; padding:12px; background:var(--bg-2); border-radius:8px; border-left:3px solid {{ p.cor }}">
       <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600;margin-bottom:6px">🐄 Brincos no Pasto ({{ p.animais_dados|length }})</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
+      <div class="brincos-lista-wrapper" style="display:flex;flex-wrap:wrap;gap:6px">
         {% for a in p.animais_dados[:12] %}
           <a href="{{ url_for('ficha_animal', id_=a.id) }}" style="background:{{ a.cor }}; color:#111; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:700; border:1px solid rgba(0,0,0,0.15); text-decoration:none; display:inline-block;">
             🏷️ {{ a.brinco }}
           </a>
         {% endfor %}
+        {% for a in p.animais_dados[12:] %}
+          <a href="{{ url_for('ficha_animal', id_=a.id) }}" class="brinco-extra" style="background:{{ a.cor }}; color:#111; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:700; border:1px solid rgba(0,0,0,0.15); text-decoration:none; display:none;">
+            🏷️ {{ a.brinco }}
+          </a>
+        {% endfor %}
         {% if p.animais_dados|length > 12 %}
-          <span style="color:var(--text-3);font-size:12px;align-self:center">
+          <button type="button" class="btn-expandir-brincos" style="background:var(--surface); border:1px solid var(--border); color:var(--text); padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; align-self:center;">
             +{{ p.animais_dados|length - 12 }} mais
-          </span>
+          </button>
         {% endif %}
       </div>
     </div>
@@ -267,6 +273,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <script>
+  // JavaScript para expansão dos animais
+  document.querySelectorAll(".btn-expandir-brincos").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const wrapper = btn.closest(".brincos-lista-wrapper");
+      wrapper.classList.toggle("expanded");
+      const isExpanded = wrapper.classList.contains("expanded");
+      const totalExtra = wrapper.querySelectorAll(".brinco-extra").length;
+      btn.textContent = isExpanded ? "Ver menos" : `+${totalExtra} mais`;
+    });
+  });
+
   // Inicialização do Mapa Leaflet com Camada Satélite Esri
   const map = L.map('mapa').setView([-18.92, -48.28], 14);
 
