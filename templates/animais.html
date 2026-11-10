@@ -50,9 +50,32 @@
     table.tab-animais { display: block; overflow-x: auto; }
     table.tab-animais thead { display: none; }
     table.tab-animais tbody { display: flex; flex-direction: column; gap: 12px; }
-    table.tab-animais tr { display: grid; grid-template-columns: 1fr; gap: 8px; border: 1px solid var(--bg-2); padding: 12px; border-radius: 8px; background: var(--surface); }
-    table.tab-animais td { border: none; padding: 0; display: flex; justify-content: space-between; align-items: center; }
+    table.tab-animais tr.linha {
+      display: grid; grid-template-columns: 1fr; gap: 8px;
+      border: 1px solid var(--bg-2); padding: 12px; border-radius: 8px;
+      background: var(--surface); cursor: pointer; position: relative;
+      transition: background .15s, box-shadow .15s, transform .15s;
+    }
+    table.tab-animais tr.linha:hover,
+    table.tab-animais tr.linha:focus-visible {
+      background: var(--green-50);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--green-600) 30%, transparent);
+      outline: none;
+    }
+    table.tab-animais tr.linha:active { transform: scale(0.99); }
+    table.tab-animais td {
+      border: none; padding: 0; display: flex;
+      justify-content: space-between; align-items: center;
+      position: relative; z-index: 0;
+    }
     table.tab-animais td::before { content: attr(data-label); font-weight: 600; color: var(--text-2); }
+    /* Link invisível cobrindo o cartão inteiro — toque em qualquer área abre a ficha. */
+    table.tab-animais a.card-link-stretch {
+      position: absolute; inset: 0; z-index: 1;
+      display: block; width: 100%; height: 100%;
+      text-indent: -9999px; overflow: hidden;
+    }
+    table.tab-animais td a:not(.card-link-stretch) { position: relative; z-index: 2; }
   }
 </style>
 
@@ -119,16 +142,19 @@
     </tr></thead>
     <tbody>
     {% for r in rows %}
-      <tr class="linha" data-dono="{{ r.dono }}" data-busca="{{ (r.brinco ~ ' ' ~ NOMES.get(r.dono, r.dono) ~ ' ' ~ r.categoria ~ ' ' ~ r.raca ~ ' ' ~ r.pelagem ~ ' ' ~ r.sinais)|lower }}">
-        <td><a href="{{ url_for('ficha_animal', id_=r.id) }}"><span class="chip-brinco animal-identificacao" aria-label="Brinco {{ r.brinco }}" style="--cor-brinco:{{ r.hex }};--texto-brinco:{{ r.texto_hex }}">{% if fotos_principais.get(r.id) %}<img class="mini-redonda" loading="lazy" alt="" src="{{ url_for('foto_mini', id_foto=fotos_principais[r.id]) }}" style="border-color:var(--texto-brinco)">{% endif %}{{ r.brinco }}</span></a></td>
-        <td>{{ NOMES.get(r.dono, r.dono) }}</td>
-        <td><a href="{{ url_for('ficha_animal', id_=r.id) }}">{{ r.categoria or '—' }}</a></td>
-        <td class="col-opc">{{ r.raca or '—' }}{% if r.pelagem %} · {{ r.pelagem }}{% endif %}
+      <tr class="linha" tabindex="0" role="link" aria-label="Abrir ficha de {{ r.brinco }}" data-dono="{{ r.dono }}" data-href="{{ url_for('ficha_animal', id_=r.id) }}" data-busca="{{ (r.brinco ~ ' ' ~ NOMES.get(r.dono, r.dono) ~ ' ' ~ r.categoria ~ ' ' ~ r.raca ~ ' ' ~ r.pelagem ~ ' ' ~ r.sinais)|lower }}">
+        <td data-label="Brinco">
+          <a class="card-link-stretch" href="{{ url_for('ficha_animal', id_=r.id) }}" aria-label="Abrir ficha de {{ r.brinco }}">{{ r.brinco }}</a>
+          <a href="{{ url_for('ficha_animal', id_=r.id) }}"><span class="chip-brinco animal-identificacao" aria-label="Brinco {{ r.brinco }}" style="--cor-brinco:{{ r.hex }};--texto-brinco:{{ r.texto_hex }}">{% if fotos_principais.get(r.id) %}<img class="mini-redonda" loading="lazy" alt="" src="{{ url_for('foto_mini', id_foto=fotos_principais[r.id]) }}" style="border-color:var(--texto-brinco)">{% endif %}{{ r.brinco }}</span></a>
+        </td>
+        <td data-label="Dono">{{ NOMES.get(r.dono, r.dono) }}</td>
+        <td data-label="Categoria"><a href="{{ url_for('ficha_animal', id_=r.id) }}">{{ r.categoria or '—' }}</a></td>
+        <td class="col-opc" data-label="Raça / Pelagem">{{ r.raca or '—' }}{% if r.pelagem %} · {{ r.pelagem }}{% endif %}
           {% if r.sinais %}<div class="muted">{{ r.sinais }}</div>{% endif %}</td>
-        <td class="col-opc">{{ r.idade or '—' }}</td>
-        <td>{% if r.peso %}{{ '%.0f' % r.peso.kg }} kg{% if r.peso.gmd is not none %}<br><span class="muted">{{ '%.2f' % r.peso.gmd }} kg/dia</span>{% endif %}{% else %}—{% endif %}</td>
-        <td class="col-opc">{{ r.origem }}</td>
-        {% if status != 'Vivo' %}<td>{{ r.status }}{% if r.saida %} <span class="muted">{{ r.saida }}</span>{% endif %}</td>{% endif %}
+        <td class="col-opc" data-label="Idade">{{ r.idade or '—' }}</td>
+        <td data-label="Peso">{% if r.peso %}{{ '%.0f' % r.peso.kg }} kg{% if r.peso.gmd is not none %}<br><span class="muted">{{ '%.2f' % r.peso.gmd }} kg/dia</span>{% endif %}{% else %}—{% endif %}</td>
+        <td class="col-opc" data-label="Origem">{{ r.origem }}</td>
+        {% if status != 'Vivo' %}<td data-label="Situação">{{ r.status }}{% if r.saida %} <span class="muted">{{ r.saida }}</span>{% endif %}</td>{% endif %}
       </tr>
     {% endfor %}
     </tbody>
@@ -163,6 +189,23 @@
 
 {% block scripts %}
 <script>
+// Tornar a linha inteira clicable em dispositivos móveis caso toque fora dos links internos
+document.querySelectorAll('tr.linha').forEach(tr => {
+  tr.addEventListener('click', e => {
+    // Se o clique foi diretamente em um link ou botão interno, deixa o evento padrão agir
+    if (e.target.closest('a') && !e.target.classList.contains('card-link-stretch')) return;
+    const href = tr.dataset.href;
+    if (href) window.location.href = href;
+  });
+  tr.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const href = tr.dataset.href;
+      if (href) window.location.href = href;
+    }
+  });
+});
+
 // Filtro combinado: texto (busca) + dono (card clicado, v5.15).
 // A cor de cada card vem do style inline (--cor), então aqui só liga/desliga o estado ativo.
 let donoAtivo = null;

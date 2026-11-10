@@ -10,7 +10,22 @@
   .card-resumo .label { font-size: 11px; color: var(--text-3); margin-top: 4px; }
 
   .lista-animais { display: grid; gap: 12px; }
-  .animal-card { padding: 12px; background: var(--surface); border-radius: 8px; display: flex; gap: 12px; align-items: center; }
+  .lista-animais > a.animal-card-link {
+    display: block; width: 100%; height: 100%;
+    text-decoration: none; color: inherit;
+  }
+  .animal-card {
+    padding: 12px; background: var(--surface); border-radius: 8px;
+    display: flex; gap: 12px; align-items: center;
+    width: 100%; height: 100%; box-sizing: border-box;
+    cursor: pointer; transition: background .15s, box-shadow .15s, transform .15s;
+  }
+  .lista-animais > a.animal-card-link:hover .animal-card,
+  .lista-animais > a.animal-card-link:focus-visible .animal-card {
+    background: var(--green-50, #f3faf1);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--green-600) 35%, transparent);
+  }
+  .lista-animais > a.animal-card-link:active .animal-card { transform: scale(0.99); }
   .animal-brinco { width: 60px; height: 60px; border-radius: 50% 50% 50% 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; flex: none; }
   .animal-info { flex: 1; }
   .animal-nome { font-weight: 600; color: var(--text-1); }
@@ -53,8 +68,8 @@
 
 <div class="lista-animais">
   {% for item in animais %}
-  <a href="{{ url_for('ficha_animal', id_=item.linha.id) }}" style="text-decoration: none; color: inherit;">
-    <div class="animal-card" style="cursor: pointer; transition: all 0.2s; border-left: 3px solid {% if item.linha.status == 'Vivo' %}var(--green-600){% elif item.linha.status == 'Vendido' %}var(--info){% else %}var(--danger){% endif %}">
+  <a class="animal-card-link" href="{{ url_for('ficha_animal', id_=item.linha.id) }}" aria-label="Abrir ficha de {{ item.linha.brinco }}">
+    <div class="animal-card" style="border-left: 3px solid {% if item.linha.status == 'Vivo' %}var(--green-600){% elif item.linha.status == 'Vendido' %}var(--info){% else %}var(--danger){% endif %}">
       <div class="animal-brinco" style="background: {{ item.linha.hex }}; color: {{ item.linha.texto_hex }}" aria-label="Brinco {{ item.linha.brinco }}">
         {{ '%02d' % item.linha.num if item.linha.num is not none else '??' }}
       </div>
