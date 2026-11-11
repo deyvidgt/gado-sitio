@@ -4,20 +4,27 @@
 
 {% block content %}
 <div style="display:flex;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap">
-  <button type="button" class="btn btn-primary" onclick="document.getElementById('form-novo-pasto').style.display='block'">➕ Novo Pasto</button>
-  <div style="display:flex;gap:8px">
-    <a href="{{ url_for('medicoes_pastos') }}" class="btn btn-outline" style="margin-right:8px">📏 Altura / MS estimada</a>
-    <a href="{{ url_for('aplicacoes_pastos') }}" class="btn btn-outline">🌱 Aplicações de insumos e custo/ha</a>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button type="button" class="btn btn-primary" onclick="const f=document.getElementById('form-novo-pasto'); f.style.display=f.style.display==='none'?'block':'none'">📱 Novo Pasto por Hectares (Fácil / Celular)</button>
+    <button type="button" class="btn btn-outline" onclick="const f=document.getElementById('form-kmz'); f.style.display=f.style.display==='none'?'block':'none'">📂 Importar KMZ</button>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a href="{{ url_for('medicoes_pastos') }}" class="btn btn-outline">📏 Altura / MS estimada</a>
+    <a href="{{ url_for('aplicacoes_pastos') }}" class="btn btn-outline">🌱 Aplicações de insumos</a>
   </div>
 </div>
 
-<form method="post" action="{{ url_for('novo_pasto_simples') }}" id="form-novo-pasto" style="display:none;margin-bottom:12px;padding:12px;background:var(--bg-2,#f8f9fa);border:1px solid var(--border);border-radius:8px">
+<form method="post" action="{{ url_for('novo_pasto_simples') }}" id="form-novo-pasto" style="display:block;margin-bottom:16px;padding:16px;background:var(--bg-2,#f8f9fa);border:1.5px solid var(--accent,#17834a);border-radius:10px">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div style="font-weight:700;margin-bottom:8px;color:var(--green-700)">✨ Criar Pasto sem precisar desenhar no mapa (Ideal para telemóvel)</div>
+    <div style="font-size:12.5px;color:var(--text-3);margin-bottom:10px">Basta informar o nome e a área em hectares. O mapa posicionará o pasto automaticamente. Para desenhar no mapa ou importar contorno de GPS/Google Earth, use o botão "Importar KMZ" ou o mapa abaixo.</div>
     <div style="display:flex;flex-direction:column;gap:8px">
-        <input type="text" name="nome" placeholder="Nome do Pasto" required class="form-input">
-        <input type="number" name="area_ha" placeholder="Área (hectares)" step="0.01" required class="form-input">
-        <button type="submit" class="btn btn-primary">Salvar Pasto</button>
-        <button type="button" class="btn btn-outline" onclick="document.getElementById('form-novo-pasto').style.display='none'">Cancelar</button>
+        <input type="text" name="nome" placeholder="Nome do Pasto (Ex: Pasto da Mina)" required class="form-input">
+        <input type="number" name="area_ha" placeholder="Área em Hectares (Ex: 15.5)" step="0.01" required class="form-input">
+        <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary" style="flex:1">💾 Salvar Pasto</button>
+            <button type="button" class="btn btn-outline" onclick="document.getElementById('form-novo-pasto').style.display='none'">Ocultar formulário</button>
+        </div>
     </div>
 </form>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
