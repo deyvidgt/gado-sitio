@@ -412,18 +412,40 @@ def alimentacao_leite():
         if not produto:
             flash("Informe o produto.", "error")
             return redirect(url_for("alimentacao_leite"))
+
+        peso_saco = _numero(f.get("peso_saco", 25)) or 25.0
+        from models import Insumo
+        from extensions import db as db_sqla
+        insumo = Insumo.query.filter_by(nome=produto).first()
+        if not insumo:
+            insumo = Insumo(nome=produto, categoria=f.get("categoria", "Nutrição"), peso_saco=peso_saco, unidade_medida="sacos")
+            db_sqla.session.add(insumo)
+        else:
+            insumo.peso_saco = peso_saco
+            if f.get("categoria"):
+                insumo.categoria = f.get("categoria")
+        db_sqla.session.commit()
+
         salvar_linha("Leite Alimentação", [
-            produto, f.get("fabricante", ""), f.get("categoria", ""), f.get("peso_saco", ""),
+            produto, f.get("fabricante", ""), f.get("categoria", ""), peso_saco,
             f.get("proteina", ""), f.get("ndt", ""), f.get("fibra", ""), f.get("calcio", ""),
             f.get("fosforo", ""), f.get("consumo", ""), f.get("preco", ""), f.get("lote", ""),
             f.get("validade", ""), f.get("observacao", ""), "Sim",
         ])
-        flash("Produto leiteiro cadastrado.", "success")
+        flash("Produto de nutrição cadastrado e sincronizado com o estoque!", "success")
         return redirect(url_for("alimentacao_leite"))
     df = carregar_aba("Leite Alimentação")
     produtos = []
     for _, linha in df.iterrows():
-        produtos.append({"produto": linha.get("Produto", ""), "proteina": linha.get("Proteína Bruta (%)", ""), "ndt": linha.get("NDT/Energia (%)", "")})
+        produtos.append({
+            "produto": linha.get("Produto", ""),
+            "fabricante": linha.get("Fabricante", ""),
+            "categoria": linha.get("Categoria", ""),
+            "peso_saco": linha.get("Peso Saco (kg)", 25),
+            "proteina": linha.get("Proteína Bruta (%)", ""),
+            "ndt": linha.get("NDT/Energia (%)", ""),
+            "preco": linha.get("Preço por Saco (R$)", ""),
+        })
     return render_template("leite_alimentacao.html", produtos=produtos)
 
 

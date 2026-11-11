@@ -13,14 +13,49 @@
     <label>Produto<input name="produto" required></label>
     <label>Fabricante<input name="fabricante"></label>
     <label>Categoria<input name="categoria" placeholder="Ração de lactação"></label>
-    <label>Proteína bruta (%)<input name="proteina"></label>
-    <label>NDT/Energia (%)<input name="ndt"></label>
-    <label>Fibra (%)<input name="fibra"></label>
-    <label>Cálcio (%)<input name="calcio"></label>
-    <label>Fósforo (%)<input name="fosforo"></label>
-    <label>Preço por saco (R$)<input name="preco"></label>
+    <label>Peso do Saco (kg)<input type="number" step="any" name="peso_saco" placeholder="Ex: 25 ou 30" value="25"></label>
+    <label>Proteína bruta (%)<input name="proteina" class="nutriente-smart" placeholder="Ex: 22% ou 500g/kg"></label>
+    <label>NDT/Energia (%)<input name="ndt" class="nutriente-smart" placeholder="Ex: 70% ou 700g/kg"></label>
+    <label>Fibra (%)<input name="fibra" class="nutriente-smart" placeholder="Ex: 10%"></label>
+    <label>Cálcio (%)<input name="calcio" class="nutriente-smart" placeholder="Ex: 15g/kg ou 1.5%"></label>
+    <label>Fósforo (%)<input name="fosforo" class="nutriente-smart" placeholder="Ex: 10g/kg"></label>
+    <label>Preço por saco (R$)<input name="preco" type="number" step="any"></label>
+    <small style="grid-column: 1 / -1; color: var(--text-3); font-size: 11.5px">💡 Pode digitar direto em % ou usar formatos como 500g/kg ou 4000mg/kg que o sistema converte sozinho.</small>
     <button class="btn btn-primary" type="submit">Salvar produto</button>
   </form>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      document.querySelectorAll(".nutriente-smart").forEach(input => {
+        const hint = document.createElement("div");
+        hint.style.fontSize = "11px";
+        hint.style.color = "var(--green-600)";
+        hint.style.marginTop = "2px";
+        input.parentNode.appendChild(hint);
+
+        input.addEventListener("input", function() {
+          let raw = input.value.trim().toLowerCase();
+          if (!raw) { hint.textContent = ""; return; }
+
+          let val = parseFloat(raw.replace(',', '.'));
+          if (isNaN(val)) { hint.textContent = ""; return; }
+
+          let percent = val;
+          if (raw.includes('mg')) {
+            percent = val / 10000;
+            hint.textContent = `Convertido: ${val} mg/kg = ${percent.toFixed(4)}%`;
+            input.value = percent.toFixed(2);
+          } else if (raw.includes('g')) {
+            percent = val / 10;
+            hint.textContent = `Convertido: ${val} g/kg = ${percent.toFixed(2)}%`;
+            input.value = percent.toFixed(2);
+          } else {
+            hint.textContent = `${percent}% (direto)`;
+          }
+        });
+      });
+    });
+  </script>
   <form method="post" action="{{ url_for('necessidade_leite') }}" class="card form-grid">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <h3>Necessidades diárias</h3>
