@@ -265,22 +265,19 @@
     {% endif %}
 
     <!-- Botões de Ação -->
-    <div style="display:flex; gap:8px; margin-top:12px">
-      <button type="button" class="btn btn-outline btn-sm btn-ver-mapa" data-pasto="{{ p.id }}" style="flex:1">🗺️ Ver no mapa</button>
-      <details style="flex:0">
-        <summary class="btn btn-outline btn-sm" style="cursor:pointer">⚙️ Opções</summary>
-        <div style="position:absolute; background:var(--surface); border:1px solid var(--border); padding:12px; border-radius:8px; z-index:100; margin-top:4px; box-shadow:var(--shadow)">
-          <form method="post" action="{{ url_for('editar_pasto', id_=p.id) }}" style="margin-bottom:8px">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <input type="text" name="nome" value="{{ p.nome }}" maxlength="40" required class="form-input" style="margin-bottom:6px">
-            <button class="btn btn-outline btn-sm" style="width:100%">Renomear</button>
-          </form>
-          <form method="post" action="{{ url_for('excluir_pasto', id_=p.id) }}" onsubmit="return confirm('Excluir este pasto?')">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <button class="btn btn-outline btn-sm" style="width:100%; color:var(--danger)">🗑️ Excluir</button>
-          </form>
-        </div>
-      </details>
+    <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center">
+      <button type="button" class="btn btn-outline btn-sm btn-ver-mapa" data-pasto="{{ p.id }}" style="flex:1; min-width:110px">🗺️ Ver no mapa</button>
+      
+      <form method="post" action="{{ url_for('editar_pasto', id_=p.id) }}" style="display:inline-flex; gap:4px; flex:1; min-width:160px; align-items:center">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="text" name="nome" value="{{ p.nome }}" maxlength="40" required class="form-input" style="font-size:12px; padding:6px 8px; height:32px">
+        <button type="submit" class="btn btn-outline btn-sm" style="height:32px" title="Renomear pasto">✏️</button>
+      </form>
+
+      <form method="post" action="{{ url_for('excluir_pasto', id_=p.id) }}" onsubmit="return confirm('Tem certeza que deseja excluir o pasto {{ p.nome }}? O histórico no manejo será preservado.')" style="flex:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger); border-color:var(--danger); height:32px" title="Excluir pasto">🗑️ Excluir</button>
+      </form>
     </div>
   </div>
   {% endfor %}
