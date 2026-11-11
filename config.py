@@ -227,6 +227,7 @@ COLUNAS_MANEJO = [
     # NOVO v5.2: para qual pasto (ID P01…) foi a "Movimentação de Pasto" — pastos.py.
     "Pasto",
     "Causa Mortis", "Laudo/Observações",
+    "Lote ID Usado", "Qtd Usada",
 ]
 
 # Tipos de manejo em que o formulário pergunta qual remédio/produto foi usado.

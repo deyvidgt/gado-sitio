@@ -22,6 +22,7 @@ from extensions import (
     BASE_DIR,
 )
 from indicadores_coleta import processar_manejo_automatico  # v5.8 — coleta automática
+import estoque_medicamentos
 
 def _anos_de(df):
     if df.empty or "Data" not in df.columns:
@@ -577,6 +578,7 @@ def _produto_do_form(f) -> str:
 def novo_manejo():
     dados   = _get_dados_cache()
     estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
+    lotes_ativos = [l for l in estoque_medicamentos.lotes_ativos() if not l["vencido"]]
     if request.method == "POST":
         _validar_csrf()
         f = request.form
@@ -596,10 +598,28 @@ def novo_manejo():
         if erro:
             flash(erro, "error")
             return redirect(url_for("novo_manejo"))
+
+        lote_id = f.get("lote_id", "").strip()
+        quantidade_uso = parse_valor(f.get("quantidade_uso", 0))
+
+        if lote_id and quantidade_uso > 0:
+            try:
+                estoque_medicamentos.registrar_movimento(
+                    movimento="Saída",
+                    data=f.get("data") or _agora(),
+                    lote_id=lote_id,
+                    quantidade=quantidade_uso,
+                    observacoes=f"Aplicação em Manejo ({f.get('tipo')}): {f.get('descricao','')}",
+                    responsavel=f.get("responsavel", "Sistema")
+                )
+                flash("Baixa automática realizada no estoque de medicamentos.", "success")
+            except ValueError as err:
+                flash(f"Atenção no estoque: {err}", "warning")
+
         salvar_linha("Manejo", [f.get("data") or _agora().strftime("%d/%m/%Y"), f.get("tipo"), _int_form(f.get("cabecas")),
                                 f.get("descricao", "").strip(), f.get("responsavel", ""),
                                 perda_de, produto, nasc_de, form["brincos_refs"], "", "",
-                                causa_mortis, laudo])
+                                causa_mortis, laudo, lote_id, quantidade_uso])
         # v5.8 — coleta automática de dados para indicadores
         processar_manejo_automatico(
             tipo_manejo=f.get("tipo", ""),
@@ -620,6 +640,7 @@ def novo_manejo():
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            TIPOS_COM_PRODUTO=TIPOS_COM_PRODUTO,
                            CAUSAS_MORTIS=CAUSAS_MORTIS,
+                           lotes_ativos=lotes_ativos,
                            produtos_usados=_produtos_usados(dados["Manejo"]),
                            produtos_sugeridos=_produtos_sugeridos(_produtos_usados(dados["Manejo"])),
                            hoje=_agora().strftime("%Y-%m-%d"))
@@ -631,6 +652,7 @@ def editar_manejo(idx):
     dados   = _get_dados_cache()
     df      = carregar_aba("Manejo")
     estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
+    lotes_ativos = [l for l in estoque_medicamentos.lotes_ativos() if not l["vencido"]]
     if df.empty or idx >= len(df):
         flash("Registro não encontrado.", "error")
         return redirect(url_for("manejo"))
@@ -643,6 +665,22 @@ def editar_manejo(idx):
             return redirect(url_for("editar_manejo", idx=idx))
         fazer_backup()
         _limpar_backups_antigos()
+        lote_id = f.get("lote_id", "").strip()
+        quantidade_uso = parse_valor(f.get("quantidade_uso", 0))
+
+        if lote_id and quantidade_uso > 0:
+            try:
+                estoque_medicamentos.registrar_movimento(
+                    movimento="Saída",
+                    data=f.get("data") or _agora(),
+                    lote_id=lote_id,
+                    quantidade=quantidade_uso,
+                    observacoes=f"Atualização Manejo ({f.get('tipo')})",
+                    responsavel=f.get("responsavel", "Sistema")
+                )
+            except ValueError as err:
+                flash(f"Atenção no estoque: {err}", "warning")
+
         updates = {
             "Brincos":     form["brincos_refs"],
             "Data":        _data_form(f.get("data", "")),
@@ -655,6 +693,8 @@ def editar_manejo(idx):
             "Nascimento De": f.get("nascimento_de", "") if f.get("tipo") == "Nascimento" else "",
             "Causa Mortis": f.get("causa_mortis", "") if f.get("tipo") == "Morte/Perda" else "",
             "Laudo/Observações": f.get("laudo", "").strip() if f.get("tipo") == "Morte/Perda" else "",
+            "Lote ID Usado": lote_id,
+            "Qtd Usada":     quantidade_uso,
         }
         if f.get("tipo") == "Morte/Perda" and updates["Causa Mortis"] not in CAUSAS_MORTIS:
             flash("Selecione a causa da morte.", "error")
@@ -685,6 +725,7 @@ def editar_manejo(idx):
                            MEMBROS=MEMBROS, NOMES=NOMES_MEMBROS,
                            TIPOS_COM_PRODUTO=TIPOS_COM_PRODUTO,
                            CAUSAS_MORTIS=CAUSAS_MORTIS,
+                           lotes_ativos=lotes_ativos,
                            produtos_usados=_produtos_usados(df),
                            produtos_sugeridos=_produtos_sugeridos(_produtos_usados(df)),
                            hoje=_agora().strftime("%Y-%m-%d"))

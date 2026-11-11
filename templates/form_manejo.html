@@ -88,6 +88,31 @@
           <datalist id="lista-produtos"></datalist>
           <small id="dica-produto" style="color:var(--text-3);font-size:11px"></small>
         </div>
+        <div class="form-group full" id="grupo-estoque-lote" style="display:none">
+          <label>📦 Selecionar Lote do Estoque (Baixa Automática)</label>
+          <select name="lote_id" id="sel-lote-id" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text)">
+            <option value="">— Selecionar do estoque ativo (opcional) —</option>
+            {% for l in lotes_ativos %}
+              <option value="{{ l.id }}" data-produto="{{ l.produto }}" data-unidade="{{ l.unidade }}">
+                {{ l.produto }} (Lote: {{ l.lote }} — Saldo: {{ l.saldo }} {{ l.unidade }} — Val: {{ l.validade.strftime('%d/%m/%Y') if l.validade else 'N/D' }})
+              </option>
+            {% endfor %}
+          </select>
+          <small style="color:var(--text-3);font-size:11px">Selecionar um lote preenche o produto e abate o saldo automaticamente ao salvar.</small>
+        </div>
+        <div class="form-group" id="grupo-qtd-uso" style="display:none">
+          <label>Quantidade Utilizada</label>
+          <div style="display:flex;gap:8px">
+            <input type="number" step="any" name="quantidade_uso" id="inp-quantidade-uso" min="0" placeholder="Ex: 10"
+                   value="{{ row.get('Qtd Usada','') if modo == 'editar' and row else '' }}" style="flex:1">
+            <span id="lbl-unidade-uso" style="align-self:center;font-size:13px;color:var(--text-3)">doses/ml</span>
+          </div>
+        </div>
+        <div class="form-group full" id="grupo-atalho-bula" style="display:none">
+          <a href="{{ url_for('listar_bulas') }}" target="_blank" class="btn btn-outline btn-sm" style="display:inline-flex;align-items:center;gap:4px">
+            📄 Adicionar bula ou foto para este produto
+          </a>
+        </div>
         <div class="form-group full">
           <label>Brincos dos animais — opcional</label>
           <input type="text" name="brincos" id="inp-brincos" maxlength="400" autocomplete="off"
@@ -167,10 +192,20 @@
   const inpProd = document.getElementById("inp-produto");
   const lista   = document.getElementById("lista-produtos");
   const dica    = document.getElementById("dica-produto");
+  const grpEstoqueLote = document.getElementById("grupo-estoque-lote");
+  const selLoteId = document.getElementById("sel-lote-id");
+  const grpQtdUso = document.getElementById("grupo-qtd-uso");
+  const inpQtdUso = document.getElementById("inp-quantidade-uso");
+  const lblUnidadeUso = document.getElementById("lbl-unidade-uso");
+  const grpAtalhoBula = document.getElementById("grupo-atalho-bula");
+
   function toggleProduto() {
     const tipo = selTipo ? selTipo.value : "";
     const mostra = COM_PRODUTO.includes(tipo);
     grpProd.style.display = mostra ? "" : "none";
+    if (grpEstoqueLote) grpEstoqueLote.style.display = mostra ? "" : "none";
+    if (grpQtdUso) grpQtdUso.style.display = mostra ? "" : "none";
+    if (grpAtalhoBula) grpAtalhoBula.style.display = mostra ? "" : "none";
     inpProd.required = mostra && !EDITANDO;
     lista.innerHTML = "";
     (SUGERIDOS[tipo] || []).forEach(p => {
@@ -180,6 +215,19 @@
       ? "Já usados: " + USADOS[tipo].slice(0, 3).join(", ") + ". " : "";
     dica.textContent = usados + (DICAS[tipo] || "");
   }
+
+  if (selLoteId) {
+    selLoteId.addEventListener("change", () => {
+      const opt = selLoteId.options[selLoteId.selectedIndex];
+      if (opt && opt.value) {
+        const prod = opt.getAttribute("data-produto");
+        const und = opt.getAttribute("data-unidade");
+        if (prod && inpProd) inpProd.value = prod;
+        if (und && lblUnidadeUso) lblUnidadeUso.textContent = und;
+      }
+    });
+  }
+
   if (selTipo) { selTipo.addEventListener("change", toggleProduto); toggleProduto(); }
 })();
 </script>
