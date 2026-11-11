@@ -78,3 +78,12 @@ class Bula(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     medicamento_id = db.Column(db.Integer, db.ForeignKey('medicamentos.id'), nullable=False, unique=True)
     arquivo = db.Column(db.String(255), nullable=False)
+
+class Insumo(db.Model):
+    __tablename__ = 'insumos_estoque'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), nullable=False, unique=True)
+    categoria = db.Column(db.String(50))
+    quantidade = db.Column(db.Float, default=0.0)
+    unidade_medida = db.Column(db.String(20), default='kg')
+    peso_saco = db.Column(db.Float, default=25.0)
