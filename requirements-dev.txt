@@ -1,0 +1,11 @@
+# ============================================================
+#  Sistema de Gestão de Gado — Sítio Santo Antonio
+#  requirements-dev.txt — Desenvolvimento (Local / PC)
+# ============================================================
+
+# Inclui tudo o de produção mais ferramentas de teste e automação
+-r requirements.txt
+
+playwright>=1.40.0
+pytest>=8.0
+pyinstaller>=6.0.0

@@ -1,65 +1,18 @@
 # ============================================================
 #  Sistema de Gestão de Gado — Sítio Santo Antonio
-#  requirements.txt — dependências Python
-#  v3.3
-# ============================================================
-#
-#  Instalar tudo de uma vez:
-#    pip install -r requirements.txt
-#
-#  Os limites "<N" travam a próxima versão MAIOR de cada biblioteca:
-#  atualizações normais continuam chegando, mas uma mudança grande
-#  (ex.: pandas 3) não entra sozinha num `pip install` no servidor.
-#
-#  Para compilar o .exe (Windows):
-#    pip install pyinstaller
-#    pyinstaller gado.spec --clean --noconfirm
+#  requirements.txt — Produção (PythonAnywhere)
 # ============================================================
 
-# ── Banco de Dados (v6.0 Migração Excel -> SQLite) ────────────
 flask-sqlalchemy>=3.1.0,<4
-
-# ── Obrigatórios (o sistema não roda sem estes) ──────────────
 flask>=3.0.0,<4
 pandas>=2.0.0,<3
 openpyxl>=3.1.0,<4
 numpy>=1.26.0,<3
 Pillow==10.2.0
-
-# ── Segurança ────────────────────────────────────────────────
-# bcrypt: hashing seguro de senhas (recomendado, mas opcional)
-# Sem bcrypt, o sistema usa SHA-256 (funciona, menos seguro)
 bcrypt>=4.0.0,<6
-
-# ── Cotações de mercado (online) ─────────────────────────────
 requests>=2.31.0,<3
 beautifulsoup4>=4.12.0,<5
-
-# ── Relatório PDF ────────────────────────────────────────────
 reportlab>=4.0.0,<5
-
-# ── Cotação IMEA via navegador (opcional) ────────────────────
-# Necessário apenas para buscar cotações pelo site do IMEA.
-# Após instalar, rodar também: python -m playwright install chromium
-playwright>=1.40.0
-
-# ── Gráficos (interface de linha de comando) ─────────────────
 matplotlib>=3.8.0
-
-# ── IA preditiva (reproducao_avancada_ia / ia_features) ──────
-# Importado no caminho do app (app.py → routes_ia): sem ele o app não sobe.
 scikit-learn>=1.7.0,<2
-
-# ── Acesso remoto via ngrok (opcional) ───────────────────────
-# Permite acessar o sistema de fora da rede local.
-# Requer conta gratuita em https://ngrok.com e token configurado.
 ngrok>=0.8.0
-
-# ── Compilação para .exe (desenvolvimento) ───────────────────
-# Não é necessário no computador que vai rodar o programa,
-# apenas no computador onde o .exe é gerado.
-# pyinstaller>=6.0.0
-
-# ── Testes (desenvolvimento) ─────────────────────────────────
-# pip install pytest   →   python -m pytest
-pytest>=8.0
