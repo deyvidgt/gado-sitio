@@ -62,3 +62,16 @@ exemplos/
 .agents/
 .claude/
 .superpowers
+# Pastas de IDE, IA e Sistema
+.agents/
+.claude/
+.devcontainer/
+.superpowers/
+.pytest_cache/
+__pycache__/
+
+# Dados e Caches locais
+cache_fotos/
+cache_bulas_pendentes/
+instance/
+data/
