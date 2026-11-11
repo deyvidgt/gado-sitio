@@ -55,26 +55,26 @@
     opacity:1; transform:translateY(0);
   }
   .pasto-pin {
-    display:flex; flex-direction:column; align-items:center; gap:4px;
-    width:112px; cursor:pointer; filter:drop-shadow(0 3px 4px rgba(0,0,0,.45));
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    width:80px; cursor:pointer; filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));
   }
   .pasto-pin-circulo {
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    width:66px; height:66px; border:3px solid #fff; border-radius:50%;
+    width:40px; height:40px; border:2px solid #fff; border-radius:50%;
     background:var(--pasto-status,#64748b); color:#fff;
-    box-shadow:0 0 0 2px var(--pasto-status,#64748b), inset 0 1px 5px rgba(0,0,0,.14);
+    box-shadow:0 0 0 1px var(--pasto-status,#64748b), inset 0 1px 3px rgba(0,0,0,.14);
   }
-  .pasto-pin-ganado { font-size:19px; line-height:1; filter:grayscale(1) brightness(0) invert(1); }
-  .pasto-pin-cabezas { font-size:21px; line-height:1.05; font-weight:900; font-variant-numeric:tabular-nums; }
-  .pasto-pin-cores { display:flex; align-items:center; justify-content:center; gap:3px; min-height:9px; }
-  .pasto-pin-cor { width:9px; height:9px; border:1px solid #fff; border-radius:50%;
-                   box-shadow:0 1px 3px rgba(0,0,0,.4); }
-  .pasto-pin-mais-cores { color:#fff; font-size:9px; line-height:1; font-weight:800;
-                          text-shadow:0 1px 3px #000; }
+  .pasto-pin-ganado { font-size:14px; line-height:1; filter:grayscale(1) brightness(0) invert(1); }
+  .pasto-pin-cabezas { font-size:15px; line-height:1.05; font-weight:900; font-variant-numeric:tabular-nums; }
+  .pasto-pin-cores { display:flex; align-items:center; justify-content:center; gap:2px; min-height:7px; }
+  .pasto-pin-cor { width:7px; height:7px; border:1px solid #fff; border-radius:50%;
+                   box-shadow:0 1px 2px rgba(0,0,0,.4); }
+  .pasto-pin-mais-cores { color:#fff; font-size:8px; line-height:1; font-weight:800;
+                          text-shadow:0 1px 2px #000; }
   .pasto-pin-etiqueta {
-    max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    padding:3px 9px; border:1px solid rgba(255,255,255,.9); border-radius:999px;
-    background:#142a21; color:#fff; font-size:11px; line-height:1.2; font-weight:800;
+    max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    padding:2px 6px; border:1px solid rgba(255,255,255,.9); border-radius:999px;
+    background:#142a21; color:#fff; font-size:10px; line-height:1.2; font-weight:800;
   }
   .brincos-lista-wrapper.expanded .brinco-extra { display: inline-block !important; }
   .pasto-popup { min-width:150px; color:#26352c; }
@@ -145,6 +145,11 @@
 
   <div class="mapa-shell">
     <div id="mapa" aria-label="Mapa de satélite dos pastos"></div>
+    <div id="painel-desenho-tools" style="display:none; position:absolute; top:12px; left:60px; z-index:1000; background:var(--surface); padding:8px 12px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,.2); gap:8px; align-items:center;">
+      <span style="font-size:12px; font-weight:700">✏️ Desenhando pasto...</span>
+      <button type="button" class="btn btn-outline btn-sm" id="btn-desfazer-ponto">↩️ Desfazer último ponto</button>
+      <button type="button" class="btn btn-outline btn-sm" id="btn-cancelar-desenho" style="color:var(--danger)">✕ Cancelar</button>
+    </div>
     <button type="button" class="mapa-fab" id="btn-add-pasto" aria-label="Desenhar novo pasto" title="Desenhar novo pasto">
       <span aria-hidden="true">+</span><span class="mapa-fab-label" aria-hidden="true">Novo pasto</span>
     </button>
@@ -489,10 +494,29 @@
   map.on("draw:drawstart", () => {
     botaoAdicionarPasto?.classList.add("is-drawing");
     botaoAdicionarPasto?.setAttribute("aria-pressed", "true");
+    const tools = document.getElementById("painel-desenho-tools");
+    if (tools) tools.style.display = "flex";
   });
   map.on("draw:drawstop", () => {
     botaoAdicionarPasto?.classList.remove("is-drawing");
     botaoAdicionarPasto?.setAttribute("aria-pressed", "false");
+    const tools = document.getElementById("painel-desenho-tools");
+    if (tools) tools.style.display = "none";
+  });
+
+  document.getElementById("btn-desfazer-ponto")?.addEventListener("click", () => {
+    if (desenhadorPasto && typeof desenhadorPasto.deleteLastVertex === "function") {
+      try {
+        desenhadorPasto.deleteLastVertex();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  });
+  document.getElementById("btn-cancelar-desenho")?.addEventListener("click", () => {
+    if (desenhadorPasto && desenhadorPasto.enabled()) {
+      desenhadorPasto.disable();
+    }
   });
 
   map.on(L.Draw.Event.CREATED, evento => {
