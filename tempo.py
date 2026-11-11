@@ -3,8 +3,9 @@
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
+import pandas as pd
 import requests
 
 import db
@@ -294,3 +295,52 @@ def previsao(*, agora=None, latitude=None, longitude=None):
         if cache:
             return _formatar(cache["dados"], cfg, cache.get("salvo_em"), desatualizado=True)
         return {"status": "indisponível", "mensagem": "Previsão indisponível no momento."}
+
+
+def analise_secas_e_chuvas(df_visitas, hoje=None):
+    """Analisa o histórico de chuvas das visitas (ano atual vs ano anterior)
+    e gera alerta automático de estiagem / necessidade de antecipar volumoso."""
+    hoje = hoje or datetime.now().date()
+    ano_atual = hoje.year
+    ano_anterior = ano_atual - 1
+
+    mensal_atual = {m: 0.0 for m in range(1, 13)}
+    mensal_anterior = {m: 0.0 for m in range(1, 13)}
+    chuva_ultimos_60d = 0.0
+    limite_60d = hoje - timedelta(days=60)
+
+    if df_visitas is not None and not df_visitas.empty and "Data" in df_visitas.columns and "Chuva mm" in df_visitas.columns:
+        for _, row in df_visitas.iterrows():
+            dt = pd.to_datetime(row.get("Data"), dayfirst=True, errors="coerce")
+            if pd.isna(dt):
+                continue
+            d = dt.date()
+            try:
+                mm = float(str(row.get("Chuva mm", 0) or 0).replace(",", "."))
+            except (TypeError, ValueError):
+                mm = 0.0
+            
+            if d.year == ano_atual:
+                mensal_atual[d.month] += mm
+            elif d.year == ano_anterior:
+                mensal_anterior[d.month] += mm
+
+            if limite_60d <= d <= hoje:
+                chuva_ultimos_60d += mm
+
+    alerta_estiagem = None
+    if chuva_ultimos_60d < 30.0 and hoje.month in (4, 5, 6, 7, 8, 9, 10):
+        alerta_estiagem = {
+            "nivel": "urgente",
+            "titulo": "⚠️ Alerta de Estiagem Prolongada",
+            "descricao": f"Acumulado de apenas {chuva_ultimos_60d:.1f}mm nos últimos 60 dias. Recomenda-se antecipar a reserva de volumoso (silagem/feno) para evitar escassez de pastagem."
+        }
+
+    return {
+        "ano_atual": ano_atual,
+        "ano_anterior": ano_anterior,
+        "mensal_atual": mensal_atual,
+        "mensal_anterior": mensal_anterior,
+        "chuva_ultimos_60d": chuva_ultimos_60d,
+        "alerta_estiagem": alerta_estiagem,
+    }

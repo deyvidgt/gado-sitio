@@ -5,6 +5,20 @@
 {% block content %}
 {% include '_leite_nav.html' %}
 
+{% if carencias_leite %}
+<div class="card" style="border-left: 4px solid var(--danger); background: rgba(192, 57, 43, 0.08); margin-bottom: 20px;">
+  <strong>🚨 Alerta de Carência de Leite ({{ carencias_leite|length }} vaca(s))</strong>
+  <div style="font-size: 13.5px; margin-top: 6px;">
+    As seguintes vacas estão em período de carência por tratamento veterinário e <b>não devem ter o leite comercializado</b>:
+    <ul style="margin: 6px 0 0 18px">
+      {% for c in carencias_leite %}
+      <li><b>{{ c.brinco }}</b> ({{ c.medicamento or 'Tratamento' }}) — liberação em {{ c.data_liberacao|data_br }} (faltam <b>{{ c.dias_restantes }} dia(s)</b>)</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+
 <style>
   .leite-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
   .leite-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); }

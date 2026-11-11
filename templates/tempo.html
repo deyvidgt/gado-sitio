@@ -120,6 +120,34 @@
 </section>
 {% endif %}
 
+<!-- Histórico de Chuvas e Previsão de Seca -->
+<section class="card tempo-card">
+  <div class="card-title" style="margin-bottom:12px">🌧️ Histórico de Chuvas e Alerta de Seca (Visitas)</div>
+  
+  {% if analise_chuvas and analise_chuvas.alerta_estiagem %}
+  <div class="alerta-tempo urgente" style="margin-bottom: 16px">
+    <strong>{{ analise_chuvas.alerta_estiagem.titulo }}</strong>
+    <p style="margin:4px 0 0 0">{{ analise_chuvas.alerta_estiagem.descricao }}</p>
+  </div>
+  {% endif %}
+
+  <div style="font-size: 13px; color: var(--text-2); margin-bottom: 12px">
+    Acumulado nos últimos 60 dias: <b>{{ '%.1f'|format(analise_chuvas.chuva_ultimos_60d) }} mm</b>.
+    Comparação entre os anos de <b>{{ analise_chuvas.ano_atual }}</b> e <b>{{ analise_chuvas.ano_anterior }}</b> (registrado nas visitas ao sítio):
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; text-align: center; margin-top: 12px">
+    {% set meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'] %}
+    {% for m_num in range(1, 13) %}
+    <div style="background: var(--surface-2); padding: 8px 4px; border-radius: 8px; font-size: 11.5px">
+      <div style="font-weight: 600; color: var(--text-3); margin-bottom: 4px">{{ meses[m_num-1] }}</div>
+      <div style="color: var(--green-600); font-weight: 700">{{ '%.0f'|format(analise_chuvas.mensal_atual[m_num]) }}mm</div>
+      <div style="color: var(--text-3); font-size: 10.5px">({{ '%.0f'|format(analise_chuvas.mensal_anterior[m_num]) }}mm ant.)</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
 <!-- Tabela Detalhada -->
 <section class="card tempo-card">
   <div class="card-title" style="margin-bottom:12px">Detalhes por Dia</div>

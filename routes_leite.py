@@ -268,6 +268,9 @@ def painel_leite():
     medias = medias_periodo(df, hoje.replace(day=1), hoje,
                             animais_lactacao=contagens["vacas_lactacao"])
 
+    from doencas_carencia import carencias_ativas
+    carencias_leite = carencias_ativas("leite", hoje)
+
     # Alertas de colchão: conta urgentes e avisos
     df_colchao = carregar_aba("Leite Colchão")
     colchoes_alertas = {"urgente": 0, "aviso": 0, "ok": 0}
@@ -288,6 +291,7 @@ def painel_leite():
     return render_template("leite.html", acumulado=acumulado, medias=medias,
                            contagens=contagens, registros=len(df), hoje=hoje,
                            colchoes_alertas=colchoes_alertas, operacional=operacional,
+                           carencias_leite=carencias_leite,
                            grafico_producao=grafico_producao,
                            grafico_qualidade=grafico_qualidade,
                            grafico_top_vacas=grafico_top_vacas,

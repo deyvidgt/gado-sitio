@@ -480,10 +480,12 @@ def familia():
 @app.route("/tempo")
 @login_required
 def tempo():
-    """Página completa de previsão de tempo com gráficos e alertas."""
+    """Página completa de previsão de tempo com gráficos, histórico de chuvas e alertas."""
     import tempo as T
     prev = T.previsao(agora=_agora())
     alertas = T.alertas_tempo(prev)
+    dados = _get_dados_cache()
+    analise_chuvas = T.analise_secas_e_chuvas(dados.get("Visitas"), _agora().date())
 
     # Recomendações por tipo (para filtragem no template)
     recomendacoes = {
@@ -508,6 +510,7 @@ def tempo():
     }
 
     return render_template("tempo.html", prev=prev, alertas=alertas,
+                          analise_chuvas=analise_chuvas,
                           recomendacoes=recomendacoes, fmt_data=fmt_data, fmt_brl=fmt_brl)
 
 
