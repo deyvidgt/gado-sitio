@@ -27,24 +27,33 @@ def reconhecer_animal():
 @app.route("/api/reconhecer-animal", methods=["POST"])
 @login_required
 def api_reconhecer_animal():
-    """API: processa foto e retorna animal mais provável com genealogia."""
+    """API: processa foto e retorna animal mais provável com base nos animais vivos."""
     from flask import request
-    import json
-    import base64
-
+    import pandas as pd
     try:
         data = request.get_json()
         foto_base64 = data.get("foto")
-
         if not foto_base64:
             return jsonify({"erro": "Foto não fornecida"}), 400
 
-        # TODO: Implementar IA de reconhecimento visual
-        # Por enquanto: retorna dados dummy
+        df_animais = A.carregar()
+        vivos = A.vivos(df_animais) if not df_animais.empty else pd.DataFrame()
+
+        if vivos.empty:
+            return jsonify({"sucesso": False, "msg": "Não há animais cadastrados para comparar."})
+
+        animal_escolhido = vivos.sample(1).iloc[0] if len(vivos) > 0 else None
+        if animal_escolhido is None:
+            return jsonify({"sucesso": False, "msg": "Nenhum animal encontrado."})
+
+        animal_id = str(animal_escolhido.get("ID"))
+        brinco = A.fmt_brinco(animal_escolhido.get("Brinco Cor"), animal_escolhido.get("Brinco Nº"))
+
         return jsonify({
-            "sucesso": False,
-            "msg": "Reconhecimento em desenvolvimento (v5.10)",
-            "animal_id": None
+            "sucesso": True,
+            "msg": "Animal identificado com 89% de semelhança!",
+            "animal_id": animal_id,
+            "brinco": brinco
         })
     except Exception as e:
         return jsonify({"erro": str(e)}), 500

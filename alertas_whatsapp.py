@@ -56,6 +56,8 @@ except Exception as e:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+URL_SISTEMA = "https://deyvidgt16.pythonanywhere.com"
+
 def _cabecalho() -> str:
     """1ª linha das mensagens: o nome do sítio de onde vem (vários sítios, v5.0)."""
     import sitios
@@ -277,6 +279,7 @@ def montar_msg_nova_visita(row: dict, estoque_esperado: int) -> str:
 
     linhas += [
         f"",
+        f"👉 *Aceder ao sistema:* {URL_SISTEMA}",
         f"_Sistema de Gestão de Gado — {sitio_nome()}_",
     ]
     return "\n".join(linhas)
