@@ -3,8 +3,60 @@
 {% block page_title %}Estoque de Medicamentos 💊{% endblock %}
 
 {% block content %}
+<style>
+  .tabela-desktop { display: table; width: 100%; border-collapse: collapse; }
+  .cards-mobile { display: none; }
+
+  @media (max-width: 768px) {
+    .tabela-desktop { display: none !important; }
+    .cards-mobile { display: grid; gap: 12px; }
+    .estoque-card-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: var(--shadow);
+    }
+    .estoque-card-topo {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .estoque-card-titulo {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text-1);
+    }
+    .estoque-card-sub {
+      font-size: 12px;
+      color: var(--text-3);
+    }
+    .estoque-card-detalhes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-size: 12.5px;
+      margin-top: 4px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+    .form-grid {
+      grid-template-columns: 1fr !important;
+    }
+    button[type="submit"], .btn {
+      min-height: 44px;
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
+
 <div class="card" style="margin-bottom:16px">
-  <p style="margin:0">Controle manual por lote. O registro de uma medicação em animal não baixa este estoque automaticamente.</p>
+  <p style="margin:0; font-size:13.5px">Controle manual por lote. O registro de uma medicação em animal abate o estoque automaticamente quando vinculado.</p>
 </div>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
@@ -27,7 +79,7 @@
         <div class="form-group"><label>Fornecedor / referência</label><input name="fornecedor" maxlength="100"></div>
         <div class="form-group full"><label>Observações</label><input name="observacoes" maxlength="200"></div>
       </div>
-      <button class="btn btn-primary" type="submit">Registrar entrada</button>
+      <button class="btn btn-primary" type="submit" style="margin-top:12px">Registrar entrada</button>
     </form>
   </section>
 
@@ -41,7 +93,7 @@
           <select name="movimento" required><option value="Saída">Saída / uso</option><option value="Descarte">Descarte</option></select>
         </div>
         <div class="form-group full"><label>Lote</label>
-          <select name="lote_id" required>
+          <select name="lote_id" required style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text)">
             <option value="">Selecione um lote com saldo</option>
             {% for lote in lotes %}
             <option value="{{ lote.id }}">{{ lote.produto }} · lote {{ lote.lote }} · {{ lote.saldo|br_num(3) }} {{ lote.unidade }} · validade {{ lote.validade|data_br }}{% if lote.vencido %} · VENCIDO (descarte){% endif %}</option>
@@ -51,23 +103,30 @@
         <div class="form-group"><label>Quantidade</label><input type="number" name="quantidade" min="0.001" step="0.001" required></div>
         <div class="form-group full"><label>Observações (ex.: motivo ou referência)</label><input name="observacoes" maxlength="200"></div>
       </div>
-      <button class="btn btn-primary" type="submit">Registrar movimento</button>
+      <button class="btn btn-primary" type="submit" style="margin-top:12px">Registrar movimento</button>
     </form>
-    <p class="hint" style="margin-bottom:0">Lotes vencidos não podem ser lançados como uso; registre o descarte para retirar o saldo.</p>
+    <p class="hint" style="margin-top:10px;margin-bottom:0">Lotes vencidos não podem ser lançados como uso; registre o descarte para retirar o saldo.</p>
   </section>
 </div>
 
 <section class="card" style="margin-top:16px">
-  <h2>📦 Lotes com saldo</h2>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <h2>📦 Lotes com saldo</h2>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('listar_bulas') }}">📖 Catálogo de Bulas</a>
+  </div>
+  
   {% if lotes %}
+  <!-- Tabela Desktop -->
   <div style="overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr><th>Medicamento</th><th>Princípio ativo</th><th>Lote</th><th>Saldo</th><th>Validade</th><th>Status</th><th>Bula / Embalagem</th></tr></thead>
+    <table class="tabela-desktop" style="border-collapse:collapse">
+      <thead><tr><th>Medicamento</th><th>Princípio ativo</th><th>Lote</th><th>Saldo</th><th>Validade</th><th>Status</th><th>Ações</th></tr></thead>
       <tbody>
       {% for lote in lotes %}
       <tr>
-        <td>{{ lote.produto }}</td><td>{{ lote.principio }}</td><td>{{ lote.lote }}</td>
-        <td>{{ lote.saldo|br_num(3) }} {{ lote.unidade }}</td>
+        <td><b>{{ lote.produto }}</b></td>
+        <td>{{ lote.principio }}</td>
+        <td>{{ lote.lote }}</td>
+        <td><b>{{ lote.saldo|br_num(3) }} {{ lote.unidade }}</b></td>
         <td>{{ lote.validade|data_br }}</td>
         <td>
           {% if lote.vencido %}<span class="badge badge-ruim">Vencido · descarte</span>
@@ -75,12 +134,37 @@
           {% else %}<span class="badge badge-ok">Dentro da validade</span>{% endif %}
         </td>
         <td>
-          <a class="btn btn-outline btn-sm" href="{{ url_for('listar_bulas') }}">📖 Ver Bulas</a>
+          <a class="btn btn-outline btn-sm" href="{{ url_for('listar_bulas') }}">📄 Bula</a>
         </td>
       </tr>
       {% endfor %}
       </tbody>
     </table>
+  </div>
+
+  <!-- Cards Mobile -->
+  <div class="cards-mobile">
+    {% for lote in lotes %}
+    <div class="estoque-card-item">
+      <div class="estoque-card-topo">
+        <div>
+          <div class="estoque-card-titulo">{{ lote.produto }}</div>
+          <div class="estoque-card-sub">{{ lote.principio }}</div>
+        </div>
+        <div>
+          {% if lote.vencido %}<span class="badge badge-ruim" style="font-size:10.5px">Vencido</span>
+          {% elif lote.vence_em_breve %}<span class="badge badge-aviso" style="font-size:10.5px">Vence em {{ lote.dias_validade }}d</span>
+          {% else %}<span class="badge badge-ok" style="font-size:10.5px">OK</span>{% endif %}
+        </div>
+      </div>
+      <div class="estoque-card-detalhes">
+        <div><b>Lote:</b> {{ lote.lote }}</div>
+        <div><b>Saldo:</b> <span style="color:var(--green-600);font-weight:700">{{ lote.saldo|br_num(3) }} {{ lote.unidade }}</span></div>
+        <div><b>Validade:</b> {{ lote.validade|data_br }}</div>
+        <div><a href="{{ url_for('listar_bulas') }}" style="color:var(--green-700);text-decoration:underline">📄 Ver Bula</a></div>
+      </div>
+    </div>
+    {% endfor %}
   </div>
   {% else %}<p class="hint">Nenhum medicamento com saldo registrado.</p>{% endif %}
 </section>
@@ -88,13 +172,33 @@
 <section class="card" style="margin-top:16px">
   <h2>🧾 Movimentações recentes</h2>
   {% if movimentos_recentes %}
+  <!-- Tabela Desktop -->
   <div style="overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse">
+    <table class="tabela-desktop" style="border-collapse:collapse">
       <thead><tr><th>Data</th><th>Movimento</th><th>Medicamento</th><th>Lote</th><th>Quantidade</th><th>Observação</th></tr></thead>
       <tbody>{% for m in movimentos_recentes %}
-        <tr><td>{{ m['Data'] }}</td><td>{{ m['Movimento'] }}</td><td>{{ m['Produto'] }}</td><td>{{ m['Lote'] }}</td><td>{{ m['Quantidade'] }} {{ m['Unidade'] }}</td><td>{{ m['Observações'] }}</td></tr>
+        <tr><td>{{ m['Data'] }}</td><td>{{ m['Movimento'] }}</td><td><b>{{ m['Produto'] }}</b></td><td>{{ m['Lote'] }}</td><td><b>{{ m['Quantidade'] }} {{ m['Unidade'] }}</b></td><td>{{ m['Observações'] }}</td></tr>
       {% endfor %}</tbody>
     </table>
+  </div>
+
+  <!-- Cards Mobile -->
+  <div class="cards-mobile">
+    {% for m in movimentos_recentes %}
+    <div class="estoque-card-item">
+      <div class="estoque-card-topo">
+        <div>
+          <div class="estoque-card-titulo">{{ m['Produto'] }}</div>
+          <div class="estoque-card-sub">Movimento: <b>{{ m['Movimento'] }}</b> · Lote: {{ m['Lote'] }}</div>
+        </div>
+        <div style="font-size:12px;color:var(--text-3);font-weight:600">{{ m['Data'] }}</div>
+      </div>
+      <div class="estoque-card-detalhes">
+        <div><b>Qtd:</b> {{ m['Quantidade'] }} {{ m['Unidade'] }}</div>
+        <div><b>Obs:</b> {{ m['Observações'] or '—' }}</div>
+      </div>
+    </div>
+    {% endfor %}
   </div>
   {% else %}<p class="hint">Ainda não há movimentações.</p>{% endif %}
 </section>
