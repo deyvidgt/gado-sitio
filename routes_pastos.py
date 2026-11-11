@@ -399,6 +399,65 @@ def aplicacoes_pastos():
     )
 
 
+@app.route("/pastos/<id_>/detalhes")
+@login_required
+def detalhes_pasto(id_):
+    dados = _get_dados_cache()
+    df_p, df_a = PA.carregar(), A.carregar()
+    match = df_p[df_p["ID"].astype(str) == str(id_)]
+    if match.empty:
+        flash("Pasto não encontrado.", "error")
+        return redirect(url_for("pastos"))
+    p_row = match.iloc[0]
+
+    estoque = calcular_estoque(dados["Compras"], dados["Vendas"], dados["Manejo"])
+    sit = PA.situacao(df_p, df_a, dados["Manejo"], estoque,
+                      _peso_medio(df_a, dados["Manejo"]), hoje=_agora())
+    capacidade = _capacidade_ua_ha()
+    pasto_sit = sit.get(id_, {"cab": 0, "ua": 0, "ua_ha": 0, "dias": None, "descanso": None, "estimado": False})
+    
+    animais_por_pasto = _extrair_animais_por_pasto(dados["Manejo"], df_a)
+    animais_info = animais_por_pasto.get(id_, {})
+
+    df_man = dados["Manejo"]
+    movs_pasto = []
+    if df_man is not None and not df_man.empty and "Pasto" in df_man.columns:
+        m_filtrado = df_man[df_man["Pasto"].astype(str) == str(id_)]
+        movs_pasto = m_filtrado.sort_values("Data", ascending=False, na_position="last").to_dict("records")
+
+    df_ms = PMS.carregar()
+    medicoes_pasto = []
+    if df_ms is not None and not df_ms.empty and "Pasto ID" in df_ms.columns:
+        medicoes_pasto = df_ms[df_ms["Pasto ID"].astype(str) == str(id_)].sort_values("Data", ascending=False).to_dict("records")
+
+    df_aplic = db.carregar_aba("Pastos Aplicações")
+    aplicacoes_pasto = []
+    if df_aplic is not None and not df_aplic.empty and "Pasto ID" in df_aplic.columns:
+        aplicacoes_pasto = df_aplic[df_aplic["Pasto ID"].astype(str) == str(id_)].sort_values("Data", ascending=False).to_dict("records")
+
+    pasto_obj = {
+        "id": p_row["ID"],
+        "nome": p_row["Nome"],
+        "area": float(p_row["Área (ha)"]),
+        "cor": p_row["Cor"],
+        **pasto_sit,
+        "nivel": PA.nivel(pasto_sit.get("ua_ha"), capacidade),
+        "animais_dados": animais_info.get("dados", []),
+        "total_animais": animais_info.get("total", 0),
+    }
+
+    return render_template(
+        "pasto_detalhes.html",
+        pasto=pasto_obj,
+        capacidade=capacidade,
+        movimentacoes=movs_pasto,
+        medicoes=medicoes_pasto,
+        aplicacoes=aplicacoes_pasto,
+        fmt_brl=fmt_brl,
+    )
+
+
+
 @app.route("/estoque")
 @login_required
 def estoque_animais():

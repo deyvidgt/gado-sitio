@@ -31,6 +31,12 @@ class Gasto(db.Model):
     categoria = db.Column(db.String)
     registrado_por = db.Column(db.String)
 
+    @property
+    def valor(self):
+        return self.valor_total
+
+Despesa = Gasto
+
 class Venda(db.Model):
     __tablename__ = 'vendas'
     id = db.Column(db.Integer, primary_key=True)

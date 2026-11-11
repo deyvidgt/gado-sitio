@@ -7,6 +7,7 @@ import uuid
 
 from flask import (Response, abort, flash, redirect, render_template, request, session,
                    url_for)
+from werkzeug.utils import secure_filename
 
 import bulas
 import db
@@ -237,3 +238,65 @@ def confirmar_bula():
     else:
         flash(f"Bula de {pendente['nome']} cadastrada e disponível na lista.", "success")
     return redirect(url_for("listar_bulas"))
+
+
+@app.route("/bulas/upload-embalagem", methods=["POST"])
+@login_required
+def upload_embalagem_bula():
+    _validar_csrf()
+    nome_produto = (request.form.get("produto") or "").strip()
+    if not nome_produto:
+        flash("Informe o nome do produto.", "error")
+        return redirect(url_for("listar_bulas"))
+
+    arquivo_up = request.files.get("foto_embalagem")
+    if not arquivo_up or not arquivo_up.filename:
+        flash("Selecione ou tire uma foto da embalagem.", "error")
+        return redirect(url_for("listar_bulas"))
+
+    ext = os.path.splitext(arquivo_up.filename)[1].lower()
+    if ext not in (".jpg", ".jpeg", ".png", ".webp"):
+        flash("Formato de imagem inválido. Use JPG, PNG ou WEBPA.", "error")
+        return redirect(url_for("listar_bulas"))
+
+    chave = bulas.slug(nome_produto)
+    safe_ext = ".jpg" if ext in (".jpg", ".jpeg") else (ext if ext in (".png", ".webp") else ".jpg")
+    nombre_seguro = secure_filename(f"{chave}__embalagem{safe_ext}")
+    nome_arquivo = nombre_seguro or f"{chave}__embalagem{safe_ext}"
+
+    try:
+        conteudo = arquivo_up.read()
+        if len(conteudo) > 15 * 1024 * 1024:
+            flash("Imagem muito grande (máximo 15 MB).", "error")
+            return redirect(url_for("listar_bulas"))
+        bulas.guardar_local(nome_arquivo, conteudo)
+    except Exception as e:
+        flash(f"Erro ao guardar foto localmente: {e}", "error")
+        return redirect(url_for("listar_bulas"))
+
+    drive_ok = False
+    cli = drive.cliente()
+    if cli is None:
+        flash(f"📸 Foto da embalagem de {nome_produto} salva localmente (Google Drive não configurado).", "warning")
+    else:
+        try:
+            pasta = cli.pasta(bulas.NOME_PASTA, {"bulas": "pasta"})
+            antigo = cli.achar_por_prop("bulas", nome_arquivo)
+            mime = "image/jpeg" if safe_ext == ".jpg" else ("image/png" if safe_ext == ".png" else "image/webp")
+            novo = cli.enviar(
+                pasta, nome_arquivo, conteudo, mime,
+                {"bulas": nome_arquivo},
+                descricao=f"Foto da embalagem de {nome_produto}",
+            )
+            if antigo and antigo != novo:
+                cli.lixeira(antigo)
+            drive_ok = True
+        except Exception as e:
+            flash(f"Foto salva localmente, mas falhou ao enviar ao Google Drive: {e}", "warning")
+
+    if drive_ok:
+        flash(f"📸 Foto da embalagem de {nome_produto} enviada com sucesso ao Google Drive!", "success")
+    else:
+        flash(f"📸 Foto da embalagem de {nome_produto} salva com sucesso!", "success")
+    return redirect(url_for("listar_bulas"))
+

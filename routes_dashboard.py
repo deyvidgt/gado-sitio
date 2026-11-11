@@ -230,18 +230,33 @@ def _grafico_cmp_gpcab_evolucao(r_timeline):
 
 
 def _grafico_gastos_por_tipo(dados):
-    """Gráfico de pizza: Composição de gastos por tipo (últimos 30 dias).
+    """Gráfico de pizza: Composição de gastos por tipo (SQLAlchemy query).
 
     Agrupa por tipo de gasto (Alimentação, Saúde, Manutenção, etc).
     """
     try:
         from datetime import timedelta
-        df_gastos = dados.get("Gastos")
-        if df_gastos is None or df_gastos.empty:
-            return None
+        from sqlalchemy import func
+        from models import Despesa
+        from extensions import db
 
         hoje = _agora().date()
         inicio = hoje - timedelta(days=30)
+        inicio_dt = datetime.combine(inicio, datetime.min.time())
+
+        resultados = db.session.query(Despesa.tipo, func.sum(Despesa.valor_total)).filter(Despesa.data >= inicio_dt).group_by(Despesa.tipo).all()
+        if not resultados:
+            resultados = db.session.query(Despesa.tipo, func.sum(Despesa.valor)).filter(Despesa.data >= inicio_dt).group_by(Despesa.tipo).all()
+
+        if resultados:
+            labels = [r[0] or "Outro" for r in resultados]
+            data = [float(r[1] or 0) for r in resultados]
+            if labels and sum(data) > 0:
+                return {"labels": labels, "data": data}
+
+        df_gastos = dados.get("Gastos")
+        if df_gastos is None or df_gastos.empty:
+            return None
 
         gastos_por_tipo = {}
         for _, row in df_gastos.iterrows():

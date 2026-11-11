@@ -25,7 +25,7 @@
 {% if com_bula %}
 <h2 style="font-size:15px;margin:18px 0 10px">Disponíveis ({{ com_bula|length }})</h2>
 {% for p in com_bula %}
-<div class="linha">
+<div class="linha" style="flex-wrap:wrap;gap:8px">
   <div>
     <div class="linha-nome">{{ p.nome }}</div>
     <div class="linha-sub">
@@ -33,7 +33,7 @@
       · {% if p.embalagem %}🖼️ Embalagem{% else %}<span style="color:var(--warn)">🖼️ Sem foto</span>{% endif %}
     </div>
   </div>
-  <div class="linha-fim" style="display:flex;gap:8px">
+  <div class="linha-fim" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     {% if p.bula %}
     <a class="btn btn-outline btn-sm" target="_blank" rel="noopener"
        href="{{ url_for('bula_arquivo', nome=p.bula) }}">📄 Abrir bula</a>
@@ -42,6 +42,12 @@
     <a class="btn btn-outline btn-sm" target="_blank" rel="noopener"
        href="{{ url_for('bula_arquivo', nome=p.embalagem) }}">🖼️ Ver foto</a>
     {% endif %}
+    <form method="post" action="{{ url_for('upload_embalagem_bula') }}" enctype="multipart/form-data" style="display:inline-flex;align-items:center;gap:4px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="produto" value="{{ p.nome }}">
+      <input type="file" name="foto_embalagem" accept="image/*" capture="environment" required style="font-size:11px;max-width:140px">
+      <button type="submit" class="btn btn-outline btn-sm">📷 {% if p.embalagem %}Trocar{% else %}Foto{% endif %}</button>
+    </form>
   </div>
 </div>
 {% endfor %}
@@ -52,13 +58,31 @@
 <h2 style="font-size:15px;margin:22px 0 10px">Ainda sem bula ({{ sem_bula|length }})</h2>
 <p class="linha-sub" style="margin-bottom:10px">
   Faltam estes arquivos no Drive. O administrador pode cadastrar a URL da bula
-  oficial, conferir o PDF e confirmar o envio.
+  oficial, conferir o PDF e confirmar o envio. Você também já pode enviar a foto da embalagem abaixo:
 </p>
-<div style="display:flex;flex-wrap:wrap;gap:6px">
-  {% for p in sem_bula %}
-  <span class="badge">{{ p.nome }}</span>
-  {% endfor %}
+{% for p in sem_bula %}
+<div class="linha" style="flex-wrap:wrap;gap:8px">
+  <div>
+    <div class="linha-nome">{{ p.nome }}</div>
+    <div class="linha-sub">
+      <span style="color:var(--warn)">📄 Sem bula</span>
+      · {% if p.embalagem %}🖼️ Embalagem{% else %}<span style="color:var(--warn)">🖼️ Sem foto</span>{% endif %}
+    </div>
+  </div>
+  <div class="linha-fim" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    {% if p.embalagem %}
+    <a class="btn btn-outline btn-sm" target="_blank" rel="noopener"
+       href="{{ url_for('bula_arquivo', nome=p.embalagem) }}">🖼️ Ver foto</a>
+    {% endif %}
+    <form method="post" action="{{ url_for('upload_embalagem_bula') }}" enctype="multipart/form-data" style="display:inline-flex;align-items:center;gap:4px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="produto" value="{{ p.nome }}">
+      <input type="file" name="foto_embalagem" accept="image/*" capture="environment" required style="font-size:11px;max-width:140px">
+      <button type="submit" class="btn btn-outline btn-sm">📷 {% if p.embalagem %}Trocar{% else %}Foto{% endif %}</button>
+    </form>
+  </div>
 </div>
+{% endfor %}
 {% endif %}
 
 <div class="card" style="margin-top:22px;background:var(--bg-2)">

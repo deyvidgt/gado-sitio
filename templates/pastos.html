@@ -225,12 +225,12 @@
         </div>
         <div style="font-size:11px; color:var(--text-3); text-transform:uppercase">UA/ha</div>
       </div>
-      <div class="tri-item" style="background:var(--bg-2); padding:10px; border-radius:8px; text-align:center">
+      <a href="{{ url_for('detalhes_pasto', id_=p.id) }}" class="tri-item" style="background:var(--bg-2); padding:10px; border-radius:8px; text-align:center; text-decoration:none; color:inherit; display:block; transition:background .15s" title="Ver detalhes, histórico e dias de ocupação/descanso deste pasto">
         <div style="font-size:18px; font-weight:700; color:var(--accent,#2980b9)">
           {{ p.descanso ~ ' dias' if p.descanso is not none else (p.dias ~ ' dias ocupado' if p.dias is not none else '—') }}
         </div>
-        <div style="font-size:11px; color:var(--text-3); text-transform:uppercase">Previsão Descanso</div>
-      </div>
+        <div style="font-size:11px; color:var(--text-3); text-transform:uppercase">Previsão Descanso 🔍</div>
+      </a>
     </div>
 
     <!-- Animais neste pasto -->

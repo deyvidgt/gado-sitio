@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Detalhes do Pasto — {{ pasto.nome }}{% endblock %}
+{% block page_title %}Pasto: {{ pasto.nome }} 🌿{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:auto">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+    <a href="{{ url_for('pastos') }}" class="btn btn-outline">← Voltar ao Mapa de Pastos</a>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="bol" style="background:{{ pasto.cor }};width:16px;height:16px"></span>
+      <span style="font-size:14px;font-weight:600">ID: {{ pasto.id }}</span>
+    </div>
+  </div>
+
+  <!-- Cards / KPIs do Pasto -->
+  <div class="tri-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px; margin-bottom:20px">
+    <div class="card" style="text-align:center;margin:0">
+      <div style="font-size:24px;font-weight:700">{{ pasto.cab }}</div>
+      <div style="font-size:11px;color:var(--text-3);text-transform:uppercase">Cabeças no Pasto</div>
+    </div>
+    <div class="card" style="text-align:center;margin:0">
+      <div style="font-size:24px;font-weight:700">{{ '%.1f'|format(pasto.area)|replace('.', ',') }} ha</div>
+      <div style="font-size:11px;color:var(--text-3);text-transform:uppercase">Área Total</div>
+    </div>
+    <div class="card" style="text-align:center;margin:0">
+      <div style="font-size:24px;font-weight:700">
+        {% if pasto.ua_ha is not none and pasto.cab %}{{ '%.2f'|format(pasto.ua_ha)|replace('.', ',') }}{% if pasto.estimado %}~{% endif %}{% else %}—{% endif %}
+      </div>
+      <div style="font-size:11px;color:var(--text-3);text-transform:uppercase">UA / hectare</div>
+    </div>
+    <div class="card" style="text-align:center;margin:0">
+      <div style="font-size:22px;font-weight:700;color:var(--accent,#2980b9)">
+        {{ pasto.descanso ~ ' dias' if pasto.descanso is not none else (pasto.dias ~ ' dias ocupado' if pasto.dias is not none else '—') }}
+      </div>
+      <div style="font-size:11px;color:var(--text-3);text-transform:uppercase">Previsão Descanso / Ocupação</div>
+    </div>
+  </div>
+
+  <!-- Animais Atuais -->
+  <div class="card" style="margin-bottom:20px">
+    <h3>🐄 Animais atualmente no pasto ({{ pasto.animais_dados|length }})</h3>
+    {% if pasto.animais_dados %}
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+        {% for a in pasto.animais_dados %}
+          <a href="{{ url_for('ficha_animal', id_=a.id) }}" style="background:{{ a.cor }}; color:#111; padding:6px 12px; border-radius:8px; font-size:13px; font-weight:700; border:1px solid rgba(0,0,0,0.15); text-decoration:none; display:inline-block;">
+            🏷️ {{ a.brinco }} {% if a.nome %}({{ a.nome }}){% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="muted" style="margin-top:8px">Nenhum animal específico alocado neste pasto no momento (ou rebanho todo em trânsito).</p>
+    {% endif %}
+  </div>
+
+  <!-- Histórico de Manejo / Movimentações -->
+  <div class="card" style="margin-bottom:20px">
+    <h3>📋 Histórico de Manejo e Movimentações</h3>
+    {% if movimentacoes %}
+      <div style="overflow:auto;margin-top:12px">
+        <table class="pastos-tab">
+          <thead><tr><th>Data</th><th>Tipo</th><th>Cabeças</th><th>Descrição</th><th>Responsável</th></tr></thead>
+          <tbody>
+            {% for m in movimentacoes %}
+              <tr>
+                <td>{{ m.Data|data_br }}</td>
+                <td><strong>{{ m.Tipo }}</strong></td>
+                <td>{{ m['Qtd Cabeças'] }}</td>
+                <td>{{ m.Descrição or '—' }}</td>
+                <td>{{ m.Responsável or '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted" style="margin-top:8px">Ainda não há registros de manejo para este pasto.</p>
+    {% endif %}
+  </div>
+
+  <!-- Histórico de Medições de Altura / MS -->
+  <div class="card" style="margin-bottom:20px">
+    <h3>📏 Medições de Altura e Matéria Seca</h3>
+    {% if medicoes %}
+      <div style="overflow:auto;margin-top:12px">
+        <table class="pastos-tab">
+          <thead><tr><th>Data</th><th>Altura</th><th>Coeficiente</th><th>MS estimada</th><th>Responsável</th></tr></thead>
+          <tbody>
+            {% for md in medicoes %}
+              <tr>
+                <td>{{ md.Data|data_br }}</td>
+                <td>{{ md['Altura (cm)'] }} cm</td>
+                <td>{{ md['Coeficiente MS (kg/ha/cm)'] }}</td>
+                <td><strong>{{ md['MS Estimada (kg/ha)'] }} kg/ha</strong></td>
+                <td>{{ md.Responsável or '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted" style="margin-top:8px">Ainda não há medições de altura/MS registradas para este pasto.</p>
+    {% endif %}
+  </div>
+
+  <!-- Aplicações de Insumos -->
+  <div class="card">
+    <h3>🌱 Aplicações de Insumos</h3>
+    {% if aplicacoes %}
+      <div style="overflow:auto;margin-top:12px">
+        <table class="pastos-tab">
+          <thead><tr><th>Data</th><th>Insumo</th><th>Produto</th><th>Quantidade</th><th>Custo Total</th><th>Responsável</th></tr></thead>
+          <tbody>
+            {% for ap in aplicacoes %}
+              <tr>
+                <td>{{ ap.Data|data_br }}</td>
+                <td>{{ ap['Tipo Insumo'] }}</td>
+                <td><strong>{{ ap.Produto }}</strong></td>
+                <td>{{ ap.Quantidade }} {{ ap.Unidade }}</td>
+                <td>{{ ap['Custo Total (R$)']|brl }}</td>
+                <td>{{ ap.Responsável or '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted" style="margin-top:8px">Ainda não há aplicações de insumos registradas para este pasto.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
