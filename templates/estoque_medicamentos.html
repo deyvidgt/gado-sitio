@@ -62,7 +62,7 @@
   {% if lotes %}
   <div style="overflow-x:auto">
     <table style="width:100%;border-collapse:collapse">
-      <thead><tr><th>Medicamento</th><th>Princípio ativo</th><th>Lote</th><th>Saldo</th><th>Validade</th><th>Status</th></tr></thead>
+      <thead><tr><th>Medicamento</th><th>Princípio ativo</th><th>Lote</th><th>Saldo</th><th>Validade</th><th>Status</th><th>Bula / Embalagem</th></tr></thead>
       <tbody>
       {% for lote in lotes %}
       <tr>
@@ -73,6 +73,9 @@
           {% if lote.vencido %}<span class="badge badge-ruim">Vencido · descarte</span>
           {% elif lote.vence_em_breve %}<span class="badge badge-aviso">Vence em {{ lote.dias_validade }} dia(s)</span>
           {% else %}<span class="badge badge-ok">Dentro da validade</span>{% endif %}
+        </td>
+        <td>
+          <a class="btn btn-outline btn-sm" href="{{ url_for('listar_bulas') }}">📖 Ver Bulas</a>
         </td>
       </tr>
       {% endfor %}

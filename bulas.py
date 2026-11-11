@@ -131,12 +131,25 @@ def slug(produto: str) -> str:
 
 
 def _catalogo_base() -> list[tuple[str, str]]:
-    """(slug, nome para a tela) de tudo que o sistema conhece.
+    """(slug, nome para a tela) de tudo que o sistema conhece,
+    incluindo automaticamente todos os produtos presentes no Estoque de Medicamentos.
     O parêntese sai do nome do arquivo: "Poliguard (IBR/BVD)" → poliguard.pdf."""
     itens = {slug(n): n for n in PERIODOS_CARENCIA_PADRAO}
     for marcas in SUGESTOES_PRODUTO.values():
         for marca in marcas:
             itens.setdefault(slug(marca), marca)
+    
+    # Integrar dinamicamente os medicamentos cadastrados ou com lote no estoque
+    try:
+        df_estoque = db.carregar_aba("Estoque Medicamentos")
+        if df_estoque is not None and not df_estoque.empty and "Produto" in df_estoque.columns:
+            for prod in df_estoque["Produto"].dropna().unique():
+                p_str = str(prod).strip()
+                if p_str:
+                    itens.setdefault(slug(p_str), p_str)
+    except Exception:
+        pass
+
     return sorted(itens.items(), key=lambda kv: kv[1].lower())
 
 
