@@ -442,6 +442,44 @@ def fmt_data(v):
     return str(v) if v else "—"
 
 
+@app.template_filter("datetime_br")
+def fmt_datetime_br(v):
+    """Formata datetime/timestamp conversível para o horário do Brasil (BRT)."""
+    if v is None:
+        return ""
+    try:
+        if pd.isna(v):
+            return ""
+    except (TypeError, ValueError):
+        pass
+    dt = None
+    if isinstance(v, (pd.Timestamp, datetime)):
+        dt = v.to_pydatetime() if isinstance(v, pd.Timestamp) else v
+    elif isinstance(v, str):
+        try:
+            dt = datetime.fromisoformat(v.strip().replace("Z", "+00:00"))
+        except ValueError:
+            try:
+                dt = datetime.strptime(v.strip(), "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                return str(v)
+    if dt is not None:
+        if dt.tzinfo is not None and _TZ_BR is not None:
+            dt = dt.astimezone(_TZ_BR)
+        return dt.strftime("%d/%m/%Y %H:%M")
+    return str(v)
+
+
+def _agora() -> datetime:
+    """Retorna datetime atual no fuso horário do Brasil (America/Sao_Paulo)."""
+    if _TZ_BR is not None:
+        dt = datetime.now(_TZ_BR)
+        if hasattr(dt, "tzinfo") and dt.tzinfo is not None:
+            return dt.astimezone(_TZ_BR).replace(tzinfo=None)
+        return dt
+    return datetime.now()
+
+
 # ── Helpers gerais ─────────────────────────────────────────────────────────────
 def _safe(v, fallback=0):
     try:

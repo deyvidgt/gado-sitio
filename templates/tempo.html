@@ -67,7 +67,7 @@
 <section class="card tempo-card">
   <div class="section-head" style="margin-bottom:16px">
     <h2>Dados Atuais</h2>
-    {% if prev.consultado_em %}<span class="status" style="font-size:0.9em">Atualizado em {{ prev.consultado_em[:16] | replace('T', ' ') }}</span>{% endif %}
+    {% if prev.consultado_em %}<span class="status" style="font-size:0.9em">Atualizado em {{ prev.consultado_em | datetime_br }}</span>{% endif %}
   </div>
   {% if prev.status != 'indisponível' and prev.atual %}
   <div class="tempo-agora">
