@@ -64,3 +64,17 @@ class RegistroGenerico(db.Model):
     fazenda_id = db.Column(db.Integer, db.ForeignKey('fazendas.id'), nullable=False)
     aba = db.Column(db.String(50), nullable=False)
     dados_json = db.Column(db.Text, nullable=False)
+
+class Medicamento(db.Model):
+    __tablename__ = 'medicamentos'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), nullable=False)
+    principio_ativo = db.Column(db.String(100))
+    lote = db.Column(db.String(60))
+    bula = db.relationship('Bula', backref='medicamento', uselist=False, cascade='all, delete-orphan')
+
+class Bula(db.Model):
+    __tablename__ = 'bulas_estoque'
+    id = db.Column(db.Integer, primary_key=True)
+    medicamento_id = db.Column(db.Integer, db.ForeignKey('medicamentos.id'), nullable=False, unique=True)
+    arquivo = db.Column(db.String(255), nullable=False)

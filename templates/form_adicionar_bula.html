@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Adicionar Bula — {{ medicamento.nome }}{% endblock %}
+{% block page_title %}Adicionar Bula 📄{% endblock %}
+
+{% block content %}
+<div style="max-width:540px; margin: 0 auto;">
+  <div class="card">
+    <h2 style="font-family:'Playfair Display',serif; font-size:20px; color:var(--green-700); margin-bottom:16px">
+      Bula para: {{ medicamento.nome }}
+    </h2>
+    <p class="hint" style="margin-bottom:20px">Princípio Ativo: <b>{{ medicamento.principio_ativo or '—' }}</b></p>
+    
+    <form method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="form-group" style="margin-bottom:16px">
+        <label>Ficheiro da Bula (PDF ou Imagem)</label>
+        <input type="file" name="bula_arquivo" accept=".pdf,image/*" required style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px">
+        <small class="hint">Formatos aceites: PDF, JPG, PNG.</small>
+      </div>
+      <div style="display:flex; gap:12px; margin-top:24px">
+        <button type="submit" class="btn btn-primary">💾 Guardar Bula</button>
+        <a href="{{ url_for('estoque_medicamentos') }}" class="btn btn-outline">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

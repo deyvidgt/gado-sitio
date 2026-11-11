@@ -170,6 +170,68 @@
 </section>
 
 <section class="card" style="margin-top:16px">
+  <h2>📖 Catálogo de Medicamentos e Bulas</h2>
+  {% if medicamentos_bulas %}
+  <div style="overflow-x:auto">
+    <table class="tabela-desktop" style="border-collapse:collapse">
+      <thead><tr><th>Medicamento</th><th>Princípio Ativo</th><th>Estado da Bula</th><th>Ação</th></tr></thead>
+      <tbody>
+        {% for med, bula in medicamentos_bulas %}
+        <tr>
+          <td><b>{{ med.nome }}</b></td>
+          <td>{{ med.principio_ativo or '—' }}</td>
+          <td>
+            {% if bula and bula.arquivo %}
+              <span class="badge badge-ok">Bula registada</span>
+            {% else %}
+              <span class="badge badge-aviso">Sem bula</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if bula and bula.arquivo %}
+              <a class="btn btn-outline btn-sm" href="{{ url_for('static', filename=bula.arquivo) }}" target="_blank">📄 Abrir Bula</a>
+            {% else %}
+              <a class="btn btn-primary btn-sm" href="{{ url_for('adicionar_bula_medicamento', medicamento_id=med.id) }}">➕ Adicionar Bula</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="cards-mobile">
+    {% for med, bula in medicamentos_bulas %}
+    <div class="estoque-card-item">
+      <div class="estoque-card-topo">
+        <div>
+          <div class="estoque-card-titulo">{{ med.nome }}</div>
+          <div class="estoque-card-sub">{{ med.principio_ativo or '—' }}</div>
+        </div>
+        <div>
+          {% if bula and bula.arquivo %}
+            <span class="badge badge-ok" style="font-size:10.5px">Com Bula</span>
+          {% else %}
+            <span class="badge badge-aviso" style="font-size:10.5px">Sem Bula</span>
+          {% endif %}
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        {% if bula and bula.arquivo %}
+          <a class="btn btn-outline btn-sm" href="{{ url_for('static', filename=bula.arquivo) }}" target="_blank" style="width:100%">📄 Abrir Bula</a>
+        {% else %}
+          <a class="btn btn-primary btn-sm" href="{{ url_for('adicionar_bula_medicamento', medicamento_id=med.id) }}" style="width:100%">➕ Adicionar Bula</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="hint">Nenhum medicamento registado no catálogo.</p>
+  {% endif %}
+</section>
+
+<section class="card" style="margin-top:16px">
   <h2>🧾 Movimentações recentes</h2>
   {% if movimentos_recentes %}
   <!-- Tabela Desktop -->
