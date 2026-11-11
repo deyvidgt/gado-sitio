@@ -48,7 +48,7 @@ matplotlib>=3.8.0
 
 # ── IA preditiva (reproducao_avancada_ia / ia_features) ──────
 # Importado no caminho do app (app.py → routes_ia): sem ele o app não sobe.
-scikit-learn>=1.8.0,<2
+scikit-learn>=1.7.0,<2
 
 # ── Acesso remoto via ngrok (opcional) ───────────────────────
 # Permite acessar o sistema de fora da rede local.
