@@ -145,6 +145,9 @@ from routes_exportar_graficos import * # noqa: F401, F403
 try:
     from db import inicializar
     inicializar()
+    from extensions import db as db_sqla
+    with app.app_context():
+        db_sqla.create_all()
 except Exception as _e:
     # Nunca derrubar o site por causa da migração; apenas registra.
     print(f"⚠️  Falha ao inicializar/migrar o banco: {_e}", flush=True)
