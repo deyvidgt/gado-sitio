@@ -37,6 +37,19 @@ def ia_predicoes():
                            timestamp=resultado.get("timestamp", ""))
 
 
+@app.route("/api/ia/alertas")
+@login_required
+def api_ia_alertas():
+    """Retorna alertas de IA preditiva em JSON."""
+    df_an = A.carregar()
+    df_man = db.carregar_aba("Manejo")
+    df_compras = db.carregar_aba("Compras")
+    df_vendas = db.carregar_aba("Vendas")
+
+    resultado = alertas_ia_preditiva(df_an, df_man, df_compras, df_vendas)
+    return jsonify(resultado), 200
+
+
 @app.route("/admin/treinar-ia", methods=["POST"])
 @login_required
 def treinar_ia():
