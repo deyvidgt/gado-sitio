@@ -3,144 +3,91 @@
 {% block page_title %}Estoque de Insumos 📦{% endblock %}
 
 {% block content %}
-<style>
-  .est-card { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--spacing-md); margin-bottom: var(--spacing-lg); }
-  .est-item { padding: var(--spacing-md); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); }
-  .est-label { font-size: var(--text-label-size); color: var(--text-2); margin-bottom: 4px; }
-  .est-value { font-size: var(--text-h3-size); font-weight: 700; color: var(--text-1); }
-  .est-unit { font-size: 12px; color: var(--text-3); }
-  .est-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-top: 4px; }
-
-  @media (max-width: 768px) {
-    .est-card { grid-template-columns: 1fr; }
-  }
-</style>
-
-{% for ins in insumos %}
-<div class="card" style="margin-bottom: var(--spacing-2xl)">
-  <h3>{{ ins.produto }}</h3>
-
-  <!-- Status de estoque -->
-  {% if ins.status == "sem_dados" %}
-  <p style="color: var(--text-2); font-size: 14px; margin: var(--spacing-md) 0">
-    📍 Estoque ainda não contado nas visitas. Conte na próxima visita.
-  </p>
-  {% elif ins.status == "sem_consumo" %}
-  <div style="padding: var(--spacing-md); background: var(--color-info-bg); border-radius: var(--radius-md); margin-bottom: var(--spacing-lg)">
-    <div style="font-size: 14px; color: var(--color-info-main); font-weight: 600">
-      ⏳ Estoque: {{ ins.estoque|int }} saco(s) / {{ ins.kg_estoque|default('—', true) }} kg
-    </div>
-    <div style="font-size: 13px; color: var(--text-2); margin-top: 4px">
-      Conte de novo para calcular consumo médio
-    </div>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+  <div>
+    <h2 style="font-family:'Playfair Display', serif; font-size: 22px; color: var(--green-700); margin:0">Armazém e Barracão</h2>
+    <p style="color: var(--text-3); font-size: 13px; margin: 2px 0 0 0">Controle de saldo em stock, sacos e valor investido nos insumos.</p>
   </div>
-  {% elif ins.status == "acabou" %}
-  <div style="padding: var(--spacing-md); background: var(--color-danger-bg); border-radius: var(--radius-md); margin-bottom: var(--spacing-lg)">
-    <div style="font-size: 14px; color: var(--color-danger-main); font-weight: 700">
-      ⚠️ ACABOU — Comprar já!
-    </div>
+  <div>
+    <button type="button" class="btn btn-primary" onclick="document.getElementById('modal-entrada').style.display='flex'">➕ Adicionar ao Estoque</button>
+    <a href="{{ url_for('comparar_insumos') }}" class="btn btn-outline" style="margin-left: 8px">🧮 Comparar Preços</a>
+  </div>
+</div>
+
+<!-- Modal de Adicionar ao Estoque -->
+<div id="modal-entrada" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center; padding:16px;">
+  <div class="card" style="width:100%; max-width:480px; position:relative">
+    <h3 style="margin-top:0; color:var(--green-700)">📥 Dar Entrada de Stock</h3>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Insumo / Produto</label>
+        <select name="insumo_id" required style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text)">
+          <option value="">Selecione o insumo...</option>
+          {% for ins in insumos %}
+          <option value="{{ ins.id }}">{{ ins.produto }} ({{ ins.peso_saco }}kg/saco)</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:16px">
+        <label>Quantidade de Sacos a Adicionar</label>
+        <input type="number" step="any" name="sacos" min="0.1" value="10" required style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border)">
+        <small style="color:var(--text-3); font-size:11px">O sistema soma automaticamente os quilos correspondentes ao stock atual.</small>
+      </div>
+      <div style="display:flex; gap:10px; justify-content:flex-end">
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-entrada').style.display='none'">Cancelar</button>
+        <button type="submit" class="btn btn-primary">✅ Confirmar Entrada</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h3>📋 Saldo Atual no Barracão</h3>
+  {% if insumos %}
+  <div style="overflow-x:auto">
+    <table style="width:100%; border-collapse:collapse; font-size:13.5px">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border); background:var(--bg-2)">
+          <th style="padding:10px; text-align:left">Insumo / Produto</th>
+          <th style="padding:10px; text-align:left">Categoria</th>
+          <th style="padding:10px; text-align:left">Peso do Saco</th>
+          <th style="padding:10px; text-align:left">Quantidade em Estoque</th>
+          <th style="padding:10px; text-align:left">Valor Total Investido</th>
+          <th style="padding:10px; text-align:center">Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ins in insumos %}
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:10px"><b>{{ ins.produto }}</b></td>
+          <td style="padding:10px">{{ ins.categoria }}</td>
+          <td style="padding:10px">{{ ins.peso_saco }} kg</td>
+          <td style="padding:10px">
+            <span style="font-weight:700; color:var(--green-600)">{{ ins.sacos_estoque }} sacos</span>
+            <small style="color:var(--text-3); display:block">({{ ins.kg_estoque }} kg)</small>
+          </td>
+          <td style="padding:10px">{{ ins.valor_total|brl }}</td>
+          <td style="padding:10px; text-align:center">
+            {% if ins.baixo %}
+              <span class="badge badge-ruim" style="background:var(--color-danger-bg); color:var(--color-danger-main); font-weight:700">🔴 Estoque Baixo (≤ 5 sacos)</span>
+            {% else %}
+              <span class="badge badge-ok">✅ Stock OK</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
   {% else %}
-  <!-- Sacos, kg, valor -->
-  <div class="est-card">
-    <div class="est-item">
-      <div class="est-label">Em Estoque</div>
-      <div class="est-value">{{ ins.estoque|int }}</div>
-      <div class="est-unit">sacos</div>
-      {% if ins.kg_estoque %}
-      <div style="margin-top: 8px; font-size: 13px">
-        ≈ <strong>{{ ins.kg_estoque|int }} kg</strong>
-      </div>
-      {% endif %}
-    </div>
-
-    {% if ins.valor_total %}
-    <div class="est-item">
-      <div class="est-label">Valor Total</div>
-      <div class="est-value">{{ ins.valor_total|brl }}</div>
-      <div class="est-unit">
-        {% if ins.preco_saco %}
-        R$ {{ ins.preco_saco|brl }}/saco
-        {% endif %}
-      </div>
-    </div>
-    {% endif %}
-
-    <div class="est-item">
-      <div class="est-label">Consumo</div>
-      <div class="est-value">{{ (ins.consumo_dia * 1000)|int if ins.consumo_dia else '—' }}</div>
-      <div class="est-unit">{% if ins.consumo_dia %}g/dia{% endif %}</div>
-      {% if ins.acaba_em %}
-      <div style="margin-top: 8px; font-size: 13px">
-        Acaba: <strong>{{ ins.acaba_em|data_br }}</strong>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Status badge -->
-  <div style="margin-bottom: var(--spacing-lg)">
-    {% if ins.status == "urgente" %}
-    <span class="est-badge" style="background: var(--color-danger-bg); color: var(--color-danger-main)">
-      🔴 URGENTE — acaba em {{ ins.dias_restantes }} dias
-    </span>
-    {% elif ins.status == "proximo" %}
-    <span class="est-badge" style="background: var(--color-warning-bg); color: var(--color-warning-main)">
-      🟡 PRÓXIMO — acaba em {{ ins.dias_restantes }} dias
-    </span>
-    {% elif ins.status == "ok" %}
-    <span class="est-badge" style="background: var(--color-success-bg); color: var(--color-success-main)">
-      ✅ OK
-    </span>
-    {% endif %}
-  </div>
-  {% endif %}
-
-  <!-- Catálogo: marca, nutrição -->
-  {% if ins.marca or ins.pb_pct or ins.energia %}
-  <div style="padding: var(--spacing-md); background: var(--bg-2); border-radius: var(--radius-md); margin-top: var(--spacing-lg)">
-    <div style="font-size: 12px; color: var(--text-3); margin-bottom: 8px; font-weight: 600">
-      📋 CADASTRO
-    </div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); font-size: 13px">
-      {% if ins.marca %}
-      <div>
-        <div style="color: var(--text-3)">Marca</div>
-        <div style="color: var(--text-1); font-weight: 600">{{ ins.marca }}</div>
-      </div>
-      {% endif %}
-
-      {% if ins.kg_saco %}
-      <div>
-        <div style="color: var(--text-3)">kg/Saco</div>
-        <div style="color: var(--text-1); font-weight: 600">{{ ins.kg_saco }} kg</div>
-      </div>
-      {% endif %}
-
-      {% if ins.pb_pct %}
-      <div>
-        <div style="color: var(--text-3)">Proteína Bruta</div>
-        <div style="color: var(--text-1); font-weight: 600">{{ ins.pb_pct }}%</div>
-      </div>
-      {% endif %}
-
-      {% if ins.energia %}
-      <div>
-        <div style="color: var(--text-3)">Energia</div>
-        <div style="color: var(--text-1); font-weight: 600">{{ ins.energia }} Mcal/kg</div>
-      </div>
-      {% endif %}
-    </div>
-  </div>
+  <p class="hint">Nenhum insumo registado no armazém.</p>
   {% endif %}
 </div>
-{% endfor %}
 
-<div class="card" style="margin-top: var(--spacing-2xl); background: var(--bg-2)">
-  <p style="color: var(--text-2); font-size: 13px; margin: 0">
-    <strong>💡 Como funciona:</strong> O estoque é estimado pela última contagem nas visitas
-    + compras depois dela − consumo médio dos últimos 120 dias. Valores nutricionais vêm do catálogo.
-    Quer atualizar marca, PB ou Energia? Edite a aba <strong>Insumos</strong>.
+<div class="card" style="margin-top:20px; background:var(--bg-2)">
+  <p style="margin:0; font-size:13px; color:var(--text-2)">
+    <strong>💡 Dica:</strong> Sempre que registar a operação de <b>Salgar Cocho</b> informando a quantidade utilizada, o sistema subtrai essa quantidade do stock do insumo correspondente de forma automática.
   </p>
 </div>
 {% endblock %}
