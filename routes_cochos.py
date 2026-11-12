@@ -23,6 +23,7 @@ def _preparar_para_editar(df):
 @login_required
 def cochos():
     """Dashboard visual dos cochos: volume, consumo, próxima salga."""
+    from models import Insumo
     dados = _get_dados_cache()
     df_cochos = CO.carregar()
     df_visitas = dados.get("Visitas")
@@ -32,6 +33,14 @@ def cochos():
     movimentos = CO.carregar_movimentos()
     sit = CO.calcular_situacao_cochos(df_cochos, df_visitas, movimentos)
     resumo = CO.resumo_cochos(df_cochos, df_visitas, movimentos)
+
+    insumos_db = Insumo.query.all()
+    lista_insumos = [{
+        "id": i.id,
+        "nome": i.nome,
+        "peso_saco": i.peso_saco or 25.0,
+        "quantidade": i.quantidade or 0.0
+    } for i in insumos_db]
 
     # Prepara lista para template (ordenada por dias restantes)
     lista = []
@@ -56,7 +65,7 @@ def cochos():
     # Ordena por dias restantes
     lista.sort(key=lambda x: (x.get("dias_restantes") or 999))
 
-    return render_template("cochos.html", cochos=lista, resumo=resumo, hoje=_agora().strftime("%Y-%m-%d"))
+    return render_template("cochos.html", cochos=lista, resumo=resumo, insumos_estoque=lista_insumos, hoje=_agora().strftime("%Y-%m-%d"))
 
 
 @app.route("/cochos/novo", methods=["POST"])
@@ -110,11 +119,14 @@ def novo_cocho():
 @app.route("/cochos/salgar/<cocho_id>", methods=["POST"])
 @login_required
 def salgar_cocho(cocho_id):
-    """Registra salga (reposição) do cocho com dados do modal."""
+    """Registra salga (reposição) do cocho com dados do modal e baixa no estoque de insumos."""
     _validar_csrf()
     try:
         from db import salvar_linha
         import math
+        from models import Insumo
+        from extensions import db as db_sqla, parse_valor
+
         df = CO.carregar()
         cocho = df[df["ID"].astype(str).str.strip() == str(cocho_id).strip()]
         if cocho.empty:
@@ -124,9 +136,27 @@ def salgar_cocho(cocho_id):
             data_obj = datetime.strptime(data_str, "%Y-%m-%d").date()
         except ValueError:
             raise ValueError("Informe uma data válida para a reposição.")
-        quantidade = float(request.form.get("volume", "").replace(",", "."))
+
+        insumo_id = request.form.get("insumo_id")
+        qtd_sacos = parse_valor(request.form.get("quantidade_sacos", 0))
+        volume_kg = parse_valor(request.form.get("volume", 0))
+
+        peso_saco = 25.0
+        insumo_nome = ""
+        if insumo_id:
+            ins = Insumo.query.get(insumo_id)
+            if ins:
+                insumo_nome = ins.nome
+                peso_saco = ins.peso_saco or 25.0
+
+        if qtd_sacos > 0:
+            quantidade = qtd_sacos * peso_saco
+        else:
+            quantidade = volume_kg
+
         if not math.isfinite(quantidade) or quantidade <= 0:
             raise ValueError("A quantidade reposta deve ser maior que zero.")
+
         dados = _get_dados_cache()
         situacao = CO.calcular_situacao_cochos(
             df, dados.get("Visitas"), CO.carregar_movimentos()
@@ -135,13 +165,24 @@ def salgar_cocho(cocho_id):
         saldo = situacao.get("volume_kg", 0)
         if quantidade + saldo > capacidade + 1e-9:
             raise ValueError(f"A reposição excede a capacidade: cabem {max(0, capacidade - saldo):g} kg.")
+
         fazer_backup_seguro()
+
+        # Dar baixa no estoque do insumo selecionado
+        if insumo_id:
+            ins = Insumo.query.get(insumo_id)
+            if ins:
+                ins.quantidade = max(0.0, (ins.quantidade or 0.0) - quantidade)
+                db_sqla.session.commit()
+
+        obs_texto = f"Insumo: {insumo_nome} ({qtd_sacos:g} sacos)" if insumo_nome else ""
+
         salvar_linha("Movimentos Cocho", [
             uuid.uuid4().hex[:12].upper(), data_obj.strftime("%d/%m/%Y"),
-            str(cocho_id), "Reposição", quantidade, "", "",
+            str(cocho_id), "Reposição", quantidade, "", obs_texto,
             _membro_logado(),
         ])
-        flash(f"✨ Reposição de {quantidade:g} kg registrada em {data_obj:%d/%m/%Y}.", "success")
+        flash(f"✨ Reposição de {quantidade:g} kg ({insumo_nome or 'Salga'}) registrada e baixada do estoque com sucesso!", "success")
     except ValueError as e:
         flash(str(e), "error")
     except Exception as e:
