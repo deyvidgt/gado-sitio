@@ -93,4 +93,4 @@ def estoque_insumos():
             "baixo": baixo,
         })
 
-    return render_template("estoque_insumos.html", insumos=lista_insumos)
+    return render_template("estoque.html", insumos=lista_insumos)
