@@ -35,12 +35,60 @@ def comparar_insumos():
                            consumo_padrao=CONSUMO_PADRAO)
 
 
+def _sincronizar_catalogo_e_estoque(dados):
+    """Garante que todos os insumos de INSUMOS, Leite Alimentação e Gastos existem na tabela Insumo."""
+    from models import Insumo
+    from extensions import db as db_sqla
+    from db import carregar_aba
+
+    produtos_conhecidos = set(INSUMOS.keys())
+    
+    df_leite = carregar_aba("Leite Alimentação")
+    if df_leite is not None and not df_leite.empty and "Produto" in df_leite.columns:
+        for _, r in df_leite.iterrows():
+            p = str(r.get("Produto", "")).strip()
+            if p:
+                produtos_conhecidos.add(p)
+
+    df_gastos = dados.get("Gastos")
+    if df_gastos is not None and not df_gastos.empty and "Produto" in df_gastos.columns:
+        for _, r in df_gastos.iterrows():
+            p = str(r.get("Produto", "")).strip()
+            if p:
+                produtos_conhecidos.add(p)
+
+    existentes = {ins.nome.strip().lower(): ins for ins in Insumo.query.all()}
+    
+    for nome_prod in produtos_conhecidos:
+        if not nome_prod:
+            continue
+        chave = nome_prod.strip().lower()
+        if chave not in existentes:
+            peso = 25.0
+            cat = "Nutrição"
+            if df_leite is not None and not df_leite.empty and "Produto" in df_leite.columns:
+                match = df_leite[df_leite["Produto"].astype(str).str.strip().str.lower() == chave]
+                if not match.empty:
+                    row_l = match.iloc[0]
+                    p_saco = parse_valor(row_l.get("Peso Saco (kg)", 25))
+                    if p_saco > 0:
+                        peso = p_saco
+                    c_l = str(row_l.get("Categoria", "")).strip()
+                    if c_l:
+                        cat = c_l
+            ins = Insumo(nome=nome_prod, categoria=cat, quantidade=0.0, peso_saco=peso, unidade_medida="kg")
+            db_sqla.session.add(ins)
+            existentes[chave] = ins
+    db_sqla.session.commit()
+
+
 @app.route("/insumos/estoque", methods=["GET", "POST"])
 @login_required
 def estoque_insumos():
     """Painel de estoque atual de insumos com suporte a dar entrada e ver valor investido."""
     from models import Insumo
     from extensions import db as db_sqla
+    from db import carregar_aba
 
     if request.method == "POST":
         _validar_csrf()
@@ -56,38 +104,52 @@ def estoque_insumos():
                 flash(f"Adicionados {novo_sacos:g} saco(s) ({adicionar_kg:g} kg) ao estoque de {ins.nome}!", "success")
         return redirect(url_for("estoque_insumos"))
 
-    insumos_db = Insumo.query.all()
-    if not insumos_db:
-        padroes = [
-            ("Sal Proteinado", "Nutrição", 125.0, 25.0),
-            ("Ração de Produção", "Nutrição", 150.0, 30.0),
-            ("Sal Mineral", "Nutrição", 100.0, 25.0),
-        ]
-        for nome, cat, qtd, ps in padroes:
-            ins = Insumo(nome=nome, categoria=cat, quantidade=qtd, peso_saco=ps, unidade_medida="kg")
-            db_sqla.session.add(ins)
-        db_sqla.session.commit()
-        insumos_db = Insumo.query.all()
-
     dados = _get_dados_cache()
+    _sincronizar_catalogo_e_estoque(dados)
+
+    insumos_db = Insumo.query.all()
+    df_gastos = dados.get("Gastos")
+    df_leite = carregar_aba("Leite Alimentação")
+
     lista_insumos = []
     for ins in insumos_db:
         peso = ins.peso_saco or 25.0
-        kg = ins.quantidade or 0.0
-        sacos = round(kg / peso, 1) if peso > 0 else 0.0
+        
+        sacos_comprados_gastos = 0.0
+        if df_gastos is not None and not df_gastos.empty and "Produto" in df_gastos.columns:
+            mask = df_gastos["Produto"].astype(str).str.strip().str.lower() == ins.nome.strip().lower()
+            for _, r in df_gastos[mask].iterrows():
+                sq = parse_valor(r.get("Qtd Sacos", 0))
+                if sq > 0:
+                    sacos_comprados_gastos += sq
 
-        preco_saco = I.ultimo_preco_saco(dados.get("Gastos"), ins.nome)
-        p_saco = preco_saco[0] if (preco_saco and preco_saco[0] > 0) else 100.0
+        kg_manual = ins.quantidade or 0.0
+        kg_total = kg_manual + (sacos_comprados_gastos * peso)
+        sacos = round(kg_total / peso, 1) if peso > 0 else 0.0
+
+        preco_saco = I.ultimo_preco_saco(df_gastos, ins.nome)
+        p_saco = 0.0
+        if preco_saco and preco_saco[0] > 0:
+            p_saco = preco_saco[0]
+        elif df_leite is not None and not df_leite.empty and "Produto" in df_leite.columns:
+            match = df_leite[df_leite["Produto"].astype(str).str.strip().str.lower() == ins.nome.strip().lower()]
+            if not match.empty:
+                p_saco = parse_valor(match.iloc[0].get("Preço por Saco (R$)", 0))
+        
+        if p_saco <= 0:
+            p_saco = 100.0
+
         valor_total = round(sacos * p_saco, 2)
-        baixo = sacos <= 5 or kg <= 50.0
+        baixo = sacos <= 5 or kg_total <= 50.0
 
         lista_insumos.append({
             "id": ins.id,
             "produto": ins.nome,
             "categoria": ins.categoria or "Nutrição",
             "peso_saco": peso,
-            "kg_estoque": round(kg, 1),
+            "kg_estoque": round(kg_total, 1),
             "sacos_estoque": sacos,
+            "sacos_comprados": sacos_comprados_gastos,
             "preco_saco": p_saco,
             "valor_total": valor_total,
             "baixo": baixo,
