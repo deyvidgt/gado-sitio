@@ -436,8 +436,9 @@ def alimentacao_leite():
         return redirect(url_for("alimentacao_leite"))
     df = carregar_aba("Leite Alimentação")
     produtos = []
-    for _, linha in df.iterrows():
+    for real_idx, linha in df.iterrows():
         produtos.append({
+            "_idx": int(real_idx),
             "produto": linha.get("Produto", ""),
             "fabricante": linha.get("Fabricante", ""),
             "categoria": linha.get("Categoria", ""),
@@ -447,6 +448,60 @@ def alimentacao_leite():
             "preco": linha.get("Preço por Saco (R$)", ""),
         })
     return render_template("leite_alimentacao.html", produtos=produtos)
+
+
+@app.route("/produtos/editar/<int:idx>", methods=["GET", "POST"])
+@login_required
+def editar_produto_nutricao(idx):
+    df = carregar_aba("Leite Alimentação")
+    if df.empty or idx >= len(df):
+        flash("Produto não encontrado.", "error")
+        return redirect(url_for("alimentacao_leite"))
+
+    if request.method == "POST":
+        _validar_csrf()
+        f = request.form
+        produto = str(f.get("produto") or "").strip()
+        if not produto:
+            flash("Informe o produto.", "error")
+            return redirect(url_for("editar_produto_nutricao", idx=idx))
+
+        peso_saco = _numero(f.get("peso_saco", 25)) or 25.0
+        linha = [
+            produto, f.get("fabricante", ""), f.get("categoria", ""), peso_saco,
+            f.get("proteina", ""), f.get("ndt", ""), f.get("fibra", ""), f.get("calcio", ""),
+            f.get("fosforo", ""), f.get("consumo", ""), f.get("preco", ""), f.get("lote", ""),
+            f.get("validade", ""), f.get("observacao", ""), "Sim",
+        ]
+
+        from routes_animais import fazer_backup_seguro
+        from db import reescrever_aba
+        fazer_backup_seguro()
+        df_edit = df.astype(object)
+        for i, col in enumerate(df_edit.columns):
+            if i < len(linha):
+                df_edit.at[idx, col] = linha[i]
+        reescrever_aba("Leite Alimentação", df_edit)
+        flash("Produto atualizado com sucesso!", "success")
+        return redirect(url_for("alimentacao_leite"))
+
+    row = df.iloc[idx].to_dict()
+    return render_template("form_editar_produto.html", row=row, idx=idx)
+
+
+@app.route("/produtos/excluir/<int:idx>", methods=["POST"])
+@login_required
+def excluir_produto_nutricao(idx):
+    _validar_csrf()
+    from routes_animais import fazer_backup_seguro
+    from db import reescrever_aba
+    fazer_backup_seguro()
+    df = carregar_aba("Leite Alimentação")
+    if not df.empty and idx < len(df):
+        df = df.drop(df.index[idx]).reset_index(drop=True)
+        reescrever_aba("Leite Alimentação", df)
+        flash("Produto excluído com sucesso.", "warning")
+    return redirect(url_for("alimentacao_leite"))
 
 
 @app.route("/leite/necessidades", methods=["POST"])

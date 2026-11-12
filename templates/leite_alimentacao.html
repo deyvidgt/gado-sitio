@@ -68,5 +68,45 @@
     <button class="btn btn-primary" type="submit">Salvar necessidade</button>
   </form>
 </div>
-<div class="card"><h3>Produtos cadastrados</h3>{% for p in produtos %}<div class="linha"><strong>{{ p.produto }}</strong><span>Proteína: {{ p.proteina or 'não informado' }} · NDT: {{ p.ndt or 'não informado' }}</span></div>{% else %}<p>Nenhum produto cadastrado. Dados nutricionais: <strong>não informado</strong>.</p>{% endfor %}</div>
+<div class="card" style="margin-top:20px">
+  <h3>📦 Produtos Cadastrados</h3>
+  {% if produtos %}
+  <div style="overflow-x:auto">
+    <table style="width:100%; border-collapse:collapse; font-size:13.5px">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border); background:var(--bg-2)">
+          <th style="padding:10px; text-align:left">Produto</th>
+          <th style="padding:10px; text-align:left">Fabricante</th>
+          <th style="padding:10px; text-align:left">Categoria</th>
+          <th style="padding:10px; text-align:left">Proteína Bruta (%)</th>
+          <th style="padding:10px; text-align:left">Preço por Saco</th>
+          <th style="padding:10px; text-align:left">Peso do Saco</th>
+          <th style="padding:10px; text-align:center">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in produtos %}
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:10px"><b>{{ p.produto }}</b></td>
+          <td style="padding:10px">{{ p.fabricante or '—' }}</td>
+          <td style="padding:10px">{{ p.categoria or '—' }}</td>
+          <td style="padding:10px">{{ p.proteina or '—' }}</td>
+          <td style="padding:10px">{{ p.preco|brl if p.preco else '—' }}</td>
+          <td style="padding:10px">{{ p.peso_saco }} kg</td>
+          <td style="padding:10px; text-align:center; display:flex; gap:8px; justify-content:center">
+            <a href="{{ url_for('editar_produto_nutricao', idx=p._idx) }}" class="btn btn-outline btn-sm">✏️ Editar</a>
+            <form method="post" action="{{ url_for('excluir_produto_nutricao', idx=p._idx) }}" onsubmit="return confirm('Tem certeza que deseja excluir o produto {{ p.produto }}?');" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger); border-color:var(--danger)">🗑️ Excluir</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="hint">Nenhum produto cadastrado ainda.</p>
+  {% endif %}
+</div>
 {% endblock %}

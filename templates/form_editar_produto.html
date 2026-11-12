@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Editar Produto — {{ row.get('Produto', '') }}{% endblock %}
+{% block page_title %}Editar Produto de Nutrição ✏️{% endblock %}
+
+{% block content %}
+<div style="max-width:600px; margin:0 auto;">
+  <div class="card">
+    <h2 style="font-family:'Playfair Display',serif; font-size:20px; color:var(--green-700); margin-bottom:16px">
+      Editar: {{ row.get('Produto', '') }}
+    </h2>
+    <form method="post" class="form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Produto<input name="produto" value="{{ row.get('Produto', '') }}" required></label>
+      <label>Fabricante<input name="fabricante" value="{{ row.get('Fabricante', '') }}"></label>
+      <label>Categoria<input name="categoria" value="{{ row.get('Categoria', '') }}"></label>
+      <label>Peso do Saco (kg)<input type="number" step="any" name="peso_saco" value="{{ row.get('Peso Saco (kg)', 25) }}"></label>
+      <label>Proteína bruta (%)<input name="proteina" value="{{ row.get('Proteína Bruta (%)', '') }}"></label>
+      <label>NDT/Energia (%)<input name="ndt" value="{{ row.get('NDT/Energia (%)', '') }}"></label>
+      <label>Fibra (%)<input name="fibra" value="{{ row.get('Fibra (%)', '') }}"></label>
+      <label>Cálcio (%)<input name="calcio" value="{{ row.get('Cálcio (%)', '') }}"></label>
+      <label>Fósforo (%)<input name="fosforo" value="{{ row.get('Fósforo (%)', '') }}"></label>
+      <label>Preço por saco (R$)<input name="preco" type="number" step="any" value="{{ row.get('Preço por Saco (R$)', '') }}"></label>
+      
+      <div style="grid-column: 1 / -1; display:flex; gap:12px; margin-top:16px">
+        <button class="btn btn-primary" type="submit">💾 Salvar Alterações</button>
+        <a href="{{ url_for('alimentacao_leite') }}" class="btn btn-outline">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

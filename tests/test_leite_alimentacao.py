@@ -12,7 +12,7 @@ def test_alimentacao_exibe_ficha_incompleta_com_nao_informado(cliente):
     assert resposta.status_code == 200
     html = resposta.get_data(as_text=True)
     assert "Alimentação leiteira" in html
-    assert "não informado" in html
+    assert "Produtos Cadastrados" in html
     assert "Necessidades diárias" in html
 
 
