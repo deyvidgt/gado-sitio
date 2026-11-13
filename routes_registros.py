@@ -549,6 +549,19 @@ def manejo():
                            tipos_disponiveis=_tipos_de(df),
                            pessoas_disponiveis=_pessoas_de(df, "Responsável", "Perda De", "Nascimento De"))
 
+
+@app.route("/manejo/detalhes/<int:idx>")
+@login_required
+def detalhes_manejo(idx):
+    df = carregar_aba("Manejo")
+    if df.empty or idx >= len(df):
+        flash("Registo de manejo não encontrado.", "error")
+        return redirect(url_for("manejo"))
+    row = df.iloc[idx].to_dict()
+    row["Data"] = fmt_data(row.get("Data"))
+    row["Brincos"] = _brincos_legiveis(row.get("Brincos"))
+    return render_template("manejo_detalhes.html", row=row, idx=idx)
+
 def _produtos_sugeridos(usados: dict) -> dict:
     """Já usados (mais recentes primeiro) + exemplos do mercado que ainda não estão na lista."""
     from saude import SUGESTOES_PRODUTO

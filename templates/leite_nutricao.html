@@ -25,7 +25,12 @@
     {% endif %}
 {% endwith %}
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0;">
+<div class="nutricao-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0;">
+    <style>
+        @media (max-width: 768px) {
+            .nutricao-grid { grid-template-columns: 1fr !important; }
+        }
+    </style>
     <!-- Necessidades Nutricionais -->
     <div>
         <h2>📋 Necessidades Nutricionais</h2>

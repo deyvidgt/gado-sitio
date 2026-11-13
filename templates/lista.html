@@ -200,6 +200,9 @@
           </td>
         {% endfor %}
         <td style="white-space:nowrap">
+          {% if secao == 'manejo' %}
+            <a href="{{ url_for('detalhes_manejo', idx=i) }}" class="btn btn-outline btn-sm" title="Ver Detalhes">👁️ Detalhes</a>
+          {% endif %}
           {% if secao == 'compras' %}
             <a href="{{ url_for('editar_compra', idx=i) }}" class="btn btn-outline btn-sm">✏️</a>
           {% elif secao == 'gastos' %}
@@ -207,7 +210,7 @@
           {% elif secao == 'vendas' %}
             <a href="{{ url_for('editar_venda', idx=i) }}" class="btn btn-outline btn-sm">✏️</a>
           {% elif secao == 'manejo' %}
-            <a href="{{ url_for('editar_manejo', idx=i) }}" class="btn btn-outline btn-sm">✏️</a>
+            <a href="{{ url_for('editar_manejo', idx=i) }}" class="btn btn-outline btn-sm" title="Editar">✏️</a>
           {% endif %}
           {% set aba_map = {'compras': 'Compras', 'gastos': 'Gastos', 'vendas': 'Vendas', 'manejo': 'Manejo'} %}
           <form method="post" action="{{ url_for('excluir', aba=aba_map[secao], idx=i) }}"
@@ -281,11 +284,12 @@
             <button class="btn btn-danger btn-sm" type="submit">🗑 Deletar</button>
           </form>
         {% elif secao == 'manejo' %}
+          <a href="{{ url_for('detalhes_manejo', idx=i) }}" class="btn btn-outline btn-sm" style="background:var(--green-50)">👁️ Detalhes</a>
           <a href="{{ url_for('editar_manejo', idx=i) }}" class="btn btn-outline btn-sm">✏️ Editar</a>
           <form method="post" action="{{ url_for('excluir', aba='Manejo', idx=i) }}"
                 onsubmit="return confirm('Excluir?')" style="display:inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <button class="btn btn-danger btn-sm" type="submit">🗑 Deletar</button>
+            <button class="btn btn-danger btn-sm" type="submit">🗑</button>
           </form>
         {% endif %}
       </div>

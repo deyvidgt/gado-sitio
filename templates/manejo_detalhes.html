@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Detalhes do Manejo — Sítio Santo Antonio{% endblock %}
+{% block page_title %}Detalhes do Manejo 🩺{% endblock %}
+
+{% block content %}
+<div class="section-head">
+  <h2>Detalhes do Manejo</h2>
+  <div style="display:flex;gap:8px">
+    <a href="{{ url_for('manejo') }}" class="btn btn-outline">← Voltar à Lista</a>
+    <a href="{{ url_for('editar_manejo', idx=idx) }}" class="btn btn-primary">✏️ Editar Manejo</a>
+  </div>
+</div>
+
+<div class="card" style="max-width:720px;margin:0 auto;padding:24px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bg-2);padding-bottom:16px;margin-bottom:20px;">
+    <div>
+      <span class="badge badge-manejo" style="font-size:14px;padding:6px 12px;">{{ row.get('Tipo', 'Manejo') }}</span>
+      <h3 style="margin-top:8px;font-size:20px;color:var(--text)">{{ row.get('Descrição') or 'Sem descrição' }}</h3>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:14px;color:var(--text-3)">Data da Execução</div>
+      <div style="font-size:16px;font-weight:600">{{ row.get('Data', '—') }}</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px;">
+    <div style="background:var(--surface-2);padding:14px;border-radius:var(--radius)">
+      <div style="font-size:12px;color:var(--text-3)">Qtd de Cabeças</div>
+      <div style="font-size:20px;font-weight:600;color:var(--green-600)">{{ row.get('Qtd Cabeças', 0) }}</div>
+    </div>
+    <div style="background:var(--surface-2);padding:14px;border-radius:var(--radius)">
+      <div style="font-size:12px;color:var(--text-3)">Responsável</div>
+      <div style="font-size:16px;font-weight:500">{{ row.get('Responsável') or '—' }}</div>
+    </div>
+    {% if row.get('Produto') and row.get('Produto') != 'nan' %}
+    <div style="background:var(--surface-2);padding:14px;border-radius:var(--radius)">
+      <div style="font-size:12px;color:var(--text-3)">Produto / Remédio</div>
+      <div style="font-size:16px;font-weight:500;color:var(--info)">{{ row.get('Produto') }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if row.get('Brincos') and row.get('Brincos') != 'nan' %}
+  <div style="margin-bottom:20px;">
+    <h4 style="font-size:14px;color:var(--text-2);margin-bottom:8px">Animais Envolvidos / Brincos:</h4>
+    <div style="background:var(--surface-2);padding:12px;border-radius:var(--radius);font-family:monospace;font-size:13px;word-break:break-word;">
+      {{ row.get('Brincos') }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if row.get('Causa Mortis') and row.get('Causa Mortis') != 'nan' %}
+  <div style="margin-bottom:16px;">
+    <strong style="color:var(--danger)">Causa Mortis:</strong> {{ row.get('Causa Mortis') }}
+  </div>
+  {% endif %}
+
+  {% if row.get('Laudo/Observações') and row.get('Laudo/Observações') != 'nan' %}
+  <div style="margin-bottom:20px;">
+    <h4 style="font-size:14px;color:var(--text-2);margin-bottom:6px">Laudo / Observações Completas:</h4>
+    <div style="background:var(--surface-2);padding:14px;border-radius:var(--radius);font-size:14px;line-height:1.5;white-space:pre-wrap;">
+      {{ row.get('Laudo/Observações') }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if row.get('Lote ID Usado') and row.get('Lote ID Usado') != 'nan' %}
+  <div style="font-size:13px;color:var(--text-3);border-top:1px solid var(--bg-2);padding-top:12px;margin-top:20px;">
+    📦 Lote de Insumo/Medicamento: <strong>{{ row.get('Lote ID Usado') }}</strong> (Qtd usada: {{ row.get('Qtd Usada', 0) }})
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
