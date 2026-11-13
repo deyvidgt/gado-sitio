@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Mortalidade e Vendas Mês a Mês — Sítio Santo Antonio{% endblock %}
+{% block page_title %}📉 Relatórios de Mortalidade e Vendas{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:20px">
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+    <!-- Mortalidade -->
+    <section class="card" style="margin:0">
+      <h3>⚠️ Mortalidade por Faixa Etária</h3>
+      <div style="font-size:24px;font-weight:700;color:var(--danger);margin:10px 0">{{ total_mortes }} óbitos totais</div>
+      <ul style="list-style:none;padding:0;margin-top:12px;font-size:13px">
+        {% for faixa, qtd in mortes_faixas.items() %}
+        <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cream-dk)">
+          <span>{{ faixa }}</span>
+          <b>{{ qtd }} óbitos</b>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <!-- Vendas Mês a Mês -->
+    <section class="card" style="margin:0">
+      <h3>📈 Histórico de Vendas Mês a Mês</h3>
+      {% if vendas_mes %}
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:12px">
+        <thead>
+          <tr style="background:var(--bg-2)">
+            <th style="padding:6px;text-align:left">Mês</th>
+            <th style="padding:6px;text-align:right">Cabeças</th>
+            <th style="padding:6px;text-align:right">Valor Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in vendas_mes %}
+          <tr style="border-bottom:1px solid var(--cream-dk)">
+            <td style="padding:6px">{{ v.mes }}</td>
+            <td style="padding:6px;text-align:right">{{ v.cabecas }} cab.</td>
+            <td style="padding:6px;text-align:right;font-weight:700;color:var(--green-700)">R$ {{ "%.2f"|format(v.valor)|replace(".", ",") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="color:var(--text-3);font-size:13px;margin-top:12px">Nenhuma venda registada recentemente.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <div style="text-align:center">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+  </div>
+</div>
+{% endblock %}

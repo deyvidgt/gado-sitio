@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Relatórios Gráficos e Vacinação — Sítio Santo Antonio{% endblock %}
+{% block page_title %}📈 Relatórios Gráficos de Rebanho e Vacinação{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:20px">
+
+  <!-- Gráficos de Distribuição -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+    <div class="card">
+      <h3>🐄 Rebanho por Categoria</h3>
+      <ul style="list-style:none;padding:0;margin-top:12px;font-size:13px">
+        {% for cat, qtd in categorias.items() %}
+        <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cream-dk)">
+          <span>{{ cat }}</span>
+          <b>{{ qtd }} animais</b>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>🧬 Distribuição por Género</h3>
+      <ul style="list-style:none;padding:0;margin-top:12px;font-size:13px">
+        {% for gen, qtd in generos.items() %}
+        <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cream-dk)">
+          <span>{{ gen }}</span>
+          <b>{{ qtd }} animais</b>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <!-- Cronograma de Vacinação -->
+  <section class="card" style="margin-bottom:24px">
+    <h2>💉 Cronograma e Alertas de Vacinação</h2>
+    
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;margin-top:16px">
+      <!-- Overdue -->
+      <div style="background:rgba(192,57,43,0.06);border-left:4px solid var(--danger);padding:14px;border-radius:6px">
+        <h4 style="color:var(--danger);margin-bottom:8px">⚠️ Em Atraso (Overdue)</h4>
+        {% if vacinacao_atrasada %}
+          {% for v in vacinacao_atrasada %}
+          <div style="font-size:12px;margin-bottom:6px"><b>{{ v.data }}</b>: {{ v.descricao }}</div>
+          {% endfor %}
+        {% else %}
+          <p style="font-size:12px;color:var(--text-3)">Nenhuma vacinação em atraso.</p>
+        {% endif %}
+      </div>
+
+      <!-- Next Week -->
+      <div style="background:rgba(230,126,34,0.06);border-left:4px solid var(--warn);padding:14px;border-radius:6px">
+        <h4 style="color:var(--warn);margin-bottom:8px">⚡ Próxima Semana (Next Week)</h4>
+        {% if vacinacao_proxima_semana %}
+          {% for v in vacinacao_proxima_semana %}
+          <div style="font-size:12px;margin-bottom:6px"><b>{{ v.data }}</b>: {{ v.descricao }}</div>
+          {% endfor %}
+        {% else %}
+          <p style="font-size:12px;color:var(--text-3)">Nenhuma agendada para os próximos 7 dias.</p>
+        {% endif %}
+      </div>
+
+      <!-- Next Month -->
+      <div style="background:rgba(41,128,185,0.06);border-left:4px solid var(--info);padding:14px;border-radius:6px">
+        <h4 style="color:var(--info);margin-bottom:8px">📅 Próximo Mês (Next Month)</h4>
+        {% if vacinacao_proximo_mes %}
+          {% for v in vacinacao_proximo_mes %}
+          <div style="font-size:12px;margin-bottom:6px"><b>{{ v.data }}</b>: {{ v.descricao }}</div>
+          {% endfor %}
+        {% else %}
+          <p style="font-size:12px;color:var(--text-3)">Nenhuma agendada para o próximo mês.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div style="text-align:center">
+    <a href="{{ url_for('relatorios') }}" class="btn btn-outline">← Voltar aos Relatórios</a>
+  </div>
+
+</div>
+{% endblock %}

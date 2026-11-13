@@ -66,6 +66,26 @@ from routes_estimar_peso import * # noqa: F401, F403
 from routes_pastos_avancados import * # noqa: F401, F403
 from routes_indicadores_embrapa import * # noqa: F401, F403
 
+# v5.22 — Manejos de Curral e Apontamentos Rápidos (Pecuária de Precisão)
+from routes_curral import * # noqa: F401, F403
+
+# v5.23-5.24 — Módulos Avançados de Corte e Leite (Enfermaria, Alertas de Parto, Controle Leiteiro)
+from routes_enfermaria import * # noqa: F401, F403
+from routes_alertas_parto import * # noqa: F401, F403
+from routes_controle_leite import * # noqa: F401, F403
+
+# v5.25 — Assistente de Ração, Gestão Financeira Completa e Relatórios Gráficos de Rebanho
+from routes_relatorios_graficos import * # noqa: F401, F403
+
+# v5.30 — Zootecnia de Precisão (Indicadores Nutricionais, Estoque por UA/ha, Cio/Parto/Enfermaria, Calendário)
+from routes_precisao import * # noqa: F401, F403
+
+# v5.35 — Simulador de Custo de Produção e Viabilidade de Engorda (Boi Gordo)
+from routes_simulador_engorda import * # noqa: F401, F403
+
+# v5.40 — Gestão de Rebanho Avançada, Apontamentos de Curral e Faixas de Peso
+from routes_precisao_avancada import * # noqa: F401, F403
+
 # v4.4 — Fotos dos animais (Google Drive)
 from routes_fotos import *      # noqa: F401, F403
 

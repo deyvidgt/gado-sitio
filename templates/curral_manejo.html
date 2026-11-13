@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Leitura de Curral (Cocho e Lote) — Sítio Santo Antonio{% endblock %}
+{% block page_title %}🤠 Apontamento Rápido de Curral (Cocho e Lote){% endblock %}
+
+{% block content %}
+<div style="max-width:700px;margin:0 auto;padding:20px">
+  <div class="card" style="margin-bottom:24px">
+    <h2>Registo de Cocho e Comportamento</h2>
+    <p style="color:var(--text-3);font-size:13px;margin-top:4px">
+      Avalie o estado do cocho e o comportamento do lote diretamente no piquete.
+    </p>
+
+    <form method="POST" style="margin-top:20px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div class="form-group" style="margin-bottom:16px">
+        <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Selecione o Piquete / Pasto</label>
+        <select name="pasto_id" required style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+          <option value="">-- Escolher Pasto --</option>
+          {% for p in pastos %}
+          <option value="{{ p.ID }}">{{ p.Nome }} ({{ p['Área (ha)'] }} ha)</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="form-group">
+          <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Estado do Cocho</label>
+          <select name="cocho" style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+            <option value="Normal">Normal (Sobra ideal)</option>
+            <option value="Vazio">Vazio (Comida acabou)</option>
+            <option value="Sobra Muito">Sobra Muito (Ajustar trato)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Comportamento Animal</label>
+          <select name="comportamento" style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+            <option value="Maioria em pé">Maioria em pé (Ativos)</option>
+            <option value="Parte em pé">Parte em pé / Parte deitados</option>
+            <option value="Deitados ruminando">Deitados ruminando (Confortáveis)</option>
+            <option value="Com fome">Com fome / Agitados no cocho</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:16px">
+        <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Data</label>
+        <input type="date" name="data" value="{{ hoje }}" required style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+      </div>
+
+      <div class="form-group" style="margin-bottom:20px">
+        <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Observações</label>
+        <input type="text" name="observacoes" placeholder="ex: Água limpa, cocho sem lama" style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:15px">💾 Guardar Apontamento de Curral</button>
+    </form>
+  </div>
+
+  <div style="text-align:center">
+    <a href="{{ url_for('curral_painel') }}" class="btn btn-outline">← Voltar ao Painel de Curral</a>
+  </div>
+</div>
+{% endblock %}

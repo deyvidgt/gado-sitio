@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Indicadores de Nutrição e Lotes — Sítio Santo Antonio{% endblock %}
+{% block page_title %}🌾 Indicadores de Nutrição e Comportamento{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:20px">
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px;margin-bottom:24px">
+    <div class="card" style="margin:0;border-left:4px solid var(--green-600)">
+      <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600">Tempo de Ruminação</div>
+      <div style="font-size:32px;font-weight:700;color:var(--green-700);margin-top:4px">5.4 <span style="font-size:16px">h/dia</span></div>
+      <div style="font-size:11px;color:var(--green-700);margin-top:2px">✅ Dentro da faixa ideal (4.5 - 7h)</div>
+    </div>
+
+    <div class="card" style="margin:0;border-left:4px solid var(--info)">
+      <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600">Ócio Médio (Descanso)</div>
+      <div style="font-size:32px;font-weight:700;color:var(--info);margin-top:4px">11.2 <span style="font-size:16px">h/dia</span></div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:2px">Conforto térmico adequado</div>
+    </div>
+
+    <div class="card" style="margin:0;border-left:4px solid var(--gold)">
+      <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600">Refeições Diárias</div>
+      <div style="font-size:32px;font-weight:700;color:var(--gold);margin-top:4px">10.8 <span style="font-size:16px">vezes</span></div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:2px">Boa frequência no cocho</div>
+    </div>
+  </div>
+
+  <section class="card" style="margin-bottom:24px">
+    <h2>💡 Recomendações Automáticas de Manejo</h2>
+    <div style="margin-top:12px;font-size:13px;line-height:1.6;color:var(--text-2)">
+      <div style="padding:12px;background:var(--bg-2);border-radius:6px;margin-bottom:8px">
+        <b>🌾 Qualidade da Cama / Cocho:</b> O tempo de ruminação está estável. Mantenha a reposição de volumoso no cocho para evitar picos de acidose.
+      </div>
+      <div style="padding:12px;background:var(--bg-2);border-radius:6px">
+        <b>🌡️ Conforto Térmico:</b> O índice de ócio está dentro do esperado. Continue monitorando a sombra nos piquetes de engorda.
+      </div>
+    </div>
+  </section>
+
+  <div style="text-align:center">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+  </div>
+</div>
+{% endblock %}

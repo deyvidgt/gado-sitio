@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Estoque por Faixa de Peso — Sítio Santo Antonio{% endblock %}
+{% block page_title %}📊 Estoque de Animais por Faixa de Peso e UA{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:20px">
+
+  <!-- Resumo Executivo -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px;margin-bottom:24px">
+    <div class="card" style="margin:0;border-left:4px solid var(--green-600)">
+      <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600">Total de Animais</div>
+      <div style="font-size:32px;font-weight:700;color:var(--green-700);margin-top:4px">{{ total_cab }} <span style="font-size:16px">cab.</span></div>
+    </div>
+    <div class="card" style="margin:0;border-left:4px solid var(--gold)">
+      <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600">Peso Médio</div>
+      <div style="font-size:32px;font-weight:700;color:var(--gold);margin-top:4px">{{ peso_medio }} <span style="font-size:16px">kg</span></div>
+    </div>
+    <div class="card" style="margin:0;border-left:4px solid var(--info)">
+      <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600">Arroba Média</div>
+      <div style="font-size:32px;font-weight:700;color:var(--info);margin-top:4px">{{ arroba_media }} <span style="font-size:16px">@</span></div>
+    </div>
+    <div class="card" style="margin:0;border-left:4px solid var(--warn)">
+      <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600">Lotação Geral</div>
+      <div style="font-size:32px;font-weight:700;color:var(--warn);margin-top:4px">{{ ua_ha_geral }} <span style="font-size:16px">UA/ha</span></div>
+    </div>
+  </div>
+
+  <section class="card" style="margin-bottom:24px">
+    <h2>Distribuição do Rebanho por Faixa de Peso e Género</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:16px">
+      <thead>
+        <tr style="background:var(--bg-2)">
+          <th style="padding:10px;text-align:left">Faixa de Peso</th>
+          <th style="padding:10px;text-align:right">Machos</th>
+          <th style="padding:10px;text-align:right">Fêmeas</th>
+          <th style="padding:10px;text-align:right">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for faixa, dados in faixas.items() %}
+        <tr style="border-bottom:1px solid var(--cream-dk)">
+          <td style="padding:10px;font-weight:600">{{ faixa }}</td>
+          <td style="padding:10px;text-align:right">{{ dados.machos }}</td>
+          <td style="padding:10px;text-align:right">{{ dados.femeas }}</td>
+          <td style="padding:10px;text-align:right;font-weight:700">{{ dados.machos + dados.femeas }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <div style="text-align:center">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+  </div>
+</div>
+{% endblock %}

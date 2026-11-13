@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Estoque e Lotação de Piquetes — Sítio Santo Antonio{% endblock %}
+{% block page_title %}🐄 Estoque de Animais e Lotação (UA/ha){% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:20px">
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+    <div class="card">
+      <h3>🏷️ Rebanho por Categoria</h3>
+      <ul style="list-style:none;padding:0;margin-top:12px;font-size:13px">
+        {% for cat, qtd in categorias.items() %}
+        <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cream-dk)">
+          <span>{{ cat }}</span>
+          <b>{{ qtd }} cabeças</b>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>📊 Rebanho por Faixa Etária</h3>
+      <ul style="list-style:none;padding:0;margin-top:12px;font-size:13px">
+        {% for faixa, qtd in faixas_etarias.items() %}
+        <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cream-dk)">
+          <span>{{ faixa }}</span>
+          <b>{{ qtd }} cabeças</b>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <section class="card" style="margin-bottom:24px">
+    <h2>🌱 Status de Lotação por Piquete (UA/ha)</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:16px">
+      <thead>
+        <tr style="background:var(--bg-2)">
+          <th style="padding:10px;text-align:left">Pasto</th>
+          <th style="padding:10px;text-align:right">Área</th>
+          <th style="padding:10px;text-align:right">Cabeças</th>
+          <th style="padding:10px;text-align:right">Lotação</th>
+          <th style="padding:10px;text-align:center">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pid, p in sit_pastos.items() %}
+        <tr style="border-bottom:1px solid var(--cream-dk)">
+          <td style="padding:10px;font-weight:600">{{ p.nome }}</td>
+          <td style="padding:10px;text-align:right">{{ '%.1f'|format(p.area) }} ha</td>
+          <td style="padding:10px;text-align:right">{{ p.cabecas }} cab.</td>
+          <td style="padding:10px;text-align:right"><b>{{ '%.2f'|format(p.ua_ha) }} UA/ha</b></td>
+          <td style="padding:10px;text-align:center">
+            <span class="badge badge-{% if p.ua_ha > 2.5 %}ruim{% elif p.ua_ha > 1.8 %}aviso{% else %}ok{% endif %}">
+              {% if p.ua_ha > 2.5 %}Lotado{% elif p.ua_ha > 1.8 %}Atenção{% else %}Ideal{% endif %}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <div style="text-align:center">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+  </div>
+</div>
+{% endblock %}

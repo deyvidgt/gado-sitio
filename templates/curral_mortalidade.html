@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Registo de Mortalidade — Sítio Santo Antonio{% endblock %}
+{% block page_title %}⚠️ Registo de Óbito ou Perda (Baixa){% endblock %}
+
+{% block content %}
+<div style="max-width:700px;margin:0 auto;padding:20px">
+  <div class="card" style="margin-bottom:24px;border-top:4px solid var(--danger)">
+    <h2>Registar Baixa por Mortalidade</h2>
+    <p style="color:var(--text-3);font-size:13px;margin-top:4px">
+      Retira imediatamente o animal do rebanho ativo e regista a causa do óbito ou extravio.
+    </p>
+
+    <form method="POST" style="margin-top:20px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div class="form-group" style="margin-bottom:16px">
+        <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Animal (Brinco ou ID)</label>
+        <input type="text" name="brinco" list="lista-vacas" placeholder="ex: Amarelo 21 ou #A0001" required style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+        <datalist id="lista-vacas">
+          {% for _, v in vacas.iterrows() %}
+          <option value="{{ v['Brinco Cor'] }} {{ v['Brinco Nº'] }} (#{{ v['ID'] }})">
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="form-group">
+          <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Causa do Óbito / Perda</label>
+          <select name="causa" style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+            <option>Doença / Enfermidade</option>
+            <option>Acidente / Raio / Picada</option>
+            <option>Predadores</option>
+            <option>Desconhecida / Natural</option>
+            <option>Extravio / Roubo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Data da Ocorrência</label>
+          <input type="date" name="data" value="{{ hoje }}" required style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:15px;background:var(--danger)">⚠️ Confirmar Baixa no Rebanho</button>
+    </form>
+  </div>
+
+  <div style="text-align:center">
+    <a href="{{ url_for('curral_painel') }}" class="btn btn-outline">← Voltar ao Painel de Curral</a>
+  </div>
+</div>
+{% endblock %}

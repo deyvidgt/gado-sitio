@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Controle Leiteiro (Laticínios) — Sítio Santo Antonio{% endblock %}
+{% block page_title %}🥛 Controle Leiteiro e Produção{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:20px">
+
+  <section class="card" style="margin-bottom:24px">
+    <h2>Registo Diário de Produção</h2>
+    <form method="POST" action="{{ url_for('salvar_controle_leiteiro') }}" style="margin-top:16px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px">Vaca / Lote</label>
+          <input type="text" name="vaca_id" list="lista-vacas" placeholder="ex: Amarelo 21 ou Lote 1" required style="width:100%;padding:8px;border:1px solid var(--cream-dk);border-radius:6px">
+          <datalist id="lista-vacas">
+            {% for _, v in vacas.iterrows() %}
+            <option value="{{ v['Brinco Cor'] }} {{ v['Brinco Nº'] }} (#{{ v['ID'] }})">
+            {% endfor %}
+          </datalist>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px">Litros Produzidos</label>
+          <input type="number" step="0.1" name="litros" placeholder="ex: 22.5" required style="width:100%;padding:8px;border:1px solid var(--cream-dk);border-radius:6px">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px">Ordenha</label>
+          <select name="ordenha" style="width:100%;padding:8px;border:1px solid var(--cream-dk);border-radius:6px">
+            <option value="Manhã">Manhã</option>
+            <option value="Tarde">Tarde</option>
+            <option value="Total Dia">Total Dia</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px">Data</label>
+          <input type="date" name="data" value="{{ hoje }}" required style="width:100%;padding:8px;border:1px solid var(--cream-dk);border-radius:6px">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%">🥛 Registar Produção</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>📊 Resumo e Descarte de Produção</h2>
+    <p style="color:var(--text-3);font-size:13px;margin-bottom:16px">
+      Vacas com média abaixo de 8 L/dia entram automaticamente em alerta de descarte por baixa produção.
+    </p>
+
+    {% if registros %}
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:var(--bg-2)">
+          <th style="padding:10px;text-align:left">Data</th>
+          <th style="padding:10px;text-align:left">Vaca / Lote</th>
+          <th style="padding:10px;text-align:left">Ordenha</th>
+          <th style="padding:10px;text-align:right">Litros</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in registros %}
+        <tr style="border-bottom:1px solid var(--cream-dk)">
+          <td style="padding:10px">{{ r.Data }}</td>
+          <td style="padding:10px;font-weight:600">{{ r['Vaca ID'] }}</td>
+          <td style="padding:10px">{{ r.Ordenha }}</td>
+          <td style="padding:10px;text-align:right;font-weight:700;color:var(--green-700)">{{ r.Litros }} L</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-3);text-align:center;padding:20px">Nenhum registo de produção leiteira recente.</p>
+    {% endif %}
+  </section>
+
+  <div style="margin-top:24px;text-align:center">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+  </div>
+
+</div>
+{% endblock %}

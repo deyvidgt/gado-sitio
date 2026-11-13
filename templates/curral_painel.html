@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Manejos de Curral — Sítio Santo Antonio{% endblock %}
+{% block page_title %}🤠 Manejos de Curral e Apontamentos{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:20px">
+
+  <div class="card" style="margin-bottom:24px;background:linear-gradient(135deg, var(--surface) 0%, var(--bg-2) 100%)">
+    <h2>⚡ Painel Tático de Curral</h2>
+    <p style="color:var(--text-3);font-size:13px;margin-top:6px">
+      Ferramenta otimizada para toque e uso rápido a campo ou no curral. Registre pesagens, vacinas, nascimentos e transferências em segundos.
+    </p>
+    <div style="margin-top:12px;font-size:14px;font-weight:600;color:var(--green-700)">
+      🐄 Rebanho ativo atual: {{ total_vivos }} animais
+    </div>
+  </div>
+
+  <!-- Grid de Botões Táteis -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:16px;margin-bottom:24px">
+    <a href="{{ url_for('curral_pesagem') }}" class="curral-btn" style="background:#e8f5e9;border-color:#2e7d32">
+      <div style="font-size:32px">⚖️</div>
+      <div style="font-size:16px;font-weight:700;color:#2e7d32;margin-top:8px">Pesagens</div>
+      <div style="font-size:12px;color:var(--text-3);margin-top:4px">Individuais ou lote com GMD e @</div>
+    </a>
+
+    <a href="{{ url_for('curral_sanitario') }}" class="curral-btn" style="background:#e3f2fd;border-color:#1565c0">
+      <div style="font-size:32px">💉</div>
+      <div style="font-size:16px;font-weight:700;color:#1565c0;margin-top:8px">Sanitário / Vacinas</div>
+      <div style="font-size:12px;color:var(--text-3);margin-top:4px">Lote, carência e histórico</div>
+    </a>
+
+    <a href="{{ url_for('curral_nascimento') }}" class="curral-btn" style="background:#f3e5f5;border-color:#6a1b9a">
+      <div style="font-size:32px">🐮</div>
+      <div style="font-size:16px;font-weight:700;color:#6a1b9a;margin-top:8px">Nascimentos</div>
+      <div style="font-size:12px;color:var(--text-3);margin-top:4px">Bezerros e vínculo com matriz</div>
+    </a>
+
+    <a href="{{ url_for('curral_troca_lote') }}" class="curral-btn" style="background:#e0f2f1;border-color:#00695c">
+      <div style="font-size:32px">🌱</div>
+      <div style="font-size:16px;font-weight:700;color:#00695c;margin-top:8px">Troca de Pasto / Lote</div>
+      <div style="font-size:12px;color:var(--text-3);margin-top:4px">Movimentação instantânea</div>
+    </a>
+
+    <a href="{{ url_for('curral_mortalidade') }}" class="curral-btn" style="background:#ffebee;border-color:#c62828">
+      <div style="font-size:32px">⚠️</div>
+      <div style="font-size:16px;font-weight:700;color:#c62828;margin-top:8px">Mortes / Perdas</div>
+      <div style="font-size:12px;color:var(--text-3);margin-top:4px">Baixa no rebanho ativo</div>
+    </a>
+
+    <a href="{{ url_for('estimar_peso') }}" class="curral-btn" style="background:#fff8e1;border-color:#f57f17">
+      <div style="font-size:32px">📸</div>
+      <div style="font-size:16px;font-weight:700;color:#f57f17;margin-top:8px">Peso por Foto (Biometria)</div>
+      <div style="font-size:12px;color:var(--text-3);margin-top:4px">Avaliação visual na carcaça</div>
+    </a>
+  </div>
+
+  <div style="text-align:center">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+  </div>
+
+</div>
+
+<style>
+.curral-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  text-decoration: none;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: all 0.2s ease;
+}
+.curral-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Calendário Sanitário — Sítio Santo Antonio{% endblock %}
+{% block page_title %}📅 Calendário Sanitário Mensal{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:20px">
+
+  <section class="card" style="margin-bottom:24px">
+    <h2>Controle de Vacinas, Banhos e Podologia</h2>
+    <p style="color:var(--text-3);font-size:13px;margin-top:4px">
+      Eventos sanitários organizados por prazos de vencimento.
+    </p>
+
+    {% if eventos %}
+    <div style="display:grid;gap:10px;margin-top:16px">
+      {% for e in eventos %}
+      <div style="padding:12px;background:var(--bg-2);border-left:4px solid {% if e.status == 'atrasado' %}var(--danger){% elif e.status == 'proximo' %}var(--warn){% else %}var(--green-600){% endif %};border-radius:4px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:600;font-size:14px">{{ e.descricao }}</div>
+          <div style="font-size:12px;color:var(--text-3);margin-top:2px">{{ e.tipo }} · {{ e.data }}</div>
+        </div>
+        <div>
+          <span class="badge badge-{% if e.status == 'atrasado' %}ruim{% elif e.status == 'proximo' %}aviso{% else %}ok{% endif %}">
+            {{ e.status|upper }}
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:var(--text-3);text-align:center;padding:20px">Nenhum evento sanitário registado.</p>
+    {% endif %}
+  </section>
+
+  <div style="text-align:center">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+  </div>
+</div>
+{% endblock %}

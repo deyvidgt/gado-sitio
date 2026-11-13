@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Cio, Parto e Enfermaria Avançada — Sítio Santo Antonio{% endblock %}
+{% block page_title %}🩺 Monitoramento de Cio, Partos e Enfermaria{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:20px">
+
+  <!-- Alerta de Parto -->
+  <section class="card" style="margin-bottom:24px;border-left:4px solid var(--green-600)">
+    <h2>🐮 Alerta de Parto Próximo (Próximos 45 dias)</h2>
+    {% if partos_proximos %}
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:12px">
+      <thead>
+        <tr style="background:var(--bg-2)">
+          <th style="padding:8px;text-align:left">Matriz</th>
+          <th style="padding:8px;text-align:left">Parto Previsto</th>
+          <th style="padding:8px;text-align:center">Contagem Regressiva</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in partos_proximos %}
+        <tr style="border-bottom:1px solid var(--cream-dk)">
+          <td style="padding:8px;font-weight:600">{{ p.nome }}</td>
+          <td style="padding:8px;font-weight:700;color:var(--green-700)">{{ p.parto_previsto.strftime('%d/%m/%Y') }}</td>
+          <td style="padding:8px;text-align:center"><span class="badge badge-ok">Faltam {{ p.dias_restantes }} dias</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-3);font-size:13px;margin-top:8px">Nenhum parto previsto para os próximos 45 dias.</p>
+    {% endif %}
+  </section>
+
+  <!-- Enfermaria Avançada -->
+  <section class="card" style="margin-bottom:24px;border-left:4px solid var(--danger)">
+    <h2>🏥 Enfermaria com Gravidade</h2>
+    {% if tratamento %}
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:12px">
+      <thead>
+        <tr style="background:var(--bg-2)">
+          <th style="padding:8px;text-align:left">Animal ID</th>
+          <th style="padding:8px;text-align:left">Gravidade</th>
+          <th style="padding:8px;text-align:left">Sintomas / Tratamento</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tratamento %}
+        <tr style="border-bottom:1px solid var(--cream-dk)">
+          <td style="padding:8px;font-weight:600">Animal #{{ t['Animal ID'] }}</td>
+          <td style="padding:8px"><span class="badge badge-{% if t.Gravidade == 'Crítico' %}ruim{% else %}aviso{% endif %}">{{ t.Gravidade }}</span></td>
+          <td style="padding:8px"><b>{{ t.Sintomas }}</b> · {{ t.Tratamento }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-3);font-size:13px;margin-top:8px">Nenhum animal em tratamento na enfermaria.</p>
+    {% endif %}
+  </section>
+
+  <div style="text-align:center">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+  </div>
+</div>
+{% endblock %}

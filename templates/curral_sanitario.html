@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Manejo Sanitário — Sítio Santo Antonio{% endblock %}
+{% block page_title %}💉 Registo Sanitário (Vacinas e Medicamentos){% endblock %}
+
+{% block content %}
+<div style="max-width:700px;margin:0 auto;padding:20px">
+  <div class="card" style="margin-bottom:24px">
+    <h2>Registar Aplicação</h2>
+    <p style="color:var(--text-3);font-size:13px;margin-top:4px">
+      Aplicação de vacina ou remédio com controle de carência. Deixe o brinco vazio se for para o lote/rebanho todo.
+    </p>
+
+    <form method="POST" style="margin-top:20px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div class="form-group" style="margin-bottom:16px">
+        <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Animal Específico (Opcional - Vazio = Rebanho Todo)</label>
+        <input type="text" name="brinco" list="lista-vacas" placeholder="ex: Amarelo 21 ou #A0001" style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+        <datalist id="lista-vacas">
+          {% for _, v in vacas.iterrows() %}
+          <option value="{{ v['Brinco Cor'] }} {{ v['Brinco Nº'] }} (#{{ v['ID'] }})">
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="form-group">
+          <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Produto / Vacina</label>
+          <input type="text" name="produto" placeholder="ex: Febre Aftosa / Ivermectina" required style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+        </div>
+        <div class="form-group">
+          <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Lote do Medicamento</label>
+          <input type="text" name="lote_medicamento" placeholder="ex: L-8823" style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="form-group">
+          <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Dias de Carência (Abate/Leite)</label>
+          <input type="number" name="carencia" value="0" min="0" required style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+        </div>
+        <div class="form-group">
+          <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Data da Aplicação</label>
+          <input type="date" name="data" value="{{ hoje }}" required style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:15px">💉 Registar Aplicação</button>
+    </form>
+  </div>
+
+  <div style="text-align:center">
+    <a href="{{ url_for('curral_painel') }}" class="btn btn-outline">← Voltar ao Painel de Curral</a>
+  </div>
+</div>
+{% endblock %}

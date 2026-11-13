@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Alertas de Parto e Controle Reprodutivo — Sítio Santo Antonio{% endblock %}
+{% block page_title %}🐄 Alertas de Parto e Controle Reprodutivo{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:20px">
+
+  <section class="card" style="margin-bottom:24px">
+    <h2>🚨 Matrizes Próximas ao Parto (Próximos 30 dias)</h2>
+    <p style="color:var(--text-3);font-size:13px;margin-bottom:16px">
+      Acompanhe em tempo real as fêmeas gestantes com parto previsto para breve, evitando surpresas a campo.
+    </p>
+
+    {% set prenhas = situacoes | selectattr('status', 'equalto', 'prenha') | list %}
+    {% if prenhas %}
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:var(--bg-2)">
+          <th style="padding:10px;text-align:left">Matriz</th>
+          <th style="padding:10px;text-align:left">Cobertura em</th>
+          <th style="padding:10px;text-align:left">Touro / Sêmen</th>
+          <th style="padding:10px;text-align:left">Parto Previsto</th>
+          <th style="padding:10px;text-align:center">Dias de Gestação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in prenhas %}
+        <tr style="border-bottom:1px solid var(--cream-dk)">
+          <td style="padding:10px;font-weight:600">{{ v.nome }}</td>
+          <td style="padding:10px">{{ v.coberta_em.strftime('%d/%m/%Y') if v.coberta_em else '—' }}</td>
+          <td style="padding:10px">{{ v.touro or '—' }}</td>
+          <td style="padding:10px;font-weight:700;color:var(--green-700)">{{ v.parto_previsto.strftime('%d/%m/%Y') if v.parto_previsto else '—' }}</td>
+          <td style="padding:10px;text-align:center">
+            <span class="badge badge-ok">{{ v.dias_de_gestacao }} dias</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-3);text-align:center;padding:20px">Nenhuma matriz prenha registada no momento.</p>
+    {% endif %}
+  </section>
+
+  <div style="margin-top:24px;text-align:center">
+    <a href="{{ url_for('reproducao') }}" class="btn btn-outline">← Voltar ao Módulo Reprodução</a>
+  </div>
+
+</div>
+{% endblock %}

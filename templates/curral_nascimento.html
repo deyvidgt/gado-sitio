@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Registo de Nascimentos — Sítio Santo Antonio{% endblock %}
+{% block page_title %}🐮 Registo de Nascimentos (Bezerros){% endblock %}
+
+{% block content %}
+<div style="max-width:700px;margin:0 auto;padding:20px">
+  <div class="card" style="margin-bottom:24px">
+    <h2>Registar Novo Bezerro</h2>
+    <p style="color:var(--text-3);font-size:13px;margin-top:4px">
+      Associe o recém-nascido à matriz (mãe) e crie o registo oficial no rebanho.
+    </p>
+
+    <form method="POST" style="margin-top:20px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div class="form-group" style="margin-bottom:16px">
+        <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Matriz (Mãe)</label>
+        <input type="text" name="mae" list="lista-femeas" placeholder="ex: Amarelo 21 ou #A0001" required style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+        <datalist id="lista-femeas">
+          {% for _, v in femeas.iterrows() %}
+          <option value="{{ v['Brinco Cor'] }} {{ v['Brinco Nº'] }} (#{{ v['ID'] }})">
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="form-group">
+          <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Cor do Brinco</label>
+          <select name="cor" style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+            <option>Amarelo</option><option>Branco</option><option>Azul</option><option>Verde</option><option>Vermelho</option><option>Laranja</option><option>Rosa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Número do Brinco</label>
+          <input type="number" name="numero" placeholder="ex: 101" required style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="form-group">
+          <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Sexo</label>
+          <select name="sexo" style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+            <option value="M">Macho (M)</option>
+            <option value="F">Fêmea (F)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Raça</label>
+          <input type="text" name="raca" value="Nelore / Mestiço" required style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:20px">
+        <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Data de Nascimento</label>
+        <input type="date" name="data" value="{{ hoje }}" required style="width:100%;padding:10px;border:1px solid var(--cream-dk);border-radius:6px;font-size:14px">
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:15px">🐮 Registar Bezerro</button>
+    </form>
+  </div>
+
+  <div style="text-align:center">
+    <a href="{{ url_for('curral_painel') }}" class="btn btn-outline">← Voltar ao Painel de Curral</a>
+  </div>
+</div>
+{% endblock %}
