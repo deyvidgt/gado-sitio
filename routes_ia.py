@@ -6,7 +6,7 @@ Somente leitura: lê os modelos de data/ia_models/ e mostra as previsões.
 Se os modelos não foram treinados, explica como treinar.
 """
 import logging
-from flask import render_template, jsonify, flash, redirect, url_for, abort
+from flask import render_template, jsonify, flash, redirect, url_for, abort, session
 import sitios
 from pathlib import Path
 
@@ -60,6 +60,10 @@ def treinar_ia():
         import subprocess
         import sys
         script_path = Path(__file__).parent / "scripts" / "train_ia_modelos.py"
+        if not script_path.exists():
+            flash("Script de treino de IA não encontrado no servidor.", "error")
+            return redirect(url_for("ia_predicoes"))
+            
         resultado = subprocess.run(
             [sys.executable, str(script_path), "--n-animais", "1000"],
             capture_output=True,
@@ -69,8 +73,11 @@ def treinar_ia():
         if resultado.returncode == 0:
             flash("Modelos de IA preditiva treinados com sucesso!", "success")
         else:
-            flash(f"Erro no treino da IA: {resultado.stderr[-300:]}", "error")
+            err_msg = resultado.stderr[-300:] if resultado.stderr else "Erro desconhecido"
+            print(f"Erro no treino da IA: {err_msg}")
+            flash(f"Erro no treino da IA: {err_msg}", "error")
     except Exception as e:
+        print(f"Exceção ao executar treino de IA: {e}")
         logger.error(f"Erro ao executar treino de IA: {e}")
         flash(f"Erro ao executar treino de IA: {e}", "error")
     return redirect(url_for("ia_predicoes"))
