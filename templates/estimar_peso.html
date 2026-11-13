@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Estimação de Peso por Foto / Biometria — Sítio Santo Antonio{% endblock %}
+{% block page_title %}📸 Estimação de Peso por Foto (Biometria){% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:20px">
+
+  <div class="card" style="margin-bottom:24px">
+    <h2>📐 Avaliação Biométrica Visual</h2>
+    <p style="color:var(--text-3);font-size:13px;margin-top:6px">
+      Faça o upload ou tire uma foto lateral do animal. Ajuste as linhas de medição no Canvas para extrair o comprimento corporal, profundidade torácica e estimar o peso exato com a fórmula de Schaeffer ajustada por Condição Corporal (BCS).
+    </p>
+
+    <form method="POST" enctype="multipart/form-data" style="margin-top:20px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div>
+          <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Selecionar Animal</label>
+          <select name="animal_id" required style="width:100%;padding:8px;border:1px solid var(--cream-dk);border-radius:6px;background:var(--surface);color:var(--text)">
+            <option value="">-- Escolher Animal --</option>
+            {% for _, v in vacas.iterrows() %}
+            <option value="{{ v['ID'] }}" {% if animal and animal['ID'] == v['ID'] %}selected{% endif %}>
+              {{ v['Brinco Cor'] }} {{ v['Brinco Nº'] }} ({{ v['ID'] }}) - {{ v['Categoria'] }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px">Foto do Animal (Lateral)</label>
+          <input type="file" id="foto-input" accept="image/*" style="width:100%;padding:6px;border:1px solid var(--cream-dk);border-radius:6px;font-size:12px">
+        </div>
+      </div>
+
+      <!-- Canvas Interativo para marcação -->
+      <div style="margin-bottom:20px;text-align:center;background:var(--bg-2);border-radius:8px;padding:12px;position:relative;overflow:hidden">
+        <p style="font-size:12px;color:var(--text-3);margin-bottom:8px">Área de Visualização e Marcação Biométrica (Canvas HTML5)</p>
+        <div id="canvas-wrapper" style="position:relative;display:inline-block;max-width:100%">
+          <canvas id="biometria-canvas" width="600" height="350" style="background:#111;border-radius:6px;max-width:100%;height:auto;cursor:crosshair"></canvas>
+        </div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text-2)">
+          <span>Modo: <b id="modo-atual">Comprimento Corporal (Ponta a Ponta)</b></span>
+          <button type="button" class="btn btn-outline" id="btn-mudar-modo" style="padding:4px 10px;font-size:11px;margin-left:10px">Mudar para Peito/Profundidade</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-bottom:16px">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Comprimento (cm)</label>
+          <input type="text" id="comprimento_cm" name="comprimento_cm" value="{{ medidas.comprimento if medidas else '140' }}" required style="width:100%;padding:8px;border:1px solid var(--cream-dk);border-radius:6px">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Profundidade do Peito (cm)</label>
+          <input type="text" id="profundidade_cm" name="profundidade_cm" value="{{ medidas.profundidade if medidas else '70' }}" required style="width:100%;padding:8px;border:1px solid var(--cream-dk);border-radius:6px">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Referência Conhecida (cm)</label>
+          <input type="text" id="referencia_cm" name="referencia_cm" value="{{ medidas.referencia if medidas else '100' }}" required style="width:100%;padding:8px;border:1px solid var(--cream-dk);border-radius:6px">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Escore Cond. Corporal (BCS 1-9)</label>
+          <select name="bcs" style="width:100%;padding:8px;border:1px solid var(--cream-dk);border-radius:6px">
+            {% for i in range(1, 10) %}
+            <option value="{{ i }}" {% if medidas and medidas.bcs|int == i %}selected{% elif i == 5 %}selected{% endif %}>BCS {{ i }} {% if i <= 3 %}(Magro){% elif i >= 7 %}(Gordo){% else %}(Ideal){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Raça / Grupo Genético</label>
+          <select name="raca" style="width:100%;padding:8px;border:1px solid var(--cream-dk);border-radius:6px">
+            <option>Zebuíno / Mestiço</option>
+            <option>Nelore Puro</option>
+            <option>Angus / Europeu</option>
+            <option>Girolando / Leiteiro</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Fase de Vida</label>
+          <select name="fase" style="width:100%;padding:8px;border:1px solid var(--cream-dk);border-radius:6px">
+            <option>Adulto</option>
+            <option>Jovem / Recria</option>
+            <option>Bezerro</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px;display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="salvar_historico" name="salvar_historico" checked style="width:16px;height:16px">
+        <label for="salvar_historico" style="font-size:13px;font-weight:600;cursor:pointer">Salvar peso estimado automaticamente no histórico de pesagens do animal</label>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:15px">🚀 Calcular Peso e Avaliar Carcaça</button>
+    </form>
+  </div>
+
+  {% if resultado %}
+  <div class="card" style="border-top:4px solid var(--green-600);background:linear-gradient(135deg, var(--surface) 0%, var(--green-50) 100%)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h3 style="margin:0;font-size:20px">📊 Leitura Concluída — Resultado Biométrico</h3>
+      <span class="badge badge-ok" style="font-size:13px;padding:4px 10px">Validação Concluída</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:16px;margin-bottom:20px">
+      <div style="background:var(--surface);padding:16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+        <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600">Peso Estimado</div>
+        <div style="font-size:32px;font-weight:700;color:var(--green-700);margin-top:4px">{{ resultado.peso_estimado }} <span style="font-size:16px">kg</span></div>
+      </div>
+      <div style="background:var(--surface);padding:16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+        <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600">Carcaça Estimada</div>
+        <div style="font-size:32px;font-weight:700;color:var(--gold);margin-top:4px">{{ resultado.arrobas }} <span style="font-size:16px">@</span></div>
+      </div>
+      <div style="background:var(--surface);padding:16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+        <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600">Valor de Mercado (Est.)</div>
+        <div style="font-size:32px;font-weight:700;color:var(--green-600);margin-top:4px">R$ {{ "%.2f"|format(resultado.valor_financeiro)|replace(".", ",") }}</div>
+      </div>
+    </div>
+
+    <div style="font-size:13px;color:var(--text-2);background:var(--surface);padding:12px;border-radius:6px">
+      <b>Parâmetros utilizados:</b> Comprimento = {{ resultado.comprimento }}cm | Profundidade = {{ resultado.profundidade }}cm | BCS = {{ resultado.bcs }} | Raça = {{ resultado.raca }}
+    </div>
+  </div>
+  {% endif %}
+
+  <div style="margin-top:24px;text-align:center">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+  </div>
+
+</div>
+
+<script>
+// Script simples para interatividade do Canvas (Desenho de linhas de biometria)
+document.addEventListener("DOMContentLoaded", function() {
+  const canvas = document.getElementById("biometria-canvas");
+  const ctx = canvas.getContext("2d");
+  let img = new Image();
+  let modo = "comprimento"; // comprimento ou profundidade
+
+  const btnMudar = document.getElementById("btn-mudar-modo");
+  const lblModo = document.getElementById("modo-atual");
+
+  btnMudar.addEventListener("click", function() {
+    if (modo === "comprimento") {
+      modo = "profundidade";
+      lblModo.innerText = "Profundidade do Peito (Vertical atrás das pás)";
+      btnMudar.innerText = "Mudar para Comprimento";
+    } else {
+      modo = "comprimento";
+      lblModo.innerText = "Comprimento Corporal (Ponta do ombro à nádega)";
+      btnMudar.innerText = "Mudar para Peito/Profundidade";
+    }
+  });
+
+  // Desenhar grid inicial no canvas
+  function desenharCanvas() {
+    ctx.fillStyle = "#1e221d";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!img.src) {
+      ctx.fillStyle = "#888";
+      ctx.font = "14px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Carregue uma foto lateral do animal para iniciar as marcações", canvas.width / 2, canvas.height / 2);
+    } else {
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    }
+  }
+
+  desenharCanvas();
+
+  document.getElementById("foto-input").addEventListener("change", function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        img.src = evt.target.result;
+        img.onload = function() {
+          desenharCanvas();
+        }
+      }
+      reader.readAsDataURL(file);
+    }
+  });
+});
+</script>
+{% endblock %}

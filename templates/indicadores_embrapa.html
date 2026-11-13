@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Indicadores Embrapa / ANCP — Sítio Santo Antonio{% endblock %}
+{% block page_title %}📊 Indicadores Zootécnicos (ANCP / Embrapa){% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:20px">
+
+  <section class="card" style="margin-bottom:24px">
+    <h2>Índices Oficiais de Reprodução e Produção</h2>
+    <p style="color:var(--text-3);font-size:13px;margin-top:6px">
+      Indicadores essenciais para relatórios gerenciais e tomada de crédito rural (Bancos / Cooperativas de Crédito).
+    </p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:16px;margin-top:20px">
+      <!-- Taxa de Natalidade -->
+      <div style="background:var(--bg-2);padding:20px;border-radius:8px;border-left:4px solid var(--green-600)">
+        <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600">Taxa de Natalidade</div>
+        <div style="font-size:36px;font-weight:700;color:var(--green-700);margin-top:6px">{{ natalidade.taxa }}%</div>
+        <div style="font-size:13px;color:var(--text-2);margin-top:8px">
+          <b>{{ natalidade.nascidos }}</b> bezerros nascidos / <b>{{ natalidade.matrizes }}</b> matrizes
+        </div>
+        <div style="margin-top:10px">
+          <span class="badge badge-ok">{{ natalidade.classificacao }}</span>
+        </div>
+      </div>
+
+      <!-- Taxa de Desmama -->
+      <div style="background:var(--bg-2);padding:20px;border-radius:8px;border-left:4px solid var(--gold)">
+        <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;font-weight:600">Taxa de Desmama</div>
+        <div style="font-size:36px;font-weight:700;color:var(--gold);margin-top:6px">{{ desmama.taxa }}%</div>
+        <div style="font-size:13px;color:var(--text-2);margin-top:8px">
+          <b>{{ desmama.desmamados }}</b> bezerros desmamados / <b>{{ desmama.matrizes }}</b> matrizes
+        </div>
+        <div style="margin-top:10px">
+          <span class="badge badge-ok">{{ desmama.classificacao }}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div style="margin-top:24px;text-align:center">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+  </div>
+
+</div>
+{% endblock %}

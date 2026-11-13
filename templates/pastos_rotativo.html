@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Pastoreio Rotativo — Sítio Santo Antonio{% endblock %}
+{% block page_title %}🌱 Pastoreio Rotativo (Rotativo x Descanso){% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:20px">
+
+  <section class="card" style="margin-bottom:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2>Controle Físico e Sanitário de Pastagens</h2>
+      <a href="{{ url_for('pastos') }}" class="btn btn-outline">🗺️ Ver Mapa de Pastos</a>
+    </div>
+    <p style="color:var(--text-3);font-size:13px;margin-bottom:20px">
+      Acompanhe os dias de ocupação, período de descanso agronômico, altura pré e pós-pastejo (resíduo) e o semáforo de lotação instantânea (UA/ha).
+    </p>
+
+    {% if relatorio %}
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:var(--bg-2)">
+          <th style="padding:10px;text-align:left">Pasto</th>
+          <th style="padding:10px;text-align:right">Área (ha)</th>
+          <th style="padding:10px;text-align:right">Cabeças / UA</th>
+          <th style="padding:10px;text-align:right">Lotação (UA/ha)</th>
+          <th style="padding:10px;text-align:right">Descanso</th>
+          <th style="padding:10px;text-align:right">Altura (Pré/Pós)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in relatorio %}
+        <tr style="border-bottom:1px solid var(--cream-dk)">
+          <td style="padding:10px;font-weight:600">
+            {{ p.nome }} <span style="font-size:11px;color:var(--text-3)">({{ p.pasto_id }})</span>
+          </td>
+          <td style="padding:10px;text-align:right">{{ '%.1f'|format(p.area_ha) }} ha</td>
+          <td style="padding:10px;text-align:right">{{ p.cabecas }} cab.</td>
+          <td style="padding:10px;text-align:right">
+            <span class="badge badge-{% if p.status_lotacao == 'critico' %}ruim{% elif p.status_lotacao == 'atencao' %}aviso{% else %}ok{% endif %}">
+              {{ '%.2f'|format(p.ua_ha) }} UA/ha
+            </span>
+          </td>
+          <td style="padding:10px;text-align:right">
+            <span class="badge badge-{% if p.status_descanso == 'critico' %}ruim{% elif p.status_descanso == 'atencao' %}aviso{% else %}ok{% endif %}">
+              {{ p.dias_descanso }} dias
+            </span>
+          </td>
+          <td style="padding:10px;text-align:right">
+            {{ p.altura_pre_cm }}cm / <b style="color:var(--green-700)">{{ p.altura_pos_cm }}cm</b>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-3);text-align:center;padding:20px">Nenhum pasto cadastrado no sistema.</p>
+    {% endif %}
+  </section>
+
+  <div style="margin-top:24px;text-align:center">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Voltar ao Dashboard</a>
+  </div>
+
+</div>
+{% endblock %}

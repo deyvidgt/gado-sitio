@@ -59,6 +59,13 @@ from routes_animais import *    # noqa: F401, F403
 # v5.6 — Gráficos de crescimento (GMD) do animal
 from routes_pesagem import *    # noqa: F401, F403
 
+# v5.20 — Estimação de Peso por Foto / Biometria Bovina
+from routes_estimar_peso import * # noqa: F401, F403
+
+# v5.21 — Controle Físico de Pastagens e Indicadores Embrapa/ANCP
+from routes_pastos_avancados import * # noqa: F401, F403
+from routes_indicadores_embrapa import * # noqa: F401, F403
+
 # v4.4 — Fotos dos animais (Google Drive)
 from routes_fotos import *      # noqa: F401, F403
 
