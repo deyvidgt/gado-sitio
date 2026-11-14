@@ -202,11 +202,12 @@
         <td style="white-space:nowrap">
           {% if secao == 'manejo' %}
             <a href="{{ url_for('detalhes_manejo', idx=i) }}" class="btn btn-outline btn-sm" title="Ver Detalhes">👁️ Detalhes</a>
+          {% elif secao == 'gastos' %}
+            <a href="{{ url_for('editar_gasto', idx=i) }}" class="btn btn-outline btn-sm" title="Editar">✏️</a>
+            <a href="javascript:alert('Detalhes do Gasto:\\nData: {{ row.get("Data") }}\\nTipo: {{ row.get("Tipo") }}\\nDescrição: {{ row.get("Descrição") }}\\nValor: {{ row.get("Valor Total (R$)") }}')" class="btn btn-outline btn-sm" title="Ver Detalhes">👁️ Detalhes</a>
           {% endif %}
           {% if secao == 'compras' %}
             <a href="{{ url_for('editar_compra', idx=i) }}" class="btn btn-outline btn-sm">✏️</a>
-          {% elif secao == 'gastos' %}
-            <a href="{{ url_for('editar_gasto', idx=i) }}" class="btn btn-outline btn-sm">✏️</a>
           {% elif secao == 'vendas' %}
             <a href="{{ url_for('editar_venda', idx=i) }}" class="btn btn-outline btn-sm">✏️</a>
           {% elif secao == 'manejo' %}
