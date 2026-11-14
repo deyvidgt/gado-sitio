@@ -107,7 +107,7 @@ function grafico_colunas(ctx, labels, dataset, opcoes = {}) {
       labels: labels,
       datasets: Array.isArray(dataset[0])
         ? dataset.map((d, i) => ({
-            label: opcoes.labels?.[i] || `Serie ${i+1}`,
+            label: opcoes.labels?.[i] || `Série ${i+1}`,
             data: d,
             backgroundColor: cores[i] || cores[0],
             borderRadius: 4,
@@ -163,7 +163,7 @@ function grafico_linhas(ctx, labels, datasets, opcoes = {}) {
     data: {
       labels: labels,
       datasets: datasets.map((d, i) => ({
-        label: d.label || `Serie ${i+1}`,
+        label: d.label || `Série ${i+1}`,
         data: d.data,
         borderColor: d.color || cores_padrao[i % cores_padrao.length],
         backgroundColor: (d.color || cores_padrao[i % cores_padrao.length]) + '20', // 20% alpha
