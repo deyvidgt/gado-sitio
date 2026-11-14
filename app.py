@@ -72,6 +72,7 @@ from routes_curral import * # noqa: F401, F403
 # v5.24 — Central de Alertas e Notificações
 from routes_alertas import * # noqa: F401, F403
 from routes_leite import * # noqa: F401, F403
+from routes_controle_leite import * # noqa: F401, F403
 
 # v5.25 — Assistente de Ração, Gestão Financeira Completa e Relatórios Gráficos de Rebanho
 from routes_relatorios_graficos import * # noqa: F401, F403
@@ -139,6 +140,7 @@ from routes_bulas import *      # noqa: F401, F403
 
 # v5.10 Onda 3 — Previsão de partos
 from routes_partos import *     # noqa: F401, F403
+from routes_alertas_parto import * # noqa: F401, F403
 
 # v5.10 Onda 4 — Análise genética e consanguinidade
 from routes_genetica import *   # noqa: F401, F403

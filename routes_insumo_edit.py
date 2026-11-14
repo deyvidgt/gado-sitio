@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+from flask import render_template, request, redirect, url_for, flash
+from extensions import app, login_required, _validar_csrf, parse_valor
+
 @app.route("/insumos/editar/<int:insumo_id>", methods=["GET", "POST"])
 @login_required
 def editar_insumo(insumo_id):
