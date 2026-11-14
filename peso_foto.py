@@ -123,9 +123,22 @@ def fator_calibracao(df_man: pd.DataFrame) -> tuple[float, int]:
     return min(max(statistics.median(razoes), FATOR_MIN), FATOR_MAX), len(razoes)
 
 
-def registrar(id_: str, comp_cm, prof_cm, ref_cm, data=None, responsavel: str = "", bcs=None) -> float:
+from image_processor import processar_foto_animal
+
+# ... (mantendo o resto do arquivo)
+
+def registrar(id_: str, comp_cm=None, prof_cm=None, ref_cm=None, data=None, responsavel: str = "", bcs=None, caminho_foto=None) -> float:
     """Valida, calcula e grava a linha "Peso Estimado". Devolve o peso bruto."""
+
+    if caminho_foto:
+        medidas = processar_foto_animal(caminho_foto)
+        if medidas:
+            comp_cm = medidas['comprimento']
+            prof_cm = medidas['profundidade']
+            ref_cm = ref_cm or 100 # Fallback se necessário
+
     comp, prof, ref, bcs_val = validar(comp_cm, prof_cm, ref_cm, bcs)
+    # ... resto da função original ...
     a = A.por_id(A.carregar(), id_)
     if a is None or a["Status"] != "Vivo":
         raise ValueError("Só dá para estimar o peso de um animal vivo.")
