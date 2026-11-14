@@ -298,7 +298,7 @@ def painel_leite():
                            grafico_saude=grafico_saude)
 
 
-@app.route("/leite/animais")
+@app.route("/leite/animais", endpoint="animais_leite")
 @login_required
 def animais_leite():
     hoje = _agora().date()

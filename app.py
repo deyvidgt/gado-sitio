@@ -69,10 +69,9 @@ from routes_indicadores_embrapa import * # noqa: F401, F403
 # v5.22 — Manejos de Curral e Apontamentos Rápidos (Pecuária de Precisão)
 from routes_curral import * # noqa: F401, F403
 
-# v5.23-5.24 — Módulos Avançados de Corte e Leite (Enfermaria, Alertas de Parto, Controle Leiteiro)
-from routes_enfermaria import * # noqa: F401, F403
-from routes_alertas_parto import * # noqa: F401, F403
-from routes_controle_leite import * # noqa: F401, F403
+# v5.24 — Central de Alertas e Notificações
+from routes_alertas import * # noqa: F401, F403
+from routes_leite import * # noqa: F401, F403
 
 # v5.25 — Assistente de Ração, Gestão Financeira Completa e Relatórios Gráficos de Rebanho
 from routes_relatorios_graficos import * # noqa: F401, F403
