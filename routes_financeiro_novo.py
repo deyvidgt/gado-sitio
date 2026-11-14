@@ -117,7 +117,7 @@ def _tabela_status_membros(r_membros, estoque_membros):
         rows = []
         for membro in MEMBROS:
             res = r_membros.get(membro, {})
-            resultado = res.get("resultado_realizado", 0)
+            resultado = res.get("resultado", 0)
 
             # Status de cor: verde (positivo), amarelo (zero), vermelho (negativo)
             if resultado > 0:

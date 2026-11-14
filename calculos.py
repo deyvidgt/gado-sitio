@@ -780,13 +780,20 @@ def calcular_todos_membros(df_vend, df_comp, df_gast,
     avg_por_venda     = sim["avg_por_venda"]
     perdas_por_membro = sim["perdas_por_membro"]
 
+    ctcab_global = calcular_ctcab(df_comp, df_gast, df_vend, df_man)
+    estoques = calcular_estoque_por_membro(df_comp, df_vend, df_man)
+
     return {
-        m: calcular_resultado_membro(
-            m, df_vend, df_comp, df_gast, df_man,
-            _avg_por_venda=avg_por_venda,
-            _perda_membro=perdas_por_membro.get(m, 0.0),
-            _fator_por_venda=sim["fator_por_venda"],
-        )
+        m: {
+            **calcular_resultado_membro(
+                m, df_vend, df_comp, df_gast, df_man,
+                _avg_por_venda=avg_por_venda,
+                _perda_membro=perdas_por_membro.get(m, 0.0),
+                _fator_por_venda=sim["fator_por_venda"],
+            ),
+            "capital_imobilizado": round(estoques.get(m, 0) * ctcab_global, 2),
+            "ctcab": round(ctcab_global, 2),
+        }
         for m in MEMBROS
     }
 

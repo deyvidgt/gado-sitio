@@ -264,3 +264,19 @@ def test_celula_vazia_nan_nao_derruba_calculos():
     r = c.calcular_resumo_financeiro(df_c, df_g, df_v, VAZIO_MAN)
     assert r["capital_imobilizado"] == pytest.approx(9900.0 * 8 / 9, abs=TOL)
     checar_invariantes(df_c, df_g, df_v, VAZIO_MAN)
+
+
+def test_membros_retornam_capital_e_ctcab():
+    df_c = compras(("2025-01-01", 9, 9000.0, 3, 3, 3))
+    df_g = gastos(("2025-02-01", 900.0))
+    df_v = vendas(("2025-03-01", {"Mae": (3, 6000.0)}))
+    resumo, membros = checar_invariantes(df_c, df_g, df_v, VAZIO_MAN)
+
+    soma_capital = sum(m["capital_imobilizado"] for m in membros.values())
+    assert soma_capital == pytest.approx(resumo["capital_imobilizado"], abs=TOL)
+
+    for m in membros.values():
+        assert "capital_imobilizado" in m
+        assert "ctcab" in m
+        assert m["ctcab"] == pytest.approx(resumo["ctcab"], abs=TOL)
+
