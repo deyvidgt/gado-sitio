@@ -7,6 +7,7 @@ from flask import render_template
 import indicadores_embrapa as IE
 import animais as A
 import db
+import pandas as pd
 from extensions import app, login_required, _get_dados_cache
 
 @app.route("/indicadores/embrapa")

@@ -46,13 +46,13 @@
       <tbody>
         {% for pid, p in sit_pastos.items() %}
         <tr style="border-bottom:1px solid var(--cream-dk)">
-          <td style="padding:10px;font-weight:600">{{ p.nome }}</td>
-          <td style="padding:10px;text-align:right">{{ '%.1f'|format(p.area) }} ha</td>
-          <td style="padding:10px;text-align:right">{{ p.cabecas }} cab.</td>
-          <td style="padding:10px;text-align:right"><b>{{ '%.2f'|format(p.ua_ha) }} UA/ha</b></td>
+          <td style="padding:10px;font-weight:600">{{ pid }}</td>
+          <td style="padding:10px;text-align:right">N/A ha</td>
+          <td style="padding:10px;text-align:right">{{ p.cab }} cab.</td>
+          <td style="padding:10px;text-align:right"><b>{{ '%.2f'|format(p.ua_ha) if p.ua_ha else '0.00' }} UA/ha</b></td>
           <td style="padding:10px;text-align:center">
-            <span class="badge badge-{% if p.ua_ha > 2.5 %}ruim{% elif p.ua_ha > 1.8 %}aviso{% else %}ok{% endif %}">
-              {% if p.ua_ha > 2.5 %}Lotado{% elif p.ua_ha > 1.8 %}Atenção{% else %}Ideal{% endif %}
+            <span class="badge badge-{% if p.ua_ha and p.ua_ha > 2.5 %}ruim{% elif p.ua_ha and p.ua_ha > 1.8 %}aviso{% else %}ok{% endif %}">
+              {% if p.ua_ha and p.ua_ha > 2.5 %}Lotado{% elif p.ua_ha and p.ua_ha > 1.8 %}Atenção{% else %}Ideal{% endif %}
             </span>
           </td>
         </tr>

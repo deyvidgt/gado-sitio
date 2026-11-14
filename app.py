@@ -157,6 +157,8 @@ from routes_pastos_ocupacao import *  # noqa: F401, F403
 
 # v5.10 — Gestão de cochos e salga
 from routes_cochos import *         # noqa: F401, F403
+# v5.10 — Gestão de volumosos
+from routes_volumosos import *      # noqa: F401, F403
 
 # v5.11 Onda 8+ — Gráficos do sistema (Chart.js)
 from routes_exportar_graficos import * # noqa: F401, F403
