@@ -117,10 +117,7 @@ from routes_lotes import *      # noqa: F401, F403
 from routes_ponto_corte import *           # noqa: F401, F403
 from routes_relatorios_avancados import *  # noqa: F401, F403
 
-# v5.4 — Produção leiteira
-from routes_leite import *      # noqa: F401, F403
-from routes_volumosos import *  # noqa: F401, F403
-from routes_alertas import *    # noqa: F401, F403
+
 
 # v5.10 — Calculador de ração avançado
 from routes_racao_avancada import *  # noqa: F401, F403

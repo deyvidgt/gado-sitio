@@ -95,4 +95,9 @@ def api_rotacao_pasto(pasto_id):
     """API: plano de rotação para um pasto."""
     rotacao = recomendar_rotacao(pasto_id)
 
-    return jsonify(rotacao)
+@app.route("/cron/verificar-alertas")
+@login_required
+def disparar_alertas():
+    from cron_alertas import executar_alertas_diarios
+    executar_alertas_diarios()
+    return "Alertas processados.", 200
