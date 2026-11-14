@@ -101,7 +101,7 @@ def api_chuvas():
         media_mm    = round(total_mm / vis_chuva, 1) if vis_chuva > 0 else 0.0
         meses_dados.append({
             "periodo":           str(periodo),
-            "label":             periodo.strftime("%b/%Y"),
+            "label":             f"{['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][periodo.month-1]}/{periodo.year}",
             "total_mm":          round(total_mm, 1),
             "media_mm":          media_mm,
             "visitas":           total_vis,

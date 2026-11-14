@@ -3,6 +3,7 @@
 def editar_insumo(insumo_id):
     from models import Insumo
     from extensions import db as db_sqla
+    from config import CATEGORIAS_GASTO
     ins = Insumo.query.get_or_404(insumo_id)
     if request.method == "POST":
         _validar_csrf()

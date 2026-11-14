@@ -213,38 +213,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {% endif %}
 
-<section class="card" style="margin-bottom:20px">
-  <div class="card-title">💸 Gastos por Tipo</div>
-  <div class="grafico-container" style="position:relative;width:100%;height:250px;min-height:250px;margin-top:16px">
-    <canvas id="grafico_gastos" style="width:100%;height:250px;display:block"></canvas>
-    <div id="grafico_gastos_vazio" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;align-items:center;justify-content:center;color:var(--text-3);font-size:14px;background:var(--bg-2);border-radius:8px;">
-      Sem registos de despesas no período
-    </div>
-  </div>
-</section>
-
-<script defer>
-document.addEventListener('DOMContentLoaded', function() {
-  const dadosGastos = {{ (grafico_gastos or {})|tojson }};
-  const canvas = document.getElementById('grafico_gastos');
-  const vazioEl = document.getElementById('grafico_gastos_vazio');
-
-  if (!dadosGastos || !dadosGastos.labels || dadosGastos.labels.length === 0 || !dadosGastos.data || dadosGastos.data.reduce((a, b) => a + b, 0) === 0) {
-    if (canvas) canvas.style.display = 'none';
-    if (vazioEl) vazioEl.style.display = 'flex';
-  } else {
-    if (vazioEl) vazioEl.style.display = 'none';
-    if (canvas && typeof grafico_pizza === 'function') {
-      const ctx = canvas.getContext('2d');
-      grafico_pizza(ctx, dadosGastos.labels, dadosGastos.data, {
-        tema: localStorage.getItem('gado-theme') || 'light',
-        colors: ['#8ba753', '#19316f', '#72b148', '#e67e22', '#95a5a6']
-      });
-    }
-  }
-});
-</script>
-
 <!-- Gráfico de Entrada/Saída foi para /fluxo-animais (v5.10) -->
 
 <section class="card" style="margin-bottom:20px">
@@ -1469,7 +1437,7 @@ async function loadChuvas() {
         labels: d.labels,
         datasets: [
           {
-            label: "Total mm",
+            label: "Total (mm)",
             data: d.totais,
             backgroundColor: d.totais.map(v =>
               v === 0 ? "rgba(136,136,136,.25)" :
@@ -1481,7 +1449,7 @@ async function loadChuvas() {
             order: 1,
           },
           {
-            label: "Média/visita",
+            label: "Média (mm/visita)",
             data: d.medias,
             type: "line",
             borderColor: "rgba(46,125,50,.85)",
