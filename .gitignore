@@ -22,6 +22,7 @@ __pycache__/
 *.pyo
 *.pyc
 .pytest_cache
+pytest.ini
 
 # ── Ambiente virtual ────────────────────────────────────
 .env
@@ -75,3 +76,4 @@ __pycache__/
 cache_fotos/
 cache_bulas_pendentes/
 docs/
+secret_key.txt
