@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-app.py — Sítio Santo Antonio v5.10.1
+app.py — Sítio Santo Antonio v5.30.0
 """
 
 import sys, os
