@@ -56,7 +56,7 @@ def _preparar_notificacoes(alertas_lista):
     return notificacoes
 
 
-@app.route("/alertas")
+@app.route("/alertas", endpoint="central_alertas")
 @login_required
 def central_alertas():
     return render_template("alertas.html", alertas=_dados_alertas(), tempo=tempo.previsao())
