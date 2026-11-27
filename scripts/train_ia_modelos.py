@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -46,7 +47,7 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\n{'='*70}")
-    print(f"🤖 Treinamento IA Preditiva — {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+    print(f"🤖 Treinamento IA Preditiva — {agora().strftime('%d/%m/%Y %H:%M:%S')}")
     print(f"{'='*70}\n")
 
     # ========== STEP 1: Generate synthetic data ==========
@@ -166,7 +167,7 @@ def main():
     print(f"  ModeloMorte acurácia: {acc_morte:.1%} (holdout) | AUC: {auc_morte:.3f}")
     print(f"  ModeloCio R² score: {r2_cio:.3f} (holdout)")
     print(f"  Output: {output_dir.resolve()}")
-    print(f"  Timestamp: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}\n")
+    print(f"  Timestamp: {agora().strftime('%d/%m/%Y %H:%M:%S')}\n")
 
 
 if __name__ == "__main__":

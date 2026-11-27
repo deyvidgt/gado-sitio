@@ -6,6 +6,7 @@ Substitui o antigo db.py baseado em Excel (.xlsx) por consultas em tabelas SQLit
 """
 
 from __future__ import annotations
+from agora import agora
 import os
 import json
 import pandas as pd
@@ -110,7 +111,7 @@ def carregar_todas_abas(fazenda_slug: str = "santo-antonio") -> dict[str, pd.Dat
     return {aba: carregar_aba_sql(aba, fazenda_slug) for aba in _SCHEMA_ABAS.keys()}
 
 def versao_arquivo():
-    return int(datetime.now().timestamp())
+    return int(agora().timestamp())
 
 def fazer_backup():
     return None

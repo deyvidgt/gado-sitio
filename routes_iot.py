@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Endpoints de leituras IoT e sincronização offline idempotente."""
@@ -42,7 +43,7 @@ def _salvar_manejo(tipo, dados, brincos=''):
         import animais as A
         import db as dados_db
         from routes_animais import _membro_logado
-        data = dados.get('timestamp') or datetime.now().strftime('%d/%m/%Y %H:%M')
+        data = dados.get('timestamp') or agora().strftime('%d/%m/%Y %H:%M')
         descricao = f"IoT {dados.get('sensor_id', '')}: {dados}".strip()
         dados_db.salvar_linha('Manejo', A._linha_manejo(data, nome_tipo, 1, descricao, _membro_logado(), brincos=brincos))
         return True

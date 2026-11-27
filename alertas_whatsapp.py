@@ -17,6 +17,7 @@ campanha), cada um repetido no máximo a cada poucos dias. Sem urgência, nada �
 enviado. Teste sem enviar:  python3 alertas_whatsapp.py --teste [--semanal]
 """
 from __future__ import annotations
+from agora import agora
 
 import os
 import sys
@@ -301,9 +302,9 @@ def _agora_br() -> datetime:
     """Hora de Brasília (o servidor do PythonAnywhere roda em UTC)."""
     try:
         from zoneinfo import ZoneInfo
-        return datetime.now(ZoneInfo("America/Sao_Paulo")).replace(tzinfo=None)
+        return agora()
     except Exception:
-        return datetime.now()
+        return agora()
 
 
 def montar_itens(hoje: datetime | None = None) -> list[dict]:
@@ -770,7 +771,7 @@ def _ler_fila(caminho: Path) -> list:
 def _quarentenar_fila(caminho: Path, motivo: str) -> Path:
     stem = "avisos_pendentes" if caminho.name.startswith("avisos_enviando_") else caminho.stem
     destino = caminho.with_name(
-        f"{stem}_corrompida_{datetime.now():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:8]}{caminho.suffix}"
+        f"{stem}_corrompida_{agora():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:8]}{caminho.suffix}"
     )
     os.replace(caminho, destino)
     logging.error("Fila WhatsApp inválida preservada em %s: %s", destino, motivo)
@@ -800,7 +801,7 @@ def guardar_aviso_pendente(msg: str, tipo: str = "visita", excluir: str = "",
             fila = []
         fila.append({"msg": msg, "tipo": tipo, "excluir": excluir,
                      "msg_sem_valores": msg_sem_valores, "sitio": sitios.atual(),
-                     "criado": datetime.now().isoformat(timespec="seconds")})
+                     "criado": agora().isoformat(timespec="seconds")})
         _gravar_fila(caminho, fila)
 
 
@@ -845,7 +846,7 @@ def avisar_manejo(tipo: str, qtd: int, brincos: str = "", de: str = "", descrica
 
 def enviar_avisos_pendentes(agora: datetime | None = None) -> int:
     """Processa a fila atomicamente; destinatários com falha ficam para nova tentativa."""
-    agora = agora or datetime.now()
+    agora = agora or agora()
     caminho = _pendentes_path()
     meu = caminho.with_name(f"avisos_enviando_{os.getpid()}_{uuid.uuid4().hex}.json")
     with _trava_fila():

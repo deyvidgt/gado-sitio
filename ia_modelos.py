@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -180,12 +181,12 @@ class ModeloCio:
             print(f"⚠️ Erro predição cio: {e}")
             return {
                 'dias_ate_cio': 21,
-                'data_prevista': (pd.Timestamp.now() + timedelta(days=21)).strftime('%d/%m/%Y'),
+                'data_prevista': (pd.Timestamp(agora()) + timedelta(days=21)).strftime('%d/%m/%Y'),
                 'confianca': 0.0,
                 'alertar': False,
             }
 
-        data_prevista = pd.Timestamp.now() + timedelta(days=dias)
+        data_prevista = pd.Timestamp(agora()) + timedelta(days=dias)
 
         # Confidence: peak at 21 days (normal cycle length)
         confianca = max(0.6, 1.0 - abs(dias - 21) / 21)

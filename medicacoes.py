@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -121,7 +122,7 @@ def alertas_quarentena(hoje: str = None) -> dict:
     """
     from doencas_carencia import status_por_animal
 
-    referencia = datetime.now().date()
+    referencia = agora().date()
     if hoje:
         try:
             referencia = pd.to_datetime(hoje, format="%d/%m/%Y").date()
@@ -156,7 +157,7 @@ def medicacoes_recentes(dias: int = 30) -> list:
         if df.empty:
             return []
 
-        data_limite = pd.to_datetime(datetime.now() - timedelta(days=dias), format='%Y-%m-%d')
+        data_limite = pd.to_datetime(agora() - timedelta(days=dias), format='%Y-%m-%d')
         df['Data_obj'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce')
         df_recentes = df[df['Data_obj'] >= data_limite].copy()
 
@@ -172,7 +173,7 @@ def relatorio_medicacoes_animal(brinco_id: str, ano: int = None) -> dict:
     Relatório de medicações de um animal em um ano.
     """
     if not ano:
-        ano = datetime.now().year
+        ano = agora().year
 
     historico = historico_animal(brinco_id)
 

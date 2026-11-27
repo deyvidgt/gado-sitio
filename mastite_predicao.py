@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -36,7 +37,7 @@ def carregar_historico_ccs(dias: int = 60) -> pd.DataFrame:
                                           format='%d/%m/%Y', errors='coerce')
 
         # Filtra últimos N dias
-        data_limite = datetime.now() - timedelta(days=dias)
+        data_limite = agora() - timedelta(days=dias)
         df_recente = df_leite[df_leite['Data'] >= data_limite].copy()
 
         return df_recente.sort_values('Data', ascending=False)

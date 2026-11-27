@@ -9,6 +9,7 @@ Manejo com o ID do pasto na coluna "Pasto" (Brincos vazio = o rebanho todo).
 Não mexe nas finanças. Design: docs/superpowers/specs/2026-10-25-pastos-mapa-design.md
 """
 from __future__ import annotations
+from agora import agora
 
 import io
 import json
@@ -283,7 +284,7 @@ def mover(pasto_id, data, refs: list[str] | None, qtd: int, responsavel: str = "
     nome = df.at[_linha(df, pasto_id), "Nome"]
     data_ts = A._data(data) if data else pd.NaT
     if pd.isna(data_ts):
-        data_ts = pd.Timestamp.now().normalize()
+        data_ts = pd.Timestamp(agora()).normalize()
     qtd = len(refs) if refs else int(qtd)
     if qtd <= 0:
         raise ValueError("Nenhuma cabeça para mover.")
@@ -298,7 +299,7 @@ def situacao(df_pastos, df_animais, df_man, estoque: int, peso_medio: float, hoj
 
     Percorre as movimentações em ordem: a do rebanho todo leva todo mundo (apaga
     as individuais anteriores); a com brincos leva só aqueles."""
-    hoje = pd.Timestamp(hoje or pd.Timestamp.now()).normalize()
+    hoje = pd.Timestamp(hoje or pd.Timestamp(agora())).normalize()
     peso_padrao = peso_medio if peso_medio and peso_medio > 0 else UA_KG
     rebanho, individual = (None, None), {}
     ultimas_saidas = {}

@@ -1,3 +1,4 @@
+from agora import agora
 # -*- coding: utf-8 -*-
 """Previsão Open-Meteo com cache por sítio e degradação segura."""
 
@@ -236,7 +237,7 @@ def previsao(*, agora=None, latitude=None, longitude=None):
     Se latitude/longitude não forem dados, tenta usar as coordenadas do sitio_config.json.
     Se nenhuma coordenada existir, avisa para permitir geolocalização no celular.
     """
-    agora = agora or datetime.now()
+    agora = agora or agora()
     cfg = _configuracao()
 
     # Permite sobrescrever com coordenadas do navegador
@@ -300,7 +301,7 @@ def previsao(*, agora=None, latitude=None, longitude=None):
 def analise_secas_e_chuvas(df_visitas, hoje=None):
     """Analisa o histórico de chuvas das visitas (ano atual vs ano anterior)
     e gera alerta automático de estiagem / necessidade de antecipar volumoso."""
-    hoje = hoje or datetime.now().date()
+    hoje = hoje or agora().date()
     ano_atual = hoje.year
     ano_anterior = ano_atual - 1
 

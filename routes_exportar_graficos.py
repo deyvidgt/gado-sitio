@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -69,7 +70,7 @@ def exportar_grafico(modulo, formato):
                 io.BytesIO(screenshot),
                 mimetype="image/png",
                 as_attachment=True,
-                download_name=f"grafico_{modulo}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                download_name=f"grafico_{modulo}_{agora().strftime('%Y%m%d_%H%M%S')}.png"
             )
         else:  # PDF via Pillow + ReportLab
             from reportlab.lib.pagesizes import A4
@@ -86,7 +87,7 @@ def exportar_grafico(modulo, formato):
             c.setFont("Helvetica-Bold", 16)
             c.drawString(40, 780, f"Gráfico: {modulo.capitalize()}")
             c.setFont("Helvetica", 10)
-            c.drawString(40, 760, f"Exportado em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+            c.drawString(40, 760, f"Exportado em {agora().strftime('%d/%m/%Y %H:%M:%S')}")
 
             # Adiciona imagem
             img_reader = ImageReader(io.BytesIO(screenshot))
@@ -99,7 +100,7 @@ def exportar_grafico(modulo, formato):
                 pdf_buffer,
                 mimetype="application/pdf",
                 as_attachment=True,
-                download_name=f"grafico_{modulo}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+                download_name=f"grafico_{modulo}_{agora().strftime('%Y%m%d_%H%M%S')}.pdf"
             )
 
     except ImportError as e:
@@ -222,7 +223,7 @@ def download_dados_grafico(modulo, tipo):
             xlsx_buffer,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             as_attachment=True,
-            download_name=f"dados_{modulo}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            download_name=f"dados_{modulo}_{agora().strftime('%Y%m%d_%H%M%S')}.xlsx"
         )
 
     except Exception as e:

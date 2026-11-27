@@ -14,6 +14,7 @@ calibração melhora com o tempo e recalcula o que se mostra. Nunca entra no GMD
 (pesagem.todas ignora esse tipo). Design: docs/superpowers/specs/2026-10-25-peso-por-foto-design.md
 """
 from __future__ import annotations
+from agora import agora
 
 import re
 import statistics
@@ -145,7 +146,7 @@ def registrar(id_: str, comp_cm=None, prof_cm=None, ref_cm=None, data=None, resp
     bruto = round(estimar_bruto(comp, prof), 1)
     data_ts = A._data(data) if data else pd.NaT
     if pd.isna(data_ts):
-        data_ts = pd.Timestamp.now().normalize()
+        data_ts = pd.Timestamp(agora()).normalize()
     desc = f"Foto: comprimento {comp:g} cm, peito {prof:g} cm, ref. {ref:g} cm"
     if bcs_val is not None:
         fator_bcs = FATOR_BCS[bcs_val]
@@ -177,7 +178,7 @@ def historico_estimativas(id_: str, df_man: pd.DataFrame, limite_dias: int = 180
         return []
 
     fator, _ = fator_calibracao(df_man)
-    agora = pd.Timestamp.now()
+    agora = pd.Timestamp(agora())
 
     resultado = []
     for data, bruto, fator_bcs in estimados:

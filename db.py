@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from __future__ import annotations  # compatibilidade Python 3.9+
+from agora import agora
 """
 Camada de acesso a dados — leitura, escrita e backup do Excel
 
@@ -116,7 +117,7 @@ def fazer_backup() -> str | None:
         return None
     backup_dir = os.path.join(DATA_DIR, "backups")
     os.makedirs(backup_dir, exist_ok=True)
-    nome = os.path.join(backup_dir, f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx")
+    nome = os.path.join(backup_dir, f"backup_{agora().strftime('%Y%m%d_%H%M%S')}.xlsx")
     with _trava_escrita():   # nunca copiar no meio de uma gravação
         shutil.copy(ARQUIVO_PATH, nome)
     return nome
