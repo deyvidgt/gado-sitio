@@ -18,6 +18,7 @@ Estoque estimado hoje:
     última contagem + compras depois dela − consumo médio × dias desde a contagem
 """
 from __future__ import annotations
+from agora import agora
 
 from datetime import datetime, timedelta
 
@@ -80,7 +81,7 @@ def previsao_insumo(produto: str, df_vis: pd.DataFrame, df_gast: pd.DataFrame,
       dias_restantes, acaba_em, comprar_ate
       status                   — sem_dados | sem_consumo | ok | proximo | urgente | acabou
     """
-    hoje = pd.Timestamp(hoje or datetime.now()).normalize()
+    hoje = pd.Timestamp(hoje or agora()).normalize()
     coluna = INSUMOS[produto]
     contagens = [(d, q) for d, q in _contagens(df_vis, coluna) if d <= hoje]
     compras = _compras(df_gast, produto)
@@ -179,7 +180,7 @@ def estoque_completo(df_insumos: pd.DataFrame, df_vis: pd.DataFrame,
     """Estado atual de cada insumo com informações do catálogo (marca, nutrição, etc).
 
     Combina previsão de estoque com dados do catálogo de insumos."""
-    hoje = pd.Timestamp(hoje or datetime.now()).normalize()
+    hoje = pd.Timestamp(hoje or agora()).normalize()
     out = []
 
     if df_insumos is None or df_insumos.empty:

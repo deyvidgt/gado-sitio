@@ -19,6 +19,7 @@ cabeças em vez de supor FIFO. Este módulo só lê — não grava nada e não e
 em nenhuma conta do painel.
 """
 from __future__ import annotations
+from agora import agora
 
 import pandas as pd
 
@@ -89,7 +90,7 @@ def _consumir(abertos: list[dict], qtd: float, campo: str, valor_cab: float, dat
 
 def calcular(df_comp, df_gast, df_vend, df_man=None, hoje=None) -> dict:
     """{lotes: [...], sem_lote: {...}, totais: {...}} — lotes do mais novo ao mais velho."""
-    hoje = pd.Timestamp(hoje or pd.Timestamp.now()).normalize()
+    hoje = pd.Timestamp(hoje or pd.Timestamp(agora())).normalize()
     lotes: list[dict] = []
     # Venda/morte sem lote aberto (lançamento fora de ordem): o dinheiro não some,
     # fica aqui em vez de ser jogado num lote que não existia.

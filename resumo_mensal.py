@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -175,7 +176,7 @@ def montar_resumo_mensal(dados: dict, ano: int, mes: int, com_valores: bool = Tr
 def main(argv: list[str]) -> int:
     teste = "--teste" in argv
     forcar = "--forcar" in argv
-    hoje = datetime.now()
+    hoje = agora()
 
     if hoje.day != 1 and not (teste or forcar):
         return 0  # Task diária: só age no dia 1º

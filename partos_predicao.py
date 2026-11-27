@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -29,7 +30,7 @@ def carregar_coberturas(dias: int = 365) -> pd.DataFrame:
         df_coberturas = df_manejo[df_manejo['Tipo'].astype(str).str.lower() == 'cobertura']
 
         # Últimos N dias
-        data_limite = datetime.now() - timedelta(days=dias)
+        data_limite = agora() - timedelta(days=dias)
         df_recente = df_coberturas[df_coberturas['Data'] >= data_limite].copy()
 
         return df_recente.sort_values('Data', ascending=False)
@@ -63,7 +64,7 @@ def calcular_datas_parto(vaca_id: str) -> Dict:
 
         data_cobertura = df_vaca.iloc[0]['Data']
         data_parto = data_cobertura + timedelta(days=DIAS_GESTACAO)
-        dias_ate_parto = (data_parto - datetime.now()).days
+        dias_ate_parto = (data_parto - agora()).days
 
         # Status
         if dias_ate_parto < 0:

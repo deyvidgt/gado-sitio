@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -66,7 +67,7 @@ def enfermaria_adicionar():
         id_animal = A.ids_de(refs[0])[0]
         fazer_backup_seguro()
 
-        novo_id = f"ENF-{datetime.now().strftime('%m%d%H%M')}"
+        novo_id = f"ENF-{agora().strftime('%m%d%H%M')}"
         linha = [
             novo_id,
             data,

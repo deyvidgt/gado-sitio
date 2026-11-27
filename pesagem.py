@@ -13,6 +13,7 @@ Pesagens antigas feitas pela voz só tinham o peso na Descrição
 Não entra nas finanças: só informa (GMD, @ estimadas, peso médio do rebanho).
 """
 from __future__ import annotations
+from agora import agora
 
 import re
 
@@ -292,7 +293,7 @@ def registrar(pares: list[tuple[str, float]], data, responsavel: str = "", obs: 
     """Grava UMA linha Pesagem no Manejo com todos os animais pesados."""
     data_ts = A._data(data) if data else pd.NaT
     if pd.isna(data_ts):
-        data_ts = pd.Timestamp.now().normalize()
+        data_ts = pd.Timestamp(agora()).normalize()
     db.salvar_linha("Manejo", A._linha_manejo(
         data_ts, "Pesagem", len(pares),
         obs or f"{len(pares)} animal(is) · média {fmt_kg(round(sum(k for _, k in pares) / len(pares), 1))} kg",

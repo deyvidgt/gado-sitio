@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -42,7 +43,7 @@ def extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje=None):
     Returns:
         dict with 25 keys, all values in [0, 1]; None if animal not found
     """
-    hoje = pd.Timestamp(hoje or datetime.now()).normalize()
+    hoje = pd.Timestamp(hoje or agora()).normalize()
 
     # Find animal (support both 'ID' and 'animal_id' column names)
     id_col = 'ID' if 'ID' in df_animais.columns else 'animal_id'
@@ -292,6 +293,40 @@ def extrair_features(animal_id, df_animais, df_manejo, df_vendas, hoje=None):
             features[key] = max(0, min(1, features[key]))
 
     return features
+
+
+def extrair_features_crescimento(animal_id, df_animais, df_manejo, df_pastos, hoje=None):
+    """Features compactas para previsões de campo, sem inventar histórico ausente."""
+    if df_animais is None or df_animais.empty or 'ID' not in df_animais.columns or animal_id not in df_animais['ID'].values:
+        return {'dados_suficientes': False, 'amostras_peso': 0, 'amostras_pasto': 0}
+    hoje = pd.to_datetime(hoje or agora(), dayfirst=True).normalize()
+    manejo = df_manejo if df_manejo is not None else pd.DataFrame()
+    pastos = df_pastos if df_pastos is not None else pd.DataFrame()
+    tipo = manejo.get('Tipo', pd.Series(dtype=str)).astype(str)
+    do_animal = manejo[manejo.get('Brincos', pd.Series(dtype=str)).astype(str).str.contains(str(animal_id), na=False)] if not manejo.empty and 'Brincos' in manejo.columns else manejo.iloc[0:0]
+    pesos = do_animal[do_animal['Tipo'].astype(str).str.contains('Pesagem', case=False, na=False)] if not do_animal.empty else do_animal
+    if not pesos.empty:
+        datas = pd.to_datetime(pesos['Data'], errors='coerce', dayfirst=True)
+        valores = pd.to_numeric(pesos.get('Descricao', pd.Series(dtype=float)).astype(str).str.extract(r'([-+]?\d+(?:[.,]\d+)?)')[0].str.replace(',', '.'), errors='coerce')
+        validos = pd.DataFrame({'data': datas, 'peso': valores}).dropna().sort_values('data')
+    else:
+        validos = pd.DataFrame(columns=['data', 'peso'])
+    if len(validos) >= 2:
+        dias = (validos['data'] - validos['data'].iloc[0]).dt.days.to_numpy()
+        x = dias.astype(float)
+        y = validos['peso'].to_numpy(dtype=float)
+        tendencia = float(np.polyfit(x, y, 1)[0]) if x[-1] > 0 else 0.0
+    else:
+        tendencia = 0.0
+    tratamentos = do_animal[do_animal['Tipo'].astype(str).str.contains('Tratamento|Medicação', case=False, na=False)] if not do_animal.empty else do_animal
+    if not tratamentos.empty:
+        datas_trat = pd.to_datetime(tratamentos['Data'], errors='coerce', dayfirst=True)
+        tratamentos_recentes = int(((hoje - datas_trat).dt.days.between(0, 90)).sum())
+    else:
+        tratamentos_recentes = 0
+    return {'dados_suficientes': len(validos) >= 2, 'amostras_peso': int(len(validos)), 'amostras_pasto': int(len(pastos)),
+            'peso_tendencia': tendencia, 'pastagem_condicao': 0.5 if len(pastos) else 0.0,
+            'tratamentos_recentes': float(tratamentos_recentes)}
 
 
 def preprocessar_batch(features_list, scaler=None):

@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -34,7 +35,7 @@ def alertas_ia_preditiva(df_animais, df_manejo, df_compras, df_vendas, hoje=None
     Returns:
         {urgentes: [...], avisos: [...], total: int, timestamp: str}
     """
-    hoje = pd.Timestamp(hoje or datetime.now()).normalize()
+    hoje = pd.Timestamp(hoje or agora()).normalize()
 
     # Carrega modelos (com fallback automático para retreino se houver incompatibilidade de versão do scikit-learn)
     try:

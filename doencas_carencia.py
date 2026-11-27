@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -62,7 +63,7 @@ def _hoje() -> date:
         from extensions import _agora
         return _agora().date()
     except Exception:
-        return datetime.now().date()
+        return agora().date()
 
 
 def _data_linha(valor) -> date | None:
@@ -282,7 +283,7 @@ def historico_animal(vaca_id: str, dias: int = 365) -> List[Dict]:
     if df.empty:
         return []
 
-    data_limite = pd.Timestamp.now() - timedelta(days=dias)
+    data_limite = pd.Timestamp(agora()) - timedelta(days=dias)
     df_recente = df[df["Data"] >= data_limite]
 
     historico = []

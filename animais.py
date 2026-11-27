@@ -19,6 +19,7 @@ nascimento. Só o atalho "Nascimento" grava também a linha de Manejo (que é o 
 faz a cabeça entrar no estoque), e a baixa por morte grava a Morte/Perda.
 """
 from __future__ import annotations
+from agora import agora
 
 import json
 import os
@@ -145,7 +146,7 @@ def evoluir_categorias(df: pd.DataFrame, hoje=None) -> pd.DataFrame:
     categoria de hoje; a planilha recebe o valor novo na próxima gravação da aba."""
     if df.empty:
         return df
-    hoje = pd.Timestamp(hoje or datetime.now()).normalize()
+    hoje = pd.Timestamp(hoje or agora()).normalize()
     maes = set()
     for ref in df["Mãe"]:
         maes |= set(ids_de(ref))
@@ -316,7 +317,7 @@ def normalizar(dados: dict, df: pd.DataFrame, reservados_num=None, exceto_id=Non
     for c in ("Nascimento", "Entrada", "Data Saída"):
         reg[c] = _data(reg.get(c))
     if pd.isna(reg["Entrada"]) and reg["Status"] == "Vivo":
-        reg["Entrada"] = pd.Timestamp(datetime.now().date())
+        reg["Entrada"] = pd.Timestamp(agora().date())
     return reg, avisos
 
 
@@ -426,9 +427,9 @@ def dar_baixa(ids: list[str], status: str, data=None, responsavel: str = "",
         if causa_mortis not in CAUSAS_MORTIS:
             raise ValueError("Selecione uma causa de morte válida.")
     df = carregar()
-    data_ts = _data(data) if data else pd.Timestamp(datetime.now().date())
+    data_ts = _data(data) if data else pd.Timestamp(agora().date())
     if pd.isna(data_ts):
-        data_ts = pd.Timestamp(datetime.now().date())
+        data_ts = pd.Timestamp(agora().date())
     feitos, por_dono = [], {}
     for id_ in ids:
         idx = df.index[df["ID"] == id_]
@@ -565,7 +566,7 @@ def resolver_texto(texto: str, df: pd.DataFrame | None = None, preferidos=()):
 def idade_txt(nasc, hoje=None) -> str:
     if nasc is None or pd.isna(nasc):
         return ""
-    hoje = hoje or datetime.now()
+    hoje = hoje or agora()
     dias = (pd.Timestamp(hoje) - pd.Timestamp(nasc)).days
     if dias < 0:
         return ""
@@ -600,7 +601,7 @@ def historico(id_: str, df_man: pd.DataFrame, df_vend: pd.DataFrame) -> list[dic
 def janela_brucelose(df: pd.DataFrame, df_man: pd.DataFrame, hoje=None) -> list[dict]:
     """Fêmeas vivas com nascimento conhecido, sem Vacina Brucelose registrada nelas,
     na janela de 3 a 8 meses (ou entrando nela nos próximos 30 dias)."""
-    hoje = pd.Timestamp(hoje or datetime.now())
+    hoje = pd.Timestamp(hoje or agora())
     if df.empty:
         return []
     vacinadas = set()

@@ -9,7 +9,7 @@
  *   return send_file('static/sw.js', mimetype='application/javascript')
  */
 
-const CACHE_VERSION = 'v5.8';
+const CACHE_VERSION = 'v5.9-offline-iot-ia';
 const CACHE_ASSETS = `${CACHE_VERSION}-assets`;
 const CACHE_PAGES = `${CACHE_VERSION}-pages`;
 const CACHE_API = `${CACHE_VERSION}-api`;
@@ -22,6 +22,8 @@ const CRITICAL_ASSETS = [
   '/static/design-tokens.css',
   '/static/css/skeleton.css',
   '/static/js/lazy-images.js',
+  '/static/sync_offline.js',
+  '/static/js/iot_sensores.js',
   '/manifest.json',
   '/_offline.html',
 ];
