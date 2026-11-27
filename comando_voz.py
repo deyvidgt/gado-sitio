@@ -37,6 +37,7 @@ Dividido em duas partes:
                                aponta ambiguidades/erros e prepara o que gravar.
 """
 from __future__ import annotations
+from agora import agora
 
 import re
 import unicodedata
@@ -843,7 +844,7 @@ def _analisar_visita(toks, n):
 
 def analisar(texto: str, hoje: datetime | None = None) -> dict:
     """Frase → intenção. Não consulta dados; ver montar()."""
-    hoje = hoje or datetime.now()
+    hoje = hoje or agora()
     toks = tokenizar(texto)
     n = " ".join(t.n for t in toks)
     atalho = _acao_busca_ou_navegacao(texto)

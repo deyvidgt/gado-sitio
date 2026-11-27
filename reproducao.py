@@ -16,6 +16,7 @@ Prazos usados (gado de corte, Nelore/cruzado):
 Não mexe nas finanças — quem põe a cabeça no estoque continua sendo o Nascimento.
 """
 from __future__ import annotations
+from agora import agora
 
 import re
 
@@ -78,7 +79,7 @@ def situacao(df_man, df_animais, hoje=None) -> list[dict]:
 
     Só vale a ÚLTIMA cobertura de cada vaca: anotar de novo é o jeito de corrigir
     ou de registrar que ela repetiu o cio."""
-    hoje = pd.Timestamp(hoje or pd.Timestamp.now()).normalize()
+    hoje = pd.Timestamp(hoje or pd.Timestamp(agora())).normalize()
     ultima = {i: (d, prod) for d, i, _, prod in _eventos(df_man, TIPO_COBERTURA)}
     diagnosticos = _eventos(df_man, TIPO_DIAGNOSTICO)
     partos = _partos(df_animais)
@@ -138,7 +139,7 @@ def indicadores(situacoes: list[dict], df_animais=None) -> dict:
 
 def alertas(situacoes: list[dict], hoje=None) -> list[dict]:
     """{texto, urgente} para o painel e o WhatsApp. Só o que exige ação."""
-    hoje = pd.Timestamp(hoje or pd.Timestamp.now()).normalize()
+    hoje = pd.Timestamp(hoje or pd.Timestamp(agora())).normalize()
     out = []
     for v in situacoes:
         if v["status"] in ("pariu", "vazia"):
@@ -175,7 +176,7 @@ def registrar(tipo: str, vaca_ref: str, data, touro: str = "", resultado: str = 
         raise ValueError("Anote uma vaca por vez.")
     d = A._data(data) if data else pd.NaT
     if pd.isna(d):
-        d = pd.Timestamp.now().normalize()
+        d = pd.Timestamp(agora()).normalize()
     if tipo == TIPO_DIAGNOSTICO:
         if resultado not in RESULTADOS:
             raise ValueError("O toque deu Prenha ou Vazia?")
@@ -199,7 +200,7 @@ def planejamento_ia(df_anim: pd.DataFrame, df_man: pd.DataFrame, hoje: pd.Timest
         return []
 
     if hoje is None:
-        hoje = pd.Timestamp.now().normalize()
+        hoje = pd.Timestamp(agora()).normalize()
 
     candidatas = []
 

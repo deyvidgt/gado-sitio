@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Estoque manual de medicamentos controlado por lote e validade."""
 from __future__ import annotations
+from agora import agora
 
 from datetime import date, datetime, timedelta
 import math
@@ -95,7 +96,7 @@ def _lotes_da_aba(df: pd.DataFrame, hoje: date) -> list[dict]:
 
 def lotes_ativos(hoje=None) -> list[dict]:
     """Lotes com saldo positivo, incluindo situação e prazo de validade."""
-    referencia = hoje or datetime.now().date()
+    referencia = hoje or agora().date()
     if isinstance(referencia, datetime):
         referencia = referencia.date()
     return _lotes_da_aba(db.carregar_aba(ABA), referencia)

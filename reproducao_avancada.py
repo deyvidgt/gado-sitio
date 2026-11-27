@@ -14,6 +14,7 @@ Dados: Manejo tipos "Sincronização IATF", "Observação de Cio"
 """
 
 from __future__ import annotations
+from agora import agora
 
 import pandas as pd
 from datetime import datetime, timedelta
@@ -91,7 +92,7 @@ def alertas_iatf(df_man, df_animais, hoje=None) -> list[dict]:
         "data_acao": "2026-11-01",
     }
     """
-    hoje = pd.Timestamp(hoje or pd.Timestamp.now()).normalize()
+    hoje = pd.Timestamp(hoje or pd.Timestamp(agora())).normalize()
     amanha = hoje + timedelta(days=1)
     alertas = []
 
@@ -168,7 +169,7 @@ def detectar_cios_proximos(df_man, df_animais, hoje=None, dias_proximos=7) -> li
         "urgencia": "urgente" | "aviso",
     }
     """
-    hoje = pd.Timestamp(hoje or pd.Timestamp.now()).normalize()
+    hoje = pd.Timestamp(hoje or pd.Timestamp(agora())).normalize()
     proxima_data = hoje + timedelta(days=dias_proximos)
     alertas = []
 

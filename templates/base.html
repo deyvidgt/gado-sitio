@@ -9,6 +9,8 @@
   <meta name="apple-mobile-web-app-title" content="Sítio SA">
   <meta name="theme-color" content="#2e7d32">
   <meta name="description" content="Sistema de gestão pecuária Sítio Santo Antonio.">
+  <meta name="offline-usuario" content="{{ session.get('usuario', '') }}">
+  <meta name="offline-sitio" content="{{ sitio_atual or '' }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/icon.png') }}">
   <title>{% block title %}Gado — Sítio Santo Antonio{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="/static/icon.svg">

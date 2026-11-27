@@ -8,7 +8,23 @@ v5.11 — Security enhancement
 import os
 import logging
 from logging.handlers import RotatingFileHandler
-from datetime import datetime
+from datetime import datetime, timezone
+try:
+    from zoneinfo import ZoneInfo
+    _TZ_BR = ZoneInfo("America/Sao_Paulo")
+except ImportError:
+    _TZ_BR = None
+
+
+def _formatador_brt(record):
+    """Converte o timestamp do LogRecord (epoch) para horário de Brasília."""
+    dt = datetime.fromtimestamp(record.created, timezone.utc)
+    if _TZ_BR is not None:
+        dt = dt.astimezone(_TZ_BR)
+    else:
+        from datetime import timedelta
+        dt = dt - timedelta(hours=3)
+    return dt.strftime("%d/%m/%Y %H:%M:%S")
 
 def configurar_logging(app, log_dir="logs"):
     """
@@ -35,6 +51,7 @@ def configurar_logging(app, log_dir="logs"):
     access_format = logging.Formatter(
         '[%(asctime)s] %(remote_addr)s - %(method)s %(path)s %(status_code)s'
     )
+    access_format.converter = lambda timestamp: datetime.fromtimestamp(timestamp, _TZ_BR or timezone.utc).timetuple()
     access_handler.setFormatter(access_format)
 
     # ── Logger de SEGURANÇA (login, CSRF, etc) ────────────────────────────────
@@ -48,6 +65,7 @@ def configurar_logging(app, log_dir="logs"):
     security_format = logging.Formatter(
         '[%(asctime)s] [%(levelname)s] %(name)s - %(message)s'
     )
+    security_format.converter = lambda timestamp: datetime.fromtimestamp(timestamp, _TZ_BR or timezone.utc).timetuple()
     security_handler.setFormatter(security_format)
 
     # ── Logger de ERROS (exceptions, 500, etc) ────────────────────────────────

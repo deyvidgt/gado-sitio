@@ -1,5 +1,16 @@
-from extensions import db
+from extensions import db, _agora
 from datetime import datetime
+
+
+class SyncRegistro(db.Model):
+    __tablename__ = 'sync_registros'
+    id = db.Column(db.Integer, primary_key=True)
+    id_envio = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    usuario = db.Column(db.String(120), nullable=False)
+    sitio = db.Column(db.String(120), nullable=False)
+    tipo = db.Column(db.String(60), nullable=False)
+    processado_em = db.Column(db.DateTime, default=_agora, nullable=False)
+
 
 class Animal(db.Model):
     __tablename__ = 'animais'

@@ -59,4 +59,14 @@
   {% endfor %}
 </div>
 {% endif %}
+
+{% if customizadas %}
+<div class="card">
+  <h2>📈 Previsões customizadas da fazenda</h2>
+  <p class="muted">Estimativas operacionais; risco sanitário não é diagnóstico veterinário.</p>
+  {% for p in customizadas %}
+  <div class="linha"><strong>{{ p.animal }}</strong><span>{{ p.modelo }}</span><span>{{ p.horizonte_dias }} dias</span><small>Confiança: {{ (p.confianca * 100)|round(0) }}% — {{ p.motivos|join(', ') }}</small></div>
+  {% endfor %}
+</div>
+{% endif %}
 {% endblock %}

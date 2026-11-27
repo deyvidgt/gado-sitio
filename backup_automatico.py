@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -71,7 +72,7 @@ def arquivos_backup(pasta: Path) -> list[tuple[Path, str]]:
 
 
 def fazer_backup(pasta: Path = DATA_DIR):
-    agora     = datetime.now().strftime("%Y%m%d_%H%M%S")
+    agora     = agora().strftime("%Y%m%d_%H%M%S")
     copiados  = []
     erros     = []
     destino   = pasta / "backups"

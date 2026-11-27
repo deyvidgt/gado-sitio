@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -27,7 +28,7 @@ def executar_alertas_diarios():
     # 2. Alertas de Saúde
     try:
         dados = carregar_todas()
-        hoje = datetime.now()
+        hoje = agora()
         alertas_saude = lembretes_sazonais(dados.get("Manejo", None), hoje)
 
         # Filtra alertas urgentes

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from __future__ import annotations  # compatibilidade Python 3.9+
+from agora import agora
 """
 Motor de cálculos financeiros do rebanho
 Versão 3.1 — correções de bugs e melhorias de desempenho
@@ -68,7 +69,7 @@ def _hoje_br():
         from extensions import _agora
         return _agora().date()
     except Exception:
-        return datetime.now().date()
+        return agora().date()
 
 
 def _normalizar_membro(valor) -> str | None:
@@ -1258,7 +1259,7 @@ def calcular_evolucao_rebanho(df_comp: pd.DataFrame, df_gast: pd.DataFrame,
     if not todas:
         return []
 
-    hoje = hoje or pd.Timestamp.now()
+    hoje = hoje or pd.Timestamp(agora())
     meses = pd.period_range(min(todas).to_period("M"),
                             max(max(todas), hoje).to_period("M"), freq="M")
 

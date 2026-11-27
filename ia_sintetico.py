@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -25,7 +26,7 @@ def gerar_sintetico(n_animais=5000, anos=3, seed=42):
     """
     np.random.seed(seed)
 
-    hoje = datetime.now()
+    hoje = agora()
     dias_historico = anos * 365
 
     # Generate base animals

@@ -1,3 +1,4 @@
+from agora import agora
 # -*- coding: utf-8 -*-
 """
 Coleta automática de dados para indicadores (v5.8+):
@@ -50,7 +51,7 @@ def registrar_engorda_pastagem(pasto_id: str, brincos: str, peso_inicial: float,
         consumo_estimado = ((peso_final - peso_inicial) / dias) if dias > 0 else 0
 
         nova_linha = [
-            datetime.now().strftime("%d/%m/%Y"),  # Data
+            agora().strftime("%d/%m/%Y"),  # Data
             pasto_id or "",  # Pasto ID
             brincos or "",  # Brincos
             float(peso_inicial) if peso_inicial else 0,  # Peso Inicial
@@ -63,7 +64,7 @@ def registrar_engorda_pastagem(pasto_id: str, brincos: str, peso_inicial: float,
             observacao or "",  # Observação
             "",  # Responsável (preenchido no formulário)
             "",  # ID Envio (offline)
-            datetime.now().isoformat(),  # Criado Em
+            agora().isoformat(),  # Criado Em
         ]
 
         salvar_linha("Engorda Pastagem", nova_linha)
@@ -110,7 +111,7 @@ def registrar_gmd_lotacao(periodo_dias: int, animais: int, peso_inicial: float,
             ocupacao_perc = min(100, round((lotacao_ua_ha / capacidade_ua_ha) * 100, 1))
 
         nova_linha = [
-            datetime.now().strftime("%d/%m/%Y"),  # Data
+            agora().strftime("%d/%m/%Y"),  # Data
             int(periodo_dias) if periodo_dias else 0,  # Período (dias)
             int(animais) if animais else 0,  # Animais
             float(peso_inicial) if peso_inicial else 0,  # Peso Inicial (kg)
@@ -124,7 +125,7 @@ def registrar_gmd_lotacao(periodo_dias: int, animais: int, peso_inicial: float,
             clima or "",  # Clima
             observacao or "",  # Observação
             "",  # ID Envio
-            datetime.now().isoformat(),  # Criado Em
+            agora().isoformat(),  # Criado Em
         ]
 
         salvar_linha("GMD Lotação", nova_linha)
@@ -171,7 +172,7 @@ def registrar_racao_consumo(tipo_racao: str, qty_oferecida: float, qty_consumida
         custo_total = (qty_oferecida or 0) * (custo_kg or 0)
 
         nova_linha = [
-            datetime.now().strftime("%d/%m/%Y"),  # Data
+            agora().strftime("%d/%m/%Y"),  # Data
             tipo_racao or "",  # Tipo Ração
             float(qty_oferecida) if qty_oferecida else 0,  # Quantidade Oferecida (kg)
             float(qty_consumida) if qty_consumida else 0,  # Quantidade Consumida (kg)
@@ -183,7 +184,7 @@ def registrar_racao_consumo(tipo_racao: str, qty_oferecida: float, qty_consumida
             observacao or "",  # Observação
             responsavel or "",  # Responsável
             "",  # ID Envio
-            datetime.now().isoformat(),  # Criado Em
+            agora().isoformat(),  # Criado Em
         ]
 
         salvar_linha("Ração Consumo", nova_linha)

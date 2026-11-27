@@ -20,6 +20,7 @@ WhatsApp. Referências (pesquisadas em 10/2026):
 Os intervalos em dias continuam ajustáveis em ⚙️ Configurações (db.get_alertas_saude).
 """
 from __future__ import annotations
+from agora import agora
 
 from datetime import datetime
 
@@ -94,7 +95,7 @@ def lembretes_sazonais(df_man: pd.DataFrame, hoje: datetime | None = None) -> li
     Lembretes de calendário (não de intervalo): campanha de brucelose e
     vermifugação 5-7-9. Retorna [{"nivel": warning|info, "msg": str}].
     """
-    hoje = hoje or datetime.now()
+    hoje = hoje or agora()
     out = []
 
     # ── Brucelose: avisa nos 2 últimos meses de cada etapa e na janela de declaração

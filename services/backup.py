@@ -1,3 +1,4 @@
+from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -15,7 +16,7 @@ def gerar_backup_excel(fazenda_id=None) -> str:
     """Gera um arquivo .xlsx consolidado com todas as abas a partir do SQLite."""
     backup_dir = "/home/deyvidgt16/gado-dados/backups" if os.path.exists("/home/deyvidgt16/gado-dados") else os.path.join(RAIZ, "backups")
     os.makedirs(backup_dir, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = agora().strftime("%Y%m%d_%H%M%S")
     caminho_arquivo = os.path.join(backup_dir, f"backup_sitio_{timestamp}.xlsx")
     
     query = RegistroGenerico.query

@@ -13,6 +13,7 @@ senão a família esquecia de recriar.
 Não mexe nas finanças.
 """
 from __future__ import annotations
+from agora import agora
 
 import re
 
@@ -78,7 +79,7 @@ def concluir(id_, hoje=None, por: str = ""):
     i = _linha(df, id_)
     if df.at[i, "Feito Em"]:
         return
-    hoje = pd.Timestamp(hoje or pd.Timestamp.now()).normalize()
+    hoje = pd.Timestamp(hoje or pd.Timestamp(agora())).normalize()
     df.at[i, "Feito Em"] = f"{hoje:%d/%m/%Y}"
     _gravar(df)
     dias = REPETICOES_TAREFA.get(df.at[i, "Repetir"] or "Não", 0)
@@ -97,7 +98,7 @@ def excluir(id_):
 def pendentes(df: pd.DataFrame, hoje=None, limite_dias: int = PROXIMAS_DIAS) -> list[dict]:
     """Tarefas não feitas até daqui a `limite_dias`, das mais atrasadas para a frente.
     Atrasada não some nunca — some só quando alguém marca como feita."""
-    hoje = pd.Timestamp(hoje or pd.Timestamp.now()).normalize()
+    hoje = pd.Timestamp(hoje or pd.Timestamp(agora())).normalize()
     out = []
     for _, r in df.iterrows():
         if r["Feito Em"] or not r["ID"]:
