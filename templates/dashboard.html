@@ -98,7 +98,7 @@
 {% endif %}
 
 <!-- IA Preditiva Alerts Widget (Onda 19) -->
-{% if ia_alertas and ia_alertas.total > 0 %}
+{% if (modulos.reproducao or modulos.genetica_confinamento) and ia_alertas and ia_alertas.total > 0 %}
 <section class="card" style="margin-bottom:20px">
   <div class="section-head" style="margin-bottom:12px">
     <h2>🤖 Alertas de IA Preditiva</h2>
