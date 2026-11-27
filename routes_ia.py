@@ -82,8 +82,20 @@ def treinar_ia():
             flash("Script de treino de IA não encontrado no servidor.", "error")
             return redirect(url_for("ia_predicoes"))
             
+        python_exe = sys.executable
+        if "uwsgi" in python_exe.lower() or not Path(python_exe).exists():
+            # Tenta encontrar o python do virtualenv ou do sistema
+            virtual_env = os.environ.get("VIRTUAL_ENV")
+            if virtual_env:
+                if os.name == "nt":
+                    python_exe = str(Path(virtual_env) / "Scripts" / "python.exe")
+                else:
+                    python_exe = str(Path(virtual_env) / "bin" / "python")
+            else:
+                python_exe = "python3" if os.name != "nt" else "python"
+
         resultado = subprocess.run(
-            [sys.executable, str(script_path), "--n-animais", "1000"],
+            [python_exe, str(script_path), "--n-animais", "1000"],
             capture_output=True,
             text=True,
             timeout=180
