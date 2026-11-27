@@ -1,4 +1,4 @@
-from agora import agora
+from agora import agora as _obter_agora
 # -*- coding: utf-8 -*-
 """Previsão Open-Meteo com cache por sítio e degradação segura."""
 
@@ -237,7 +237,7 @@ def previsao(*, agora=None, latitude=None, longitude=None):
     Se latitude/longitude não forem dados, tenta usar as coordenadas do sitio_config.json.
     Se nenhuma coordenada existir, avisa para permitir geolocalização no celular.
     """
-    agora = agora or agora()
+    agora = agora or _obter_agora()
     cfg = _configuracao()
 
     # Permite sobrescrever com coordenadas do navegador
