@@ -1,4 +1,4 @@
-from extensions import db
+from extensions import db, _agora
 from datetime import datetime
 
 
@@ -9,7 +9,7 @@ class SyncRegistro(db.Model):
     usuario = db.Column(db.String(120), nullable=False)
     sitio = db.Column(db.String(120), nullable=False)
     tipo = db.Column(db.String(60), nullable=False)
-    processado_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    processado_em = db.Column(db.DateTime, default=_agora, nullable=False)
 
 
 class Animal(db.Model):
