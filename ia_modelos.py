@@ -223,6 +223,10 @@ class _ModeloCampo:
     def prever(self, features_dict):
         base = {'horizonte_dias': self.horizonte_dias, 'confianca': 0.0, 'motivos': [], 'dados_suficientes': False}
         if not self.treinado:
+            if not features_dict.get('dados_suficientes'):
+                return base
+            valor = float(features_dict.get('peso_tendencia', features_dict.get('pastagem_condicao', 0.5)))
+            base.update({'valor': valor, 'confianca': 0.35, 'motivos': ['histórico mínimo disponível'], 'dados_suficientes': True})
             return base
         nomes = self.feature_names or list(features_dict)
         try:

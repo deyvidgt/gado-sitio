@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Endpoints de leituras IoT e sincronização offline idempotente."""
 import logging
+import threading
 from datetime import datetime
 
 from flask import jsonify, request, session
@@ -10,7 +11,8 @@ from extensions import app, login_required, db
 from models import SyncRegistro
 
 logger = logging.getLogger(__name__)
-_TIPOS_IOT = {'pesagem': 'Pesagem', 'temperatura': 'Temperatura', 'consumo': 'Consumo', 'agua': 'Água', 'cocho': 'Consumo Cocho'}
+_SYNC_LOCK = threading.Lock()
+_TIPOS_IOT = {'pesagem': 'Pesagem', 'temperatura': 'Temperatura', 'consumo': 'Consumo', 'agua': 'Água', 'cocho': 'Consumo Cocho', 'rfid': 'Leitura RFID'}
 
 
 def _animal_por_rfid(tag_id):
@@ -81,7 +83,8 @@ def _processar_sync(itens):
     resultados = []
     usuario = str(session.get('usuario') or '')
     sitio = str(session.get('sitio') or 'default')
-    for item in itens:
+    with _SYNC_LOCK:
+      for item in itens:
         if not isinstance(item, dict) or not item.get('id_envio'):
             resultados.append({'id_envio': '', 'status': 'invalido', 'msg': 'id_envio obrigatório'})
             continue
@@ -124,6 +127,8 @@ def iot_rfid():
     if not animal_id:
         return jsonify({'status': 'invalido', 'msg': 'RFID desconhecido'}), 422
     dados['brincos'] = animal_id
+    if not _salvar_manejo('rfid', dados, brincos=animal_id):
+        return jsonify({'status': 'erro_transitorio', 'msg': 'Falha ao registrar leitura'}), 500
     return jsonify({'status': 'processado', 'animal_id': animal_id}), 201
 
 
@@ -142,6 +147,9 @@ def iot_cocho():
     dados = request.get_json(silent=True) or {}
     if dados.get('unidade') not in ('kg', 'g') or not _numero_valido(dados.get('consumo_kg'), 0, 100000):
         return jsonify({'sucesso': False, 'status': 'invalido', 'msg': 'Consumo/unidade inválidos'}), 400
+    if dados['unidade'] == 'g':
+        dados['consumo_kg'] = float(dados['consumo_kg']) / 1000
+        dados['unidade'] = 'kg'
     return jsonify({'sucesso': True, 'status': 'processado', 'msg': 'cocho registrado'}) if _salvar_manejo('cocho', dados) else (jsonify({'sucesso': False}), 500)
 
 

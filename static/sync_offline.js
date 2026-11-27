@@ -16,19 +16,19 @@
         if (!db.objectStoreNames.contains(STORE)) {
           db.createObjectStore(STORE, {keyPath: "id_envio"});
         }
-        if (e.oldVersion < 4) migrarFilaIoT(db);
+        if (e.oldVersion < 4) migrarFilaIoT(e.target.transaction);
       };
       req.onsuccess = () => ok(req.result);
       req.onerror = () => falha(req.error);
     });
   }
 
-  function migrarFilaIoT(db) {
+  function migrarFilaIoT(upgradeTx) {
     const antiga = localStorage.getItem("iot_fila_offline");
-    if (!antiga || !db.objectStoreNames.contains(STORE)) return;
+    if (!antiga || !upgradeTx.db.objectStoreNames.contains(STORE)) return;
     let itens;
     try { itens = JSON.parse(antiga); } catch (_) { return; }
-    const store = db.transaction(STORE, "readwrite").objectStore(STORE);
+    const store = upgradeTx.objectStore(STORE);
     for (const item of Array.isArray(itens) ? itens : []) {
       const id = String(item.id_envio || crypto.randomUUID());
       store.put({
@@ -72,9 +72,18 @@
     if (!itens.length) { atualizarBanner(); return; }
     enviando = true;
     try {
+      const formularios = itens.filter((i) => i.tipo === "formulario");
+      for (const item of formularios) {
+        const body = new URLSearchParams(item.dados);
+        const resposta = await fetch(item.url, {method: item.metodo || "POST", body, credentials: "same-origin"});
+        if (resposta.ok || resposta.status === 302) await remover(item.id_envio);
+        else { item.tentativas++; item.ultimo_erro = `HTTP ${resposta.status}`; await atualizar(item); }
+      }
+      const leituras = itens.filter((i) => i.tipo !== "formulario");
+      if (!leituras.length) return;
       const response = await fetch("/api/sync", {
         method: "POST", headers: {"Content-Type": "application/json"},
-        credentials: "same-origin", body: JSON.stringify({itens})
+        credentials: "same-origin", body: JSON.stringify({itens: leituras})
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const resultados = (await response.json()).resultados || [];
