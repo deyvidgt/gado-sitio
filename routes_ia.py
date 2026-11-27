@@ -6,6 +6,7 @@ Somente leitura: lê os modelos de data/ia_models/ e mostra as previsões.
 Se os modelos não foram treinados, explica como treinar.
 """
 import logging
+import os
 from flask import render_template, jsonify, flash, redirect, url_for, abort, session
 import sitios
 from pathlib import Path
@@ -93,6 +94,11 @@ def treinar_ia():
                     python_exe = str(Path(virtual_env) / "bin" / "python")
             else:
                 python_exe = "python3" if os.name != "nt" else "python"
+        elif os.name != "nt":
+            # No Linux (PythonAnywhere), sys.executable pode ser o python global ao invés do venv ativo se uwsgi não estiver encapsulado
+            virtual_env = os.environ.get("VIRTUAL_ENV")
+            if virtual_env and Path(virtual_env, "bin", "python").exists():
+                python_exe = str(Path(virtual_env, "bin", "python"))
 
         resultado = subprocess.run(
             [python_exe, str(script_path), "--n-animais", "1000"],

@@ -49,7 +49,18 @@ def alertas_ia_preditiva(df_animais, df_manejo, df_compras, df_vendas, hoje=None
             import subprocess
             import sys
             script_path = Path(__file__).parent / "scripts" / "train_ia_modelos.py"
-            subprocess.run([sys.executable, str(script_path), "--n-animais", "200"], check=True, capture_output=True)
+            python_exe = sys.executable
+            if "uwsgi" in python_exe.lower() or not Path(python_exe).exists():
+                virtual_env = os.environ.get("VIRTUAL_ENV")
+                if virtual_env:
+                    python_exe = str(Path(virtual_env) / "bin" / "python")
+                else:
+                    python_exe = "python3"
+            elif os.name != "nt":
+                virtual_env = os.environ.get("VIRTUAL_ENV")
+                if virtual_env and Path(virtual_env, "bin", "python").exists():
+                    python_exe = str(Path(virtual_env, "bin", "python"))
+            subprocess.run([python_exe, str(script_path), "--n-animais", "200"], check=True, capture_output=True)
             with open(MODELOS_DIR / 'modelo_morte.pkl', 'rb') as f:
                 modelo_morte = pickle.load(f)
             with open(MODELOS_DIR / 'modelo_cio.pkl', 'rb') as f:
