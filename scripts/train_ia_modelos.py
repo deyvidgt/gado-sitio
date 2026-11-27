@@ -1,4 +1,3 @@
-from agora import agora
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -18,11 +17,12 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 
-import numpy as np
-import pandas as pd
-
 # Add parent directory to path so we can import ia_sintetico, etc.
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from agora import agora
+import numpy as np
+import pandas as pd
 
 from ia_sintetico import gerar_sintetico
 from ia_features import extrair_features
