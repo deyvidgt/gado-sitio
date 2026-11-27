@@ -201,6 +201,72 @@ class ModeloCio:
         }
 
 
+class _ModeloCampo:
+    horizonte_dias = 0
+    nome = 'previsão'
+
+    def __init__(self):
+        self.modelo = GradientBoostingRegressor(n_estimators=60, max_depth=3, random_state=42)
+        self.scaler = StandardScaler()
+        self.feature_names = None
+        self.treinado = False
+
+    def treinar(self, X, y):
+        if isinstance(X, pd.DataFrame):
+            self.feature_names = X.columns.tolist()
+            X = X.values
+        self.scaler.fit(X)
+        self.modelo.fit(self.scaler.transform(X), y)
+        self.treinado = True
+        return self
+
+    def prever(self, features_dict):
+        base = {'horizonte_dias': self.horizonte_dias, 'confianca': 0.0, 'motivos': [], 'dados_suficientes': False}
+        if not self.treinado:
+            return base
+        nomes = self.feature_names or list(features_dict)
+        try:
+            X = pd.DataFrame([[features_dict.get(n, 0) for n in nomes]], columns=nomes)
+            pred = float(self.modelo.predict(self.scaler.transform(X))[0])
+        except Exception:
+            return base
+        base.update({'valor': round(pred, 3), 'confianca': 0.6, 'motivos': ['histórico da fazenda'], 'dados_suficientes': True})
+        return base
+
+
+class ModeloGanhoPeso(_ModeloCampo):
+    horizonte_dias = 30
+    nome = 'ganho de peso'
+
+    def prever(self, features_dict):
+        result = super().prever(features_dict)
+        result['gmd_30d'] = result.pop('valor', 0.0)
+        return result
+
+
+class ModeloPastagem(_ModeloCampo):
+    horizonte_dias = 14
+    nome = 'pastagem'
+
+    def prever(self, features_dict):
+        result = super().prever(features_dict)
+        result['condicao_14d'] = max(0.0, min(1.0, result.pop('valor', 0.0)))
+        result['tendencia'] = 'estável' if result['dados_suficientes'] else 'indeterminada'
+        return result
+
+
+class ModeloRiscoSanitario(_ModeloCampo):
+    horizonte_dias = 7
+    nome = 'risco sanitário'
+
+    def prever(self, features_dict):
+        result = super().prever(features_dict)
+        risco = max(0.0, min(1.0, result.pop('valor', 0.0)))
+        result.update({'probabilidade_7d': risco, 'nivel': 'AVISO' if risco >= .5 else 'OK',
+                       'recomendacao': 'Inspecionar e contatar veterinário se houver sinais.'})
+        return result
+
+
 def calcular_inbreeding_avk(animal_id, df_animais, max_depth=5):
     """
     Simple pedigree-based inbreeding coefficient (AVK approximation).

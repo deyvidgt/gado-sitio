@@ -10,7 +10,26 @@ from extensions import app, login_required, db
 from models import SyncRegistro
 
 logger = logging.getLogger(__name__)
-_TIPOS_IOT = {'pesagem': 'Pesagem', 'temperatura': 'Temperatura', 'consumo': 'Consumo'}
+_TIPOS_IOT = {'pesagem': 'Pesagem', 'temperatura': 'Temperatura', 'consumo': 'Consumo', 'agua': 'Água', 'cocho': 'Consumo Cocho'}
+
+
+def _animal_por_rfid(tag_id):
+    import animais as A
+    df = A.carregar()
+    for coluna in ('RFID', 'Tag RFID', 'Chip', 'Brinco RFID'):
+        if coluna in df.columns:
+            encontrados = df[df[coluna].astype(str).str.strip() == str(tag_id).strip()]
+            if not encontrados.empty:
+                return str(encontrados.iloc[0].get('ID', encontrados.index[0]))
+    return None
+
+
+def _numero_valido(valor, minimo=0, maximo=100000):
+    try:
+        valor = float(valor)
+        return minimo <= valor <= maximo
+    except (TypeError, ValueError):
+        return False
 
 
 def _salvar_manejo(tipo, dados, brincos=''):
@@ -95,6 +114,35 @@ def _processar_sync(itens):
 def sync_geral():
     dados = request.get_json(silent=True) or {}
     return jsonify({'sucesso': True, 'resultados': _processar_sync(dados.get('itens') or [])}), 200
+
+
+@app.route('/api/iot/rfid', methods=['POST'])
+@login_required
+def iot_rfid():
+    dados = request.get_json(silent=True) or {}
+    animal_id = _animal_por_rfid(dados.get('tag_id')) if dados.get('tag_id') else None
+    if not animal_id:
+        return jsonify({'status': 'invalido', 'msg': 'RFID desconhecido'}), 422
+    dados['brincos'] = animal_id
+    return jsonify({'status': 'processado', 'animal_id': animal_id}), 201
+
+
+@app.route('/api/iot/agua', methods=['POST'])
+@login_required
+def iot_agua():
+    dados = request.get_json(silent=True) or {}
+    if dados.get('unidade') not in ('L', 'l', 'm3') or not _numero_valido(dados.get('valor'), 0, 100000):
+        return jsonify({'sucesso': False, 'status': 'invalido', 'msg': 'Valor/unidade inválidos'}), 400
+    return (_receber('valor', 'agua')[0] | {'status': 'processado'}, 201) if _salvar_manejo('agua', dados) else (jsonify({'sucesso': False}), 500)
+
+
+@app.route('/api/iot/cocho', methods=['POST'])
+@login_required
+def iot_cocho():
+    dados = request.get_json(silent=True) or {}
+    if dados.get('unidade') not in ('kg', 'g') or not _numero_valido(dados.get('consumo_kg'), 0, 100000):
+        return jsonify({'sucesso': False, 'status': 'invalido', 'msg': 'Consumo/unidade inválidos'}), 400
+    return jsonify({'sucesso': True, 'status': 'processado', 'msg': 'cocho registrado'}) if _salvar_manejo('cocho', dados) else (jsonify({'sucesso': False}), 500)
 
 
 @app.route('/api/iot/sync', methods=['POST'])

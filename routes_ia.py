@@ -15,8 +15,23 @@ import db
 import ia_modelos
 from extensions import app, login_required
 from reproducao_avancada_ia import alertas_ia_preditiva
+from ia_features import extrair_features_crescimento
+from ia_modelos import ModeloGanhoPeso, ModeloPastagem, ModeloRiscoSanitario
 
 logger = logging.getLogger(__name__)
+
+
+def _previsoes_customizadas(df_an, df_man, df_pastos):
+    saida = []
+    modelos = (ModeloGanhoPeso(), ModeloPastagem(), ModeloRiscoSanitario())
+    for _, animal in df_an.iterrows():
+        animal_id = animal.get('ID')
+        features = extrair_features_crescimento(animal_id, df_an, df_man, df_pastos)
+        if not features.get('dados_suficientes'):
+            continue
+        for modelo in modelos:
+            saida.append({'animal': animal_id, 'modelo': modelo.nome, **modelo.prever(features)})
+    return saida
 
 
 @app.route("/reproducao/ia-predicoes")
@@ -29,11 +44,13 @@ def ia_predicoes():
     df_vendas = db.carregar_aba("Vendas")
 
     resultado = alertas_ia_preditiva(df_an, df_man, df_compras, df_vendas)
+    resultado['customizadas'] = _previsoes_customizadas(df_an, df_man, db.carregar_aba('Pastos'))
 
     return render_template("ia_predicoes.html",
                            urgentes=resultado.get("urgentes", []),
                            avisos=resultado.get("avisos", []),
                            total=resultado.get("total", 0),
+                           customizadas=resultado.get('customizadas', []),
                            timestamp=resultado.get("timestamp", ""))
 
 
@@ -47,6 +64,7 @@ def api_ia_alertas():
     df_vendas = db.carregar_aba("Vendas")
 
     resultado = alertas_ia_preditiva(df_an, df_man, df_compras, df_vendas)
+    resultado['customizadas'] = _previsoes_customizadas(df_an, df_man, db.carregar_aba('Pastos'))
     return jsonify(resultado), 200
 
 

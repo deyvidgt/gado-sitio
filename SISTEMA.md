@@ -1,5 +1,12 @@
 # 📚 Documentação Completa do Sistema — Gado v5.25.0
 
+## Offline, IoT e IA (v5.9)
+
+- Registros criados sem sinal ficam em uma fila IndexedDB única e são enviados automaticamente quando a conexão volta.
+- A fila é vinculada ao usuário e ao sítio atuais; após expiração da sessão, o mesmo usuário precisa autenticar novamente. Outro usuário não sincroniza esses itens.
+- Leituras IoT genéricas suportam emulador/entrada manual para RFID, água e cocho. Equipamentos Bluetooth reais dependem do protocolo compatível com o navegador.
+- A IA customizada estima ganho de peso em 30 dias, condição de pastagem em 14 dias e risco sanitário em 7 dias. Sem histórico suficiente, a previsão não é exibida. Alertas sanitários são triagem e não diagnóstico veterinário.
+
 ## 🏗️ Arquitetura Geral
 
 ```
