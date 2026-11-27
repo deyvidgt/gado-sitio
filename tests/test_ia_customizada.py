@@ -25,6 +25,21 @@ def test_custom_models_mark_short_history_insufficient():
         assert resultado['confianca'] == 0
 
 
+def test_growth_features_use_weight_slope_and_recent_treatments():
+    from ia_features import extrair_features_crescimento
+    animais = pd.DataFrame({'ID': ['A1']})
+    manejo = pd.DataFrame({
+        'Tipo': ['Pesagem', 'Pesagem', 'Tratamento Veterinário', 'Tratamento Veterinário'],
+        'Data': ['01/01/2026', '31/01/2026', '15/01/2026', '01/01/2025'],
+        'Brincos': ['A1', 'A1', 'A1', 'A1'],
+        'Descricao': ['400', '430', 'febre', 'antigo'],
+    })
+    result = extrair_features_crescimento('A1', animais, manejo, pd.DataFrame(), hoje='01/02/2026')
+    assert result['dados_suficientes'] is True
+    assert result['peso_tendencia'] > 0
+    assert result['tratamentos_recentes'] == 1
+
+
 def test_growth_feature_extraction_handles_missing_history():
     from ia_features import extrair_features_crescimento
     animais = pd.DataFrame({'ID': ['A1']})
