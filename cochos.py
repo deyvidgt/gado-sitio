@@ -276,16 +276,23 @@ def calcular_situacao_cochos(df_cochos, df_visitas, df_movimentos=None) -> Dict[
                 consumo_dia = consumo_g_cab_dia * cabecas_ultima_leitura / 1_000
 
         # Calcula dias restantes
+        # Fórmula: volume_atual / consumo_dia (consumo total kg/dia)
+        # Se volume_atual > 0 e consumo_dia > 0 -> dias_restantes
+        # Se volume_atual == 0 -> Crítico: Cocho vazio!
+        # Se consumo_dia == 0 -> Indeterminado
+
         if volume_atual <= 0:
             dias_restantes = 0
+            proxima_salga = _hoje_br().strftime("%Y-%m-%d") # HOJE
+            estado_cocho = "Crítico: Cocho vazio!"
         elif consumo_dia > 0:
-            dias_restantes = round(volume_atual / consumo_dia)
+            dias_restantes = max(0, int(volume_atual / consumo_dia))
+            proxima_salga = (_hoje_br() + timedelta(days=dias_restantes)).strftime("%Y-%m-%d")
+            estado_cocho = None
         else:
-            dias_restantes = 0  # Indeterminado / Sem consumo, evita o 999 alucinado
-
-        proxima_salga = None
-        if ultima_salga and consumo_dia > 0 and dias_restantes < 999:
-            proxima_salga = (ultima_salga + timedelta(days=dias_restantes)).strftime("%Y-%m-%d")
+            dias_restantes = 999
+            proxima_salga = None
+            estado_cocho = None
 
         # Estado visual do cocho
         percentual = round((volume_atual / capacidade * 100)) if capacidade > 0 else 0

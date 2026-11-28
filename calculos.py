@@ -784,19 +784,48 @@ def calcular_todos_membros(df_vend, df_comp, df_gast,
     ctcab_global = calcular_ctcab(df_comp, df_gast, df_vend, df_man)
     estoques = calcular_estoque_por_membro(df_comp, df_vend, df_man)
 
-    return {
-        m: {
-            **calcular_resultado_membro(
-                m, df_vend, df_comp, df_gast, df_man,
-                _avg_por_venda=avg_por_venda,
-                _perda_membro=perdas_por_membro.get(m, 0.0),
-                _fator_por_venda=sim["fator_por_venda"],
-            ),
-            "capital_imobilizado": round(estoques.get(m, 0) * ctcab_global, 2),
-            "ctcab": round(ctcab_global, 2),
-        }
-        for m in MEMBROS
-    }
+    # NOVO: Cálculo por membro (CTCab individual)
+    membros_res = {}
+    total_resultado = 0.0
+
+    for m in MEMBROS:
+        res = calcular_resultado_membro(
+            m, df_vend, df_comp, df_gast, df_man,
+            _avg_por_venda=avg_por_venda,
+            _perda_membro=perdas_por_membro.get(m, 0.0),
+            _fator_por_venda=sim["fator_por_venda"],
+        )
+
+        # Filtra compras/gastos do membro
+        # Nota: a aba de Compras/Gastos pode não ter coluna de membro em todos os projetos,
+        # mas vamos assumir que sim ou usar fallback.
+        # Se não houver coluna de membro, usa o total (comportamento antigo).
+        if not df_comp.empty and m in df_comp.columns:
+            c_membro = df_comp[df_comp[m].notna() & (df_comp[m] != 0)]
+        else:
+            c_membro = df_comp
+
+        if not df_gast.empty and m in df_gast.columns:
+            g_membro = df_gast[df_gast[m].notna() & (df_gast[m] != 0)]
+        else:
+            g_membro = df_gast
+
+        custo_total_m = c_membro["Valor Total (R$)"].sum() + g_membro["Valor Total (R$)"].sum() if not c_membro.empty or not g_membro.empty else 0
+        cab_atuais_m = estoques.get(m, 0)
+        ctcab_m = custo_total_m / cab_atuais_m if cab_atuais_m > 0 else 0
+
+        res["ctcab"] = round(ctcab_m, 2)
+        res["capital_imobilizado"] = round(cab_atuais_m * ctcab_m, 2)
+
+        membros_res[m] = res
+        total_resultado += res["resultado"]
+
+    # Log de verificação
+    r_global = calcular_resumo_financeiro(df_comp, df_gast, df_vend, df_man)
+    if abs(total_resultado - r_global["resultado_realizado"]) > 0.01:
+        app.logger.warning(f"Divergência de resultado: Membros={total_resultado} vs Global={r_global['resultado_realizado']}")
+
+    return membros_res
 
 
 # ── Resumo financeiro global ──────────────────────────────────────────────────
@@ -1407,3 +1436,28 @@ def comparativo_anual(df_comp, df_gast, df_vend, df_man, df_anim=None):
             "resultado_pct": _pct(ano_ant["resultado"], ano_atu["resultado"]),
         }
     }
+
+def calcular_resultado_unico(df_vend, df_comp, df_gast, df_man):
+    """Fonte de verdade única para resultado total (v5.20)."""
+    sim = _simular_media_movel(df_comp, df_gast, df_vend, df_man)
+    custo_vendidos = sim["custo_vendidos"]
+    perdas = sim["perdas"]
+    total_vend = float(df_vend["Valor Total (R$)"].sum()) if not df_vend.empty else 0.0
+    return round(total_vend - custo_vendidos - perdas, 2)
+
+def calcular_ctcab_unico(df_comp, df_gast, df_vend, df_man):
+    """Fonte de verdade única para CTCab (v5.20)."""
+    sim = _simular_media_movel(df_comp, df_gast, df_vend, df_man)
+    avg_comp = sim["avg_compra_final"]
+    avg_gast = sim["avg_gasto_final"]
+    return round(avg_comp + avg_gast, 2)
+
+def calcular_chuva_mensal_unica(df_visitas):
+    """Fonte de verdade única para chuvas mensais (v5.20)."""
+    if df_visitas is None or df_visitas.empty or "Data" not in df_visitas.columns:
+        return {}
+    df = df_visitas.copy()
+    df["Data"] = pd.to_datetime(df["Data"], dayfirst=True, errors="coerce")
+    df["Chuva (mm)"] = pd.to_numeric(df["Chuva (mm)"], errors="coerce").fillna(0)
+    mensal = df.groupby(df["Data"].dt.to_period("M"))["Chuva (mm)"].sum()
+    return {m.strftime("%m/%Y"): float(v) for m, v in mensal.items()}
